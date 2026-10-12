@@ -3,9 +3,6 @@ name: Deploy apps to GitHub Pages
 on:
   push:
     branches: ["main"]
-    paths:
-      - "artifacts/**"
-      - "appindex/**"
   workflow_dispatch:
 
 permissions:

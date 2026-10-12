@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Regenera appindex/artifacts/index.html (el portal) a partir del checkout
-local de este mismo repo, usando portal_render.py (misma carpeta). No hace
-llamadas a la API de GitHub ni necesita ningún secreto: el workflow que
-invoca este script es el que hace commit/push del resultado con el
-GITHUB_TOKEN propio del repo."""
+"""Regenera appindex/index.html (el portal) a partir del checkout local de
+este mismo repo, usando portal_render.py (misma carpeta). Recorre cada
+carpeta de app en la raíz del repo (excluyendo appindex/ y .github/) en
+vez de una única carpeta "artifacts/", porque cada app vive directamente
+en la raíz (p.ej. /consultar/index.html -> https://.../apps/consultar/).
+
+No hace llamadas a la API de GitHub ni necesita ningún secreto: el
+workflow que invoca este script es el que hace commit/push del resultado
+con el GITHUB_TOKEN propio del repo."""
 import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from portal_render import extract_app_metadata, render_portal_html
 
-FOLDER = "artifacts"
+ROOT = "."
+EXCLUDE_DIRS = {"appindex", ".github", ".git"}
 OUT_PATH = "appindex/index.html"
 TITLE = "Herramientas de IA para la Docencia (HIAD)"
 SUBTITLE = "Aplicaciones de inteligencia artificial para diseño de moda, generación de contenido y automatización de procesos académicos."
@@ -18,27 +23,34 @@ CONTACT_NAME = "Rafael Puerto"
 CONTACT_EMAIL = "r.puerto@umh.es"
 
 
-def list_local_apps(folder):
-    """Recorre folder buscando .html/.htm con metadatos data-app-title."""
+def list_local_apps(root):
+    """Recorre cada carpeta de app en la raíz (salvo las excluidas)
+    buscando .html/.htm con metadatos data-app-title."""
     apps = []
-    for root, _, files in os.walk(folder):
-        for fn in files:
-            if not fn.lower().endswith((".html", ".htm")):
-                continue
-            full = os.path.join(root, fn)
-            rel = os.path.relpath(full, folder).replace(os.sep, "/")
-            with open(full, encoding="utf-8", errors="replace") as f:
-                content = f.read()
-            meta = extract_app_metadata(content)
-            if meta is None:
-                continue
-            apps.append((rel, meta))
+    for entry in sorted(os.listdir(root)):
+        full_dir = os.path.join(root, entry)
+        if entry.startswith(".") or entry in EXCLUDE_DIRS:
+            continue
+        if not os.path.isdir(full_dir):
+            continue
+        for dirpath, _, files in os.walk(full_dir):
+            for fn in files:
+                if not fn.lower().endswith((".html", ".htm")):
+                    continue
+                full = os.path.join(dirpath, fn)
+                rel = os.path.relpath(full, root).replace(os.sep, "/")
+                with open(full, encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                meta = extract_app_metadata(content)
+                if meta is None:
+                    continue
+                apps.append((rel, meta))
     return apps
 
 
 def path_to_url(pages_owner, pages_repo, rel):
     owner_lc = pages_owner.lower()
-    base = f"https://{owner_lc}.github.io/{pages_repo}/artifacts"
+    base = f"https://{owner_lc}.github.io/{pages_repo}"
     if rel == "index.html":
         return f"{base}/"
     if rel.endswith("/index.html"):
@@ -54,7 +66,7 @@ def main():
         sys.exit(1)
     pages_owner, pages_repo = pages_owner_repo.split("/", 1)
 
-    local_apps = list_local_apps(FOLDER)
+    local_apps = list_local_apps(ROOT)
     if not local_apps:
         print("No se encontraron apps con metadatos de catálogo; no se actualiza el portal.")
         return

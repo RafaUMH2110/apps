@@ -3,8 +3,9 @@ name: Sync artifacts portal (appindex)
 on:
   push:
     branches: ["main"]
-    paths:
-      - "artifacts/**"
+    paths-ignore:
+      - "appindex/**"
+      - ".github/**"
   workflow_dispatch:
 
 permissions:

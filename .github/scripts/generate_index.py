@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from portal_render import extract_app_metadata, render_portal_html
 
 FOLDER = "artifacts"
-OUT_PATH = "appindex/artifacts/index.html"
+OUT_PATH = "appindex/index.html"
 TITLE = "Herramientas de IA para la Docencia (HIAD)"
 SUBTITLE = "Aplicaciones de inteligencia artificial para diseño de moda, generación de contenido y automatización de procesos académicos."
 EYEBROW = "RafaUMH2110 · UMH"

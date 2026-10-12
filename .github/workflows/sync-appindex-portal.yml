@@ -22,6 +22,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add appindex/artifacts/index.html
+          git add appindex/index.html
           git diff --cached --quiet || git commit -m "Update artifacts portal (auto-sync)"
           git push

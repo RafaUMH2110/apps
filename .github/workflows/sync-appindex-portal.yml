@@ -1,0 +1,27 @@
+name: Sync artifacts portal (appindex)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "artifacts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-portal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate portal
+        run: python3 .github/scripts/generate_index.py
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appindex/artifacts/index.html
+          git diff --cached --quiet || git commit -m "Update artifacts portal (auto-sync)"
+          git push

@@ -1,1 +1,2 @@
-# apps
+# Artifacts
+Artifacts Claude

@@ -33,6 +33,7 @@ persona que la usa.
 | [TelemetriaWU Monitor](https://rafaumh2110.github.io/apps/telemetriawumonitor/) | Segunda app de la serie TelemetriaWU: sondeo continuo con backoff automático ante errores, lecturas en tarjetas gráficas con minigráficos en tiempo real, histórico de sesión y exportación a CSV. |
 | [TelemetriaWU Histórico](https://rafaumh2110.github.io/apps/telemetriawuhistorico/) | Tercera app de la serie TelemetriaWU: igual que TelemetriaWU Monitor, pero con histórico PERSISTENTE guardado en IndexedDB (sobrevive a recargar la página), con retención configurable, purga automática y exportación a CSV de todo el histórico guardado. |
 | [TelemetriaWU MQTT](https://rafaumh2110.github.io/apps/telemetriawumqtt/) | Cuarta app de la serie TelemetriaWU: igual que TelemetriaWU Histórico, añadiendo publicación de cada lectura en un topic MQTT sobre WebSocket (broker, topic, usuario/contraseña, QoS y retain configurables), con estado de conexión, contadores y registro de actividad independientes del sondeo. |
+| [TelemetriaWU Gráficos](https://rafaumh2110.github.io/apps/telemetriawugraficos/) | Quinta app de la serie TelemetriaWU, a partir de TelemetriaWU Monitor: sustituye los minigráficos por gráficos de líneas a tamaño completo que muestran la evolución de cada parámetro (temperatura y punto de rocío, viento y racha, humedad, presión, lluvia), con leyenda, cursor cruzado con tooltip y navegación por teclado; histórico de sesión y exportación a CSV. |
 
 ## Estructura del repositorio
 

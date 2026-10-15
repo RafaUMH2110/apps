@@ -9,6 +9,7 @@ OpenAI, Google Gemini y/o fal.ai con la clave que introduce la propia
 persona que la usa.
 
 **Portal con el catálogo completo:** https://rafaumh2110.github.io/apps/appindex/
+**Versión alternativa, agrupada por tema (moda, telemetría...):** https://rafaumh2110.github.io/apps/appindex/temas/
 
 ## Apps
 
@@ -62,10 +63,12 @@ URL en GitHub Pages queda limpia:
 - **GitHub Pages** (`deploy-artifacts-pages.yml`): cada `push` a `main`
   publica todo el repositorio en https://rafaumh2110.github.io/apps/.
 - **Portal** (`sync-appindex-portal.yml`): cada `push` que modifique una
-  carpeta de app regenera `appindex/index.html` a partir de los
-  metadatos (`data-app-title`, `data-app-description`, `data-categories`,
-  `data-tags`) declarados en la etiqueta `<body>` de cada app, y hace
-  commit del resultado automáticamente. No requiere ningún secreto:
+  carpeta de app regenera `appindex/index.html` (versión principal) y
+  `appindex/temas/index.html` (versión alternativa, agrupada por tema) a
+  partir de los metadatos (`data-app-title`, `data-app-description`,
+  `data-categories`, `data-tags`) declarados en la etiqueta `<body>` de
+  cada app, y hace commit del resultado automáticamente. No requiere
+  ningún secreto:
   todo ocurre dentro de este mismo repositorio.
 
 ## Despliegue en un servidor propio (Apache)

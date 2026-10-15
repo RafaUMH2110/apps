@@ -44,6 +44,7 @@ def list_local_apps(root):
                 meta = extract_app_metadata(content)
                 if meta is None:
                     continue
+                meta["group"] = rel.split("/")[0]
                 apps.append((rel, meta))
     return apps
 

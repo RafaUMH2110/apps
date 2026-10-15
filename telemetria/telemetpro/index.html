@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F2237">
+<title>TeleMet Pro · Monitor en vivo de tu estación meteorológica</title>
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, con sondeo continuo, backoff automático y un panel editorial con glosario, luz de estado y ajustes avanzados plegables.">
+<meta name="author" content="Rafael Puerto">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E4572E'/%3E%3Cstop offset='1' stop-color='%230E7C6B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath d='M9 20a4 4 0 0 1 .6-7.96A6 6 0 0 1 21 14.5a4 4 0 0 1-1 7.5H9z' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M12 24l-1 2M16 24l-1 2M20 24l-1 2' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Marca — constante en claro y oscuro */
+  --brasa:#E4572E; --brasa-osc:#C9441F;
+  --forjado:#0E7C6B;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-dew:#0E7C6B; --c-rain:#3FA7D6;
+  --r:14px;
+  --display:'Bricolage Grotesque',Georgia,serif;
+  --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme: light dark;
+
+  /* Superficie — modo claro */
+  --ink:#0F2237; --muted:#5D7691;
+  --page-bg:#F3F6FA; --card-bg:#FFFFFF;
+  --line:#D8E0E9; --line-2:#E8EEF4;
+  --steel:#2E4B6B; --steel-soft:#7C93AC;
+  --panel-dark:#0F2237; --on-dark:#EAF1F7; --on-dark-muted:#8FA7BE; --panel-line:#3E5C7D;
+  --brasa-suave:#FDEBE4; --forjado-suave:#E0F3EE; --aviso-ink:#8A3617;
+  --tip-bg:#FFF8E6; --tip-bd:#F3DDA0; --tip-ink:#6B4E00; --tip-ico:#C98200;
+  --sombra:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
+  --sombra-alta:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EAF1F7; --muted:#92ACC4;
+    --page-bg:#0B1420; --card-bg:#121C2B;
+    --line:#223247; --line-2:#1A2638;
+    --steel:#9CB7D6; --steel-soft:#51708F;
+    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
+    --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
+    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC;
+    --forjado:#1FBE9F;
+    --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
+    --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--ink);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:84px}
+a{color:var(--steel)}
+:focus-visible{outline:3px solid var(--brasa);outline-offset:2px;border-radius:6px}
+svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1px 5px;border-radius:5px}
+
+/* Barra superior */
+.topbar{position:sticky;top:0;z-index:40;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 6px 24px -14px rgba(0,0,0,.6)}
+.tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
+.logo em{font-style:normal;color:var(--brasa)}
+.logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brasa),var(--forjado));display:grid;place-items:center;color:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tb-btn:hover{border-color:var(--brasa);color:var(--on-dark)}
+@media(max-width:560px){.tb-btn .lbl{display:none}}
+
+/* Luz de estado (semáforo del monitor) */
+.light{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.light .bulbo{width:12px;height:12px;border-radius:50%;background:#B8C5D3;box-shadow:0 0 0 4px rgba(184,197,211,.3);flex:none;transition:all .2s}
+.light[data-s="ok"] .bulbo{background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.25);animation:pulso 1.3s ease-in-out infinite}
+.light[data-s="warn"] .bulbo{background:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.25)}
+.light[data-s="err"] .bulbo{background:var(--brasa);box-shadow:0 0 0 4px rgba(228,87,46,.25)}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.35}}
+.topbar .light{color:var(--on-dark-muted)}
+.topbar .light .ltxt{display:none}
+@media(min-width:720px){.topbar .light .ltxt{display:inline}}
+
+main{max-width:1100px;margin:0 auto;padding:26px 16px 10px}
+
+/* Hero */
+.hero{background:var(--panel-dark);color:var(--on-dark);border-radius:22px;padding:38px 36px;position:relative;overflow:hidden;margin-bottom:26px;box-shadow:var(--sombra-alta)}
+.hero::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(228,87,46,.5),transparent 65%)}
+.hero::after{content:"";position:absolute;left:25%;bottom:-140px;width:380px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(14,140,122,.35),transparent 65%)}
+.hero>*{position:relative;z-index:1}
+@media(max-width:600px){.hero{padding:26px 20px;border-radius:18px}}
+.eyebrow{font:600 11.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-dark-muted);margin:0 0 12px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;letter-spacing:-.03em;margin:0 0 14px}
+.hero h1 em{font-style:normal;color:var(--brasa)}
+.hero p.lede{max-width:62ch;font-size:16.5px;color:var(--on-dark-muted);margin:0 0 20px}
+.hero .actions .btn-ghost{background:transparent;color:#fff;border-color:var(--panel-line)}
+.hero .actions .btn-ghost:hover{border-color:#fff}
+.draft{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.8px}
+.draft:empty{display:none}
+
+/* Encabezados de sección */
+.sh{display:flex;gap:16px;align-items:flex-start;margin:34px 0 18px}
+.sh:first-of-type{margin-top:4px}
+.sh-ico{width:52px;height:52px;border-radius:15px;background:var(--c,var(--brasa));color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 10px 20px -12px var(--c,var(--brasa))}
+.sh-ico svg{width:26px;height:26px}
+.sh-step{font:600 11.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel-soft);margin:3px 0}
+.sh h2{font-family:var(--display);font-weight:800;font-size:clamp(21px,3vw,27px);letter-spacing:-.02em;line-height:1.1;margin:0 0 4px}
+.sh-lede{margin:0;color:var(--muted);font-size:14.5px;max-width:72ch}
+@media(max-width:560px){.sh-ico{width:42px;height:42px;border-radius:12px}.sh-ico svg{width:21px;height:21px}}
+
+.card{background:var(--card-bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sombra);padding:20px;margin-bottom:16px}
+.card h3{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 4px}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+label{display:block;font-size:13.5px;font-weight:700;margin:0 0 6px;color:var(--steel)}
+.field{margin-bottom:16px}
+.help{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--texto);font-size:14.5px;color:var(--ink);background:var(--card-bg);transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--steel-soft);box-shadow:0 0 0 4px rgba(124,147,172,.18)}
+input:disabled{background:var(--line-2);color:var(--muted);cursor:not-allowed}
+input::placeholder{color:var(--steel-soft)}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1;font-family:var(--mono);font-size:13.5px}
+.eye{width:44px;flex:none;border:1.5px solid var(--line);background:var(--card-bg);border-radius:10px;color:var(--steel);display:grid;place-items:center;cursor:pointer}
+.eye:hover{border-color:var(--steel-soft)}
+
+button{font-family:var(--texto);cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-weight:700;font-size:14.5px;border:1.5px solid transparent;padding:10px 17px;transition:transform .08s,background .15s,border-color .15s;line-height:1.2}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--brasa);color:#fff;box-shadow:0 8px 18px -10px var(--brasa)}
+.btn-primary:hover:not(:disabled){background:var(--brasa-osc)}
+.btn-big{font-size:16px;padding:13px 22px;border-radius:13px}
+.btn-dark{background:var(--panel-dark);color:var(--on-dark)}
+.btn-dark:hover:not(:disabled){opacity:.88}
+.btn-ghost{background:var(--card-bg);border-color:var(--line);color:var(--steel)}
+.btn-ghost:hover:not(:disabled){border-color:var(--steel-soft)}
+.btn-ok{background:var(--forjado);color:#fff}
+.btn-ok:hover:not(:disabled){filter:brightness(.92)}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.tip{display:flex;gap:11px;background:var(--tip-bg);border:1px solid var(--tip-bd);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--tip-ink);margin-bottom:16px}
+.tip svg{width:20px;height:20px;color:var(--tip-ico);flex:none;margin-top:1px}
+.aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
+.aviso svg{width:20px;height:20px;flex:none;margin-top:1px}
+.okbox{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forjado);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
+
+/* Acordeón de ajustes avanzados */
+.acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--steel)}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.acc .inner{padding-top:14px}
+
+/* Estadísticas */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
+.stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
+.stat span{font-size:12px;color:var(--muted)}
+
+.progreso{height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+.progreso-fill{height:100%;width:0;background:var(--brasa);transition:width .25s linear}
+.progreso-etiqueta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Tarjetas de métricas */
+.datos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:4px}
+.feat{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:14px 15px;border-top:4px solid var(--c)}
+.feat .fi{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,var(--card-bg));color:var(--c);display:grid;place-items:center;margin-bottom:9px}
+.feat .fi svg{width:18px;height:18px}
+.feat .etiqueta{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+.feat .valor{font-family:var(--display);font-size:21px;font-weight:700;margin-top:2px;display:flex;align-items:baseline;gap:5px}
+.feat .unidad{font-size:12px;color:var(--muted);margin-left:1px;font-family:var(--texto);font-weight:400}
+.feat .tendencia{display:inline-flex;align-items:center}
+.feat .tendencia svg{width:15px;height:15px}
+.feat .tendencia.subida{color:#16A34A}
+.feat .tendencia.bajada{color:var(--brasa)}
+.feat .tendencia.estable{color:var(--steel-soft)}
+.sparkline{width:100%;height:28px;display:block;margin-top:7px}
+.sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.tile-calidad{grid-column:1/-1}
+
+.meta-linea{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+/* Histórico */
+.historial-vacio{color:var(--muted);font-size:13.5px;font-style:italic}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px;font-family:var(--mono)}
+table.t th{background:var(--panel-dark);color:var(--on-dark);text-align:left;padding:9px 10px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line-2)}
+table.t tr:nth-child(even) td{background:var(--page-bg)}
+.historial-envoltorio{max-height:260px;overflow-y:auto}
+
+/* Barra inferior fija */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
+.bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.bn-in .light{flex:1;min-width:0}
+@media(max-width:480px){.bn-in .btn .lbl{display:none}}
+
+/* Modal glosario */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(15,34,55,.55);display:none;align-items:flex-start;justify-content:center;padding:8vh 16px;overflow:auto}
+.modal.on{display:flex}
+.modal-box{background:var(--card-bg);border-radius:18px;max-width:640px;width:100%;box-shadow:var(--sombra-alta);overflow:hidden}
+.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--panel-dark);color:var(--on-dark)}
+.modal-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1}
+.modal-head button{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark);border-radius:9px;padding:6px 10px}
+.modal-body{padding:18px 20px 22px}
+.glos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.glos{grid-template-columns:1fr}}
+.glos div{background:var(--page-bg);border-radius:12px;padding:12px 14px}
+.glos b{display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+.glos span{font-size:13px;color:var(--muted)}
+
+footer.app-footer{max-width:1100px;margin:0 auto;padding:18px 16px 0;font-size:12.5px;color:var(--muted)}
+footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
+.firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
+</style>
+</head>
+<body data-app-title="TeleMet Pro" data-app-description="Monitor en vivo de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network, con un rediseño editorial inspirado en una paleta de tipo 'forja' (tipografía Bricolage Grotesque + Instrument Sans, tarjetas con icono y color por variable, luz de estado persistente, glosario de términos, visibilidad de la API Key y ajustes avanzados plegables). Mismo motor que TeleMet: sondeo continuo con backoff automático, tiempo límite configurable, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial" data-client-only="true">
+
+<!--
+  ============================================================================
+  TeleMet Pro — Notas de diseño y configuración
+  ============================================================================
+
+  QUÉ ES ESTA APP
+  Misma lógica de sondeo que TeleMet (apps/telemetria/telemet), con un
+  rediseño completo de la interfaz en un estilo editorial tipo "forja":
+  paleta de tinta/acero/brasa/forjado, tipografía Bricolage Grotesque
+  (titulares) + Instrument Sans (texto) + JetBrains Mono (cifras/código),
+  tarjetas con icono y borde de color por variable meteorológica, una luz
+  de estado (semáforo) que se mantiene visible en la barra superior y en
+  una barra inferior fija, visibilidad de la API Key, ajustes avanzados
+  plegables (acordeón) y un glosario emergente de los términos propios
+  de la app (Freshness, tendencia, backoff, comprobación de plausibilidad).
+
+  El sondeo sigue viviendo en el navegador (setTimeout): solo funciona
+  mientras esta pestaña permanece abierta.
+
+  1) ESTACIÓN Y API KEY
+     Station ID / API Key se guardan con las mismas claves de
+     localStorage que el resto de la familia TelemetriaWU
+     (wu_station_id / wu_api_key): si ya las configuraste en otra app de
+     la familia, aparecerán aquí automáticamente. Los ajustes propios de
+     esta app (intervalo, backoff, tiempo límite, nº de puntos) usan su
+     propio prefijo ("telemetpro_"), independiente del resto.
+
+  2) QUÉ CONSTANTES EDITAR (buscar en el <script> final)
+     - BASE_URL: el endpoint de la API.
+     - DEFAULTS: valores por defecto de intervalo, backoff, tiempo límite
+       de petición, umbral de "stale" y longitud del histórico.
+     - SANITY_CHECK: rangos físicamente plausibles para el aviso de
+       valor sospechoso (cubre las siete variables graficadas).
+     - GRAFICABLES: qué variable se dibuja, con qué icono y qué color
+       (var(--c-xxx) definida en :root).
+     - MAX_FILAS_TABLA: filas que conserva el histórico antes de
+       descartar las más antiguas.
+  ============================================================================
+-->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m10 8 6 4-6 4z"></path></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"></path></symbol>
+  <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"></path></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 15a8.5 8.5 0 1 1 17 0"></path><path d="M12 15l3.3-3.3"></path><circle cx="12" cy="15" r="1.3"></circle></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 4.22-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.9 19.9 0 0 1-2.22 3.2M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"></path></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="tb-in">
+    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-cloud"></use></svg></span><span>TeleMet <em>Pro</em></span></button>
+    <div class="tb-right">
+      <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
+      <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="hero">
+    <p class="eyebrow">ESTACIÓN PERSONAL · WEATHER UNDERGROUND / EARTH NETWORK</p>
+    <h1>Tu estación, <em>en vivo</em></h1>
+    <p class="lede">Sondeo continuo de tu estación meteorológica personal (Vevor YT60234 u otra compatible), con backoff automático, tiempo límite configurable y un aviso claro en cuanto algo no cuadra.</p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-big" id="btnIrConfig"><svg class="i"><use href="#i-sliders"></use></svg>Configurar mi estación</button>
+      <button type="button" class="btn btn-ghost btn-big" id="btnHelp2"><svg class="i"><use href="#i-help"></use></svg>¿Qué significa cada término?</button>
+    </div>
+    <div class="draft" id="draftEstacion"></div>
+  </div>
+
+  <div class="tip" style="margin-bottom:22px">
+    <svg class="i"><use href="#i-alert"></use></svg>
+    <span><strong>Aviso:</strong> el sondeo solo funciona mientras esta pestaña permanece abierta; no es un proceso en segundo plano, así que se detiene si la cierras o recargas la página.</span>
+  </div>
+
+  <!-- ============ SECCIÓN 1 · CONFIGURACIÓN ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="seccionConfig"><div class="sh-ico"><svg class="i"><use href="#i-sliders"></use></svg></div><div><p class="sh-step">01 · Antes de empezar</p><h2>Configuración</h2><p class="sh-lede">El Station ID y la API Key se guardan solo en este navegador. Los campos se bloquean mientras el monitor está en marcha.</p></div></header>
+
+  <div class="card">
+    <h3>Estación</h3>
+    <p class="sub">El identificador de tu estación en wunderground.com (My Profile → My Devices).</p>
+    <div class="grid2">
+      <div class="field">
+        <label for="stationIdInput">Station ID</label>
+        <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="apiKeyInput">API Key (opcional)</label>
+        <div class="keyrow">
+          <input type="password" id="apiKeyInput" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
+          <button type="button" class="eye" id="btnVerApiKey" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Sondeo</h3>
+    <p class="sub">Cada cuánto se consulta la API y cuántos puntos recientes se muestran en los minigráficos.</p>
+    <div class="grid2">
+      <div class="field">
+        <label for="pollIntervalInput">Intervalo de sondeo (s)</label>
+        <input type="number" id="pollIntervalInput" min="5" step="1" value="60">
+      </div>
+      <div class="field">
+        <label for="historyLenInput">Puntos en los minigráficos</label>
+        <input type="number" id="historyLenInput" min="5" max="200" step="1" value="40">
+      </div>
+    </div>
+
+    <details class="acc">
+      <summary><svg class="i"><use href="#i-sliders"></use></svg>Ajustes avanzados<svg class="i chev"><use href="#i-down"></use></svg></summary>
+      <div class="inner">
+        <div class="grid2">
+          <div class="field">
+            <label for="requestTimeoutInput">Tiempo límite de la petición (s)</label>
+            <input type="number" id="requestTimeoutInput" min="3" step="1" value="15">
+            <p class="help">Si la API no responde en este tiempo, se cancela y se trata como error transitorio.</p>
+          </div>
+          <div class="field">
+            <label for="staleThresholdInput">Umbral de dato obsoleto (s)</label>
+            <input type="number" id="staleThresholdInput" min="5" step="5" value="120">
+            <p class="help">A partir de cuántos segundos de antigüedad una lectura se marca como obsoleta.</p>
+          </div>
+          <div class="field">
+            <label for="backoffBaseInput">Backoff inicial (s)</label>
+            <input type="number" id="backoffBaseInput" min="0.5" step="0.5" value="2">
+            <p class="help">Espera tras el primer error transitorio; se duplica en cada reintento.</p>
+          </div>
+          <div class="field">
+            <label for="backoffMaxInput">Backoff máximo (s)</label>
+            <input type="number" id="backoffMaxInput" min="5" step="5" value="300">
+            <p class="help">Tope de espera entre reintentos, por muchos que se acumulen.</p>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-dark" id="btnGuardarConfig"><svg class="i"><use href="#i-check"></use></svg>Guardar</button>
+      <button type="button" class="btn btn-ghost" id="btnBorrarConfig"><svg class="i"><use href="#i-trash"></use></svg>Borrar de este navegador</button>
+    </div>
+    <div class="okbox" id="estadoConfig" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración guardada en este navegador</span></div>
+  </div>
+
+  <!-- ============ SECCIÓN 2 · CONTROL Y ESTADO ============ -->
+  <header class="sh" style="--c:#E4572E"><div class="sh-ico"><svg class="i"><use href="#i-activity"></use></svg></div><div><p class="sh-step">02 · El motor</p><h2>Control y estado</h2><p class="sh-lede">Primera lectura inmediata y, a partir de ahí, una cada «intervalo de sondeo» segundos, con tiempo límite y reintento automático ante fallos transitorios.</p></div></header>
+
+  <div class="card">
+    <div class="actions">
+      <button type="button" class="btn btn-ok" id="btnIniciar" disabled><svg class="i"><use href="#i-play"></use></svg>Iniciar monitor</button>
+      <button type="button" class="btn btn-primary" id="btnDetener" disabled><svg class="i"><use href="#i-pause"></use></svg>Detener</button>
+      <div class="light" id="luzEstado" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTexto">Detenido</span></div>
+    </div>
+
+    <div class="progreso"><div class="progreso-fill" id="progresoFill"></div></div>
+    <div class="progreso-etiqueta" id="progresoEtiqueta" aria-live="polite">Sin actividad.</div>
+
+    <div class="stats">
+      <div class="stat"><b id="contLecturas">0</b><span>Lecturas recibidas</span></div>
+      <div class="stat"><b id="contReintentos">0</b><span>Reintentos actuales</span></div>
+      <div class="stat"><b id="contLatencia">—</b><span>Latencia última (ms)</span></div>
+    </div>
+
+    <div class="aviso" id="errorBox" role="alert" style="display:none"><svg class="i"><use href="#i-alert"></use></svg><span id="errorTexto"></span></div>
+    <div class="aviso" id="avisoPlausibilidad" role="alert" style="display:none"><svg class="i"><use href="#i-alert"></use></svg><span>Alguno de los valores de la última lectura está fuera de un rango físicamente plausible; revisa la estación o la conexión antes de confiar en ella.</span></div>
+  </div>
+
+  <!-- ============ SECCIÓN 3 · LECTURAS EN TIEMPO REAL ============ -->
+  <header class="sh" style="--c:#0E7C6B"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">03 · Ahora mismo</p><h2>Lecturas en tiempo real</h2><p class="sh-lede">Cada tarjeta muestra el último valor, su tendencia frente a la lectura anterior y un minigráfico con las lecturas recientes de esta sesión.</p></div></header>
+
+  <p class="meta-linea" id="metaLinea" aria-live="polite">Última lectura: — · Freshness: —</p>
+
+  <div class="datos-grid" id="datosGrid">
+    <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para incluir icono, color y sparkline -->
+  </div>
+
+  <div class="datos-grid" style="margin-top:12px">
+    <div class="feat tile-calidad" style="--c:#2E4B6B">
+      <div class="fi"><svg class="i"><use href="#i-check"></use></svg></div>
+      <div class="etiqueta">Calidad del dato (qualityControlFlag)</div>
+      <div class="valor" id="valorCalidad">—</div>
+    </div>
+  </div>
+
+  <!-- ============ SECCIÓN 4 · HISTÓRICO DE LA SESIÓN ============ -->
+  <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Histórico de esta sesión</h2><p class="sh-lede">Se reinicia al recargar la página; no se guarda en ningún sitio. Se conservan como máximo las últimas <span id="maxFilasTexto">500</span> lecturas.</p></div></header>
+
+  <div class="card">
+    <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
+    <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
+      <table class="t">
+        <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Freshness</th><th>Estado</th></tr></thead>
+        <tbody id="historialCuerpo"></tbody>
+      </table>
+    </div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnDescargarCSV" disabled><svg class="i"><use href="#i-download"></use></svg>Descargar histórico (CSV)</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnLimpiarHistorial" disabled><svg class="i"><use href="#i-trash"></use></svg>Limpiar histórico</button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  <hr>
+  <p>TeleMet Pro — misma base de TeleMet, con un rediseño editorial (tipografía Bricolage Grotesque + Instrument Sans, luz de estado persistente, glosario y ajustes avanzados plegables). Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026, 22:26</p>
+</footer>
+
+<div class="bottomnav">
+  <div class="bn-in">
+    <div class="light" id="luzEstadoBar" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoBar">Monitor detenido</span></div>
+    <button type="button" class="btn btn-ok btn-sm" id="btnIniciarBar" disabled><svg class="i"><use href="#i-play"></use></svg><span class="lbl">Iniciar</span></button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnDetenerBar" disabled><svg class="i"><use href="#i-pause"></use></svg><span class="lbl">Detener</span></button>
+  </div>
+</div>
+
+<div class="modal" id="modalGlosario">
+  <div class="modal-box">
+    <div class="modal-head"><svg class="i"><use href="#i-help"></use></svg><h2>Glosario</h2><button type="button" id="modalCerrar" aria-label="Cerrar"><svg class="i"><use href="#i-x"></use></svg></button></div>
+    <div class="modal-body">
+      <div class="glos">
+        <div><b>Station ID</b><span>El identificador de tu estación en wunderground.com (My Profile → My Devices).</span></div>
+        <div><b>API Key</b><span>Clave opcional que algunas cuentas de Weather Underground exigen para leer datos. Se envía como parámetro de la URL, nunca como cabecera.</span></div>
+        <div><b>Freshness</b><span>Segundos transcurridos entre el instante en que la estación registró la lectura y el instante actual. Si supera el umbral configurado, la lectura se marca como obsoleta ("stale").</span></div>
+        <div><b>Tendencia (▲ ▼ —)</b><span>Compara el último valor de cada variable con el anterior: sube, baja o se mantiene estable.</span></div>
+        <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
+        <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+
+  // Mismas claves de localStorage que el resto de la familia TelemetriaWU.
+  const STORAGE_KEY_STATION = 'wu_station_id';
+  const STORAGE_KEY_APIKEY  = 'wu_api_key';
+  // Claves propias de TeleMet Pro, independientes de TeleMet y del resto.
+  const STORAGE_KEY_POLL      = 'telemetpro_poll_interval_s';
+  const STORAGE_KEY_TIMEOUT   = 'telemetpro_request_timeout_s';
+  const STORAGE_KEY_BACKOFF_B = 'telemetpro_backoff_base_s';
+  const STORAGE_KEY_BACKOFF_M = 'telemetpro_backoff_max_s';
+  const STORAGE_KEY_STALE     = 'telemetpro_stale_threshold_s';
+  const STORAGE_KEY_HISTLEN   = 'telemetpro_history_len';
+
+  const DEFAULTS = {
+    pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
+    staleThresholdS: 120, historyLen: 40
+  };
+
+  const MAX_FILAS_TABLA = 500;
+
+  const SANITY_CHECK = {
+    temp_c:        { min: -60,  max: 60   },
+    humidity_pct:  { min: 0,    max: 100  },
+    pressure_hpa:  { min: 850,  max: 1085 },
+    wind_kmh:      { min: 0,    max: 250  },
+    gust_kmh:      { min: 0,    max: 300  },
+    dewpoint_c:    { min: -60,  max: 50   },
+    rainrate_mmh:  { min: 0,    max: 500  }
+  };
+
+  // Variable, icono y color (debe existir como var(--c-xxx) en :root).
+  const GRAFICABLES = [
+    { key: 'temp_c',       etiqueta: 'Temperatura',    unidad: '°C',   icono: 'thermometer', color: 'var(--c-temp)' },
+    { key: 'humidity_pct', etiqueta: 'Humedad',        unidad: '%',    icono: 'droplet',     color: 'var(--c-hum)'  },
+    { key: 'pressure_hpa', etiqueta: 'Presión',        unidad: 'hPa',  icono: 'gauge',       color: 'var(--c-pres)' },
+    { key: 'wind_kmh',     etiqueta: 'Viento',         unidad: 'km/h', icono: 'wind',        color: 'var(--c-wind)' },
+    { key: 'gust_kmh',     etiqueta: 'Racha',          unidad: 'km/h', icono: 'wind',        color: 'var(--c-gust)' },
+    { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C',   icono: 'droplet',     color: 'var(--c-dew)'  },
+    { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h', icono: 'cloud-rain',  color: 'var(--c-rain)' }
+  ];
+
+  const UMBRAL_TENDENCIA = 0.05;
+
+  /* ============================================================
+     ELEMENTOS DEL DOM
+     ============================================================ */
+  const stationIdInput    = document.getElementById('stationIdInput');
+  const apiKeyInput        = document.getElementById('apiKeyInput');
+  const btnVerApiKey       = document.getElementById('btnVerApiKey');
+  const pollIntervalInput  = document.getElementById('pollIntervalInput');
+  const requestTimeoutInput = document.getElementById('requestTimeoutInput');
+  const historyLenInput    = document.getElementById('historyLenInput');
+  const backoffBaseInput   = document.getElementById('backoffBaseInput');
+  const backoffMaxInput    = document.getElementById('backoffMaxInput');
+  const staleThresholdInput = document.getElementById('staleThresholdInput');
+  const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
+  const btnBorrarConfig    = document.getElementById('btnBorrarConfig');
+  const estadoConfig       = document.getElementById('estadoConfig');
+  const draftEstacion      = document.getElementById('draftEstacion');
+
+  const btnIniciar  = document.getElementById('btnIniciar');
+  const btnDetener  = document.getElementById('btnDetener');
+  const btnIniciarBar = document.getElementById('btnIniciarBar');
+  const btnDetenerBar = document.getElementById('btnDetenerBar');
+  const luces = [
+    { el: document.getElementById('luzEstado'),    txt: document.getElementById('luzTexto') },
+    { el: document.getElementById('luzEstadoTop'), txt: document.getElementById('luzTextoTop') },
+    { el: document.getElementById('luzEstadoBar'), txt: document.getElementById('luzTextoBar') }
+  ];
+  const progresoFill = document.getElementById('progresoFill');
+  const progresoEtiqueta = document.getElementById('progresoEtiqueta');
+  const contLecturas = document.getElementById('contLecturas');
+  const contReintentos = document.getElementById('contReintentos');
+  const contLatencia = document.getElementById('contLatencia');
+  const errorBox = document.getElementById('errorBox');
+  const errorTexto = document.getElementById('errorTexto');
+  const avisoPlausibilidad = document.getElementById('avisoPlausibilidad');
+  const metaLinea = document.getElementById('metaLinea');
+  const datosGrid = document.getElementById('datosGrid');
+  const valorCalidad = document.getElementById('valorCalidad');
+
+  const historialVacio = document.getElementById('historialVacio');
+  const historialEnvoltorio = document.getElementById('historialEnvoltorio');
+  const historialCuerpo = document.getElementById('historialCuerpo');
+  const btnDescargarCSV = document.getElementById('btnDescargarCSV');
+  const btnLimpiarHistorial = document.getElementById('btnLimpiarHistorial');
+
+  const btnIrConfig = document.getElementById('btnIrConfig');
+  const btnHelp = document.getElementById('btnHelp');
+  const btnHelp2 = document.getElementById('btnHelp2');
+  const modalGlosario = document.getElementById('modalGlosario');
+  const modalCerrar = document.getElementById('modalCerrar');
+  const goHome = document.getElementById('goHome');
+  const toast = document.getElementById('toast');
+
+  document.getElementById('maxFilasTexto').textContent = MAX_FILAS_TABLA;
+
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
+
+  /* ============================================================
+     ESTADO EN MEMORIA
+     ============================================================ */
+  let running = false;
+  let retryCount = 0;
+  let lecturasRecibidas = 0;
+  let timeoutId = null;
+  let countdownIntervalId = null;
+  let toastTimeoutId = null;
+  let activo = null;
+  const series = {};
+  const ultimoValor = {};
+  const filasHistorial = [];
+
+  GRAFICABLES.forEach(m => { series[m.key] = []; ultimoValor[m.key] = null; });
+
+  /* ============================================================
+     CONSTRUCCIÓN DE LAS TARJETAS DE MÉTRICA (una vez, al cargar)
+     ============================================================ */
+  function construirTarjetas(){
+    datosGrid.innerHTML = '';
+    GRAFICABLES.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'feat';
+      div.id = 'tile-' + m.key;
+      div.style.setProperty('--c', m.color);
+      div.innerHTML =
+        '<div class="fi"><svg class="i"><use href="#i-' + m.icono + '"></use></svg></div>' +
+        '<div class="etiqueta">' + m.etiqueta + '</div>' +
+        '<div class="valor"><span class="valor-num">—</span><span class="unidad">' + m.unidad + '</span><span class="tendencia estable" aria-hidden="true"></span></div>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""/></svg>' +
+        '<div class="rango-minmax">mín — · máx —</div>';
+      datosGrid.appendChild(div);
+    });
+  }
+
+  /* ============================================================
+     UTILIDADES DE INTERFAZ
+     ============================================================ */
+  function mostrarToast(mensaje){
+    toast.textContent = mensaje;
+    toast.classList.add('on');
+    if (toastTimeoutId) clearTimeout(toastTimeoutId);
+    toastTimeoutId = setTimeout(() => toast.classList.remove('on'), 2600);
+  }
+
+  function abrirModal(){ modalGlosario.classList.add('on'); }
+  function cerrarModal(){ modalGlosario.classList.remove('on'); }
+
+  /* ============================================================
+     CONFIGURACIÓN (localStorage)
+     ============================================================ */
+  function leerNumero(input, porDefecto){
+    const v = parseFloat(input.value);
+    return Number.isFinite(v) && v > 0 ? v : porDefecto;
+  }
+
+  function cargarConfig(){
+    stationIdInput.value = localStorage.getItem(STORAGE_KEY_STATION) || '';
+    apiKeyInput.value = localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+    pollIntervalInput.value = localStorage.getItem(STORAGE_KEY_POLL) || DEFAULTS.pollIntervalS;
+    requestTimeoutInput.value = localStorage.getItem(STORAGE_KEY_TIMEOUT) || DEFAULTS.requestTimeoutS;
+    backoffBaseInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_B) || DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_M) || DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = localStorage.getItem(STORAGE_KEY_STALE) || DEFAULTS.staleThresholdS;
+    historyLenInput.value = localStorage.getItem(STORAGE_KEY_HISTLEN) || DEFAULTS.historyLen;
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+  }
+
+  function guardarConfig(){
+    const stationId = stationIdInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    if (stationId) localStorage.setItem(STORAGE_KEY_STATION, stationId);
+    else localStorage.removeItem(STORAGE_KEY_STATION);
+    if (apiKey) localStorage.setItem(STORAGE_KEY_APIKEY, apiKey);
+    else localStorage.removeItem(STORAGE_KEY_APIKEY);
+    localStorage.setItem(STORAGE_KEY_POLL, leerNumero(pollIntervalInput, DEFAULTS.pollIntervalS));
+    localStorage.setItem(STORAGE_KEY_TIMEOUT, leerNumero(requestTimeoutInput, DEFAULTS.requestTimeoutS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_B, leerNumero(backoffBaseInput, DEFAULTS.backoffBaseS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_M, leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS));
+    localStorage.setItem(STORAGE_KEY_STALE, leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS));
+    localStorage.setItem(STORAGE_KEY_HISTLEN, leerNumero(historyLenInput, DEFAULTS.historyLen));
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+    mostrarToast('Configuración guardada en este navegador.');
+  }
+
+  function borrarConfig(){
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN]
+      .forEach(k => localStorage.removeItem(k));
+    stationIdInput.value = '';
+    apiKeyInput.value = '';
+    pollIntervalInput.value = DEFAULTS.pollIntervalS;
+    requestTimeoutInput.value = DEFAULTS.requestTimeoutS;
+    backoffBaseInput.value = DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = DEFAULTS.staleThresholdS;
+    historyLenInput.value = DEFAULTS.historyLen;
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+    mostrarToast('Configuración borrada de este navegador.');
+  }
+
+  function actualizarEstadoConfig(){
+    const guardado = !!localStorage.getItem(STORAGE_KEY_STATION);
+    estadoConfig.style.display = guardado ? 'inline-flex' : 'none';
+    draftEstacion.innerHTML = guardado
+      ? '<svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración ya guardada para la estación <b>' + localStorage.getItem(STORAGE_KEY_STATION) + '</b>.</span>'
+      : '';
+  }
+
+  function actualizarEstadoBotonIniciar(){
+    if (running) return;
+    const vacio = stationIdInput.value.trim().length === 0;
+    btnIniciar.disabled = vacio;
+    btnIniciarBar.disabled = vacio;
+  }
+
+  /* ============================================================
+     CONSTRUCCIÓN DE URL
+     ============================================================ */
+  function construirURL(stationId, apiKey){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm' });
+    // La apiKey va siempre como parámetro de URL, nunca como cabecera HTTP:
+    // una cabecera propia obligaría a un preflight CORS que esta API no supera.
+    if (apiKey) params.set('apiKey', apiKey);
+    return BASE_URL + '?' + params.toString();
+  }
+
+  function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
+  function fmt(valor){ return (valor === null || valor === undefined) ? '—' : String(valor); }
+
+  function esPlausible(t){
+    for (const campo of Object.keys(SANITY_CHECK)){
+      const valor = t[campo];
+      if (valor === null || valor === undefined) continue;
+      const rango = SANITY_CHECK[campo];
+      if (valor < rango.min || valor > rango.max) return false;
+    }
+    return true;
+  }
+
+  /* ============================================================
+     PETICIÓN CON TIEMPO LÍMITE (AbortController)
+     ============================================================ */
+  async function fetchConTimeout(url, timeoutMs){
+    const controller = new AbortController();
+    const idTimeout = setTimeout(() => controller.abort(), timeoutMs);
+    try { return await fetch(url, { signal: controller.signal }); }
+    finally { clearTimeout(idTimeout); }
+  }
+
+  /* ============================================================
+     MINIGRÁFICOS (SPARKLINES)
+     ============================================================ */
+  function actualizarSparkline(key){
+    const valoresBrutos = series[key];
+    const valores = valoresBrutos.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+    const svg = document.querySelector('#tile-' + key + ' .sparkline');
+    const polyline = svg.querySelector('polyline');
+    const rangoEl = document.querySelector('#tile-' + key + ' .rango-minmax');
+
+    if (valores.length < 2){
+      polyline.setAttribute('points', '');
+      rangoEl.textContent = 'mín — · máx —';
+      return;
+    }
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    const rango = (max - min) || 1;
+    const w = 100, h = 30, pad = 3;
+    const puntos = valores.map((v, i) => {
+      const x = pad + (i / (valores.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((v - min) / rango) * (h - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    polyline.setAttribute('points', puntos);
+    rangoEl.textContent = 'mín ' + min.toFixed(1) + ' · máx ' + max.toFixed(1);
+  }
+
+  function registrarEnSeries(t){
+    const historyLen = (activo && activo.historyLen) || DEFAULTS.historyLen;
+    GRAFICABLES.forEach(m => {
+      series[m.key].push(numOrNull(t[m.key]));
+      if (series[m.key].length > historyLen) series[m.key].shift();
+      actualizarSparkline(m.key);
+    });
+  }
+
+  /* ============================================================
+     TENDENCIA (▲ / ▼ / —) RESPECTO A LA LECTURA ANTERIOR
+     ============================================================ */
+  function iconoTendencia(clase){
+    if (clase === 'subida') return '<svg class="i"><use href="#i-up"></use></svg>';
+    if (clase === 'bajada') return '<svg class="i"><use href="#i-down"></use></svg>';
+    return '—';
+  }
+
+  function actualizarTendencia(key, valorNuevo){
+    const el = document.querySelector('#tile-' + key + ' .tendencia');
+    const anterior = ultimoValor[key];
+    let clase = 'estable';
+    if (valorNuevo !== null && valorNuevo !== undefined && Number.isFinite(valorNuevo) &&
+        anterior !== null && anterior !== undefined){
+      const diff = valorNuevo - anterior;
+      if (diff > UMBRAL_TENDENCIA) clase = 'subida';
+      else if (diff < -UMBRAL_TENDENCIA) clase = 'bajada';
+    }
+    el.className = 'tendencia ' + clase;
+    el.innerHTML = iconoTendencia(clase);
+    el.setAttribute('aria-label', clase === 'subida' ? 'en subida' : clase === 'bajada' ? 'en bajada' : 'estable');
+    if (valorNuevo !== null && valorNuevo !== undefined && Number.isFinite(valorNuevo)) ultimoValor[key] = valorNuevo;
+  }
+
+  /* ============================================================
+     PINTADO DE VALORES ACTUALES
+     ============================================================ */
+  function pintarValoresActuales(t){
+    GRAFICABLES.forEach(m => {
+      const el = document.querySelector('#tile-' + m.key + ' .valor-num');
+      el.textContent = fmt(t[m.key]);
+      actualizarTendencia(m.key, t[m.key]);
+    });
+    valorCalidad.textContent = fmt(t.quality_code);
+    metaLinea.textContent = 'Última lectura: ' + new Date().toLocaleTimeString('es-ES') +
+      ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';
+    contLatencia.textContent = t.latency_ms.toFixed(0);
+  }
+
+  /* ============================================================
+     HISTÓRICO DE SESIÓN (tabla + CSV)
+     ============================================================ */
+  function anadirAlHistorial(t, staleThresholdS){
+    historialVacio.style.display = 'none';
+    historialEnvoltorio.style.display = 'block';
+    btnDescargarCSV.disabled = false;
+    btnLimpiarHistorial.disabled = false;
+
+    const registro = Object.assign({ hora: new Date().toISOString() }, t);
+    filasHistorial.push(registro);
+    if (filasHistorial.length > MAX_FILAS_TABLA) filasHistorial.shift();
+
+    const estadoTexto = t.staleness_s <= staleThresholdS ? 'En línea' : 'Stale';
+    const fila = document.createElement('tr');
+    fila.innerHTML =
+      '<td>' + new Date().toLocaleTimeString('es-ES') + '</td>' +
+      '<td>' + fmt(t.temp_c) + '</td>' +
+      '<td>' + fmt(t.humidity_pct) + '</td>' +
+      '<td>' + fmt(t.pressure_hpa) + '</td>' +
+      '<td>' + fmt(t.wind_kmh) + '</td>' +
+      '<td>' + t.staleness_s.toFixed(1) + 's</td>' +
+      '<td>' + estadoTexto + '</td>';
+    historialCuerpo.appendChild(fila);
+    if (historialCuerpo.children.length > MAX_FILAS_TABLA) historialCuerpo.removeChild(historialCuerpo.firstChild);
+    historialEnvoltorio.scrollTop = historialEnvoltorio.scrollHeight;
+  }
+
+  function limpiarHistorial(){
+    filasHistorial.length = 0;
+    historialCuerpo.innerHTML = '';
+    historialVacio.style.display = 'block';
+    historialEnvoltorio.style.display = 'none';
+    btnDescargarCSV.disabled = true;
+    btnLimpiarHistorial.disabled = true;
+    mostrarToast('Histórico de esta sesión borrado.');
+  }
+
+  function descargarCSV(){
+    if (filasHistorial.length === 0) return;
+    const columnas = ['hora', 'temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'dewpoint_c', 'rainrate_mmh', 'quality_code', 'staleness_s', 'latency_ms'];
+    const lineas = [columnas.join(',')];
+    filasHistorial.forEach(r => {
+      lineas.push(columnas.map(c => {
+        const v = r[c];
+        return (v === null || v === undefined) ? '' : String(v).replace(/,/g, '.');
+      }).join(','));
+    });
+    // BOM UTF-8 al principio para que Excel no descoloque los acentos.
+    const blob = new Blob(['﻿' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const estacion = (activo && activo.stationId) || 'estacion';
+    const fecha = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = 'telemetpro-' + estacion + '-' + fecha + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     BARRA DE PROGRESO / CUENTA ATRÁS
+     ============================================================ */
+  function iniciarCuentaAtras(delayMs, etiqueta){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    const inicio = Date.now();
+    const fin = inicio + delayMs;
+    progresoFill.style.width = '0%';
+    function tick(){
+      const ahora = Date.now();
+      const transcurrido = ahora - inicio;
+      const pct = Math.min(100, (transcurrido / delayMs) * 100);
+      progresoFill.style.width = pct.toFixed(1) + '%';
+      const restante = Math.max(0, (fin - ahora) / 1000);
+      progresoEtiqueta.textContent = etiqueta + ' en ' + restante.toFixed(0) + ' s';
+      if (ahora >= fin) clearInterval(countdownIntervalId);
+    }
+    tick();
+    countdownIntervalId = setInterval(tick, 250);
+  }
+
+  function detenerCuentaAtras(textoFinal){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    progresoFill.style.width = '0%';
+    progresoEtiqueta.textContent = textoFinal;
+  }
+
+  /* ============================================================
+     LUZ DE ESTADO Y BOTONES (sincronizados: card + barra inferior)
+     ============================================================ */
+  function fijarLuz(estado, texto){
+    luces.forEach(l => { l.el.dataset.s = estado; l.txt.textContent = texto; });
+  }
+
+  function setBotonesIniciarDetener(iniciarDisabled, detenerDisabled){
+    btnIniciar.disabled = iniciarDisabled;
+    btnIniciarBar.disabled = iniciarDisabled;
+    btnDetener.disabled = detenerDisabled;
+    btnDetenerBar.disabled = detenerDisabled;
+  }
+
+  function mostrarError(mensaje){
+    errorTexto.textContent = mensaje;
+    errorBox.style.display = 'flex';
+  }
+
+  function ocultarError(){
+    errorBox.style.display = 'none';
+    errorTexto.textContent = '';
+  }
+
+  /* ============================================================
+     MOTOR DEL MONITOR
+     ============================================================ */
+  async function cicloConsulta(){
+    if (!running || !activo) return;
+
+    const url = construirURL(activo.stationId, activo.apiKey);
+    const inicio = performance.now();
+    let response;
+    try {
+      response = await fetchConTimeout(url, activo.requestTimeoutMs);
+    } catch (err) {
+      const motivo = (err && err.name === 'AbortError')
+        ? 'tiempo límite de ' + (activo.requestTimeoutMs / 1000).toFixed(0) + ' s agotado'
+        : 'fallo de red (¿bloqueador de contenido o conexión caída?)';
+      programarReintento(motivo);
+      return;
+    }
+    const latenciaMs = performance.now() - inicio;
+
+    if (response.status === 401){ pararMonitor('fatal', '401: API Key inválida o no autorizada.'); return; }
+    if (response.status === 404){ pararMonitor('fatal', '404: Station ID no encontrado o endpoint obsoleto.'); return; }
+    if (!response.ok){ programarReintento('HTTP ' + response.status); return; }
+
+    let data;
+    try { data = await response.json(); }
+    catch (err) { programarReintento('respuesta no es JSON válido'); return; }
+
+    const obs = (data.observations || [])[0];
+    if (!obs){
+      fijarLuz('ok', 'En ejecución (sin datos nuevos)');
+      programarSiguienteCicloOrdinario();
+      return;
+    }
+
+    retryCount = 0;
+    contReintentos.textContent = '0';
+    ocultarError();
+
+    const metric = obs.metric || {};
+    const ahoraMs = Date.now();
+    const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
+    const stalenessS = (ahoraMs - obsMs) / 1000;
+
+    const t = {
+      temp_c: numOrNull(metric.temp),
+      humidity_pct: numOrNull(obs.humidity),
+      pressure_hpa: numOrNull(metric.pressure),
+      wind_kmh: numOrNull(metric.windSpeed),
+      gust_kmh: numOrNull(metric.windGust),
+      dewpoint_c: numOrNull(obs.dewpoint),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      quality_code: (obs.qualityControlFlag !== undefined && obs.qualityControlFlag !== null) ? obs.qualityControlFlag : 'N/A',
+      staleness_s: stalenessS,
+      latency_ms: latenciaMs
+    };
+
+    lecturasRecibidas += 1;
+    contLecturas.textContent = lecturasRecibidas;
+
+    pintarValoresActuales(t);
+    registrarEnSeries(t);
+    anadirAlHistorial(t, activo.staleThresholdS);
+
+    if (!esPlausible(t)) avisoPlausibilidad.style.display = 'flex';
+    else avisoPlausibilidad.style.display = 'none';
+
+    if (stalenessS <= activo.staleThresholdS) fijarLuz('ok', 'En ejecución');
+    else fijarLuz('warn', 'En ejecución (dato stale)');
+
+    programarSiguienteCicloOrdinario();
+  }
+
+  function programarSiguienteCicloOrdinario(){
+    if (!running) return;
+    iniciarCuentaAtras(activo.pollIntervalMs, 'Próxima consulta');
+    timeoutId = setTimeout(cicloConsulta, activo.pollIntervalMs);
+  }
+
+  function programarReintento(motivo){
+    if (!running) return;
+    retryCount += 1;
+    contReintentos.textContent = retryCount;
+    const delayMs = Math.min(activo.backoffBaseMs * Math.pow(2, retryCount - 1), activo.backoffMaxMs);
+    mostrarError('Error transitorio (' + motivo + '). Reintento ' + retryCount + ' en ' + (delayMs / 1000).toFixed(1) + ' s.');
+    fijarLuz('warn', 'Reintentando (intento ' + retryCount + ')');
+    iniciarCuentaAtras(delayMs, 'Reintento ' + retryCount);
+    timeoutId = setTimeout(cicloConsulta, delayMs);
+  }
+
+  function pararMonitor(tipo, motivo){
+    running = false;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = null;
+    detenerCuentaAtras(tipo === 'fatal' ? 'Monitor detenido por error fatal.' : 'Monitor detenido.');
+
+    if (tipo === 'fatal'){
+      mostrarError(motivo);
+      fijarLuz('err', 'Detenido: error fatal');
+    } else {
+      fijarLuz('off', 'Detenido');
+    }
+
+    setBotonesIniciarDetener(stationIdInput.value.trim().length === 0, true);
+    INPUTS_CONFIG.forEach(i => { i.disabled = false; });
+  }
+
+  function iniciarMonitor(){
+    const stationId = stationIdInput.value.trim();
+    if (!stationId) return;
+
+    activo = {
+      stationId: stationId,
+      apiKey: apiKeyInput.value.trim(),
+      pollIntervalMs: leerNumero(pollIntervalInput, DEFAULTS.pollIntervalS) * 1000,
+      requestTimeoutMs: leerNumero(requestTimeoutInput, DEFAULTS.requestTimeoutS) * 1000,
+      backoffBaseMs: leerNumero(backoffBaseInput, DEFAULTS.backoffBaseS) * 1000,
+      backoffMaxMs: leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS) * 1000,
+      staleThresholdS: leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS),
+      historyLen: Math.round(leerNumero(historyLenInput, DEFAULTS.historyLen))
+    };
+
+    running = true;
+    retryCount = 0;
+    contReintentos.textContent = '0';
+    ocultarError();
+    avisoPlausibilidad.style.display = 'none';
+
+    setBotonesIniciarDetener(true, false);
+    INPUTS_CONFIG.forEach(i => { i.disabled = true; });
+    fijarLuz('ok', 'En ejecución');
+    progresoEtiqueta.textContent = 'Realizando la primera consulta…';
+
+    cicloConsulta();
+  }
+
+  function detenerMonitor(){ pararMonitor('manual', null); }
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+  btnGuardarConfig.addEventListener('click', guardarConfig);
+  btnBorrarConfig.addEventListener('click', borrarConfig);
+  stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);
+  btnIniciar.addEventListener('click', iniciarMonitor);
+  btnDetener.addEventListener('click', detenerMonitor);
+  btnIniciarBar.addEventListener('click', iniciarMonitor);
+  btnDetenerBar.addEventListener('click', detenerMonitor);
+  btnDescargarCSV.addEventListener('click', descargarCSV);
+  btnLimpiarHistorial.addEventListener('click', limpiarHistorial);
+
+  btnVerApiKey.addEventListener('click', () => {
+    const mostrar = apiKeyInput.type === 'password';
+    apiKeyInput.type = mostrar ? 'text' : 'password';
+    btnVerApiKey.setAttribute('aria-pressed', String(mostrar));
+    btnVerApiKey.innerHTML = '<svg class="i"><use href="#i-' + (mostrar ? 'eye-off' : 'eye') + '"></use></svg>';
+  });
+
+  btnIrConfig.addEventListener('click', () => {
+    document.getElementById('seccionConfig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  goHome.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  btnHelp.addEventListener('click', abrirModal);
+  btnHelp2.addEventListener('click', abrirModal);
+  modalCerrar.addEventListener('click', cerrarModal);
+  modalGlosario.addEventListener('click', (e) => { if (e.target === modalGlosario) cerrarModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); });
+
+  construirTarjetas();
+  cargarConfig();
+})();
+</script>
+</body>
+</html>

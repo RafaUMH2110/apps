@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DetectIApdf — Análisis forense de documentos PDF</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAzMiAzMic+CjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgcng9JzgnIGZpbGw9JyMyZjZmYjAnLz4KPHJlY3QgeD0nNycgeT0nNScgd2lkdGg9JzE0JyBoZWlnaHQ9JzE5JyByeD0nMS42JyBmaWxsPSd3aGl0ZScvPgo8cmVjdCB4PSc5LjUnIHk9JzkuNScgd2lkdGg9JzgnIGhlaWdodD0nMS42JyByeD0nMC44JyBmaWxsPScjMmY2ZmIwJy8+CjxyZWN0IHg9JzkuNScgeT0nMTMnIHdpZHRoPSc4JyBoZWlnaHQ9JzEuNicgcng9JzAuOCcgZmlsbD0nIzJmNmZiMCcvPgo8cmVjdCB4PSc5LjUnIHk9JzE2LjUnIHdpZHRoPSc1LjUnIGhlaWdodD0nMS42JyByeD0nMC44JyBmaWxsPScjMmY2ZmIwJy8+CjxjaXJjbGUgY3g9JzIyLjUnIGN5PScyMicgcj0nNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjEnLz4KPGxpbmUgeDE9JzI1LjMnIHkxPScyNC44JyB4Mj0nMjcuOCcgeTI9JzI3LjMnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nMi4zJyBzdHJva2UtbGluZWNhcD0ncm91bmQnLz4KPC9zdmc+">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -40,7 +41,7 @@
     color:var(--accent-deep); padding:38px 20px 30px;
     border-bottom:4px solid var(--accent);
   }
-  .header-inner{max-width:760px; margin:0 auto;}
+  .header-inner{max-width:880px; margin:0 auto;}
   .header-inner h1{
     font-family:var(--serif); font-weight:700; font-size:clamp(28px,5vw,38px);
     margin:0 0 6px; letter-spacing:.2px; color:var(--accent-deep);
@@ -51,13 +52,13 @@
   }
 
   .aviso-banner{
-    max-width:760px; margin:20px auto 0; padding:12px 16px;
+    max-width:880px; margin:20px auto 0; padding:12px 16px;
     background:var(--warn-bg); border:1px solid var(--warn-bd); color:var(--warn-fg);
     border-radius:3px; font-size:14px; display:flex; gap:10px; align-items:flex-start;
   }
   .aviso-banner strong{white-space:nowrap;}
 
-  main{max-width:760px; margin:28px auto 0; padding:0 20px;}
+  main{max-width:880px; margin:28px auto 0; padding:0 20px;}
 
   .card{
     background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent);
@@ -186,7 +187,7 @@
   .acciones-informe{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
 
   footer.app-footer{
-    max-width:760px; margin:34px auto 0; padding:0 20px 14px; font-size:12.5px; color:var(--text-muted);
+    max-width:880px; margin:34px auto 0; padding:0 20px 14px; font-size:12.5px; color:var(--text-muted);
   }
   footer.app-footer .firma{
     margin-top:10px; padding-top:10px; border-top:1px solid var(--border);
@@ -368,7 +369,7 @@
 
 <footer class="app-footer">
   DetectIApdf — herramienta de apoyo docente. El análisis se basa en indicios lingüísticos, de metadatos y de estructura; no constituye una prueba concluyente de uso de IA.
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 25 de septiembre de 2026</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026</div>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>

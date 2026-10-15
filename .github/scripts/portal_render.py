@@ -94,7 +94,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   * { box-sizing: border-box; }
   body { margin:0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
   .header { background: linear-gradient(135deg, var(--blue-900), var(--blue-700)); color:#fff; padding: 56px 24px 92px; }
-  .header-inner { max-width: 1100px; margin: 0 auto; text-align: center; }
+  .header-inner { max-width: 1220px; margin: 0 auto; text-align: center; }
   .header-logo { margin: 0 auto 18px; display:block; filter: drop-shadow(0 4px 14px rgba(0,0,0,.18)); }
   .eyebrow { font-size: .85rem; letter-spacing:.03em; opacity:.85; margin-bottom: 14px; }
   .header h1 { font-size: 2.1rem; margin: 0 0 14px; font-weight: 700; }
@@ -102,7 +102,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .stats { display:flex; gap: 44px; flex-wrap:wrap; justify-content: center; }
   .stat-num { font-size: 2rem; font-weight: 700; }
   .stat-label { font-size:.82rem; opacity:.82; }
-  .container { max-width: 1100px; margin: -60px auto 60px; padding: 0 24px; }
+  .container { max-width: 1220px; margin: -60px auto 60px; padding: 0 24px; }
   .searchbar { background:#fff; border:1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 6px 6px 6px 18px; display:flex; align-items:center; gap:10px; }
   .searchbar input { flex:1; border:none; outline:none; font-size:1rem; padding: 12px 0; color: var(--ink); background: transparent; }
   .searchbar svg { color: var(--muted); flex-shrink:0; }

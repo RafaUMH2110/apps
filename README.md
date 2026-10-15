@@ -73,5 +73,4 @@ necesitas.
 
 ## Autor
 
-Rafael Puerto — Universidad Miguel Hernández de Elche (UMH), Grado en
-Gestión, Tecnología y Moda. Contacto: r.puerto@umh.es
+Rafael Puerto — Departamento de Ingeniería de Sistemas y Automática. Universidad Miguel Hernández de Elche (UMH),  Contacto: r.puerto@umh.es

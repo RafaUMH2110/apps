@@ -31,6 +31,7 @@ CATEGORY_INFO = {
     "analisis-datos": {"label": "Análisis de datos", "icon": "bar-chart-3"},
     "programacion": {"label": "Programación", "icon": "code"},
     "productividad": {"label": "Productividad", "icon": "wrench"},
+    "telemetria": {"label": "Telemetría", "icon": "radio-tower"},
 }
 
 

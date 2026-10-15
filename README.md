@@ -15,9 +15,9 @@ persona que la usa.
 | App | Descripción |
 |---|---|
 | [ConSultar](https://rafaumh2110.github.io/apps/consultar/) | Mejora automáticamente tu consulta y la envía a Claude para obtener una respuesta completa en Markdown, exportable a Word o PDF. |
-| [DetectIApdf](https://rafaumh2110.github.io/apps/detectiapdf/) | Analiza hasta 3 documentos PDF y genera un informe forense de indicios de uso de IA en su redacción, con exportación a PDF; pensada para profesorado universitario. |
-| [DetectIApdfOne](https://rafaumh2110.github.io/apps/detectiapdfone/) | Versión de un único documento de DetectIApdf. |
-| [DetectIApdfLite](https://rafaumh2110.github.io/apps/detectiapdflite/) | Versión ligera de DetectIApdfOne: prompt reducido, menos tokens y menor coste en documentos extensos. |
+| [DetectIApdf](https://rafaumh2110.github.io/apps/pdfs/detectiapdf/) | Analiza hasta 3 documentos PDF y genera un informe forense de indicios de uso de IA en su redacción, con exportación a PDF; pensada para profesorado universitario. |
+| [DetectIApdfOne](https://rafaumh2110.github.io/apps/pdfs/detectiapdfone/) | Versión de un único documento de DetectIApdf. |
+| [DetectIApdfLite](https://rafaumh2110.github.io/apps/pdfs/detectiapdflite/) | Versión ligera de DetectIApdfOne: prompt reducido, menos tokens y menor coste en documentos extensos. |
 | [GenImOd](https://rafaumh2110.github.io/apps/moda/genimod/) | Genera imágenes de moda con IA: mejora la idea con Claude, OpenAI o Gemini y crea la imagen final con FLUX (fal.ai). Versión completa, con proveedor, modelos y parámetros configurables. |
 | [GenImOda](https://rafaumh2110.github.io/apps/moda/genimoda/) | Versión de GenImOd para el aula, con opción de omitir la mejora del prompt y modelos/parámetros limitados por el profesor. |
 | [GenImOd — alumnos](https://rafaumh2110.github.io/apps/moda/genimod-alumnos/) | Otra versión de GenImOd para el aula, con modelos y parámetros limitados y fijados por el profesor. |

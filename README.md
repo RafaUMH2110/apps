@@ -29,6 +29,7 @@ persona que la usa.
 | [GenPatModa](https://rafaumh2110.github.io/apps/genpatmoda/) | Versión para alumnos de GenPatMod, con catálogo de modelos y tokens limitados por el profesor. |
 | [SearchLogMod](https://rafaumh2110.github.io/apps/searchlogmod/) | Consulta asistida por IA sobre métodos y logística de empresas de la industria de la moda, con estimación de coste y exportación a Markdown/texto/Word. |
 | [SearchLogModCB](https://rafaumh2110.github.io/apps/searchlogmodcb/) | Versión de SearchLogMod con caché de resultados, caché de prompts de Anthropic y modo por lotes (cola propia o Batch API). |
+| [TelemetriaWU](https://rafaumh2110.github.io/apps/telemetriawu/) | Consulta bajo demanda los datos de una estación meteorológica personal (Vevor YT60234 u otra compatible) dada de alta en Weather Underground / Earth Network, directamente desde el navegador. Primera app de una serie que irá incorporando sondeo continuo, histórico persistente y otras funcionalidades. |
 
 ## Estructura del repositorio
 

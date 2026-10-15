@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TelemetriaWU — Consulta de tu estación personal en Weather Underground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef4fb;
+    --bg-2:#f6fafd;
+    --surface:#ffffff;
+    --surface-2:#e2edf9;
+    --border:#c9dcf0;
+    --border-strong:#9cbfe3;
+    --accent:#2f6fb0;
+    --accent-dark:#1f5590;
+    --accent-deep:#163d68;
+    --ok-bg:#e3f2ea; --ok-fg:#256143; --ok-bd:#a9d4bd;
+    --warn-bg:#fdf1dc; --warn-fg:#8a5a12; --warn-bd:#eac888;
+    --danger-bg:#fbe7e2; --danger-fg:#9c3a26; --danger-bd:#e7ab97;
+    --text:#1b2a3a;
+    --text-muted:#5e7488;
+    --serif:'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --sans:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', 'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); line-height:1.55;
+    padding-bottom:64px;
+  }
+  a{color:var(--accent-dark);}
+  header.app-header{
+    background:linear-gradient(135deg, var(--bg-2), var(--surface-2));
+    color:var(--accent-deep); padding:38px 20px 30px;
+    border-bottom:4px solid var(--accent);
+  }
+  .header-inner{max-width:760px; margin:0 auto;}
+  .header-inner h1{
+    font-family:var(--serif); font-weight:700; font-size:clamp(28px,5vw,38px);
+    margin:0 0 6px; letter-spacing:.2px; color:var(--accent-deep);
+  }
+  .header-inner p{margin:0; color:#3f5a78; font-size:15px; max-width:56ch;}
+  .header-meta{
+    margin-top:16px; font-family:var(--mono); font-size:12px; color:#5c7896;
+  }
+
+  .aviso-banner{
+    max-width:760px; margin:20px auto 0; padding:12px 16px;
+    background:var(--warn-bg); border:1px solid var(--warn-bd); color:var(--warn-fg);
+    border-radius:3px; font-size:14px; display:flex; gap:10px; align-items:flex-start;
+  }
+  .aviso-banner strong{white-space:nowrap;}
+
+  main{max-width:760px; margin:28px auto 0; padding:0 20px;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent);
+    border-radius:2px; margin-bottom:22px; overflow:hidden;
+    box-shadow:0 1px 3px rgba(31,85,144,.06);
+  }
+  .card-tab{
+    font-family:var(--mono); font-size:12px; letter-spacing:.03em; color:var(--accent-dark);
+    background:var(--surface-2); padding:8px 18px; border-bottom:1px solid var(--border);
+  }
+  .card-body{padding:20px 22px 22px;}
+  .card-body h2{
+    font-family:var(--serif); font-size:20px; margin:0 0 4px; font-weight:600; color:var(--accent-deep);
+  }
+  .card-body .subtitle{color:var(--text-muted); font-size:14px; margin:0 0 16px;}
+
+  label{display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; color:var(--accent-deep);}
+  .hint{font-size:12.5px; color:var(--text-muted); margin-top:5px;}
+  input[type="password"], input[type="text"], input[type="number"]{
+    width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:3px;
+    font-family:var(--sans); font-size:14.5px; background:#fdfeff; color:var(--text);
+  }
+  input:focus-visible, button:focus-visible{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  .field{margin-bottom:16px;}
+  .row{display:flex; gap:14px; flex-wrap:wrap;}
+  .row > .field{flex:1 1 200px;}
+
+  .key-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .key-row input{flex:1 1 220px;}
+  .key-status{
+    margin-top:8px; font-size:13px; font-family:var(--mono); display:inline-flex; align-items:center; gap:6px;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dot.ok{background:#2f8a5b;}
+  .dot.off{background:#a8bccf;}
+
+  button{
+    font-family:var(--sans); font-weight:600; font-size:14.5px; cursor:pointer;
+    border-radius:3px; border:1px solid transparent; padding:10px 16px;
+  }
+  button.primario{background:var(--accent); color:#fff; border-color:var(--accent-dark);}
+  button.primario:hover:not(:disabled){background:var(--accent-dark);}
+  button.secundario{background:var(--surface); color:var(--accent-deep); border-color:var(--border-strong);}
+  button.secundario:hover:not(:disabled){background:var(--surface-2);}
+  button.chico{padding:5px 10px; font-size:12.5px; border-radius:3px;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+
+  .consulta-barra{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .estado-badge{
+    font-family:var(--mono); font-size:13px; padding:5px 12px; border-radius:20px;
+    border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text-muted);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .estado-badge .dot{width:9px; height:9px;}
+  .estado-badge.ok{background:var(--ok-bg); color:var(--ok-fg); border-color:var(--ok-bd);}
+  .estado-badge.ok .dot{background:#2f8a5b;}
+  .estado-badge.warn{background:var(--warn-bg); color:var(--warn-fg); border-color:var(--warn-bd);}
+  .estado-badge.warn .dot{background:#b5790f;}
+  .estado-badge.danger{background:var(--danger-bg); color:var(--danger-fg); border-color:var(--danger-bd);}
+  .estado-badge.danger .dot{background:#b5402b;}
+
+  .meta-linea{font-family:var(--mono); font-size:12.5px; color:var(--text-muted); margin-top:10px;}
+
+  .error-box{
+    margin-top:14px; padding:10px 14px; background:var(--danger-bg); border:1px solid var(--danger-bd);
+    color:var(--danger-fg); border-radius:3px; font-size:13.5px; display:none;
+  }
+  .error-box.visible{display:block;}
+
+  .aviso-plausibilidad{
+    margin-top:14px; padding:10px 14px; background:var(--warn-bg); border:1px solid var(--warn-bd);
+    color:var(--warn-fg); border-radius:3px; font-size:13.5px; display:none;
+  }
+  .aviso-plausibilidad.visible{display:block;}
+
+  .datos-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px;
+    margin-top:16px;
+  }
+  .dato-item{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:3px; padding:12px 14px;
+  }
+  .dato-item .etiqueta{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.03em;}
+  .dato-item .valor{font-family:var(--serif); font-size:22px; font-weight:600; color:var(--accent-deep); margin-top:2px;}
+  .dato-item .unidad{font-size:12.5px; color:var(--text-muted); margin-left:3px;}
+
+  .historial-vacio{color:var(--text-muted); font-size:13.5px; font-style:italic;}
+  table.historial{width:100%; border-collapse:collapse; font-size:13px; font-family:var(--mono);}
+  table.historial th, table.historial td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);}
+  table.historial th{color:var(--text-muted); font-weight:600; font-size:11.5px; text-transform:uppercase;}
+  .historial-envoltorio{max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:3px;}
+
+  footer.app-footer{
+    max-width:760px; margin:0 auto; padding:18px 20px 0; color:var(--text-muted); font-size:12.5px;
+  }
+  .firma{margin-top:6px; font-family:var(--mono); font-size:11.5px;}
+</style>
+</head>
+<body data-app-title="TelemetriaWU" data-app-description="Consulta bajo demanda los datos de tu estación meteorológica personal (Vevor YT60234 u otra compatible) dada de alta en Weather Underground / Earth Network: introduce el Station ID y obtén temperatura, humedad, presión, viento y lluvia directamente desde tu navegador." data-categories="automatizacion,analisis-datos,docencia" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores" data-client-only="true">
+
+<!--
+  ============================================================================
+  TelemetriaWU — Notas de configuración
+  ============================================================================
+
+  QUÉ ES ESTA APP
+  Versión web, de un solo fichero HTML y sin backend propio, de los
+  aspectos más básicos de los scripts de Python de este mismo proyecto
+  (wu_telemetria_consulta_simple.py / wu_telemetria_cliente_sincrono.py):
+  una consulta puntual, bajo demanda, a la API pública de Weather
+  Underground / Earth Network para una estación personal (PWS). La
+  petición se hace directamente desde el navegador de quien la usa, con
+  su propio Station ID (y, si su cuenta lo exige, su propia API Key),
+  guardados solo en su localStorage — nunca viajan a ningún servidor
+  propio.
+
+  Es la primera app de una serie: las siguientes irán añadiendo
+  funcionalidades (sondeo continuo, histórico persistente, publicación
+  MQTT, etc.) siguiendo la misma progresión que los scripts de Python.
+
+  1) CÓMO OBTENER EL STATION ID Y LA API KEY
+     - El Station ID es el identificador de tu PWS en Wunderground
+       (formato típico "IXXXXXXX"), visible en wunderground.com →
+       My Profile → My Devices.
+     - La API Key (opcional: muchas cuentas no la necesitan) es la de
+       The Weather Company / IBM; si tu cuenta la exige, la consulta
+       anónima devolverá 401 y tendrás que introducirla.
+
+  2) CÓMO PUBLICAR ESTE FICHERO GRATIS EN GITHUB PAGES
+     - Sube este fichero con el nombre exacto "index.html" a una
+       carpeta de tu repositorio y activa GitHub Pages en esa ruta.
+     - Cada persona que abra la URL introduce su propio Station ID (y
+       su propia API Key, si la necesita); nadie comparte la tuya.
+
+  3) SI LA CONSULTA FALLA SIN MOTIVO APARENTE (POSIBLE CORS)
+     La API de Weather Underground no está pensada principalmente para
+     llamarse desde el navegador de un tercero; si tu navegador bloquea
+     la petición por CORS, esta app lo indicará con un mensaje
+     específico. En ese caso, usa los scripts de Python equivalentes de
+     este mismo repositorio, que no tienen esa limitación.
+
+  4) QUÉ CONSTANTES EDITAR (buscar en el <script> final)
+     - BASE_URL: el endpoint de la API, por si Earth Network lo cambia.
+     - STALE_THRESHOLD_S: segundos a partir de los cuales una lectura
+       se considera "stale" (por defecto 120, igual que en los scripts
+       de Python de este proyecto).
+     - Los rangos de SANITY_CHECK (temperatura, humedad, presión
+       plausibles), también alineados con los scripts de Python.
+  ============================================================================
+-->
+
+<header class="app-header">
+  <div class="header-inner">
+    <h1>TelemetriaWU</h1>
+    <p>Consulta bajo demanda los datos de tu estación meteorológica personal dada de alta en Weather Underground / Earth Network, directamente desde tu navegador.</p>
+    <div class="header-meta">estación personal · Weather Underground / Earth Network · consulta bajo demanda</div>
+  </div>
+</header>
+
+<div class="aviso-banner">
+  <span>⚠️</span>
+  <span><strong>Aviso:</strong> esta app llama directamente a la API de Weather Underground desde tu navegador. Si tu navegador bloquea la petición (CORS) o tu cuenta exige una API Key que no tienes, verás un mensaje explicando el motivo; los scripts de Python de este mismo repositorio no tienen esa limitación.</span>
+</div>
+
+<main>
+
+  <!-- ============ SECCIÓN 1 · CONFIGURACIÓN ============ -->
+  <section class="card" id="seccion-config">
+    <div class="card-tab">01 · CONFIGURACIÓN</div>
+    <div class="card-body">
+      <h2>Tu estación</h2>
+      <p class="subtitle">El Station ID y la API Key se guardan solo en este navegador (localStorage) y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
+
+      <div class="row">
+        <div class="field">
+          <label for="stationIdInput">Station ID</label>
+          <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+          <div class="hint">El identificador de tu estación en wunderground.com (My Profile → My Devices).</div>
+        </div>
+        <div class="field">
+          <label for="apiKeyInput">API Key (opcional)</label>
+          <input type="password" id="apiKeyInput" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
+          <div class="hint">Déjala en blanco para probar primero en modo anónimo.</div>
+        </div>
+      </div>
+
+      <div class="key-row">
+        <button type="button" class="primario" id="btnGuardarConfig">Guardar</button>
+        <button type="button" class="secundario" id="btnBorrarConfig">Borrar de este navegador</button>
+      </div>
+      <div class="key-status" id="estadoConfig"><span class="dot off"></span><span>Sin guardar</span></div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 2 · CONSULTA ============ -->
+  <section class="card" id="seccion-consulta">
+    <div class="card-tab">02 · CONSULTA</div>
+    <div class="card-body">
+      <h2>Lectura actual</h2>
+      <p class="subtitle">Una única consulta puntual, tal y como hace <code>wu_telemetria_consulta_simple.py</code>: pulsa el botón cada vez que quieras una lectura nueva.</p>
+
+      <div class="consulta-barra">
+        <button type="button" class="primario" id="btnConsultar" disabled>Consultar ahora</button>
+        <span class="estado-badge" id="estadoBadge"><span class="dot off"></span><span>Sin consultar todavía</span></span>
+      </div>
+      <div class="meta-linea" id="metaLinea">Latencia: — · Frescura: —</div>
+
+      <div class="error-box" id="errorBox"></div>
+      <div class="aviso-plausibilidad" id="avisoPlausibilidad">⚠ Alguno de los valores recibidos está fuera de un rango físicamente plausible; revisa la estación o la conexión antes de confiar en esta lectura.</div>
+
+      <div class="datos-grid" id="datosGrid">
+        <div class="dato-item"><div class="etiqueta">Temperatura</div><div class="valor">—<span class="unidad">°C</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Humedad</div><div class="valor">—<span class="unidad">%</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Presión</div><div class="valor">—<span class="unidad">hPa</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Viento</div><div class="valor">—<span class="unidad">km/h</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Racha</div><div class="valor">—<span class="unidad">km/h</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Punto de rocío</div><div class="valor">—<span class="unidad">°C</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Lluvia</div><div class="valor">—<span class="unidad">mm/h</span></div></div>
+        <div class="dato-item"><div class="etiqueta">Calidad</div><div class="valor">—</div></div>
+      </div>
+
+      <div class="key-row" style="margin-top:16px;">
+        <button type="button" class="secundario chico" id="btnCopiarJSON" disabled>Copiar como JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 3 · HISTÓRICO DE LA SESIÓN ============ -->
+  <section class="card" id="seccion-historial">
+    <div class="card-tab">03 · HISTÓRICO DE ESTA SESIÓN</div>
+    <div class="card-body">
+      <h2>Consultas realizadas</h2>
+      <p class="subtitle">Se reinicia al recargar la página; no se guarda en ningún sitio.</p>
+      <div id="historialVacio" class="historial-vacio">Todavía no has hecho ninguna consulta.</div>
+      <div class="historial-envoltorio" id="historialEnvoltorio" style="display:none;">
+        <table class="historial">
+          <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Frescura</th><th>Estado</th></tr></thead>
+          <tbody id="historialCuerpo"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  TelemetriaWU — primera versión de la serie, con la funcionalidad más básica (consulta puntual bajo demanda). Las siguientes apps de esta familia irán añadiendo sondeo continuo, histórico persistente y otras funcionalidades.
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const APP_NAME = 'TelemetriaWU';
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+  const STORAGE_KEY_STATION = 'wu_station_id';
+  const STORAGE_KEY_APIKEY  = 'wu_api_key';
+  const STALE_THRESHOLD_S = 120;
+
+  // Mismos rangos de plausibilidad física que wu_telemetria_cliente_sincrono.py
+  const SANITY_CHECK = {
+    temp_c:        { min: -60,  max: 60   },
+    humidity_pct:  { min: 0,    max: 100  },
+    pressure_hpa:  { min: 850,  max: 1085 }
+  };
+
+  /* ============================================================
+     ELEMENTOS DEL DOM
+     ============================================================ */
+  const stationIdInput   = document.getElementById('stationIdInput');
+  const apiKeyInput       = document.getElementById('apiKeyInput');
+  const btnGuardarConfig  = document.getElementById('btnGuardarConfig');
+  const btnBorrarConfig   = document.getElementById('btnBorrarConfig');
+  const estadoConfig      = document.getElementById('estadoConfig');
+
+  const btnConsultar      = document.getElementById('btnConsultar');
+  const estadoBadge       = document.getElementById('estadoBadge');
+  const metaLinea         = document.getElementById('metaLinea');
+  const errorBox          = document.getElementById('errorBox');
+  const avisoPlausibilidad = document.getElementById('avisoPlausibilidad');
+  const datosGrid         = document.getElementById('datosGrid');
+  const btnCopiarJSON     = document.getElementById('btnCopiarJSON');
+
+  const historialVacio      = document.getElementById('historialVacio');
+  const historialEnvoltorio = document.getElementById('historialEnvoltorio');
+  const historialCuerpo     = document.getElementById('historialCuerpo');
+
+  let ultimaTelemetria = null;
+
+  /* ============================================================
+     CONFIGURACIÓN (localStorage)
+     ============================================================ */
+  function cargarConfig(){
+    const stationId = localStorage.getItem(STORAGE_KEY_STATION) || '';
+    const apiKey = localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+    stationIdInput.value = stationId;
+    apiKeyInput.value = apiKey;
+    actualizarEstadoConfig();
+    actualizarEstadoBotonConsultar();
+  }
+
+  function guardarConfig(){
+    const stationId = stationIdInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    if (stationId) localStorage.setItem(STORAGE_KEY_STATION, stationId);
+    else localStorage.removeItem(STORAGE_KEY_STATION);
+    if (apiKey) localStorage.setItem(STORAGE_KEY_APIKEY, apiKey);
+    else localStorage.removeItem(STORAGE_KEY_APIKEY);
+    actualizarEstadoConfig();
+    actualizarEstadoBotonConsultar();
+  }
+
+  function borrarConfig(){
+    localStorage.removeItem(STORAGE_KEY_STATION);
+    localStorage.removeItem(STORAGE_KEY_APIKEY);
+    stationIdInput.value = '';
+    apiKeyInput.value = '';
+    actualizarEstadoConfig();
+    actualizarEstadoBotonConsultar();
+  }
+
+  function actualizarEstadoConfig(){
+    const guardado = !!localStorage.getItem(STORAGE_KEY_STATION);
+    estadoConfig.innerHTML = guardado
+      ? '<span class="dot ok"></span><span>Configuración guardada en este navegador</span>'
+      : '<span class="dot off"></span><span>Sin guardar</span>';
+  }
+
+  function actualizarEstadoBotonConsultar(){
+    btnConsultar.disabled = stationIdInput.value.trim().length === 0;
+  }
+
+  /* ============================================================
+     CONSULTA A LA API
+     ============================================================ */
+  function construirURL(stationId){
+    const params = new URLSearchParams({
+      stationId: stationId,
+      format: 'json',
+      numericPrecision: 'decimal',
+      units: 'm'
+    });
+    return BASE_URL + '?' + params.toString();
+  }
+
+  function mostrarError(mensaje){
+    errorBox.textContent = mensaje;
+    errorBox.classList.add('visible');
+    estadoBadge.className = 'estado-badge danger';
+    estadoBadge.innerHTML = '<span class="dot"></span><span>Error</span>';
+  }
+
+  function ocultarError(){
+    errorBox.classList.remove('visible');
+    errorBox.textContent = '';
+  }
+
+  function esPlausible(telemetria){
+    for (const campo of Object.keys(SANITY_CHECK)){
+      const valor = telemetria[campo];
+      if (valor === null || valor === undefined) continue;
+      const rango = SANITY_CHECK[campo];
+      if (valor < rango.min || valor > rango.max) return false;
+    }
+    return true;
+  }
+
+  async function consultar(){
+    ocultarError();
+    avisoPlausibilidad.classList.remove('visible');
+    btnConsultar.disabled = true;
+    const textoOriginalBoton = btnConsultar.textContent;
+    btnConsultar.textContent = 'Consultando…';
+
+    const stationId = stationIdInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    const headers = apiKey ? { 'x-api-key': apiKey } : {};
+    const url = construirURL(stationId);
+
+    const inicio = performance.now();
+    let response;
+    try {
+      response = await fetch(url, { headers: headers });
+    } catch (err) {
+      mostrarError('No se pudo contactar con la API. Puede deberse a que tu red bloquea la petición, a que el servicio está caído, o a que la API de Weather Underground no permite llamadas directas desde el navegador (CORS) para tu cuenta. Si el problema persiste, usa el script equivalente de Python de este mismo repositorio (wu_telemetria_consulta_simple.py), que no tiene esta limitación.');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+    const latenciaMs = performance.now() - inicio;
+
+    if (response.status === 401){
+      mostrarError('401: acceso denegado. ¿Falta la API Key, o es inválida?');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+    if (response.status === 404){
+      mostrarError('404: Station ID no encontrado, endpoint obsoleto, o incidente en los servidores de Earth Network ("Brutus").');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+    if (!response.ok){
+      mostrarError('HTTP ' + response.status + ' inesperado.');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      mostrarError('La respuesta no es JSON válido (posible página de error HTML de Earth Network).');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+
+    const obs = (data.observations || [])[0];
+    if (!obs){
+      mostrarError('Respuesta recibida correctamente, pero sin observaciones (la estación puede no estar subiendo datos en este momento).');
+      restaurarBoton(textoOriginalBoton);
+      return;
+    }
+
+    const metric = obs.metric || {};
+    const ahoraMs = Date.now();
+    const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
+    const stalenessS = (ahoraMs - obsMs) / 1000;
+
+    const telemetria = {
+      temp_c: numOrNull(metric.temp),
+      humidity_pct: numOrNull(obs.humidity),
+      pressure_hpa: numOrNull(metric.pressure),
+      wind_kmh: numOrNull(metric.windSpeed),
+      gust_kmh: numOrNull(metric.windGust),
+      dewpoint_c: numOrNull(obs.dewpoint),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      quality_code: (obs.qualityControlFlag !== undefined && obs.qualityControlFlag !== null) ? obs.qualityControlFlag : 'N/A',
+      staleness_s: stalenessS,
+      latency_ms: latenciaMs
+    };
+
+    ultimaTelemetria = telemetria;
+    pintarDatos(telemetria);
+    actualizarBadgeEstado(telemetria);
+    if (!esPlausible(telemetria)) avisoPlausibilidad.classList.add('visible');
+    anadirAlHistorial(telemetria);
+    btnCopiarJSON.disabled = false;
+
+    restaurarBoton(textoOriginalBoton);
+  }
+
+  function restaurarBoton(texto){
+    btnConsultar.textContent = texto;
+    btnConsultar.disabled = stationIdInput.value.trim().length === 0;
+  }
+
+  function numOrNull(v){
+    return (v === undefined || v === null) ? null : v;
+  }
+
+  function fmt(valor){
+    return (valor === null || valor === undefined) ? '—' : String(valor);
+  }
+
+  function pintarDatos(t){
+    const items = datosGrid.querySelectorAll('.dato-item .valor');
+    const valores = [t.temp_c, t.humidity_pct, t.pressure_hpa, t.wind_kmh, t.gust_kmh, t.dewpoint_c, t.rainrate_mmh, t.quality_code];
+    items.forEach((el, i) => {
+      const unidad = el.querySelector('.unidad');
+      el.childNodes[0].nodeValue = fmt(valores[i]);
+      if (unidad) el.appendChild(unidad); // fmt() machaca el texto; reinserta la unidad
+    });
+    metaLinea.textContent = 'Latencia: ' + t.latency_ms.toFixed(0) + ' ms · Frescura: ' + t.staleness_s.toFixed(1) + ' s';
+  }
+
+  function actualizarBadgeEstado(t){
+    if (t.staleness_s <= STALE_THRESHOLD_S){
+      estadoBadge.className = 'estado-badge ok';
+      estadoBadge.innerHTML = '<span class="dot"></span><span>En línea</span>';
+    } else {
+      estadoBadge.className = 'estado-badge warn';
+      estadoBadge.innerHTML = '<span class="dot"></span><span>Stale (&gt;' + STALE_THRESHOLD_S + 's)</span>';
+    }
+  }
+
+  function anadirAlHistorial(t){
+    historialVacio.style.display = 'none';
+    historialEnvoltorio.style.display = 'block';
+    const fila = document.createElement('tr');
+    const hora = new Date().toLocaleTimeString('es-ES');
+    const estadoTexto = t.staleness_s <= STALE_THRESHOLD_S ? 'En línea' : 'Stale';
+    fila.innerHTML =
+      '<td>' + hora + '</td>' +
+      '<td>' + fmt(t.temp_c) + '</td>' +
+      '<td>' + fmt(t.humidity_pct) + '</td>' +
+      '<td>' + fmt(t.pressure_hpa) + '</td>' +
+      '<td>' + t.staleness_s.toFixed(1) + 's</td>' +
+      '<td>' + estadoTexto + '</td>';
+    historialCuerpo.appendChild(fila);
+    historialEnvoltorio.scrollTop = historialEnvoltorio.scrollHeight;
+  }
+
+  async function copiarComoJSON(){
+    if (!ultimaTelemetria) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(ultimaTelemetria, null, 2));
+      const textoOriginal = btnCopiarJSON.textContent;
+      btnCopiarJSON.textContent = '¡Copiado!';
+      setTimeout(() => { btnCopiarJSON.textContent = textoOriginal; }, 1500);
+    } catch (err) {
+      mostrarError('No se pudo copiar al portapapeles: ' + err.message);
+    }
+  }
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+  btnGuardarConfig.addEventListener('click', guardarConfig);
+  btnBorrarConfig.addEventListener('click', borrarConfig);
+  stationIdInput.addEventListener('input', actualizarEstadoBotonConsultar);
+  btnConsultar.addEventListener('click', consultar);
+  btnCopiarJSON.addEventListener('click', copiarComoJSON);
+
+  cargarConfig();
+})();
+</script>
+</body>
+</html>

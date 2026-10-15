@@ -32,6 +32,7 @@ persona que la usa.
 | [TelemetriaWU](https://rafaumh2110.github.io/apps/telemetriawu/) | Consulta bajo demanda los datos de una estación meteorológica personal (Vevor YT60234 u otra compatible) dada de alta en Weather Underground / Earth Network, directamente desde el navegador. Primera app de una serie que irá incorporando sondeo continuo, histórico persistente y otras funcionalidades. |
 | [TelemetriaWU Monitor](https://rafaumh2110.github.io/apps/telemetriawumonitor/) | Segunda app de la serie TelemetriaWU: sondeo continuo con backoff automático ante errores, lecturas en tarjetas gráficas con minigráficos en tiempo real, histórico de sesión y exportación a CSV. |
 | [TelemetriaWU Histórico](https://rafaumh2110.github.io/apps/telemetriawuhistorico/) | Tercera app de la serie TelemetriaWU: igual que TelemetriaWU Monitor, pero con histórico PERSISTENTE guardado en IndexedDB (sobrevive a recargar la página), con retención configurable, purga automática y exportación a CSV de todo el histórico guardado. |
+| [TelemetriaWU MQTT](https://rafaumh2110.github.io/apps/telemetriawumqtt/) | Cuarta app de la serie TelemetriaWU: igual que TelemetriaWU Histórico, añadiendo publicación de cada lectura en un topic MQTT sobre WebSocket (broker, topic, usuario/contraseña, QoS y retain configurables), con estado de conexión, contadores y registro de actividad independientes del sondeo. |
 
 ## Estructura del repositorio
 

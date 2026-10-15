@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TelemetriaWU MQTT — Sondeo continuo con histórico persistente y publicación MQTT de tu estación en Weather Underground</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAzMiAzMic+CjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgcng9JzgnIGZpbGw9JyMyZjZmYjAnLz4KPGNpcmNsZSBjeD0nMTAuNScgY3k9JzExLjUnIHI9JzMnIGZpbGw9J3doaXRlJy8+CjxjaXJjbGUgY3g9JzE1JyBjeT0nOS40JyByPSc0LjEnIGZpbGw9J3doaXRlJy8+CjxjaXJjbGUgY3g9JzE5LjMnIGN5PScxMS41JyByPSczJyBmaWxsPSd3aGl0ZScvPgo8cmVjdCB4PSc4LjcnIHk9JzExLjUnIHdpZHRoPScxMi4zJyBoZWlnaHQ9JzMuOScgcng9JzEuOTUnIGZpbGw9J3doaXRlJy8+CjxnIGZpbGw9J25vbmUnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nMS41JyBzdHJva2UtbGluZWNhcD0ncm91bmQnIHN0cm9rZS1saW5lam9pbj0ncm91bmQnPgo8Y2lyY2xlIGN4PScxNicgY3k9JzIxJyByPScxLjUnIGZpbGw9J3doaXRlJyBzdHJva2U9J25vbmUnLz4KPGNpcmNsZSBjeD0iMTAuOCIgY3k9IjI2LjMiIHI9IjEuNSIgZmlsbD0id2hpdGUiIHN0cm9rZT0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIyMS4yIiBjeT0iMjYuMyIgcj0iMS41IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJub25lIi8+CjxwYXRoIGQ9J00xNiAyMi41IEwxNiAyNCBNMTYgMjQgTDEwLjggMjQuOCBNMTYgMjQgTDIxLjIgMjQuOCBNMTAuOCAyNC44IEwxMC44IDI2LjMgTTIxLjIgMjQuOCBMMjEuMiAyNi4zJy8+CjwvZz4KPC9zdmc+Cg==">
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.16.1/dist/mqtt.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef4fb;
+    --bg-2:#f6fafd;
+    --surface:#ffffff;
+    --surface-2:#e2edf9;
+    --border:#c9dcf0;
+    --border-strong:#9cbfe3;
+    --accent:#2f6fb0;
+    --accent-dark:#1f5590;
+    --accent-deep:#163d68;
+    --ok-bg:#e3f2ea; --ok-fg:#256143; --ok-bd:#a9d4bd;
+    --warn-bg:#fdf1dc; --warn-fg:#8a5a12; --warn-bd:#eac888;
+    --danger-bg:#fbe7e2; --danger-fg:#9c3a26; --danger-bd:#e7ab97;
+    --text:#1b2a3a;
+    --text-muted:#5e7488;
+    --serif:'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --sans:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', 'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); line-height:1.55;
+    padding-bottom:64px;
+  }
+  a{color:var(--accent-dark);}
+  header.app-header{
+    background:linear-gradient(135deg, var(--bg-2), var(--surface-2));
+    color:var(--accent-deep); padding:38px 20px 30px;
+    border-bottom:4px solid var(--accent);
+  }
+  .header-inner{max-width:1000px; margin:0 auto;}
+  .header-inner h1{
+    font-family:var(--serif); font-weight:700; font-size:clamp(26px,5vw,36px);
+    margin:0 0 6px; letter-spacing:.2px; color:var(--accent-deep);
+  }
+  .header-inner p{margin:0; color:#3f5a78; font-size:15px; max-width:60ch;}
+  .header-meta{
+    margin-top:16px; font-family:var(--mono); font-size:12px; color:#5c7896;
+  }
+
+  .aviso-banner{
+    max-width:1000px; margin:20px auto 0; padding:12px 16px;
+    background:var(--warn-bg); border:1px solid var(--warn-bd); color:var(--warn-fg);
+    border-radius:3px; font-size:14px; display:flex; gap:10px; align-items:flex-start;
+  }
+  .aviso-banner strong{white-space:nowrap;}
+
+  main{max-width:1000px; margin:28px auto 0; padding:0 20px;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent);
+    border-radius:2px; margin-bottom:22px; overflow:hidden;
+    box-shadow:0 1px 3px rgba(31,85,144,.06);
+  }
+  .card-tab{
+    font-family:var(--mono); font-size:12px; letter-spacing:.03em; color:var(--accent-dark);
+    background:var(--surface-2); padding:8px 18px; border-bottom:1px solid var(--border);
+  }
+  .card-body{padding:20px 22px 22px;}
+  .card-body h2{
+    font-family:var(--serif); font-size:20px; margin:0 0 4px; font-weight:600; color:var(--accent-deep);
+  }
+  .card-body .subtitle{color:var(--text-muted); font-size:14px; margin:0 0 16px;}
+  .card-body h3{
+    font-family:var(--sans); font-size:13px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--accent-dark); margin:22px 0 10px; padding-top:14px; border-top:1px solid var(--border);
+  }
+  .card-body h3:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+
+  label{display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; color:var(--accent-deep);}
+  .hint{font-size:12.5px; color:var(--text-muted); margin-top:5px;}
+  input[type="password"], input[type="text"], input[type="number"], select{
+    width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:3px;
+    font-family:var(--sans); font-size:14.5px; background:#fdfeff; color:var(--text);
+  }
+  input:disabled, select:disabled{background:var(--surface-2); color:var(--text-muted); cursor:not-allowed;}
+  input:focus-visible, button:focus-visible, select:focus-visible{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  .field{margin-bottom:16px;}
+  .row{display:flex; gap:14px; flex-wrap:wrap;}
+  .row > .field{flex:1 1 160px;}
+
+  .checkbox-field{display:flex; align-items:center; gap:8px; margin-bottom:16px;}
+  .checkbox-field input[type="checkbox"]{width:16px; height:16px; accent-color:var(--accent);}
+  .checkbox-field label{margin:0; font-weight:600; color:var(--accent-deep); cursor:pointer;}
+
+  .key-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .key-row input{flex:1 1 220px;}
+  .key-status{
+    margin-top:8px; font-size:13px; font-family:var(--mono); display:inline-flex; align-items:center; gap:6px;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dot.ok{background:#2f8a5b;}
+  .dot.off{background:#a8bccf;}
+  .dot.pulse{animation:pulso 1.4s ease-in-out infinite;}
+  @keyframes pulso{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+  button{
+    font-family:var(--sans); font-weight:600; font-size:14.5px; cursor:pointer;
+    border-radius:3px; border:1px solid transparent; padding:10px 16px;
+  }
+  button.primario{background:var(--accent); color:#fff; border-color:var(--accent-dark);}
+  button.primario:hover:not(:disabled){background:var(--accent-dark);}
+  button.secundario{background:var(--surface); color:var(--accent-deep); border-color:var(--border-strong);}
+  button.secundario:hover:not(:disabled){background:var(--surface-2);}
+  button.peligro{background:var(--danger-bg); color:var(--danger-fg); border-color:var(--danger-bd);}
+  button.peligro:hover:not(:disabled){background:#f7d9d0;}
+  button.chico{padding:5px 10px; font-size:12.5px; border-radius:3px;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+
+  .consulta-barra{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .estado-badge{
+    font-family:var(--mono); font-size:13px; padding:5px 12px; border-radius:20px;
+    border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text-muted);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .estado-badge .dot{width:9px; height:9px;}
+  .estado-badge.ok{background:var(--ok-bg); color:var(--ok-fg); border-color:var(--ok-bd);}
+  .estado-badge.ok .dot{background:#2f8a5b;}
+  .estado-badge.warn{background:var(--warn-bg); color:var(--warn-fg); border-color:var(--warn-bd);}
+  .estado-badge.warn .dot{background:#b5790f;}
+  .estado-badge.danger{background:var(--danger-bg); color:var(--danger-fg); border-color:var(--danger-bd);}
+  .estado-badge.danger .dot{background:#b5402b;}
+
+  .progreso{height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden; margin-top:12px; border:1px solid var(--border);}
+  .progreso-fill{height:100%; width:0%; background:var(--accent); transition:width .25s linear;}
+  .progreso-etiqueta{font-family:var(--mono); font-size:12px; color:var(--text-muted); margin-top:6px;}
+
+  .contador-grid{display:flex; gap:24px; flex-wrap:wrap; margin-top:16px;}
+  .contador-item{font-family:var(--mono);}
+  .contador-item .n{font-family:var(--serif); font-size:22px; font-weight:600; color:var(--accent-deep); display:block;}
+  .contador-item .l{font-size:11.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.03em;}
+
+  .meta-linea{font-family:var(--mono); font-size:12.5px; color:var(--text-muted); margin-top:10px;}
+
+  .error-box{
+    margin-top:14px; padding:10px 14px; background:var(--danger-bg); border:1px solid var(--danger-bd);
+    color:var(--danger-fg); border-radius:3px; font-size:13.5px; display:none;
+  }
+  .error-box.visible{display:block;}
+
+  .aviso-plausibilidad{
+    margin-top:14px; padding:10px 14px; background:var(--warn-bg); border:1px solid var(--warn-bd);
+    color:var(--warn-fg); border-radius:3px; font-size:13.5px; display:none;
+  }
+  .aviso-plausibilidad.visible{display:block;}
+
+  .datos-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
+    margin-top:16px;
+  }
+  .dato-item{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:3px; padding:12px 14px;
+  }
+  .dato-item .etiqueta{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.03em;}
+  .dato-item .valor{font-family:var(--serif); font-size:21px; font-weight:600; color:var(--accent-deep); margin-top:2px;}
+  .dato-item .unidad{font-size:12px; color:var(--text-muted); margin-left:3px;}
+  .sparkline{width:100%; height:28px; display:block; margin-top:6px;}
+  .sparkline polyline{fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round;}
+  .rango-minmax{font-size:10.5px; color:var(--text-muted); margin-top:3px; font-family:var(--mono);}
+
+  .stats-persistencia{
+    margin-top:14px; padding:10px 14px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:3px; font-size:13px; font-family:var(--mono); color:var(--accent-deep);
+  }
+
+  .historial-vacio{color:var(--text-muted); font-size:13.5px; font-style:italic;}
+  table.historial{width:100%; border-collapse:collapse; font-size:13px; font-family:var(--mono);}
+  table.historial th, table.historial td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);}
+  table.historial th{color:var(--text-muted); font-weight:600; font-size:11.5px; text-transform:uppercase;}
+  .historial-envoltorio{max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:3px;}
+
+  .log-panel{
+    max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:3px;
+    background:#0f2235; padding:10px 12px; font-family:var(--mono); font-size:12.5px;
+    margin-top:14px;
+  }
+  .log-linea{padding:2px 0; color:#cfe0f2; white-space:pre-wrap; word-break:break-word;}
+  .log-linea .t{color:#6f91b3; margin-right:8px;}
+  .log-linea.info{color:#cfe0f2;}
+  .log-linea.ok{color:#7fd9a8;}
+  .log-linea.warn{color:#f0c77e;}
+  .log-linea.error{color:#f0948a;}
+  .log-vacio{color:#6f91b3; font-style:italic;}
+
+  footer.app-footer{
+    max-width:1000px; margin:0 auto; padding:18px 20px 0; color:var(--text-muted); font-size:12.5px;
+  }
+  .firma{margin-top:6px; font-family:var(--mono); font-size:11.5px;}
+</style>
+</head>
+<body data-app-title="TelemetriaWU MQTT" data-app-description="Sondeo continuo de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network, con histórico PERSISTENTE en IndexedDB y publicación de cada lectura en un topic MQTT (sobre WebSocket, con QoS y retain configurables) para que cualquier suscriptor —app, dashboard, Node-RED, Home Assistant...— reciba la telemetría en tiempo real." data-categories="automatizacion,analisis-datos,docencia" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,indexeddb,historico persistente,mqtt,websocket,publicacion" data-client-only="true">
+
+<!--
+  ============================================================================
+  TelemetriaWU MQTT — Notas de configuración
+  ============================================================================
+
+  QUÉ ES ESTA APP
+  Cuarta y (de momento) última app de la serie TelemetriaWU: toma
+  TelemetriaWU Histórico (sondeo continuo + histórico persistente en
+  IndexedDB) y le añade PUBLICACIÓN MQTT de cada lectura válida, igual
+  que wu_telemetria_puente_mqtt.py pero ejecutándose en el navegador.
+
+  DIFERENCIA IMPORTANTE RESPECTO AL SCRIPT DE PYTHON
+  wu_telemetria_puente_mqtt.py usa paho-mqtt sobre TCP plano (puerto
+  1883/8883). Un navegador NO puede abrir sockets TCP arbitrarios, así
+  que esta app usa MQTT sobre WEBSOCKET (librería MQTT.js, cargada por
+  CDN) contra un broker que tenga un listener WebSocket habilitado
+  (Mosquitto con "listener ... protocol websockets" en su config,
+  EMQX, HiveMQ, AWS IoT Core, etc.). El puerto y la ruta suelen ser
+  distintos de los del MQTT clásico (por ejemplo, Mosquitto por
+  defecto no expone WebSocket salvo que se configure explícitamente).
+  Por eso el campo de conexión aquí es una URL "ws://" o "wss://"
+  completa, no un host:puerto sueltos.
+
+  Por defecto se usa el broker público de pruebas
+  wss://broker.hivemq.com:8884/mqtt (acceso anónimo, sin TLS de
+  cliente) solo para poder probar la app sin broker propio. Para un
+  uso real, apunta a tu propio broker con WebSocket habilitado.
+
+  AVISO DE SEGURIDAD
+  Si usas "ws://" (sin TLS) el usuario/contraseña del broker viajan en
+  claro por la red; usa siempre "wss://" en producción. El usuario y
+  la contraseña del broker se guardan en localStorage de este
+  navegador igual que la API Key de Weather Underground: cómodo para
+  un uso personal, pero no pensado para equipos compartidos.
+
+  1) PUBLICACIÓN MQTT ES OPCIONAL E INDEPENDIENTE DEL SONDEO
+     La conexión MQTT se controla con sus propios botones "Conectar" /
+     "Desconectar" (sección 05), separados de "Iniciar monitor" /
+     "Detener" (sección 02). Puedes probar la conexión MQTT sin
+     arrancar el sondeo, y puedes sondear sin publicar nada si
+     desmarcas "Publicar en MQTT". Si el sondeo obtiene una lectura
+     válida y la publicación está activada pero el cliente MQTT no
+     está conectado en ese momento, esa lectura simplemente no se
+     publica (se queda igualmente guardada en el histórico
+     persistente); no se considera un error del sondeo.
+
+  2) PAYLOAD PUBLICADO
+     JSON con las mismas claves que construye wu_telemetria_puente_mqtt.py
+     (_build_payload): station, ts_utc, latency_ms, staleness_s, temp_c,
+     humidity_pct, pressure_hpa, wind_kmh, gust_kmh, dewpoint_c,
+     rainrate_mmh, quality_flag.
+
+  3) QUÉ CONSTANTES EDITAR (buscar en el <script> final)
+     - BASE_URL, DEFAULTS, DB_NAME/DB_VERSION/STORE_NAME: igual que en
+       TelemetriaWU Histórico.
+     - MQTT_DEFAULTS: URL WS, topic, QoS y retain por defecto.
+     - MAX_LOG_LINEAS: líneas conservadas en el panel de registro.
+  ============================================================================
+-->
+
+<header class="app-header">
+  <div class="header-inner">
+    <h1>TelemetriaWU MQTT</h1>
+    <p>Sondeo continuo con histórico persistente, y publicación de cada lectura en un topic MQTT (sobre WebSocket) para cualquier suscriptor externo.</p>
+    <div class="header-meta">estación personal · Weather Underground / Earth Network · histórico persistente (IndexedDB) · difusión MQTT (WebSocket)</div>
+  </div>
+</header>
+
+<div class="aviso-banner">
+  <span>⚠️</span>
+  <span><strong>Aviso:</strong> el sondeo y la publicación MQTT solo funcionan mientras esta pestaña permanece abierta. El histórico ya guardado SÍ persiste al recargar o cerrar. Para un puente MQTT 24/7 sin depender del navegador, usa <code>wu_telemetria_puente_mqtt.py</code> de este mismo repositorio.</span>
+</div>
+
+<main>
+
+  <!-- ============ SECCIÓN 1 · CONFIGURACIÓN ============ -->
+  <section class="card" id="seccion-config">
+    <div class="card-tab">01 · CONFIGURACIÓN</div>
+    <div class="card-body">
+      <h2>Parámetros del sondeo, la persistencia y MQTT</h2>
+      <p class="subtitle">El Station ID y la API Key se guardan en localStorage (compartido con el resto de apps TelemetriaWU). Los campos se bloquean mientras el elemento correspondiente (monitor o conexión MQTT) está activo.</p>
+
+      <h3>Estación</h3>
+      <div class="row">
+        <div class="field">
+          <label for="stationIdInput">Station ID</label>
+          <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+          <div class="hint">El identificador de tu estación en wunderground.com (My Profile → My Devices).</div>
+        </div>
+        <div class="field">
+          <label for="apiKeyInput">API Key (opcional)</label>
+          <input type="password" id="apiKeyInput" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
+          <div class="hint">Déjala en blanco para probar primero en modo anónimo.</div>
+        </div>
+      </div>
+
+      <h3>Sondeo</h3>
+      <div class="row">
+        <div class="field">
+          <label for="pollIntervalInput">Intervalo de sondeo (s)</label>
+          <input type="number" id="pollIntervalInput" min="5" step="1" value="60">
+          <div class="hint">Cada cuánto se consulta la API mientras todo va bien.</div>
+        </div>
+        <div class="field">
+          <label for="historyLenInput">Puntos en los minigráficos</label>
+          <input type="number" id="historyLenInput" min="5" max="200" step="1" value="40">
+          <div class="hint">Nº de lecturas recientes que se muestran en cada tarjeta.</div>
+        </div>
+      </div>
+
+      <h3>Backoff ante errores (avanzado)</h3>
+      <div class="row">
+        <div class="field">
+          <label for="backoffBaseInput">Backoff inicial (s)</label>
+          <input type="number" id="backoffBaseInput" min="0.5" step="0.5" value="2">
+          <div class="hint">Espera tras el 1er error transitorio; se duplica en cada reintento.</div>
+        </div>
+        <div class="field">
+          <label for="backoffMaxInput">Backoff máximo (s)</label>
+          <input type="number" id="backoffMaxInput" min="5" step="5" value="300">
+          <div class="hint">Tope de espera entre reintentos, por muchos que se acumulen.</div>
+        </div>
+        <div class="field">
+          <label for="staleThresholdInput">Umbral de dato obsoleto (s)</label>
+          <input type="number" id="staleThresholdInput" min="5" step="5" value="120">
+          <div class="hint">A partir de cuántos segundos de antigüedad una lectura se marca "stale".</div>
+        </div>
+      </div>
+
+      <h3>Persistencia (histórico guardado)</h3>
+      <div class="row">
+        <div class="field">
+          <label for="retencionDiasInput">Retención (días)</label>
+          <input type="number" id="retencionDiasInput" min="1" step="1" value="30">
+          <div class="hint">Las lecturas más antiguas que esto se purgan automáticamente.</div>
+        </div>
+      </div>
+
+      <h3>Difusión MQTT (opcional)</h3>
+      <div class="checkbox-field">
+        <input type="checkbox" id="mqttEnabledInput">
+        <label for="mqttEnabledInput">Publicar cada lectura en MQTT</label>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1 1 320px;">
+          <label for="mqttWsUrlInput">URL WebSocket del broker</label>
+          <input type="text" id="mqttWsUrlInput" placeholder="wss://mi-broker.ejemplo.com:8884/mqtt" autocomplete="off" spellcheck="false">
+          <div class="hint">Debe empezar por "ws://" o "wss://" (no host:puerto sueltos). Por defecto, un broker público de pruebas.</div>
+        </div>
+        <div class="field">
+          <label for="mqttTopicInput">Topic</label>
+          <input type="text" id="mqttTopicInput" placeholder="weather/vevor/telemetry" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="mqttUserInput">Usuario (opcional)</label>
+          <input type="text" id="mqttUserInput" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="mqttPasswordInput">Contraseña (opcional)</label>
+          <input type="password" id="mqttPasswordInput" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="mqttQosInput">QoS</label>
+          <select id="mqttQosInput">
+            <option value="0">0 · como mucho una vez</option>
+            <option value="1" selected>1 · al menos una vez</option>
+            <option value="2">2 · exactamente una vez</option>
+          </select>
+        </div>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="mqttRetainInput" checked>
+        <label for="mqttRetainInput">Publicar con "retain" (el broker guarda y reenvía la última lectura a nuevos suscriptores)</label>
+      </div>
+
+      <div class="key-row">
+        <button type="button" class="primario" id="btnGuardarConfig">Guardar</button>
+        <button type="button" class="secundario" id="btnBorrarConfig">Borrar configuración de este navegador</button>
+      </div>
+      <div class="key-status" id="estadoConfig"><span class="dot off"></span><span>Sin guardar</span></div>
+
+      <div class="stats-persistencia" id="statsPersistencia">Cargando histórico guardado…</div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 2 · CONTROL Y ESTADO ============ -->
+  <section class="card" id="seccion-control">
+    <div class="card-tab">02 · CONTROL Y ESTADO</div>
+    <div class="card-body">
+      <h2>Monitor</h2>
+      <p class="subtitle">Primera lectura inmediata y, a partir de ahí, una cada "intervalo de sondeo" segundos, con reintento automático ante fallos transitorios. Cada lectura válida se guarda de inmediato en el histórico persistente y, si está activada, se publica en MQTT.</p>
+
+      <div class="consulta-barra">
+        <button type="button" class="primario" id="btnIniciar" disabled>Iniciar monitor</button>
+        <button type="button" class="peligro" id="btnDetener" disabled>Detener</button>
+        <span class="estado-badge" id="estadoBadge"><span class="dot off"></span><span>Detenido</span></span>
+      </div>
+
+      <div class="progreso"><div class="progreso-fill" id="progresoFill"></div></div>
+      <div class="progreso-etiqueta" id="progresoEtiqueta">Sin actividad.</div>
+
+      <div class="contador-grid">
+        <div class="contador-item"><span class="n" id="contLecturas">0</span><span class="l">Lecturas esta sesión</span></div>
+        <div class="contador-item"><span class="n" id="contReintentos">0</span><span class="l">Reintentos actuales</span></div>
+        <div class="contador-item"><span class="n" id="contLatencia">—</span><span class="l">Latencia última (ms)</span></div>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+      <div class="aviso-plausibilidad" id="avisoPlausibilidad">⚠ Alguno de los valores de la última lectura está fuera de un rango físicamente plausible; revisa la estación o la conexión antes de confiar en ella.</div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 3 · LECTURAS EN TIEMPO REAL ============ -->
+  <section class="card" id="seccion-lecturas">
+    <div class="card-tab">03 · LECTURAS EN TIEMPO REAL</div>
+    <div class="card-body">
+      <h2>Última lectura y tendencia</h2>
+      <p class="subtitle">Al cargar la página, los minigráficos se rellenan con el histórico ya guardado para esta estación; el valor "actual" de cada tarjeta se actualiza al iniciar el monitor y recibir lecturas nuevas.</p>
+      <div class="meta-linea" id="metaLinea">Frescura: —</div>
+
+      <div class="datos-grid" id="datosGrid">
+        <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para poder incluir el sparkline -->
+      </div>
+
+      <div class="datos-grid" style="margin-top:14px; grid-template-columns:1fr;">
+        <div class="dato-item" id="tileCalidad">
+          <div class="etiqueta">Calidad del dato (qualityControlFlag)</div>
+          <div class="valor" id="valorCalidad">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 4 · HISTÓRICO PERSISTENTE ============ -->
+  <section class="card" id="seccion-historial">
+    <div class="card-tab">04 · HISTÓRICO PERSISTENTE</div>
+    <div class="card-body">
+      <h2>Lecturas guardadas</h2>
+      <p class="subtitle">Guardado en este navegador (IndexedDB): sobrevive a recargar la página. La tabla muestra como máximo las <span id="maxFilasTexto">300</span> lecturas más recientes de esta estación.</p>
+      <div id="historialVacio" class="historial-vacio">Todavía no hay lecturas guardadas para esta estación.</div>
+      <div class="historial-envoltorio" id="historialEnvoltorio" style="display:none;">
+        <table class="historial">
+          <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Frescura</th><th>Estado</th></tr></thead>
+          <tbody id="historialCuerpo"></tbody>
+        </table>
+      </div>
+      <div class="key-row" style="margin-top:14px;">
+        <button type="button" class="secundario chico" id="btnDescargarCSV" disabled>Descargar histórico (CSV)</button>
+        <button type="button" class="secundario chico" id="btnPurgarAhora">Purgar ahora (según retención)</button>
+        <button type="button" class="peligro chico" id="btnVaciarPersistente" disabled>Vaciar histórico persistente</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECCIÓN 5 · PUBLICACIÓN MQTT ============ -->
+  <section class="card" id="seccion-mqtt">
+    <div class="card-tab">05 · PUBLICACIÓN MQTT</div>
+    <div class="card-body">
+      <h2>Conexión y actividad MQTT</h2>
+      <p class="subtitle">Conexión independiente del sondeo: puedes probarla sin tener el monitor en marcha. Mientras esté conectada y "Publicar en MQTT" esté marcado, cada lectura válida del sondeo se publica en el topic configurado.</p>
+
+      <div class="consulta-barra">
+        <button type="button" class="primario" id="btnConectarMqtt">Conectar</button>
+        <button type="button" class="peligro" id="btnDesconectarMqtt" disabled>Desconectar</button>
+        <button type="button" class="secundario chico" id="btnPublicarAhora" disabled>Publicar lectura actual ahora</button>
+        <span class="estado-badge" id="estadoMqttBadge"><span class="dot off"></span><span>Desconectado</span></span>
+      </div>
+
+      <div class="contador-grid">
+        <div class="contador-item"><span class="n" id="contPublicados">0</span><span class="l">Mensajes publicados</span></div>
+        <div class="contador-item"><span class="n" id="contOmitidos">0</span><span class="l">Lecturas omitidas (sin conexión)</span></div>
+        <div class="contador-item"><span class="n" id="ultimoPublishTexto">—</span><span class="l">Último publish</span></div>
+      </div>
+
+      <h3 style="margin-top:18px;">Registro de actividad</h3>
+      <div class="log-panel" id="logPanel"><div class="log-vacio">Sin actividad todavía.</div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  TelemetriaWU MQTT — cuarta app de la serie, con sondeo continuo, histórico persistente en IndexedDB y publicación MQTT sobre WebSocket (a partir de TelemetriaWU Histórico / <code>wu_telemetria_puente_mqtt.py</code>).
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const APP_NAME = 'TelemetriaWU MQTT';
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+
+  // Mismas claves de localStorage que el resto de apps TelemetriaWU.
+  const STORAGE_KEY_STATION = 'wu_station_id';
+  const STORAGE_KEY_APIKEY  = 'wu_api_key';
+  const STORAGE_KEY_POLL       = 'wu_monitor_poll_interval_s';
+  const STORAGE_KEY_BACKOFF_B  = 'wu_monitor_backoff_base_s';
+  const STORAGE_KEY_BACKOFF_M  = 'wu_monitor_backoff_max_s';
+  const STORAGE_KEY_STALE      = 'wu_monitor_stale_threshold_s';
+  const STORAGE_KEY_HISTLEN    = 'wu_monitor_history_len';
+  const STORAGE_KEY_RETENCION  = 'wu_historico_retencion_dias';
+
+  const STORAGE_KEY_MQTT_ENABLED  = 'wu_mqtt_enabled';
+  const STORAGE_KEY_MQTT_WS_URL   = 'wu_mqtt_ws_url';
+  const STORAGE_KEY_MQTT_TOPIC    = 'wu_mqtt_topic';
+  const STORAGE_KEY_MQTT_USER     = 'wu_mqtt_user';
+  const STORAGE_KEY_MQTT_PASSWORD = 'wu_mqtt_password';
+  const STORAGE_KEY_MQTT_QOS      = 'wu_mqtt_qos';
+  const STORAGE_KEY_MQTT_RETAIN   = 'wu_mqtt_retain';
+
+  const DEFAULTS = {
+    pollIntervalS: 60,
+    backoffBaseS: 2,
+    backoffMaxS: 300,
+    staleThresholdS: 120,
+    historyLen: 40,
+    retencionDias: 30
+  };
+
+  const MQTT_DEFAULTS = {
+    wsUrl: 'wss://broker.hivemq.com:8884/mqtt',
+    topic: 'weather/vevor/telemetry',
+    qos: 1,
+    retain: true
+  };
+
+  const MAX_FILAS_TABLA = 300;
+  const MAX_EXPORT_SEGURIDAD = 20000;
+  const MAX_LOG_LINEAS = 200;
+
+  // Base de datos IndexedDB donde vive el histórico persistente.
+  const DB_NAME = 'telemetriawu_historico_db';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'lecturas';
+  const INDEX_ESTACION_TIEMPO = 'porEstacionTiempo';
+
+  // Mismos rangos de plausibilidad física que wu_telemetria_cliente_sincrono.py
+  const SANITY_CHECK = {
+    temp_c:        { min: -60,  max: 60   },
+    humidity_pct:  { min: 0,    max: 100  },
+    pressure_hpa:  { min: 850,  max: 1085 }
+  };
+
+  const GRAFICABLES = [
+    { key: 'temp_c',       etiqueta: 'Temperatura',    unidad: '°C'   },
+    { key: 'humidity_pct', etiqueta: 'Humedad',        unidad: '%'    },
+    { key: 'pressure_hpa', etiqueta: 'Presión',        unidad: 'hPa'  },
+    { key: 'wind_kmh',     etiqueta: 'Viento',         unidad: 'km/h' },
+    { key: 'gust_kmh',     etiqueta: 'Racha',          unidad: 'km/h' },
+    { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C'   },
+    { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h' }
+  ];
+
+  /* ============================================================
+     INDEXEDDB: CAPA DE PERSISTENCIA (idéntico a TelemetriaWU Histórico)
+     ============================================================ */
+  let dbPromise = null;
+
+  function abrirDB(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (ev) => {
+        const db = ev.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)){
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          store.createIndex(INDEX_ESTACION_TIEMPO, ['stationId', 'timestampMs'], { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function getDB(){
+    if (!dbPromise) dbPromise = abrirDB();
+    return dbPromise;
+  }
+
+  function rangoEstacion(stationId){
+    return IDBKeyRange.bound([stationId, -Infinity], [stationId, Infinity]);
+  }
+
+  async function guardarLectura(registro){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).add(registro);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function obtenerUltimas(stationId, limite){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      const resultados = [];
+      const req = idx.openCursor(rangoEstacion(stationId), 'prev');
+      req.onsuccess = (ev) => {
+        const cursor = ev.target.result;
+        if (cursor && resultados.length < limite){
+          resultados.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(resultados.reverse());
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function contarLecturas(stationId){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      const req = idx.count(rangoEstacion(stationId));
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function extremoTimestamp(stationId, direction){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      const req = idx.openCursor(rangoEstacion(stationId), direction);
+      req.onsuccess = (ev) => {
+        const cursor = ev.target.result;
+        resolve(cursor ? cursor.value.timestampMs : null);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function estadisticasEstacion(stationId){
+    const [total, primero, ultimo] = await Promise.all([
+      contarLecturas(stationId),
+      extremoTimestamp(stationId, 'next'),
+      extremoTimestamp(stationId, 'prev')
+    ]);
+    return { total, primero, ultimo };
+  }
+
+  async function purgarAntiguas(stationId, cutoffMs){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      const range = IDBKeyRange.bound([stationId, -Infinity], [stationId, cutoffMs], false, true);
+      let borrados = 0;
+      const req = idx.openCursor(range);
+      req.onsuccess = (ev) => {
+        const cursor = ev.target.result;
+        if (cursor){
+          cursor.delete();
+          borrados++;
+          cursor.continue();
+        } else {
+          resolve(borrados);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function vaciarEstacion(stationId){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      let borrados = 0;
+      const req = idx.openCursor(rangoEstacion(stationId));
+      req.onsuccess = (ev) => {
+        const cursor = ev.target.result;
+        if (cursor){
+          cursor.delete();
+          borrados++;
+          cursor.continue();
+        } else {
+          resolve(borrados);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function exportarTodo(stationId, limiteSeguridad){
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const idx = tx.objectStore(STORE_NAME).index(INDEX_ESTACION_TIEMPO);
+      const resultados = [];
+      const req = idx.openCursor(rangoEstacion(stationId), 'next');
+      req.onsuccess = (ev) => {
+        const cursor = ev.target.result;
+        if (cursor && resultados.length < limiteSeguridad){
+          resultados.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(resultados);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /* ============================================================
+     ELEMENTOS DEL DOM
+     ============================================================ */
+  const stationIdInput    = document.getElementById('stationIdInput');
+  const apiKeyInput        = document.getElementById('apiKeyInput');
+  const pollIntervalInput  = document.getElementById('pollIntervalInput');
+  const historyLenInput    = document.getElementById('historyLenInput');
+  const backoffBaseInput   = document.getElementById('backoffBaseInput');
+  const backoffMaxInput    = document.getElementById('backoffMaxInput');
+  const staleThresholdInput = document.getElementById('staleThresholdInput');
+  const retencionDiasInput = document.getElementById('retencionDiasInput');
+  const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
+  const btnBorrarConfig    = document.getElementById('btnBorrarConfig');
+  const estadoConfig       = document.getElementById('estadoConfig');
+  const statsPersistencia  = document.getElementById('statsPersistencia');
+
+  const mqttEnabledInput  = document.getElementById('mqttEnabledInput');
+  const mqttWsUrlInput    = document.getElementById('mqttWsUrlInput');
+  const mqttTopicInput    = document.getElementById('mqttTopicInput');
+  const mqttUserInput     = document.getElementById('mqttUserInput');
+  const mqttPasswordInput = document.getElementById('mqttPasswordInput');
+  const mqttQosInput      = document.getElementById('mqttQosInput');
+  const mqttRetainInput   = document.getElementById('mqttRetainInput');
+
+  const btnIniciar  = document.getElementById('btnIniciar');
+  const btnDetener  = document.getElementById('btnDetener');
+  const estadoBadge = document.getElementById('estadoBadge');
+  const progresoFill = document.getElementById('progresoFill');
+  const progresoEtiqueta = document.getElementById('progresoEtiqueta');
+  const contLecturas = document.getElementById('contLecturas');
+  const contReintentos = document.getElementById('contReintentos');
+  const contLatencia = document.getElementById('contLatencia');
+  const errorBox = document.getElementById('errorBox');
+  const avisoPlausibilidad = document.getElementById('avisoPlausibilidad');
+  const metaLinea = document.getElementById('metaLinea');
+  const datosGrid = document.getElementById('datosGrid');
+  const valorCalidad = document.getElementById('valorCalidad');
+
+  const historialVacio = document.getElementById('historialVacio');
+  const historialEnvoltorio = document.getElementById('historialEnvoltorio');
+  const historialCuerpo = document.getElementById('historialCuerpo');
+  const btnDescargarCSV = document.getElementById('btnDescargarCSV');
+  const btnPurgarAhora = document.getElementById('btnPurgarAhora');
+  const btnVaciarPersistente = document.getElementById('btnVaciarPersistente');
+
+  const btnConectarMqtt = document.getElementById('btnConectarMqtt');
+  const btnDesconectarMqtt = document.getElementById('btnDesconectarMqtt');
+  const btnPublicarAhora = document.getElementById('btnPublicarAhora');
+  const estadoMqttBadge = document.getElementById('estadoMqttBadge');
+  const contPublicados = document.getElementById('contPublicados');
+  const contOmitidos = document.getElementById('contOmitidos');
+  const ultimoPublishTexto = document.getElementById('ultimoPublishTexto');
+  const logPanel = document.getElementById('logPanel');
+
+  document.getElementById('maxFilasTexto').textContent = MAX_FILAS_TABLA;
+
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, retencionDiasInput];
+  const INPUTS_MQTT = [mqttEnabledInput, mqttWsUrlInput, mqttTopicInput, mqttUserInput, mqttPasswordInput, mqttQosInput, mqttRetainInput];
+
+  /* ============================================================
+     ESTADO EN MEMORIA
+     ============================================================ */
+  let running = false;
+  let retryCount = 0;
+  let lecturasRecibidas = 0;
+  let timeoutId = null;
+  let countdownIntervalId = null;
+  let activo = null;
+  let ultimaLectura = null;
+  const series = {};
+
+  let mqttClient = null;
+  let mqttConnecting = false;
+  let mqttTopicActivo = MQTT_DEFAULTS.topic;
+  let mensajesPublicados = 0;
+  let lecturasOmitidas = 0;
+
+  GRAFICABLES.forEach(m => { series[m.key] = []; });
+
+  /* ============================================================
+     REGISTRO DE ACTIVIDAD (MQTT)
+     ============================================================ */
+  function log(nivel, mensaje){
+    const vacio = logPanel.querySelector('.log-vacio');
+    if (vacio) vacio.remove();
+    const linea = document.createElement('div');
+    linea.className = 'log-linea ' + nivel;
+    const hora = new Date().toLocaleTimeString('es-ES');
+    linea.innerHTML = '<span class="t">' + hora + '</span>' + mensaje;
+    logPanel.appendChild(linea);
+    while (logPanel.children.length > MAX_LOG_LINEAS) logPanel.removeChild(logPanel.firstChild);
+    logPanel.scrollTop = logPanel.scrollHeight;
+  }
+
+  /* ============================================================
+     TARJETAS GRÁFICAS
+     ============================================================ */
+  function construirTarjetas(){
+    datosGrid.innerHTML = '';
+    GRAFICABLES.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'dato-item';
+      div.id = 'tile-' + m.key;
+      div.innerHTML =
+        '<div class="etiqueta">' + m.etiqueta + '</div>' +
+        '<div class="valor"><span class="valor-num">—</span><span class="unidad">' + m.unidad + '</span></div>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""/></svg>' +
+        '<div class="rango-minmax">mín — · máx —</div>';
+      datosGrid.appendChild(div);
+    });
+  }
+
+  /* ============================================================
+     CONFIGURACIÓN (localStorage)
+     ============================================================ */
+  function leerNumero(input, porDefecto){
+    const v = parseFloat(input.value);
+    return Number.isFinite(v) && v > 0 ? v : porDefecto;
+  }
+
+  function cargarConfig(){
+    stationIdInput.value = localStorage.getItem(STORAGE_KEY_STATION) || '';
+    apiKeyInput.value = localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+    pollIntervalInput.value = localStorage.getItem(STORAGE_KEY_POLL) || DEFAULTS.pollIntervalS;
+    backoffBaseInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_B) || DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_M) || DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = localStorage.getItem(STORAGE_KEY_STALE) || DEFAULTS.staleThresholdS;
+    historyLenInput.value = localStorage.getItem(STORAGE_KEY_HISTLEN) || DEFAULTS.historyLen;
+    retencionDiasInput.value = localStorage.getItem(STORAGE_KEY_RETENCION) || DEFAULTS.retencionDias;
+
+    mqttEnabledInput.checked = localStorage.getItem(STORAGE_KEY_MQTT_ENABLED) === '1';
+    mqttWsUrlInput.value = localStorage.getItem(STORAGE_KEY_MQTT_WS_URL) || MQTT_DEFAULTS.wsUrl;
+    mqttTopicInput.value = localStorage.getItem(STORAGE_KEY_MQTT_TOPIC) || MQTT_DEFAULTS.topic;
+    mqttUserInput.value = localStorage.getItem(STORAGE_KEY_MQTT_USER) || '';
+    mqttPasswordInput.value = localStorage.getItem(STORAGE_KEY_MQTT_PASSWORD) || '';
+    mqttQosInput.value = localStorage.getItem(STORAGE_KEY_MQTT_QOS) || String(MQTT_DEFAULTS.qos);
+    const retainGuardado = localStorage.getItem(STORAGE_KEY_MQTT_RETAIN);
+    mqttRetainInput.checked = retainGuardado === null ? MQTT_DEFAULTS.retain : retainGuardado === '1';
+
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+  }
+
+  function guardarConfig(){
+    const stationId = stationIdInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    if (stationId) localStorage.setItem(STORAGE_KEY_STATION, stationId);
+    else localStorage.removeItem(STORAGE_KEY_STATION);
+    if (apiKey) localStorage.setItem(STORAGE_KEY_APIKEY, apiKey);
+    else localStorage.removeItem(STORAGE_KEY_APIKEY);
+    localStorage.setItem(STORAGE_KEY_POLL, leerNumero(pollIntervalInput, DEFAULTS.pollIntervalS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_B, leerNumero(backoffBaseInput, DEFAULTS.backoffBaseS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_M, leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS));
+    localStorage.setItem(STORAGE_KEY_STALE, leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS));
+    localStorage.setItem(STORAGE_KEY_HISTLEN, leerNumero(historyLenInput, DEFAULTS.historyLen));
+    localStorage.setItem(STORAGE_KEY_RETENCION, leerNumero(retencionDiasInput, DEFAULTS.retencionDias));
+
+    localStorage.setItem(STORAGE_KEY_MQTT_ENABLED, mqttEnabledInput.checked ? '1' : '0');
+    localStorage.setItem(STORAGE_KEY_MQTT_WS_URL, mqttWsUrlInput.value.trim() || MQTT_DEFAULTS.wsUrl);
+    localStorage.setItem(STORAGE_KEY_MQTT_TOPIC, mqttTopicInput.value.trim() || MQTT_DEFAULTS.topic);
+    localStorage.setItem(STORAGE_KEY_MQTT_USER, mqttUserInput.value.trim());
+    localStorage.setItem(STORAGE_KEY_MQTT_PASSWORD, mqttPasswordInput.value);
+    localStorage.setItem(STORAGE_KEY_MQTT_QOS, mqttQosInput.value);
+    localStorage.setItem(STORAGE_KEY_MQTT_RETAIN, mqttRetainInput.checked ? '1' : '0');
+
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+    cargarHistoricoPersistido(stationId);
+  }
+
+  function borrarConfig(){
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_RETENCION,
+     STORAGE_KEY_MQTT_ENABLED, STORAGE_KEY_MQTT_WS_URL, STORAGE_KEY_MQTT_TOPIC, STORAGE_KEY_MQTT_USER, STORAGE_KEY_MQTT_PASSWORD, STORAGE_KEY_MQTT_QOS, STORAGE_KEY_MQTT_RETAIN]
+      .forEach(k => localStorage.removeItem(k));
+    stationIdInput.value = '';
+    apiKeyInput.value = '';
+    pollIntervalInput.value = DEFAULTS.pollIntervalS;
+    backoffBaseInput.value = DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = DEFAULTS.staleThresholdS;
+    historyLenInput.value = DEFAULTS.historyLen;
+    retencionDiasInput.value = DEFAULTS.retencionDias;
+
+    mqttEnabledInput.checked = false;
+    mqttWsUrlInput.value = MQTT_DEFAULTS.wsUrl;
+    mqttTopicInput.value = MQTT_DEFAULTS.topic;
+    mqttUserInput.value = '';
+    mqttPasswordInput.value = '';
+    mqttQosInput.value = String(MQTT_DEFAULTS.qos);
+    mqttRetainInput.checked = MQTT_DEFAULTS.retain;
+
+    actualizarEstadoConfig();
+    actualizarEstadoBotonIniciar();
+    cargarHistoricoPersistido('');
+  }
+
+  function actualizarEstadoConfig(){
+    const guardado = !!localStorage.getItem(STORAGE_KEY_STATION);
+    estadoConfig.innerHTML = guardado
+      ? '<span class="dot ok"></span><span>Configuración guardada en este navegador</span>'
+      : '<span class="dot off"></span><span>Sin guardar</span>';
+  }
+
+  function actualizarEstadoBotonIniciar(){
+    if (!running) btnIniciar.disabled = stationIdInput.value.trim().length === 0;
+  }
+
+  /* ============================================================
+     CONSTRUCCIÓN DE URL (API de Weather Underground)
+     ============================================================ */
+  function construirURL(stationId, apiKey){
+    const params = new URLSearchParams({
+      stationId: stationId,
+      format: 'json',
+      numericPrecision: 'decimal',
+      units: 'm'
+    });
+    if (apiKey) params.set('apiKey', apiKey);
+    return BASE_URL + '?' + params.toString();
+  }
+
+  function numOrNull(v){
+    return (v === undefined || v === null) ? null : v;
+  }
+
+  function fmt(valor){
+    return (valor === null || valor === undefined) ? '—' : String(valor);
+  }
+
+  function fmtFecha(ms){
+    if (ms === null || ms === undefined) return '—';
+    return new Date(ms).toLocaleString('es-ES');
+  }
+
+  function esPlausible(t){
+    for (const campo of Object.keys(SANITY_CHECK)){
+      const valor = t[campo];
+      if (valor === null || valor === undefined) continue;
+      const rango = SANITY_CHECK[campo];
+      if (valor < rango.min || valor > rango.max) return false;
+    }
+    return true;
+  }
+
+  /* ============================================================
+     MINIGRÁFICOS (SPARKLINES)
+     ============================================================ */
+  function actualizarSparkline(key){
+    const valoresBrutos = series[key];
+    const valores = valoresBrutos.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+    const svg = document.querySelector('#tile-' + key + ' .sparkline');
+    const polyline = svg.querySelector('polyline');
+    const rangoEl = document.querySelector('#tile-' + key + ' .rango-minmax');
+
+    if (valores.length < 2){
+      polyline.setAttribute('points', '');
+      rangoEl.textContent = 'mín — · máx —';
+      return;
+    }
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    const rango = (max - min) || 1;
+    const w = 100, h = 30, pad = 3;
+    const puntos = valores.map((v, i) => {
+      const x = pad + (i / (valores.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((v - min) / rango) * (h - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    polyline.setAttribute('points', puntos);
+    rangoEl.textContent = 'mín ' + min.toFixed(1) + ' · máx ' + max.toFixed(1);
+  }
+
+  function registrarEnSeries(t, historyLen){
+    GRAFICABLES.forEach(m => {
+      series[m.key].push(numOrNull(t[m.key]));
+      if (series[m.key].length > historyLen) series[m.key].shift();
+      actualizarSparkline(m.key);
+    });
+  }
+
+  function reiniciarSeries(){
+    GRAFICABLES.forEach(m => { series[m.key] = []; actualizarSparkline(m.key); });
+  }
+
+  /* ============================================================
+     PINTADO DE VALORES ACTUALES
+     ============================================================ */
+  function pintarValoresActuales(t){
+    GRAFICABLES.forEach(m => {
+      const el = document.querySelector('#tile-' + m.key + ' .valor-num');
+      el.textContent = fmt(t[m.key]);
+    });
+    valorCalidad.textContent = fmt(t.quality_code);
+  }
+
+  /* ============================================================
+     TABLA DEL HISTÓRICO (vista; los datos reales viven en IndexedDB)
+     ============================================================ */
+  function pintarFilaHistorial(t, staleThresholdS){
+    historialVacio.style.display = 'none';
+    historialEnvoltorio.style.display = 'block';
+    const estadoTexto = t.staleness_s <= staleThresholdS ? 'En línea' : 'Stale';
+    const fila = document.createElement('tr');
+    fila.innerHTML =
+      '<td>' + new Date(t.timestampMs).toLocaleTimeString('es-ES') + '</td>' +
+      '<td>' + fmt(t.temp_c) + '</td>' +
+      '<td>' + fmt(t.humidity_pct) + '</td>' +
+      '<td>' + fmt(t.pressure_hpa) + '</td>' +
+      '<td>' + fmt(t.wind_kmh) + '</td>' +
+      '<td>' + t.staleness_s.toFixed(1) + 's</td>' +
+      '<td>' + estadoTexto + '</td>';
+    historialCuerpo.appendChild(fila);
+    if (historialCuerpo.children.length > MAX_FILAS_TABLA) historialCuerpo.removeChild(historialCuerpo.firstChild);
+    historialEnvoltorio.scrollTop = historialEnvoltorio.scrollHeight;
+  }
+
+  function vaciarVistaHistorial(){
+    historialCuerpo.innerHTML = '';
+    historialVacio.style.display = 'block';
+    historialEnvoltorio.style.display = 'none';
+  }
+
+  async function actualizarStatsPersistencia(stationId){
+    if (!stationId){
+      statsPersistencia.textContent = 'Introduce un Station ID para ver su histórico guardado.';
+      btnDescargarCSV.disabled = true;
+      btnVaciarPersistente.disabled = true;
+      return;
+    }
+    try {
+      const { total, primero, ultimo } = await estadisticasEstacion(stationId);
+      if (total === 0){
+        statsPersistencia.textContent = 'Sin lecturas guardadas todavía para ' + stationId + '.';
+        btnDescargarCSV.disabled = true;
+        btnVaciarPersistente.disabled = true;
+      } else {
+        statsPersistencia.textContent =
+          total + ' lecturas guardadas para ' + stationId + ' · desde ' + fmtFecha(primero) + ' hasta ' + fmtFecha(ultimo);
+        btnDescargarCSV.disabled = false;
+        btnVaciarPersistente.disabled = false;
+      }
+    } catch (err) {
+      statsPersistencia.textContent = 'No se pudo leer el histórico guardado (' + err.message + ').';
+    }
+  }
+
+  async function cargarHistoricoPersistido(stationId){
+    reiniciarSeries();
+    vaciarVistaHistorial();
+    valorCalidad.textContent = '—';
+    GRAFICABLES.forEach(m => { document.querySelector('#tile-' + m.key + ' .valor-num').textContent = '—'; });
+    metaLinea.textContent = 'Frescura: —';
+    ultimaLectura = null;
+    actualizarEstadoBotonPublicarAhora();
+
+    await actualizarStatsPersistencia(stationId);
+    if (!stationId) return;
+
+    const historyLen = Math.round(leerNumero(historyLenInput, DEFAULTS.historyLen));
+    try {
+      const registros = await obtenerUltimas(stationId, Math.max(historyLen, MAX_FILAS_TABLA));
+      registros.forEach(r => pintarFilaHistorial(r, leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS)));
+      registros.slice(-historyLen).forEach(r => registrarEnSeries(r, historyLen));
+      if (registros.length > 0){
+        const ultimo = registros[registros.length - 1];
+        pintarValoresActuales(ultimo);
+        ultimaLectura = ultimo;
+        actualizarEstadoBotonPublicarAhora();
+      }
+    } catch (err) {
+      statsPersistencia.textContent = 'No se pudo cargar el histórico guardado (' + err.message + ').';
+    }
+  }
+
+  async function descargarCSV(){
+    const stationId = (activo && activo.stationId) || stationIdInput.value.trim();
+    if (!stationId) return;
+    const textoOriginal = btnDescargarCSV.textContent;
+    btnDescargarCSV.disabled = true;
+    btnDescargarCSV.textContent = 'Exportando…';
+    try {
+      const registros = await exportarTodo(stationId, MAX_EXPORT_SEGURIDAD);
+      if (registros.length === 0) return;
+      const columnas = ['timestampMs', 'temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'dewpoint_c', 'rainrate_mmh', 'quality_code', 'staleness_s', 'latency_ms'];
+      const lineas = [columnas.join(',')];
+      registros.forEach(r => {
+        lineas.push(columnas.map(c => {
+          const v = r[c];
+          return (v === null || v === undefined) ? '' : String(v).replace(/,/g, '.');
+        }).join(','));
+      });
+      const blob = new Blob([lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const fecha = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      a.href = url;
+      a.download = 'telemetriawu-mqtt-' + stationId + '-' + fecha + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      btnDescargarCSV.textContent = textoOriginal;
+      btnDescargarCSV.disabled = false;
+    }
+  }
+
+  async function purgarAhora(){
+    const stationId = stationIdInput.value.trim();
+    if (!stationId) return;
+    const dias = leerNumero(retencionDiasInput, DEFAULTS.retencionDias);
+    const cutoff = Date.now() - dias * 86400000;
+    const textoOriginal = btnPurgarAhora.textContent;
+    btnPurgarAhora.disabled = true;
+    btnPurgarAhora.textContent = 'Purgando…';
+    try {
+      const borrados = await purgarAntiguas(stationId, cutoff);
+      await actualizarStatsPersistencia(stationId);
+      statsPersistencia.textContent += ' · ' + borrados + ' lectura(s) purgada(s) ahora';
+    } finally {
+      btnPurgarAhora.textContent = textoOriginal;
+      btnPurgarAhora.disabled = false;
+    }
+  }
+
+  async function vaciarPersistente(){
+    const stationId = stationIdInput.value.trim();
+    if (!stationId) return;
+    const ok = window.confirm('¿Seguro que quieres borrar TODO el histórico guardado para la estación "' + stationId + '"? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    await vaciarEstacion(stationId);
+    await cargarHistoricoPersistido(stationId);
+  }
+
+  /* ============================================================
+     BARRA DE PROGRESO / CUENTA ATRÁS
+     ============================================================ */
+  function iniciarCuentaAtras(delayMs, etiqueta){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    const inicio = Date.now();
+    const fin = inicio + delayMs;
+    progresoFill.style.width = '0%';
+    function tick(){
+      const ahora = Date.now();
+      const transcurrido = ahora - inicio;
+      const pct = Math.min(100, (transcurrido / delayMs) * 100);
+      progresoFill.style.width = pct.toFixed(1) + '%';
+      const restante = Math.max(0, (fin - ahora) / 1000);
+      progresoEtiqueta.textContent = etiqueta + ' en ' + restante.toFixed(0) + ' s';
+      if (ahora >= fin) clearInterval(countdownIntervalId);
+    }
+    tick();
+    countdownIntervalId = setInterval(tick, 250);
+  }
+
+  function detenerCuentaAtras(textoFinal){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    progresoFill.style.width = '0%';
+    progresoEtiqueta.textContent = textoFinal;
+  }
+
+  /* ============================================================
+     MQTT: CONEXIÓN Y PUBLICACIÓN
+     ============================================================ */
+  function fijarBadgeMqtt(clase, html){
+    estadoMqttBadge.className = 'estado-badge' + (clase ? ' ' + clase : '');
+    estadoMqttBadge.innerHTML = html;
+  }
+
+  function actualizarEstadoBotonPublicarAhora(){
+    btnPublicarAhora.disabled = !(mqttClient && mqttClient.connected && ultimaLectura);
+  }
+
+  function generarClientId(){
+    return 'wu-bridge-web-' + Math.random().toString(16).slice(2, 10);
+  }
+
+  function construirPayload(t){
+    return {
+      station: t.stationId,
+      ts_utc: new Date().toISOString(),
+      latency_ms: Math.round((t.latency_ms || 0) * 100) / 100,
+      staleness_s: Math.round(t.staleness_s * 10) / 10,
+      temp_c: t.temp_c,
+      humidity_pct: t.humidity_pct,
+      pressure_hpa: t.pressure_hpa,
+      wind_kmh: t.wind_kmh,
+      gust_kmh: t.gust_kmh,
+      dewpoint_c: t.dewpoint_c,
+      rainrate_mmh: t.rainrate_mmh,
+      quality_flag: t.quality_code
+    };
+  }
+
+  function publicarLectura(t, origen){
+    if (!mqttClient || !mqttClient.connected){
+      lecturasOmitidas += 1;
+      contOmitidos.textContent = lecturasOmitidas;
+      log('warn', 'MQTT no conectado; se omite la publicación de esta lectura (' + origen + ').');
+      return;
+    }
+    const payload = JSON.stringify(construirPayload(t));
+    const qos = parseInt(mqttQosInput.value, 10) || 0;
+    const retain = mqttRetainInput.checked;
+    mqttClient.publish(mqttTopicActivo, payload, { qos: qos, retain: retain }, (err) => {
+      if (err){
+        log('error', 'Fallo al publicar en "' + mqttTopicActivo + '": ' + err.message);
+        return;
+      }
+      mensajesPublicados += 1;
+      contPublicados.textContent = mensajesPublicados;
+      ultimoPublishTexto.textContent = new Date().toLocaleTimeString('es-ES');
+      log('ok', 'Publicado en "' + mqttTopicActivo + '" (qos=' + qos + ', retain=' + retain + ', ' + origen + ').');
+    });
+  }
+
+  function publicarAhora(){
+    if (!ultimaLectura) return;
+    publicarLectura(ultimaLectura, 'manual');
+  }
+
+  function conectarMqtt(){
+    if (mqttClient || mqttConnecting) return;
+    const wsUrl = (mqttWsUrlInput.value.trim() || MQTT_DEFAULTS.wsUrl);
+    if (!/^wss?:\/\//i.test(wsUrl)){
+      log('error', 'La URL del broker debe empezar por "ws://" o "wss://": "' + wsUrl + '".');
+      return;
+    }
+    mqttTopicActivo = mqttTopicInput.value.trim() || MQTT_DEFAULTS.topic;
+    const usuario = mqttUserInput.value.trim();
+    const opciones = {
+      clientId: generarClientId(),
+      keepalive: 60,
+      reconnectPeriod: 4000,
+      connectTimeout: 15000
+    };
+    if (usuario){
+      opciones.username = usuario;
+      opciones.password = mqttPasswordInput.value;
+    }
+
+    mqttConnecting = true;
+    btnConectarMqtt.disabled = true;
+    INPUTS_MQTT.forEach(i => { i.disabled = true; });
+    fijarBadgeMqtt('warn', '<span class="dot"></span><span>Conectando…</span>');
+    log('info', 'Conectando a ' + wsUrl + ' (topic "' + mqttTopicActivo + '")…');
+
+    let cliente;
+    try {
+      cliente = mqtt.connect(wsUrl, opciones);
+    } catch (err) {
+      mqttConnecting = false;
+      btnConectarMqtt.disabled = false;
+      INPUTS_MQTT.forEach(i => { i.disabled = false; });
+      fijarBadgeMqtt('danger', '<span class="dot"></span><span>Error de conexión</span>');
+      log('error', 'No se pudo iniciar la conexión: ' + err.message);
+      return;
+    }
+    mqttClient = cliente;
+
+    cliente.on('connect', () => {
+      mqttConnecting = false;
+      fijarBadgeMqtt('ok', '<span class="dot pulse"></span><span>Conectado</span>');
+      btnDesconectarMqtt.disabled = false;
+      log('ok', 'Conectado al broker.');
+      actualizarEstadoBotonPublicarAhora();
+    });
+    cliente.on('reconnect', () => {
+      fijarBadgeMqtt('warn', '<span class="dot"></span><span>Reconectando…</span>');
+      log('warn', 'Reconectando con el broker…');
+      actualizarEstadoBotonPublicarAhora();
+    });
+    cliente.on('close', () => {
+      fijarBadgeMqtt('', '<span class="dot off"></span><span>Desconectado</span>');
+      actualizarEstadoBotonPublicarAhora();
+    });
+    cliente.on('offline', () => {
+      fijarBadgeMqtt('warn', '<span class="dot"></span><span>Sin conexión (reintentando)</span>');
+      log('warn', 'Cliente MQTT sin conexión; reintentando en segundo plano.');
+      actualizarEstadoBotonPublicarAhora();
+    });
+    cliente.on('error', (err) => {
+      fijarBadgeMqtt('danger', '<span class="dot"></span><span>Error</span>');
+      log('error', 'Error MQTT: ' + (err && err.message ? err.message : err));
+      actualizarEstadoBotonPublicarAhora();
+    });
+  }
+
+  function desconectarMqtt(){
+    if (!mqttClient) return;
+    const cliente = mqttClient;
+    mqttClient = null;
+    cliente.end(true);
+    mqttConnecting = false;
+    btnConectarMqtt.disabled = false;
+    btnDesconectarMqtt.disabled = true;
+    INPUTS_MQTT.forEach(i => { i.disabled = false; });
+    fijarBadgeMqtt('', '<span class="dot off"></span><span>Desconectado</span>');
+    log('info', 'Desconectado manualmente del broker.');
+    actualizarEstadoBotonPublicarAhora();
+  }
+
+  /* ============================================================
+     MOTOR DEL MONITOR (idéntico a TelemetriaWU Histórico + MQTT)
+     ============================================================ */
+  function fijarBadge(clase, html){
+    estadoBadge.className = 'estado-badge' + (clase ? ' ' + clase : '');
+    estadoBadge.innerHTML = html;
+  }
+
+  function mostrarError(mensaje){
+    errorBox.textContent = mensaje;
+    errorBox.classList.add('visible');
+  }
+
+  function ocultarError(){
+    errorBox.classList.remove('visible');
+    errorBox.textContent = '';
+  }
+
+  async function cicloConsulta(){
+    if (!running || !activo) return;
+
+    const url = construirURL(activo.stationId, activo.apiKey);
+    const inicio = performance.now();
+    let response;
+    try {
+      response = await fetch(url);
+    } catch (err) {
+      programarReintento('fallo de red (¿bloqueador de contenido o conexión caída?)');
+      return;
+    }
+    const latenciaMs = performance.now() - inicio;
+
+    if (response.status === 401){
+      pararMonitor('fatal', '401: API Key inválida o no autorizada.');
+      return;
+    }
+    if (response.status === 404){
+      pararMonitor('fatal', '404: Station ID no encontrado o endpoint obsoleto.');
+      return;
+    }
+    if (!response.ok){
+      programarReintento('HTTP ' + response.status);
+      return;
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      programarReintento('respuesta no es JSON válido');
+      return;
+    }
+
+    const obs = (data.observations || [])[0];
+    if (!obs){
+      fijarBadge('ok', '<span class="dot pulse"></span><span>En ejecución (sin datos nuevos)</span>');
+      programarSiguienteCicloOrdinario();
+      return;
+    }
+
+    retryCount = 0;
+    contReintentos.textContent = '0';
+    ocultarError();
+
+    const metric = obs.metric || {};
+    const ahoraMs = Date.now();
+    const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
+    const stalenessS = (ahoraMs - obsMs) / 1000;
+
+    const t = {
+      stationId: activo.stationId,
+      timestampMs: ahoraMs,
+      temp_c: numOrNull(metric.temp),
+      humidity_pct: numOrNull(obs.humidity),
+      pressure_hpa: numOrNull(metric.pressure),
+      wind_kmh: numOrNull(metric.windSpeed),
+      gust_kmh: numOrNull(metric.windGust),
+      dewpoint_c: numOrNull(obs.dewpoint),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      quality_code: (obs.qualityControlFlag !== undefined && obs.qualityControlFlag !== null) ? obs.qualityControlFlag : 'N/A',
+      staleness_s: stalenessS,
+      latency_ms: latenciaMs
+    };
+
+    lecturasRecibidas += 1;
+    contLecturas.textContent = lecturasRecibidas;
+    contLatencia.textContent = latenciaMs.toFixed(0);
+    metaLinea.textContent = 'Frescura: ' + stalenessS.toFixed(1) + ' s';
+
+    pintarValoresActuales(t);
+    registrarEnSeries(t, activo.historyLen);
+    pintarFilaHistorial(t, activo.staleThresholdS);
+    ultimaLectura = t;
+    actualizarEstadoBotonPublicarAhora();
+
+    if (!esPlausible(t)) avisoPlausibilidad.classList.add('visible');
+    else avisoPlausibilidad.classList.remove('visible');
+
+    if (stalenessS <= activo.staleThresholdS){
+      fijarBadge('ok', '<span class="dot pulse"></span><span>En ejecución</span>');
+    } else {
+      fijarBadge('warn', '<span class="dot"></span><span>En ejecución (dato stale)</span>');
+    }
+
+    // Persistencia: se guarda primero, y a continuación se purga lo que haya
+    // superado la retención configurada.
+    try {
+      await guardarLectura(t);
+      const cutoff = Date.now() - activo.retencionDias * 86400000;
+      await purgarAntiguas(activo.stationId, cutoff);
+      await actualizarStatsPersistencia(activo.stationId);
+    } catch (err) {
+      mostrarError('Aviso: la lectura se procesó pero no se pudo guardar en el histórico persistente (' + err.message + ').');
+    }
+
+    // Publicación MQTT (si está activada): no detiene el sondeo si falla u
+    // omite por no estar conectado en este momento.
+    if (activo.mqttEnabled){
+      publicarLectura(t, 'sondeo');
+    }
+
+    programarSiguienteCicloOrdinario();
+  }
+
+  function programarSiguienteCicloOrdinario(){
+    if (!running) return;
+    iniciarCuentaAtras(activo.pollIntervalMs, 'Próxima consulta');
+    timeoutId = setTimeout(cicloConsulta, activo.pollIntervalMs);
+  }
+
+  function programarReintento(motivo){
+    if (!running) return;
+    retryCount += 1;
+    contReintentos.textContent = retryCount;
+    const delayMs = Math.min(activo.backoffBaseMs * Math.pow(2, retryCount - 1), activo.backoffMaxMs);
+    mostrarError('Error transitorio (' + motivo + '). Reintento ' + retryCount + ' en ' + (delayMs / 1000).toFixed(1) + ' s.');
+    fijarBadge('warn', '<span class="dot"></span><span>Reintentando (intento ' + retryCount + ')</span>');
+    iniciarCuentaAtras(delayMs, 'Reintento ' + retryCount);
+    timeoutId = setTimeout(cicloConsulta, delayMs);
+  }
+
+  function pararMonitor(tipo, motivo){
+    running = false;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = null;
+    detenerCuentaAtras(tipo === 'fatal' ? 'Monitor detenido por error fatal.' : 'Monitor detenido.');
+
+    if (tipo === 'fatal'){
+      mostrarError(motivo);
+      fijarBadge('danger', '<span class="dot"></span><span>Detenido: error fatal</span>');
+    } else {
+      fijarBadge('', '<span class="dot off"></span><span>Detenido</span>');
+    }
+
+    btnIniciar.disabled = stationIdInput.value.trim().length === 0;
+    btnDetener.disabled = true;
+    INPUTS_CONFIG.forEach(i => { i.disabled = false; });
+  }
+
+  async function iniciarMonitor(){
+    const stationId = stationIdInput.value.trim();
+    if (!stationId) return;
+
+    activo = {
+      stationId: stationId,
+      apiKey: apiKeyInput.value.trim(),
+      pollIntervalMs: leerNumero(pollIntervalInput, DEFAULTS.pollIntervalS) * 1000,
+      backoffBaseMs: leerNumero(backoffBaseInput, DEFAULTS.backoffBaseS) * 1000,
+      backoffMaxMs: leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS) * 1000,
+      staleThresholdS: leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS),
+      historyLen: Math.round(leerNumero(historyLenInput, DEFAULTS.historyLen)),
+      retencionDias: leerNumero(retencionDiasInput, DEFAULTS.retencionDias),
+      mqttEnabled: mqttEnabledInput.checked
+    };
+
+    running = true;
+    retryCount = 0;
+    lecturasRecibidas = 0;
+    contLecturas.textContent = '0';
+    contReintentos.textContent = '0';
+    ocultarError();
+    avisoPlausibilidad.classList.remove('visible');
+
+    btnIniciar.disabled = true;
+    btnDetener.disabled = false;
+    INPUTS_CONFIG.forEach(i => { i.disabled = true; });
+    fijarBadge('ok', '<span class="dot pulse"></span><span>En ejecución</span>');
+    progresoEtiqueta.textContent = 'Cargando histórico guardado…';
+
+    if (activo.mqttEnabled && !mqttClient && !mqttConnecting){
+      log('info', 'Publicación MQTT activada: conectando automáticamente al iniciar el monitor.');
+      conectarMqtt();
+    }
+
+    // Sincroniza la vista con el histórico ya persistido antes de empezar,
+    // por si la estación ha cambiado desde la última carga de página.
+    await cargarHistoricoPersistido(stationId);
+    progresoEtiqueta.textContent = 'Realizando la primera consulta…';
+
+    cicloConsulta();
+  }
+
+  function detenerMonitor(){
+    pararMonitor('manual', null);
+  }
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+  btnGuardarConfig.addEventListener('click', guardarConfig);
+  btnBorrarConfig.addEventListener('click', borrarConfig);
+  stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);
+  btnIniciar.addEventListener('click', iniciarMonitor);
+  btnDetener.addEventListener('click', detenerMonitor);
+  btnDescargarCSV.addEventListener('click', descargarCSV);
+  btnPurgarAhora.addEventListener('click', purgarAhora);
+  btnVaciarPersistente.addEventListener('click', vaciarPersistente);
+
+  btnConectarMqtt.addEventListener('click', conectarMqtt);
+  btnDesconectarMqtt.addEventListener('click', desconectarMqtt);
+  btnPublicarAhora.addEventListener('click', publicarAhora);
+
+  construirTarjetas();
+  cargarConfig();
+  cargarHistoricoPersistido(stationIdInput.value.trim());
+})();
+</script>
+</body>
+</html>

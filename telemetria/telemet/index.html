@@ -376,7 +376,7 @@
     <div class="card-body">
       <h2>Última lectura y tendencia</h2>
       <p class="subtitle">Cada tarjeta muestra el último valor, su tendencia frente a la lectura anterior (▲/▼/—) y un minigráfico con las lecturas más recientes de esta sesión (ver "Puntos en los minigráficos" arriba).</p>
-      <div class="meta-linea" id="metaLinea" aria-live="polite">Última lectura: — · Frescura: —</div>
+      <div class="meta-linea" id="metaLinea" aria-live="polite">Última lectura: — · Freshness: —</div>
 
       <div class="datos-grid" id="datosGrid">
         <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para poder incluir el sparkline -->
@@ -400,7 +400,7 @@
       <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
       <div class="historial-envoltorio" id="historialEnvoltorio" style="display:none;">
         <table class="historial">
-          <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Frescura</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Freshness</th><th>Estado</th></tr></thead>
           <tbody id="historialCuerpo"></tbody>
         </table>
       </div>
@@ -415,7 +415,7 @@
 
 <footer class="app-footer">
   TeleMet — monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, con sondeo continuo, backoff automático, tiempo límite configurable y tendencia por variable, directamente desde el navegador.
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026, 21:11</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026, 22:11</div>
 </footer>
 
 <script>
@@ -739,7 +739,7 @@
     });
     valorCalidad.textContent = fmt(t.quality_code);
     metaLinea.textContent = 'Última lectura: ' + new Date().toLocaleTimeString('es-ES') +
-      ' · Frescura: ' + t.staleness_s.toFixed(1) + ' s';
+      ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';
     contLatencia.textContent = t.latency_ms.toFixed(0);
   }
 

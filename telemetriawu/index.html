@@ -195,12 +195,16 @@
      - Cada persona que abra la URL introduce su propio Station ID (y
        su propia API Key, si la necesita); nadie comparte la tuya.
 
-  3) SI LA CONSULTA FALLA SIN MOTIVO APARENTE (POSIBLE CORS)
-     La API de Weather Underground no está pensada principalmente para
-     llamarse desde el navegador de un tercero; si tu navegador bloquea
-     la petición por CORS, esta app lo indicará con un mensaje
-     específico. En ese caso, usa los scripts de Python equivalentes de
-     este mismo repositorio, que no tienen esa limitación.
+  3) SOBRE LA API KEY Y CORS
+     Según la documentación oficial (Weather Company Data - API Common
+     Usage Guide), todas las APIs de TWC soportan CORS y la apiKey se
+     envía SIEMPRE como parámetro de la URL ("?apiKey=..."), nunca como
+     cabecera HTTP. Por eso esta app NO manda ninguna cabecera
+     personalizada: una cabecera propia como "x-api-key" obliga al
+     navegador a hacer un preflight CORS que esta API no supera, y la
+     petición real nunca llega a salir (se ve como un fallo de red
+     genérico, sin más detalle). Si aun así la consulta falla, usa los
+     scripts de Python equivalentes de este mismo repositorio.
 
   4) QUÉ CONSTANTES EDITAR (buscar en el <script> final)
      - BASE_URL: el endpoint de la API, por si Earth Network lo cambia.
@@ -222,7 +226,7 @@
 
 <div class="aviso-banner">
   <span>⚠️</span>
-  <span><strong>Aviso:</strong> esta app llama directamente a la API de Weather Underground desde tu navegador. Si tu navegador bloquea la petición (CORS) o tu cuenta exige una API Key que no tienes, verás un mensaje explicando el motivo; los scripts de Python de este mismo repositorio no tienen esa limitación.</span>
+  <span><strong>Aviso:</strong> esta app llama directamente a la API de Weather Underground desde tu navegador. Si tu cuenta exige una API Key y no la has introducido, verás un error 401; si la consulta falla por otro motivo, los scripts de Python de este mismo repositorio son la alternativa.</span>
 </div>
 
 <main>
@@ -400,13 +404,21 @@
   /* ============================================================
      CONSULTA A LA API
      ============================================================ */
-  function construirURL(stationId){
+  function construirURL(stationId, apiKey){
     const params = new URLSearchParams({
       stationId: stationId,
       format: 'json',
       numericPrecision: 'decimal',
       units: 'm'
     });
+    // La API Key se envía SIEMPRE como parámetro de consulta "apiKey" (así lo
+    // documenta IBM/The Weather Company), nunca como cabecera HTTP propia:
+    // una cabecera personalizada como "x-api-key" obliga al navegador a
+    // hacer un preflight CORS (OPTIONS) que esta API no supera, y la
+    // petición real nunca llega a salir — exactamente el fallo genérico de
+    // red que se ve en consulta() más abajo. Como parámetro de URL, la
+    // petición es una petición CORS "simple" y sí funciona.
+    if (apiKey) params.set('apiKey', apiKey);
     return BASE_URL + '?' + params.toString();
   }
 
@@ -441,15 +453,14 @@
 
     const stationId = stationIdInput.value.trim();
     const apiKey = apiKeyInput.value.trim();
-    const headers = apiKey ? { 'x-api-key': apiKey } : {};
-    const url = construirURL(stationId);
+    const url = construirURL(stationId, apiKey);
 
     const inicio = performance.now();
     let response;
     try {
-      response = await fetch(url, { headers: headers });
+      response = await fetch(url);
     } catch (err) {
-      mostrarError('No se pudo contactar con la API. Puede deberse a que tu red bloquea la petición, a que el servicio está caído, o a que la API de Weather Underground no permite llamadas directas desde el navegador (CORS) para tu cuenta. Si el problema persiste, usa el script equivalente de Python de este mismo repositorio (wu_telemetria_consulta_simple.py), que no tiene esta limitación.');
+      mostrarError('No se pudo contactar con la API. Puede deberse a que tu red o un bloqueador de contenido está impidiendo la petición, o a que el servicio está caído. Si el problema persiste, usa el script equivalente de Python de este mismo repositorio (wu_telemetria_consulta_simple.py).');
       restaurarBoton(textoOriginalBoton);
       return;
     }

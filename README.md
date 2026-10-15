@@ -73,4 +73,5 @@ necesitas.
 
 ## Autor
 
-Rafael Puerto — Departamento de Ingeniería de Sistemas y Automática. Universidad Miguel Hernández de Elche (UMH),  Contacto: r.puerto@umh.es
+Rafael Puerto — Departamento de Ingeniería de Sistemas y Automática.
+Universidad Miguel Hernández de Elche (UMH),  Contacto: r.puerto@umh.es

@@ -274,9 +274,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      (ejeXModo, persistido en telemetpro_eje_x_modo) decide cómo se
      reparte el ancho del sparkline:
        - "uniforme": un punto, un paso de ancho fijo (como antes).
-       - "tiempo": posición proporcional a la marca de tiempo real,
-         autoajustando el rango al primer y último punto disponibles;
-         un hueco por reintentos o caídas se ve como un tramo más ancho.
+       - "tiempo": posición proporcional a la marca de tiempo real, dentro
+         de una VENTANA FIJA (historyLen × pollIntervalMs) terminada en
+         Date.now() — no el rango entre el primer y el último punto
+         disponibles, porque con sondeo regular ese rango casi coincide
+         con el espaciado por índice y la diferencia con "uniforme" no se
+         aprecia. Con ventana fija, en cambio, los puntos se agrupan a la
+         derecha mientras el histórico no está lleno (sesión recién
+         empezada o recién reiniciada) y un hueco por reintentos se ve
+         como un tramo vacío: la diferencia es visible siempre.
      "Reiniciar gráficas" vacía series/seriesTiempos y redibuja; no toca
      el histórico de la tabla ni el CSV (eso lo hace "Limpiar histórico").
   ============================================================================
@@ -443,7 +449,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     </div>
     <button type="button" class="btn btn-ghost btn-sm" id="btnReiniciarGraficas" disabled><svg class="i"><use href="#i-refresh"></use></svg>Reiniciar gráficas</button>
   </div>
-  <p class="help" style="margin:0 0 14px">«Por lectura» separa los puntos a intervalos iguales; «Por tiempo real» los sitúa según su marca de tiempo, así que los huecos por reintentos o caídas se ven como tramos más anchos.</p>
+  <p class="help" style="margin:0 0 14px">«Por lectura» separa los puntos a intervalos iguales; «Por tiempo real» los sitúa dentro de una ventana de duración fija terminada ahora mismo, así que se agrupan a la derecha mientras el histórico no está lleno y un hueco por reintentos se ve como un tramo vacío.</p>
 
   <div class="datos-grid" id="datosGrid">
     <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para incluir icono, color y sparkline -->
@@ -479,7 +485,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:37</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:43</p>
 </footer>
 
 <div class="bottomnav">
@@ -501,7 +507,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Tendencia (▲ ▼ —)</b><span>Compara el último valor de cada variable con el anterior: sube, baja o se mantiene estable.</span></div>
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
-        <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa según cuándo se recibió cada uno, de modo que un hueco por reintentos se ve como un tramo más ancho.</span></div>
+        <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
       </div>
     </div>
   </div>
@@ -793,11 +799,22 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
     let xs;
     if (ejeXModo === 'tiempo'){
-      // Rango autoajustado a la primera y última marca de tiempo disponibles:
-      // no requiere que el usuario fije nada, solo cambia cómo se reparte el ancho.
-      const tMin = pares[0].t, tMax = pares[pares.length - 1].t;
-      const rangoT = (tMax - tMin) || 1;
-      xs = pares.map(p => pad + ((p.t - tMin) / rangoT) * (w - pad * 2));
+      // Ventana de duración fija (nº de puntos configurado × intervalo de
+      // sondeo), terminada en el instante actual — NO el rango entre el
+      // primer y el último punto disponibles: con un sondeo regular ese
+      // rango casi coincide con el espaciado por índice y la diferencia
+      // con "Por lectura" no se nota. Con una ventana fija, en cambio, los
+      // puntos quedan agrupados hacia la derecha mientras el histórico no
+      // se ha llenado (sesión recién empezada o recién reiniciada) y un
+      // hueco por reintentos se ve como un tramo vacío, siempre visible.
+      const historyLenActivo = (activo && activo.historyLen) || DEFAULTS.historyLen;
+      const pollMsActivo = (activo && activo.pollIntervalMs) || DEFAULTS.pollIntervalS * 1000;
+      const ventanaMs = historyLenActivo * pollMsActivo;
+      const tMin = Date.now() - ventanaMs;
+      xs = pares.map(p => {
+        const frac = Math.max(0, Math.min(1, (p.t - tMin) / ventanaMs));
+        return pad + frac * (w - pad * 2);
+      });
     } else {
       xs = pares.map((p, i) => pad + (i / (pares.length - 1)) * (w - pad * 2));
     }

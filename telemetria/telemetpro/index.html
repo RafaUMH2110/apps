@@ -16,7 +16,7 @@
   /* Marca — constante en claro y oscuro */
   --brasa:#E4572E; --brasa-osc:#C9441F;
   --forjado:#0E7C6B;
-  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-dew:#0E7C6B; --c-rain:#3FA7D6;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70;
   --r:14px;
   --display:'Bricolage Grotesque',Georgia,serif;
   --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -220,7 +220,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Pro" data-app-description="Monitor en vivo de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network, con un rediseño editorial inspirado en una paleta de tipo 'forja' (tipografía Bricolage Grotesque + Instrument Sans, tarjetas con icono y color por variable, luz de estado persistente, glosario de términos, visibilidad de la API Key y ajustes avanzados plegables). Mismo motor que TeleMet: sondeo continuo con backoff automático, tiempo límite configurable, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial" data-client-only="true">
+<body data-app-title="TeleMet Pro" data-app-description="Monitor en vivo de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network, con un rediseño editorial inspirado en una paleta de tipo 'forja' (tipografía Bricolage Grotesque + Instrument Sans, tarjetas con icono y color por variable, luz de estado persistente, glosario de términos, visibilidad de la API Key y ajustes avanzados plegables). Mismo motor que TeleMet: sondeo continuo con backoff automático, tiempo límite configurable, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv" data-client-only="true">
 
 <!--
   ============================================================================
@@ -254,7 +254,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      - DEFAULTS: valores por defecto de intervalo, backoff, tiempo límite
        de petición, umbral de "stale" y longitud del histórico.
      - SANITY_CHECK: rangos físicamente plausibles para el aviso de
-       valor sospechoso (cubre las siete variables graficadas).
+       valor sospechoso (cubre las ocho variables graficadas).
      - GRAFICABLES: qué variable se dibuja, con qué icono y qué color
        (var(--c-xxx) definida en :root).
      - MAX_FILAS_TABLA: filas que conserva el histórico antes de
@@ -274,6 +274,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 15a8.5 8.5 0 1 1 17 0"></path><path d="M12 15l3.3-3.3"></path><circle cx="12" cy="15" r="1.3"></circle></symbol>
   <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
   <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"></path></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
@@ -448,7 +449,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro — misma base de TeleMet, con un rediseño editorial (tipografía Bricolage Grotesque + Instrument Sans, luz de estado persistente, glosario y ajustes avanzados plegables). Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 15 de octubre de 2026, 22:26</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:08</p>
 </footer>
 
 <div class="bottomnav">
@@ -510,8 +511,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     pressure_hpa:  { min: 850,  max: 1085 },
     wind_kmh:      { min: 0,    max: 250  },
     gust_kmh:      { min: 0,    max: 300  },
-    dewpoint_c:    { min: -60,  max: 50   },
-    rainrate_mmh:  { min: 0,    max: 500  }
+    rainrate_mmh:  { min: 0,    max: 500  },
+    solarradiation_wm2: { min: 0, max: 1500 },
+    uv_index:      { min: 0,    max: 20   }
   };
 
   // Variable, icono y color (debe existir como var(--c-xxx) en :root).
@@ -521,8 +523,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { key: 'pressure_hpa', etiqueta: 'Presión',        unidad: 'hPa',  icono: 'gauge',       color: 'var(--c-pres)' },
     { key: 'wind_kmh',     etiqueta: 'Viento',         unidad: 'km/h', icono: 'wind',        color: 'var(--c-wind)' },
     { key: 'gust_kmh',     etiqueta: 'Racha',          unidad: 'km/h', icono: 'wind',        color: 'var(--c-gust)' },
-    { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C',   icono: 'droplet',     color: 'var(--c-dew)'  },
-    { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h', icono: 'cloud-rain',  color: 'var(--c-rain)' }
+    { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h', icono: 'cloud-rain',  color: 'var(--c-rain)' },
+    { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun',  color: 'var(--c-solar)' },
+    { key: 'uv_index',     etiqueta: 'Índice UV',      unidad: '',     icono: 'sun',         color: 'var(--c-uv)'   }
   ];
 
   const UMBRAL_TENDENCIA = 0.05;
@@ -853,7 +856,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function descargarCSV(){
     if (filasHistorial.length === 0) return;
-    const columnas = ['hora', 'temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'dewpoint_c', 'rainrate_mmh', 'quality_code', 'staleness_s', 'latency_ms'];
+    const columnas = ['hora', 'temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'rainrate_mmh', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
     const lineas = [columnas.join(',')];
     filasHistorial.forEach(r => {
       lineas.push(columnas.map(c => {
@@ -976,8 +979,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       pressure_hpa: numOrNull(metric.pressure),
       wind_kmh: numOrNull(metric.windSpeed),
       gust_kmh: numOrNull(metric.windGust),
-      dewpoint_c: numOrNull(obs.dewpoint),
       rainrate_mmh: numOrNull(metric.precipRate),
+      // "solarradiation"/"uv" son los nombres de clave habituales en payloads
+      // de Fine Offset (sin variante métrica/imperial, van sueltos en la raíz
+      // de obs); si tu estación los reporta pero las tarjetas se quedan
+      // siempre en —, vuelca un payload crudo y ajusta estas dos claves.
+      solarradiation_wm2: numOrNull(obs.solarradiation),
+      uv_index: numOrNull(obs.uv),
       quality_code: (obs.qualityControlFlag !== undefined && obs.qualityControlFlag !== null) ? obs.qualityControlFlag : 'N/A',
       staleness_s: stalenessS,
       latency_ms: latenciaMs

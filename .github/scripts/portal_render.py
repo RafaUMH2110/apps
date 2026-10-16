@@ -13,9 +13,15 @@ Este módulo expone DOS generadores de portal, pensados para dos archivos
 de salida distintos (ver generate_index.py):
 
   - render_portal_html(...)       -> appindex/index.html (PRINCIPAL)
-      Diseño original azul/índigo con iconos Lucide (CDN) y cuadrícula
-      plana de tarjetas, sin agrupar por tema. Es la versión que se usa
-      en producción / la que se enlaza en el README.
+      Rediseño de octubre de 2026: rail de categorías fijo a la
+      izquierda (chips horizontales en móvil) y las apps agrupadas por
+      familia de proyecto (GROUP_INFO: consultar, pdfs, moda,
+      telemetria -> la carpeta de nivel superior de cada app), en vez
+      de una cuadrícula plana. Tipografía Fraunces + Figtree +
+      JetBrains Mono vía Google Fonts, iconos Lucide (CDN) y modo
+      oscuro. Es la versión que se usa en producción / la que se
+      enlaza en el README. El diseño plano anterior se conserva a mano
+      en appindex/index-anterior.html, que este generador nunca toca.
 
   - render_portal_html_temas(...) -> appindex/temas/index.html (ALTERNATIVO)
       Mismo catálogo de apps, pero agrupado en contenedores por tema (la
@@ -91,7 +97,8 @@ def _fecha_es(dt):
 
 # ============================================================================
 # VERSIÓN PRINCIPAL — appindex/index.html
-# Diseño azul/índigo original, iconos Lucide vía CDN, cuadrícula plana.
+# Rail de categorías + apps agrupadas por familia (GROUP_INFO), iconos
+# Lucide vía CDN, tipografía Fraunces/Figtree/JetBrains Mono, modo oscuro.
 # ============================================================================
 
 # Catálogo de categorías conocidas: slug -> (etiqueta legible, icono de Lucide).
@@ -120,70 +127,197 @@ def category_info(slug):
     return {"label": label, "icon": "tag"}
 
 
+# Catálogo de "familias" de proyecto (contenedores): slug de la carpeta de
+# nivel superior de cada app -> etiqueta, icono de Lucide y una línea de
+# contexto. Una familia nueva que no esté aquí recibe una etiqueta derivada
+# del slug y el icono genérico ("folder"), para que el portal no se rompa al
+# añadir una carpeta de apps nueva.
+GROUP_INFO = {
+    "consultar": {
+        "label": "Consulta general",
+        "icon": "message-square-text",
+        "blurb": "Un punto de entrada rápido para lanzar cualquier consulta a Claude y recibir una respuesta lista para exportar.",
+    },
+    "pdfs": {
+        "label": "Detección de IA en PDF",
+        "icon": "file-search",
+        "blurb": "Informes forenses sobre indicios de redacción asistida por IA en trabajos entregados en PDF.",
+    },
+    "moda": {
+        "label": "Diseño y producción de moda",
+        "icon": "shirt",
+        "blurb": "Generación de imágenes, outfits y patrones de corte, además de consulta de logística de la industria.",
+    },
+    "telemetria": {
+        "label": "Telemetría meteorológica",
+        "icon": "cloud-sun",
+        "blurb": "Monitorización en vivo de la estación meteorológica personal, con histórico, gráficos y exportación.",
+    },
+}
+
+# Orden fijo en el que se muestran las secciones de familia cuando existen;
+# cualquier familia nueva que no esté en esta lista se añade al final, por
+# orden alfabético de su etiqueta (ver _group_order_for, más abajo).
+GROUP_ORDER_DEFAULT = ["consultar", "pdfs", "moda", "telemetria"]
+
+
+def group_info(slug):
+    if slug in GROUP_INFO:
+        return GROUP_INFO[slug]
+    label = slug.replace("-", " ").replace("_", " ").strip().title() or slug
+    return {"label": label, "icon": "folder", "blurb": ""}
+
+
+
 PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__TITLE__</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzRGNDZFNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM3QzNBRUQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgoKICA8IS0tIEZvbmRvIHJlZG9uZGVhZG8gLS0+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iMTQiIGZpbGw9InVybCgjYmcpIi8+CgogIDwhLS0gQmlycmV0ZSAoZ29ycm8gZGUgZ3JhZHVhY2nDs24pIC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI1KSI+CiAgICA8cG9seWdvbiBwb2ludHM9IjAsLTkgMjIsLTEuNSAwLDYgLTIyLC0xLjUiIGZpbGw9IiNGRkZGRkYiLz4KICAgIDxwb2x5Z29uIHBvaW50cz0iMCwtOSAyMiwtMS41IDAsNiAtMjIsLTEuNSIgZmlsbD0iI0ZGRkZGRiIgb3BhY2l0eT0iMCIvPgogICAgPHBhdGggZD0iTSAtMTEgMyBMIC0xMSAxMiBDIC0xMSAxNiAxMSAxNiAxMSAxMiBMIDExIDMgTCAwIDcgWiIgZmlsbD0iI0UwRTdGRiIvPgogICAgPGxpbmUgeDE9IjE4IiB5MT0iLTIuNSIgeDI9IjE4IiB5Mj0iMTAiIHN0cm9rZT0iI0ZERTY4QSIgc3Ryb2tlLXdpZHRoPSIxLjYiLz4KICAgIDxjaXJjbGUgY3g9IjE4IiBjeT0iMTEuNSIgcj0iMi4xIiBmaWxsPSIjRkRFNjhBIi8+CiAgPC9nPgoKICA8IS0tIENoaXNwYSBkZSBJQSAtLT4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NiwxNikiIGZpbGw9IiNGREU2OEEiPgogICAgPHBhdGggZD0iTTAgLTcgTDIgLTEgTDggMCBMMiAxIEwwIDcgTC0yIDEgTC04IDAgTC0yIC0xIFoiLz4KICA8L2c+Cjwvc3ZnPgo=">
-<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<script src="https://unpkg.com/lucide@0.400.0"></script>
 <style>
   :root {
-    --blue-900:#0b2545; --blue-800:#123a6b; --blue-700:#1656a3; --blue-600:#1d6fd1;
-    --blue-500:#3b82f6; --blue-100:#e5f0fd; --blue-50:#f4f9ff;
-    --ink:#0f172a; --muted:#5b6b82; --border:#dde7f5; --card-bg:#ffffff;
-    --bg:#f6f9fc; --radius:16px; --shadow:0 4px 22px rgba(15,45,90,0.07);
+    --bg: #eff5fc;
+    --surface: #ffffff;
+    --surface-sunk: #f4f9ff;
+    --ink: #0f1f35;
+    --muted: #5c6c82;
+    --border: #d9e4f3;
+    --border-strong: #c3d6ee;
+    --navy-950: #081b33;
+    --blue-800: #123a6b;
+    --blue-700: #1656a3;
+    --blue-600: #1d6fd1;
+    --blue-500: #3b82f6;
+    --accent: #c98a1f;
+    --accent-soft: #fbead0;
+    --shadow: 0 4px 22px rgba(15, 45, 90, 0.08);
+    --shadow-lift: 0 14px 34px rgba(15, 45, 90, 0.14);
+    color-scheme: light;
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a1526;
+      --surface: #111f36;
+      --surface-sunk: #0d1a2e;
+      --ink: #e9eef8;
+      --muted: #93a4bf;
+      --border: #203454;
+      --border-strong: #2b4367;
+      --navy-950: #050f1e;
+      --blue-800: #1c3f72;
+      --blue-700: #2f6bc4;
+      --blue-600: #4a85e6;
+      --blue-500: #6fa3f4;
+      --accent: #e6b35c;
+      --accent-soft: #3a2c15;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-lift: 0 16px 38px rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1526;
+    --surface: #111f36;
+    --surface-sunk: #0d1a2e;
+    --ink: #e9eef8;
+    --muted: #93a4bf;
+    --border: #203454;
+    --border-strong: #2b4367;
+    --navy-950: #050f1e;
+    --blue-800: #1c3f72;
+    --blue-700: #2f6bc4;
+    --blue-600: #4a85e6;
+    --blue-500: #6fa3f4;
+    --accent: #e6b35c;
+    --accent-soft: #3a2c15;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lift: 0 16px 38px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
-  .header { background: linear-gradient(135deg, var(--blue-900), var(--blue-700)); color:#fff; padding: 56px 24px 92px; }
-  .header-inner { max-width: 1100px; margin: 0 auto; text-align: center; }
-  .header-logo { margin: 0 auto 18px; display:block; filter: drop-shadow(0 4px 14px rgba(0,0,0,.18)); }
-  .eyebrow { font-size: .85rem; letter-spacing:.03em; opacity:.85; margin-bottom: 14px; }
-  .header h1 { font-size: 2.1rem; margin: 0 0 14px; font-weight: 700; }
-  .header p.lede { max-width: 640px; margin: 0 auto 32px; opacity:.92; line-height:1.6; }
-  .stats { display:flex; gap: 44px; flex-wrap:wrap; justify-content: center; }
-  .stat-num { font-size: 2rem; font-weight: 700; }
-  .stat-label { font-size:.82rem; opacity:.82; }
-  .container { max-width: 1100px; margin: -60px auto 60px; padding: 0 24px; }
-  .searchbar { background:#fff; border:1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 6px 6px 6px 18px; display:flex; align-items:center; gap:10px; }
-  .searchbar input { flex:1; border:none; outline:none; font-size:1rem; padding: 12px 0; color: var(--ink); background: transparent; }
-  .searchbar svg { color: var(--muted); flex-shrink:0; }
-  .categories { display:flex; flex-wrap:wrap; gap: 10px; margin: 28px 0 8px; }
-  .category-btn { display:flex; align-items:center; gap:8px; padding: 9px 16px; border-radius: 999px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:.9rem; color: var(--ink); transition: all .15s ease; }
-  .category-btn:hover { border-color: var(--blue-500); color: var(--blue-700); }
-  .category-btn.active { background: var(--blue-700); color:#fff; border-color: var(--blue-700); }
-  .category-btn .count { background: rgba(15,45,90,.07); border-radius: 999px; padding: 1px 8px; font-size:.76rem; }
-  .category-btn.active .count { background: rgba(255,255,255,.25); }
-  .category-btn svg { width:16px; height:16px; }
-  .results-line { color: var(--muted); font-size:.88rem; margin: 18px 0 14px; }
-  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 20px; }
-  .card { background: var(--card-bg); border:1px solid var(--border); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); display:flex; flex-direction:column; gap: 12px; transition: transform .15s ease, box-shadow .15s ease; }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(15,45,90,.12); }
-  .card-top { display:flex; align-items:center; gap:12px; }
-  .card-icon { width:40px; height:40px; border-radius:10px; background: var(--blue-100); display:flex; align-items:center; justify-content:center; color: var(--blue-700); flex-shrink:0; }
-  .card-icon svg { width:20px; height:20px; }
-  .card h3 { margin:0; font-size:1.08rem; }
-  .card p.desc { margin:0; color: var(--muted); font-size:.9rem; line-height:1.55; flex:1; }
-  .badges { display:flex; flex-wrap:wrap; gap:6px; }
-  .badge { font-size:.72rem; padding:3px 10px; border-radius:999px; background: var(--blue-50); color: var(--blue-700); border:1px solid var(--border); }
-  .card a.open { margin-top:auto; text-decoration:none; background: var(--blue-700); color:#fff; text-align:center; padding: 11px; border-radius: 10px; font-size:.9rem; font-weight:600; transition: background .15s ease; }
+  body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; }
+  .gutter { padding-left: 16px; padding-right: 16px; }
+  .hero { background: linear-gradient(135deg, var(--navy-950), var(--blue-700)); color: #fff; padding: 34px 0 56px; }
+  .hero-inner { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+  .hero-logo { flex-shrink: 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.2)); }
+  .hero-text { flex: 1; min-width: 260px; }
+  .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; opacity: .78; margin-bottom: 10px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 600; line-height: 1.15; margin-bottom: 10px; }
+  .hero p.lede { max-width: 54ch; margin: 0; opacity: .88; line-height: 1.55; font-size: .98rem; }
+  .hero-stats { display: flex; gap: 28px; flex-shrink: 0; flex-wrap: wrap; }
+  .hero-stat { text-align: left; }
+  .hero-stat .num { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .hero-stat .label { font-size: .72rem; opacity: .78; margin-top: 4px; }
+  .shell { max-width: 1180px; margin: 0 auto; padding-bottom: 60px; }
+  .layout { margin-top: -28px; display: grid; grid-template-columns: 234px 1fr; gap: 28px; align-items: start; }
+  .sidebar { position: sticky; top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar-label { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 4px 10px 10px; }
+  .cat-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: none; background: transparent; cursor: pointer; padding: 9px 10px; border-radius: var(--radius-sm); color: var(--ink); font-family: var(--font-body); font-size: .88rem; transition: background .12s ease, color .12s ease; }
+  .cat-btn svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--blue-600); }
+  .cat-btn .cname { flex: 1; }
+  .cat-btn .ccount { font-family: var(--font-mono); font-size: .74rem; color: var(--muted); background: var(--surface-sunk); border-radius: 999px; padding: 1px 7px; }
+  .cat-btn:hover { background: var(--surface-sunk); }
+  .cat-btn.active { background: var(--blue-700); color: #fff; }
+  .cat-btn.active svg { color: #fff; }
+  .cat-btn.active .ccount { background: rgba(255,255,255,.22); color: #fff; }
+  .content { min-width: 0; display: flex; flex-direction: column; gap: 30px; }
+  .searchbar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 4px 4px 16px; display: flex; align-items: center; gap: 10px; }
+  .searchbar svg { color: var(--muted); flex-shrink: 0; }
+  .searchbar input { flex: 1; border: none; outline: none; font-size: .98rem; font-family: var(--font-body); padding: 12px 4px; color: var(--ink); background: transparent; min-width: 0; }
+  .results-line { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); margin-top: -16px; }
+  .filter-row { display: none; }
+  .group-section { display: flex; flex-direction: column; gap: 14px; }
+  .group-head { display: flex; align-items: baseline; gap: 10px; }
+  .group-head .gicon { width: 30px; height: 30px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .group-head .gicon svg { width: 16px; height: 16px; }
+  .group-head h2 { font-size: 1.22rem; font-weight: 600; }
+  .group-head .gcount { font-family: var(--font-mono); font-size: .76rem; color: var(--muted); }
+  .group-blurb { font-size: .86rem; color: var(--muted); margin: -8px 0 0; max-width: 62ch; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 11px; transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--border-strong); }
+  .card-top { display: flex; align-items: flex-start; gap: 11px; }
+  .card-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--surface-sunk); color: var(--blue-700); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border); }
+  .card-icon svg { width: 17px; height: 17px; }
+  .card h3 { font-size: 1rem; font-weight: 600; line-height: 1.3; }
+  .card p.desc { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: 1; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { font-family: var(--font-mono); font-size: .68rem; padding: 3px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--blue-700); border: 1px solid var(--border); }
+  .card a.open { margin-top: 2px; text-decoration: none; background: var(--blue-700); color: #fff; text-align: center; padding: 10px; border-radius: var(--radius-sm); font-size: .86rem; font-weight: 600; transition: background .14s ease; }
   .card a.open:hover { background: var(--blue-800); }
-  .empty-state { text-align:center; color: var(--muted); padding: 70px 0; }
-  footer { text-align:center; color: var(--muted); font-size:.82rem; padding: 20px 24px 48px; }
-  @media (max-width:640px) {
-    .header { padding: 44px 18px 80px; }
-    .header h1 { font-size: 1.6rem; }
-    .stats { gap: 26px; }
-    .container { margin-top: -50px; }
+  .empty-state { text-align: center; color: var(--muted); padding: 60px 0; font-size: .95rem; }
+  .empty-state svg { color: var(--border-strong); margin-bottom: 10px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 26px 24px 10px; line-height: 1.7; }
+  footer a { color: var(--blue-700); }
+  @media (max-width: 880px) {
+    .hero { padding: 26px 0 44px; }
+    .hero h1 { font-size: 1.5rem; }
+    .layout { grid-template-columns: 1fr; margin-top: -24px; }
+    .sidebar { display: none; }
+    .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-row .cat-btn { width: auto; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .filter-row .cat-btn.active { border-color: var(--blue-700); }
   }
 </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-inner">
-      <svg class="header-logo" width="96" height="96" viewBox="0 0 120 120" aria-hidden="true">
+<div class="shell">
+  <header class="hero gutter">
+    <div class="hero-inner">
+      <svg class="hero-logo" width="78" height="78" viewBox="0 0 120 120" aria-hidden="true">
         <defs>
           <linearGradient id="hiadCapGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#ffffff"/>
@@ -214,39 +348,56 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
           <path d="M0 -9 L2.4 -1.6 L10 0 L2.4 1.6 L0 9 L-2.4 1.6 L-10 0 L-2.4 -1.6 Z"/>
         </g>
       </svg>
-      <div class="eyebrow">__EYEBROW__</div>
-      <h1>__TITLE__</h1>
-      <p class="lede">__SUBTITLE__</p>
-      <div class="stats">
-        <div><div class="stat-num">__STAT_TOTAL__</div><div class="stat-label">Herramientas</div></div>
-        <div><div class="stat-num">__STAT_CATEGORIES__</div><div class="stat-label">Categorías</div></div>
-        <div><div class="stat-num">__STAT_PCT__</div><div class="stat-label">__STAT_PCT_LABEL__</div></div>
+      <div class="hero-text">
+        <div class="eyebrow">__EYEBROW__</div>
+        <h1>__TITLE__</h1>
+        <p class="lede">__SUBTITLE__</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">__STAT_TOTAL__</div><div class="label">Herramientas</div></div>
+        <div class="hero-stat"><div class="num">__STAT_CATEGORIES__</div><div class="label">Categorías</div></div>
+        <div class="hero-stat"><div class="num">__STAT_PCT__</div><div class="label">__STAT_PCT_LABEL__</div></div>
       </div>
     </div>
   </header>
 
-  <div class="container">
-    <div class="searchbar">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input id="search" type="text" placeholder="Buscar por nombre, descripción, categoría o etiqueta...">
-    </div>
+  <div class="layout gutter">
+    <aside class="sidebar" id="sidebar"></aside>
 
-    <div id="categories" class="categories"></div>
-    <div id="results-line" class="results-line"></div>
-    <div id="grid" class="grid"></div>
-    <div id="empty" class="empty-state" style="display:none;">No se encontraron aplicaciones con ese criterio.</div>
+    <main class="content">
+      <div class="searchbar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="search" type="text" placeholder="Buscar por nombre, descripción, categoría o etiqueta...">
+      </div>
+
+      <div class="filter-row" id="filter-row"></div>
+
+      <div class="results-line" id="results-line"></div>
+
+      <div id="sections"></div>
+
+      <div id="empty" class="empty-state" style="display:none;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <div>No se encontraron aplicaciones con ese criterio.</div>
+      </div>
+    </main>
   </div>
 
-  <footer>
-    Generado automáticamente a partir de las aplicaciones publicadas.<br>
+  <footer class="gutter">
+    Generado automáticamente a partir de las aplicaciones publicadas. También disponible la <a href="index-anterior.html">versión anterior</a> y la <a href="temas/">agrupada por tema</a>.<br>
     __CONTACT_NAME__ (<a href="mailto:__CONTACT_EMAIL__">__CONTACT_EMAIL__</a>) · Última actualización: __LAST_UPDATED__
   </footer>
+</div>
 
 <script id="catalog-data" type="application/json">__CATALOG_JSON__</script>
 <script id="category-meta" type="application/json">__CATEGORY_META_JSON__</script>
+<script id="group-meta" type="application/json">__GROUP_META_JSON__</script>
+<script id="group-order" type="application/json">__GROUP_ORDER_JSON__</script>
 <script>
   const CATALOG = JSON.parse(document.getElementById('catalog-data').textContent);
   const CATEGORY_META = JSON.parse(document.getElementById('category-meta').textContent);
+  const GROUP_META = JSON.parse(document.getElementById('group-meta').textContent);
+  const GROUP_ORDER = JSON.parse(document.getElementById('group-order').textContent);
 
   let activeCategory = 'all';
   let query = '';
@@ -267,27 +418,29 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     return haystack.includes(query);
   }
 
-  function renderCategories() {
+  function renderCategoryList(targetId, variant) {
     const counts = {};
     CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
     const slugs = Object.keys(counts).sort((a, b) =>
       ((CATEGORY_META[a] || {}).label || a).localeCompare((CATEGORY_META[b] || {}).label || b)
     );
 
-    const allBtn = `<button class="category-btn ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">
-        <i data-lucide="layout-grid"></i> Todas <span class="count">${CATALOG.length}</span>
+    const allBtn = `<button class="cat-btn ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">
+        <i data-lucide="layout-grid"></i><span class="cname">Todas</span><span class="ccount">${CATALOG.length}</span>
       </button>`;
 
     const buttons = slugs.map(slug => {
       const meta = CATEGORY_META[slug] || { label: slug, icon: 'tag' };
       const active = activeCategory === slug ? 'active' : '';
-      return `<button class="category-btn ${active}" data-cat="${slug}">
-          <i data-lucide="${meta.icon}"></i> ${escapeHtml(meta.label)} <span class="count">${counts[slug]}</span>
+      return `<button class="cat-btn ${active}" data-cat="${slug}">
+          <i data-lucide="${meta.icon}"></i><span class="cname">${escapeHtml(meta.label)}</span><span class="ccount">${counts[slug]}</span>
         </button>`;
     }).join('');
 
-    document.getElementById('categories').innerHTML = allBtn + buttons;
-    document.querySelectorAll('.category-btn').forEach(btn => {
+    const el = document.getElementById(targetId);
+    const label = variant === 'sidebar' ? '<div class="sidebar-label">Categorías</div>' : '';
+    el.innerHTML = label + allBtn + buttons;
+    el.querySelectorAll('.cat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         activeCategory = btn.dataset.cat;
         renderAll();
@@ -295,46 +448,66 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
 
-  function renderGrid() {
+  function cardHtml(app) {
+    const primaryCat = app.categories[0];
+    const meta = CATEGORY_META[primaryCat] || { label: primaryCat, icon: 'sparkles' };
+    const badges = app.categories.map(c => {
+      const m = CATEGORY_META[c] || { label: c };
+      return `<span class="badge">${escapeHtml(m.label)}</span>`;
+    }).join('');
+    return `<div class="card">
+        <div class="card-top">
+          <div class="card-icon"><i data-lucide="${meta.icon}"></i></div>
+          <h3>${escapeHtml(app.title)}</h3>
+        </div>
+        <p class="desc">${escapeHtml(app.description)}</p>
+        <div class="badges">${badges}</div>
+        <a class="open" href="${app.url}" target="_blank" rel="noopener">Abrir aplicación</a>
+      </div>`;
+  }
+
+  function renderSections() {
     const filtered = CATALOG.filter(matches);
-    const grid = document.getElementById('grid');
-    const empty = document.getElementById('empty');
+    const sectionsEl = document.getElementById('sections');
+    const emptyEl = document.getElementById('empty');
     const resultsLine = document.getElementById('results-line');
 
     resultsLine.textContent = filtered.length === CATALOG.length
-      ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'}`
+      ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'} en ${GROUP_ORDER.length} familia${GROUP_ORDER.length === 1 ? '' : 's'}`
       : `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
-      grid.style.display = 'none';
-      empty.style.display = 'block';
+      sectionsEl.innerHTML = '';
+      emptyEl.style.display = 'block';
       return;
     }
-    grid.style.display = 'grid';
-    empty.style.display = 'none';
+    emptyEl.style.display = 'none';
 
-    grid.innerHTML = filtered.map(app => {
-      const primaryCat = app.categories[0];
-      const meta = CATEGORY_META[primaryCat] || { label: primaryCat, icon: 'sparkles' };
-      const badges = app.categories.map(c => {
-        const m = CATEGORY_META[c] || { label: c };
-        return `<span class="badge">${escapeHtml(m.label)}</span>`;
-      }).join('');
-      return `<div class="card">
-          <div class="card-top">
-            <div class="card-icon"><i data-lucide="${meta.icon}"></i></div>
-            <h3>${escapeHtml(app.title)}</h3>
-          </div>
-          <p class="desc">${escapeHtml(app.description)}</p>
-          <div class="badges">${badges}</div>
-          <a class="open" href="${app.url}" target="_blank" rel="noopener">Abrir aplicación</a>
-        </div>`;
-    }).join('');
+    const byGroup = {};
+    filtered.forEach(app => {
+      (byGroup[app.group] = byGroup[app.group] || []).push(app);
+    });
+
+    sectionsEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:34px;">` +
+      GROUP_ORDER.filter(g => byGroup[g] && byGroup[g].length).map(g => {
+        const meta = GROUP_META[g] || { label: g, icon: 'folder', blurb: '' };
+        const apps = byGroup[g];
+        return `<section class="group-section">
+            <div class="group-head">
+              <div class="gicon"><i data-lucide="${meta.icon}"></i></div>
+              <h2>${escapeHtml(meta.label)}</h2>
+              <span class="gcount">${apps.length}</span>
+            </div>
+            <p class="group-blurb">${escapeHtml(meta.blurb)}</p>
+            <div class="grid">${apps.map(cardHtml).join('')}</div>
+          </section>`;
+      }).join('') + `</div>`;
   }
 
   function renderAll() {
-    renderCategories();
-    renderGrid();
+    renderCategoryList('sidebar', 'sidebar');
+    renderCategoryList('filter-row', 'row');
+    renderSections();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -350,6 +523,19 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 """
 
 
+def _group_order_for(catalog):
+    """Orden de las secciones de familia: GROUP_ORDER_DEFAULT primero (solo
+    las que de verdad tienen apps), seguido de cualquier familia nueva no
+    contemplada en GROUP_ORDER_DEFAULT, por orden alfabético de su etiqueta."""
+    present = {app["group"] for app in catalog if app.get("group")}
+    ordered = [slug for slug in GROUP_ORDER_DEFAULT if slug in present]
+    extra = sorted(
+        (slug for slug in present if slug not in GROUP_ORDER_DEFAULT),
+        key=lambda slug: group_info(slug)["label"].casefold(),
+    )
+    return ordered + extra
+
+
 def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", contact_email=""):
     """
     catalog: lista de dicts {title, description, categories, tags, client_only, url}
@@ -358,6 +544,9 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
     total = len(catalog)
     all_categories = sorted({c for app in catalog for c in app["categories"]})
     category_meta = {slug: category_info(slug) for slug in all_categories}
+
+    group_order = _group_order_for(catalog)
+    group_meta = {slug: group_info(slug) for slug in group_order}
 
     client_only_count = sum(1 for app in catalog if app.get("client_only"))
     if total > 0 and client_only_count == total:
@@ -380,6 +569,8 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
     out = out.replace("__STAT_PCT__", stat_pct)
     out = out.replace("__CATALOG_JSON__", json.dumps(catalog, ensure_ascii=False))
     out = out.replace("__CATEGORY_META_JSON__", json.dumps(category_meta, ensure_ascii=False))
+    out = out.replace("__GROUP_META_JSON__", json.dumps(group_meta, ensure_ascii=False))
+    out = out.replace("__GROUP_ORDER_JSON__", json.dumps(group_order, ensure_ascii=False))
     out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
     out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
     out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))

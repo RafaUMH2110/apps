@@ -162,7 +162,16 @@
   .tile-dual > div{flex:1; min-width:0;}
 
   /* ===================== GRÁFICOS ===================== */
-  .charts-stack{display:flex; flex-direction:column; gap:14px; padding:0 14px 14px;}
+  .charts-toggle{padding:0 14px 14px;}
+  .charts-toggle-btn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:12px 16px; font-size:14px; font-weight:700; color:var(--text);
+  }
+  .charts-toggle-btn svg{width:15px; height:15px; flex:none; transition:transform .2s ease;}
+  .charts-toggle-btn[aria-expanded="true"] svg{transform:rotate(180deg);}
+  .charts-stack{display:none; flex-direction:column; gap:14px; padding:0 14px 14px;}
+  .charts-stack.visible{display:flex;}
   .chart-card{background:var(--surface); border-radius:12px; border:1px solid var(--border); overflow:hidden;}
   .chart-card-header{
     background:var(--tile-header); padding:7px 12px; font-size:13.5px; font-weight:700; color:#e4e4e6;
@@ -285,7 +294,7 @@
   }
 </style>
 </head>
-<body data-app-title="TeleMet Mobile Pro" data-app-description="Versión Pro de TeleMet Mobile: panel en vivo, con aspecto de app nativa instalable en la pantalla de inicio, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Añade tendencia (▲▼—) por variable respecto a la lectura anterior, sensación térmica calculada (índice de calor / sensación de frío), una franja de resumen del día y un histórico de los últimos 7 días aprovechando los datos que ya se conservan en este dispositivo. Mismo motor que TeleMet Mobile: luz de estado persistente, tiempo límite de petición configurable, visibilidad de la API Key y exportación a CSV con BOM UTF-8." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ios,pwa,pantalla de inicio,panel,dashboard,graficos,tiempo real,diseno editorial,tendencia,sensacion termica,historico" data-client-only="true">
+<body data-app-title="TeleMet Mobile Pro" data-app-description="Versión Pro de TeleMet Mobile: panel en vivo, con aspecto de app nativa instalable en la pantalla de inicio, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Añade tendencia (▲▼—) por variable respecto a la lectura anterior, sensación térmica calculada (índice de calor / sensación de frío), una franja de resumen del día, un histórico de los últimos 7 días aprovechando los datos que ya se conservan en este dispositivo, y gráficas de evolución plegables (ocultas tras un botón) para no alargar el scroll. Mismo motor que TeleMet Mobile: luz de estado persistente, tiempo límite de petición configurable, visibilidad de la API Key y exportación a CSV con BOM UTF-8." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ios,pwa,pantalla de inicio,panel,dashboard,graficos,tiempo real,diseno editorial,tendencia,sensacion termica,historico" data-client-only="true">
 
 <!--
   ============================================================================
@@ -326,6 +335,10 @@
     de lecturas en IndexedDB para purgarlos, pero nunca se mostraban;
     ahora una tarjeta al final del panel resume cada día (máxima,
     mínima, lluvia y racha) con una barra de rango de temperatura.
+  - Gráficas plegables: las siete gráficas de evolución del día están
+    ocultas por defecto, detrás de un botón ("Ver gráficas de hoy"),
+    para no alargar el scroll del panel en un móvil; se despliegan al
+    pulsarlo (o al elegir una desde "Ir a sección" en la barra inferior).
 
   1) SONDEO AUTOMÁTICO, NO MANUAL
      Si ya hay un Station ID guardado, el sondeo arranca solo al abrir la
@@ -377,6 +390,13 @@
   <section class="resumen-strip" id="resumenStrip"></section>
 
   <section class="tiles-grid" id="tilesGrid"></section>
+
+  <div class="charts-toggle">
+    <button type="button" class="charts-toggle-btn" id="btnToggleCharts" aria-expanded="false" aria-controls="chartsStack">
+      <span id="btnToggleChartsTexto">Ver gráficas de hoy</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
 
   <section class="charts-stack" id="chartsStack"></section>
 
@@ -478,7 +498,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 22:59</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 01:41</div>
 </section>
 
 <script>
@@ -590,6 +610,8 @@
   const resumenStrip = $('resumenStrip');
   const tilesGrid = $('tilesGrid');
   const chartsStack = $('chartsStack');
+  const btnToggleCharts = $('btnToggleCharts');
+  const btnToggleChartsTexto = $('btnToggleChartsTexto');
   const diasGrid = $('diasGrid');
 
   const sheetBackdrop = $('sheetBackdrop');
@@ -1204,7 +1226,8 @@
       btn.textContent = cfg.titulo;
       btn.addEventListener('click', () => {
         cerrarHoja(navSheet);
-        card.scrollIntoView({ behavior:'smooth', block:'center' });
+        mostrarGraficas(true);
+        requestAnimationFrame(() => card.scrollIntoView({ behavior:'smooth', block:'center' }));
       });
       li.appendChild(btn);
       navLista.appendChild(li);
@@ -1500,6 +1523,17 @@
   }
 
   /* ============================================================
+     GRÁFICAS PLEGABLES: ocultas por defecto, se muestran al pulsar
+     el botón (evita un scroll largo con las siete gráficas siempre
+     desplegadas en el panel de una sola columna).
+     ============================================================ */
+  function mostrarGraficas(mostrar){
+    chartsStack.classList.toggle('visible', mostrar);
+    btnToggleCharts.setAttribute('aria-expanded', String(mostrar));
+    btnToggleChartsTexto.textContent = mostrar ? 'Ocultar gráficas de hoy' : 'Ver gráficas de hoy';
+  }
+
+  /* ============================================================
      PETICIÓN CON TIEMPO LÍMITE (AbortController)
      ============================================================ */
   async function fetchConTimeout(url, timeoutMs){
@@ -1656,6 +1690,7 @@
 
   sheetBackdrop.addEventListener('click', cerrarTodasLasHojas);
   $('btnNav').addEventListener('click', () => abrirHoja(navSheet));
+  btnToggleCharts.addEventListener('click', () => mostrarGraficas(!chartsStack.classList.contains('visible')));
   $('btnSettings').addEventListener('click', () => { cargarAjustes(); abrirHoja(settingsSheet); });
   $('btnInfo').addEventListener('click', () => abrirHoja(infoSheet));
   $('btnCerrarAjustes').addEventListener('click', () => cerrarHoja(settingsSheet));

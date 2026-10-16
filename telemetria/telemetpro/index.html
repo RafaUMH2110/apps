@@ -141,6 +141,12 @@ button{font-family:var(--texto);cursor:pointer}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
+.herramientas-graf{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 6px}
+.herramientas-etq{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.segmentado{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;padding:2px;background:var(--card-bg)}
+.segmentado button{background:transparent;border:0;border-radius:8px;padding:6px 12px;font:600 13px var(--texto);color:var(--muted);cursor:pointer}
+.segmentado button[aria-pressed="true"]{background:var(--brasa);color:#fff}
+
 .tip{display:flex;gap:11px;background:var(--tip-bg);border:1px solid var(--tip-bd);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--tip-ink);margin-bottom:16px}
 .tip svg{width:20px;height:20px;color:var(--tip-ico);flex:none;margin-top:1px}
 .aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
@@ -259,6 +265,19 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
        (var(--c-xxx) definida en :root).
      - MAX_FILAS_TABLA: filas que conserva el histórico antes de
        descartar las más antiguas.
+
+  3) MINIGRÁFICOS: EJE X Y REINICIO
+     Cada punto se guarda junto a su marca de tiempo (seriesTiempos,
+     compartida por todas las variables porque se registran todas a la
+     vez en cada lectura). El selector "Por lectura / Por tiempo real"
+     (ejeXModo, persistido en telemetpro_eje_x_modo) decide cómo se
+     reparte el ancho del sparkline:
+       - "uniforme": un punto, un paso de ancho fijo (como antes).
+       - "tiempo": posición proporcional a la marca de tiempo real,
+         autoajustando el rango al primer y último punto disponibles;
+         un hueco por reintentos o caídas se ve como un tramo más ancho.
+     "Reiniciar gráficas" vacía series/seriesTiempos y redibuja; no toca
+     el histórico de la tabla ni el CSV (eso lo hace "Limpiar histórico").
   ============================================================================
 -->
 
@@ -411,9 +430,19 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   </div>
 
   <!-- ============ SECCIÓN 3 · LECTURAS EN TIEMPO REAL ============ -->
-  <header class="sh" style="--c:#0E7C6B"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">03 · Ahora mismo</p><h2>Lecturas en tiempo real</h2><p class="sh-lede">Cada tarjeta muestra el último valor, su tendencia frente a la lectura anterior y un minigráfico con las lecturas recientes de esta sesión.</p></div></header>
+  <header class="sh" style="--c:#0E7C6B"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">03 · Ahora mismo</p><h2>Lecturas en tiempo real</h2><p class="sh-lede">Cada tarjeta muestra el último valor, su tendencia frente a la lectura anterior y un minigráfico con las lecturas recientes de esta sesión, espaciadas por lectura o a escala de tiempo real.</p></div></header>
 
   <p class="meta-linea" id="metaLinea" aria-live="polite">Última lectura: — · Freshness: —</p>
+
+  <div class="herramientas-graf">
+    <span class="herramientas-etq">Minigráficos</span>
+    <div class="segmentado" role="group" aria-label="Escala del eje X en los minigráficos">
+      <button type="button" id="btnEjeUniforme" aria-pressed="true">Por lectura</button>
+      <button type="button" id="btnEjeTiempo" aria-pressed="false">Por tiempo real</button>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnReiniciarGraficas" disabled><svg class="i"><use href="#i-refresh"></use></svg>Reiniciar gráficas</button>
+  </div>
+  <p class="help" style="margin:0 0 14px">«Por lectura» separa los puntos a intervalos iguales; «Por tiempo real» los sitúa según su marca de tiempo, así que los huecos por reintentos o caídas se ven como tramos más anchos.</p>
 
   <div class="datos-grid" id="datosGrid">
     <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para incluir icono, color y sparkline -->
@@ -448,8 +477,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <footer class="app-footer">
   <hr>
-  <p>TeleMet Pro — misma base de TeleMet, con un rediseño editorial (tipografía Bricolage Grotesque + Instrument Sans, luz de estado persistente, glosario y ajustes avanzados plegables). Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:08</p>
+  <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:23</p>
 </footer>
 
 <div class="bottomnav">
@@ -471,6 +500,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Tendencia (▲ ▼ —)</b><span>Compara el último valor de cada variable con el anterior: sube, baja o se mantiene estable.</span></div>
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
+        <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa según cuándo se recibió cada uno, de modo que un hueco por reintentos se ve como un tramo más ancho.</span></div>
       </div>
     </div>
   </div>
@@ -497,6 +527,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const STORAGE_KEY_BACKOFF_M = 'telemetpro_backoff_max_s';
   const STORAGE_KEY_STALE     = 'telemetpro_stale_threshold_s';
   const STORAGE_KEY_HISTLEN   = 'telemetpro_history_len';
+  const STORAGE_KEY_EJE_X     = 'telemetpro_eje_x_modo';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
@@ -567,6 +598,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const metaLinea = document.getElementById('metaLinea');
   const datosGrid = document.getElementById('datosGrid');
   const valorCalidad = document.getElementById('valorCalidad');
+  const btnEjeUniforme = document.getElementById('btnEjeUniforme');
+  const btnEjeTiempo = document.getElementById('btnEjeTiempo');
+  const btnReiniciarGraficas = document.getElementById('btnReiniciarGraficas');
 
   const historialVacio = document.getElementById('historialVacio');
   const historialEnvoltorio = document.getElementById('historialEnvoltorio');
@@ -596,7 +630,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   let countdownIntervalId = null;
   let toastTimeoutId = null;
   let activo = null;
+  let ejeXModo = 'uniforme'; // 'uniforme' (por lectura) | 'tiempo' (por marca de tiempo real)
   const series = {};
+  const seriesTiempos = []; // marca de tiempo (ms) de cada punto, compartida por todas las series: todas se registran juntas en cada lectura
   const ultimoValor = {};
   const filasHistorial = [];
 
@@ -652,6 +688,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     backoffMaxInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_M) || DEFAULTS.backoffMaxS;
     staleThresholdInput.value = localStorage.getItem(STORAGE_KEY_STALE) || DEFAULTS.staleThresholdS;
     historyLenInput.value = localStorage.getItem(STORAGE_KEY_HISTLEN) || DEFAULTS.historyLen;
+    fijarEjeXModo(localStorage.getItem(STORAGE_KEY_EJE_X) || 'uniforme');
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
   }
@@ -744,36 +781,77 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      ============================================================ */
   function actualizarSparkline(key){
     const valoresBrutos = series[key];
-    const valores = valoresBrutos.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+    // Empareja cada valor con su marca de tiempo y descarta los huecos (null)
+    // de ambos a la vez, para que el eje "por tiempo real" no se desalinee.
+    const pares = [];
+    for (let i = 0; i < valoresBrutos.length; i++){
+      const v = valoresBrutos[i];
+      if (v !== null && v !== undefined && !Number.isNaN(v)) pares.push({ v: v, t: seriesTiempos[i] });
+    }
     const svg = document.querySelector('#tile-' + key + ' .sparkline');
     const polyline = svg.querySelector('polyline');
     const rangoEl = document.querySelector('#tile-' + key + ' .rango-minmax');
 
-    if (valores.length < 2){
+    if (pares.length < 2){
       polyline.setAttribute('points', '');
       rangoEl.textContent = 'mín — · máx —';
       return;
     }
+    const valores = pares.map(p => p.v);
     const min = Math.min(...valores);
     const max = Math.max(...valores);
     const rango = (max - min) || 1;
     const w = 100, h = 30, pad = 3;
-    const puntos = valores.map((v, i) => {
-      const x = pad + (i / (valores.length - 1)) * (w - pad * 2);
-      const y = h - pad - ((v - min) / rango) * (h - pad * 2);
-      return x.toFixed(1) + ',' + y.toFixed(1);
+
+    let xs;
+    if (ejeXModo === 'tiempo'){
+      // Rango autoajustado a la primera y última marca de tiempo disponibles:
+      // no requiere que el usuario fije nada, solo cambia cómo se reparte el ancho.
+      const tMin = pares[0].t, tMax = pares[pares.length - 1].t;
+      const rangoT = (tMax - tMin) || 1;
+      xs = pares.map(p => pad + ((p.t - tMin) / rangoT) * (w - pad * 2));
+    } else {
+      xs = pares.map((p, i) => pad + (i / (pares.length - 1)) * (w - pad * 2));
+    }
+
+    const puntos = pares.map((p, i) => {
+      const y = h - pad - ((p.v - min) / rango) * (h - pad * 2);
+      return xs[i].toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
     polyline.setAttribute('points', puntos);
     rangoEl.textContent = 'mín ' + min.toFixed(1) + ' · máx ' + max.toFixed(1);
   }
 
+  function redibujarSparklines(){
+    GRAFICABLES.forEach(m => actualizarSparkline(m.key));
+  }
+
+  function fijarEjeXModo(modo){
+    ejeXModo = (modo === 'tiempo') ? 'tiempo' : 'uniforme';
+    localStorage.setItem(STORAGE_KEY_EJE_X, ejeXModo);
+    btnEjeUniforme.setAttribute('aria-pressed', String(ejeXModo === 'uniforme'));
+    btnEjeTiempo.setAttribute('aria-pressed', String(ejeXModo === 'tiempo'));
+    redibujarSparklines();
+  }
+
+  function reiniciarGraficas(){
+    GRAFICABLES.forEach(m => { series[m.key].length = 0; });
+    seriesTiempos.length = 0;
+    redibujarSparklines();
+    btnReiniciarGraficas.disabled = true;
+    mostrarToast('Minigráficos reiniciados.');
+  }
+
   function registrarEnSeries(t){
     const historyLen = (activo && activo.historyLen) || DEFAULTS.historyLen;
+    seriesTiempos.push(Date.now());
+    if (seriesTiempos.length > historyLen) seriesTiempos.shift();
     GRAFICABLES.forEach(m => {
       series[m.key].push(numOrNull(t[m.key]));
       if (series[m.key].length > historyLen) series[m.key].shift();
       actualizarSparkline(m.key);
     });
+    btnReiniciarGraficas.disabled = false;
   }
 
   /* ============================================================
@@ -1084,6 +1162,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   btnDetenerBar.addEventListener('click', detenerMonitor);
   btnDescargarCSV.addEventListener('click', descargarCSV);
   btnLimpiarHistorial.addEventListener('click', limpiarHistorial);
+  btnEjeUniforme.addEventListener('click', () => fijarEjeXModo('uniforme'));
+  btnEjeTiempo.addEventListener('click', () => fijarEjeXModo('tiempo'));
+  btnReiniciarGraficas.addEventListener('click', reiniciarGraficas);
 
   btnVerApiKey.addEventListener('click', () => {
     const mostrar = apiKeyInput.type === 'password';

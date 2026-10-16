@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<!--
+  GenOutFit — generador de outfits completos a partir de una prenda, con IA.
+
+  INSTRUCCIONES PARA CUALQUIER PROFESOR QUE QUIERA ADAPTAR O ALOJAR ESTA APP
+  ============================================================================
+  1. Qué es: un único fichero HTML autocontenido (HTML + CSS + JS vanilla,
+     sin backend, sin build). Funciona abriéndolo directamente en el
+     navegador o subido a cualquier alojamiento estático (GitHub Pages,
+     servidor propio...). Cada usuario pega su propia API key, que se guarda
+     solo en su navegador (localStorage) y se envía únicamente al endpoint
+     oficial del proveedor elegido.
+
+  2. Cómo conseguir una API key de cada proveedor:
+       - Anthropic (Claude):  https://console.anthropic.com/settings/keys
+       - OpenAI (GPT):        https://platform.openai.com/api-keys
+       - Google (Gemini):     https://aistudio.google.com/app/apikey
+       - fal.ai (FLUX):       https://fal.ai/dashboard/keys
+
+  3. Cómo publicar gratis en GitHub Pages:
+       a) Crea (o usa) un repositorio en GitHub.
+       b) Sube este fichero como "index.html" (puede ir en la raíz o en una
+          subcarpeta, p. ej. "genoutfit/index.html").
+       c) En Settings → Pages, elige la rama y la carpeta donde está el
+          fichero y guarda. La URL pública tarda uno o dos minutos en estar
+          lista.
+
+  4. Qué constantes editar para adaptar esta app a tu asignatura (busca estos
+     nombres en el bloque <script>):
+       - SYSTEM_PROMPT_OUTFIT: el "rol" que sigue la IA al describir el
+         outfit (BLOQUE 0 del encargo original). Determina el estilo de los
+         prompts generados para FLUX.
+       - MODELOS_POR_PROVEEDOR / LIMITES_TOKENS_MODELO / PRECIOS_POR_MTOK:
+         listas de modelos de texto/visión disponibles, su límite de tokens
+         de salida y su precio orientativo por millón de tokens.
+       - APP_CONFIG.fal: modelo de FLUX usado por defecto para cada pieza
+         (texto→imagen) y parámetros fijos de generación de imagen (pasos de
+         inferencia, tamaño, tolerancia de seguridad), más el modelo FLUX
+         Kontext multi-imagen (APP_CONFIG.fal.multiModel) usado para la foto
+         del modelo con el outfit completo: ese paso toma como referencia la
+         prenda original y las imágenes ya generadas de cada pieza, para que
+         el modelo salga vistiendo EXACTAMENTE esas prendas (no una
+         reinterpretación nueva a partir de texto).
+       - NUM_PIEZAS_MIN / NUM_PIEZAS_MAX_CON_MODELO / NUM_PIEZAS_MAX_SIN_MODELO:
+         rango permitido para el número de prendas del outfit (el máximo
+         depende de si se incluye también la foto del modelo).
+
+  5. Aviso: la IA puede cometer errores (en la identificación de la prenda
+     o en los prompts generados). Revisa siempre el resultado antes de
+     usarlo; esta herramienta no sustituye el criterio profesional del
+     diseñador.
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenOutFit Pro &#8212; Generador de Outfits con IA</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23d8b55c'/%3E%3Cstop offset='1' stop-color='%231f2a5c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%231f2a5c'/%3E%3Cpath d='M20 14 L26 10 L32 14 L38 10 L44 14 L44 20 L38 17 L38 50 L26 50 L26 17 L20 20 Z' fill='url(%23g)' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='12' r='2.2' fill='%23fff'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f6f2e8;
+    --card: #fffdf9;
+    --border: #e3d9c2;
+    --border-strong: #c7b483;
+    --text: #211d14;
+    --muted: #6d6552;
+    --blue-50: #eceef7;
+    --blue-100: #d9ddf0;
+    --blue-500: #46569c;
+    --blue-600: #2e3c7e;
+    --blue-700: #1f2a5c;
+    --gold: #b3862a;
+    --gold-ink: #3c2d08;
+    --gold-soft: #f6ecd2;
+    --ok: #2b6b47;
+    --ok-bg: #e7f3ea;
+    --err: #a3302b;
+    --err-bg: #fbe6e4;
+    --warn-bg: #fbf0d6;
+    --warn-border: #d9ba72;
+    --radius: 14px;
+    --shadow: 0 3px 16px rgba(33, 29, 20, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Public Sans', "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  main { max-width: 1160px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+
+  header.hero { max-width: 1160px; margin: 0 auto; padding: 2.5rem 1.25rem 1.25rem; text-align: left; }
+  header.hero h1 { font-family: 'Fraunces', Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 2.8rem); margin: 0; letter-spacing: -0.02em; color: var(--blue-700); font-weight: 700; }
+  header.hero p { margin: .3rem 0 1rem; font-size: 1.1rem; color: var(--muted); }
+  .badge-pro {
+    display: inline-block; vertical-align: middle; font-family: 'JetBrains Mono', monospace;
+    font-size: .42em; font-weight: 700; letter-spacing: .09em; color: #fff; background: var(--gold);
+    border-radius: 6px; padding: .22em .55em; margin-left: .5em; transform: translateY(-0.35em);
+  }
+  .pro-strip {
+    max-width: 1160px; margin: 0 auto; padding: 0 1.25rem; display: flex; gap: .6rem; flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace; font-size: .76rem; color: var(--muted);
+  }
+  .pro-strip span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: .3rem .7rem; }
+  .pro-strip b { color: var(--blue-700); }
+  .flow { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .9rem; }
+  .flow .step { background: var(--blue-50); border: 1px solid var(--blue-100); color: var(--blue-700); padding: .25rem .7rem; border-radius: 999px; font-weight: 600; }
+  .flow .sep { color: var(--blue-500); }
+
+  .aviso {
+    max-width: 1160px; margin: 0 auto 1.25rem; padding: .8rem 1.25rem;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 10px;
+    color: #7a5b12; font-size: .88rem;
+  }
+
+  section.panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.4rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  section.panel h2 { margin: 0 0 .9rem; font-size: 1.15rem; color: var(--blue-700); }
+
+  details.panel-guia {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.1rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  details.panel-guia summary { cursor: pointer; font-weight: 700; color: var(--blue-700); font-size: 1.1rem; padding: .25rem 0; }
+  details.panel-guia[open] summary { margin-bottom: .6rem; }
+  details.panel-guia ol, details.panel-guia ul { padding-left: 1.3rem; margin: .6rem 0; }
+  details.panel-guia li { margin-bottom: .35rem; }
+  details.panel-guia p { line-height: 1.55; margin: .6rem 0; }
+  details.panel-guia strong { color: var(--text); }
+
+  label { display: block; font-size: .92rem; font-weight: 600; margin: .7rem 0 .35rem; color: var(--text); }
+  select, input[type=password], input[type=text], input[type=number], textarea {
+    width: 100%; padding: .6rem .75rem; border: 1px solid var(--border-strong); border-radius: 10px;
+    font-size: .95rem; font-family: inherit; background: #fff; color: var(--text);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  textarea.tall { min-height: 150px; }
+  textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: .82rem; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--blue-500); outline-offset: 2px;
+  }
+
+  .fila { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .fila > div { flex: 1; min-width: 180px; }
+  .field { margin-bottom: .9rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+  @media (max-width: 700px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  /* Alinea los controles de esta fila aunque sus etiquetas ocupen distinto nº de líneas */
+  #grid-piezas-flux { align-items: start; }
+  #grid-piezas-flux .field label { min-height: 2.9rem; display: flex; align-items: flex-end; }
+
+  .pick-row { display: flex; align-items: flex-start; gap: .5rem; font-weight: 600; margin: .3rem 0 .2rem; cursor: pointer; }
+  .pick-row input { width: 1.15rem; height: 1.15rem; margin-top: .15rem; flex-shrink: 0; }
+  .hint { font-size: .85rem; color: var(--muted); margin: .35rem 0 0; font-weight: 400; }
+
+  .botones { display: flex; gap: .6rem; margin-top: .8rem; flex-wrap: wrap; }
+  button {
+    cursor: pointer; border: 1px solid var(--border-strong); border-radius: 10px;
+    padding: .55rem 1rem; font-size: .92rem; font-weight: 600; font-family: inherit;
+    background: #fff; color: var(--blue-700);
+  }
+  button:hover:not(:disabled) { background: var(--blue-50); }
+  button.primario { background: var(--blue-600); color: #fff; border-color: var(--blue-600); }
+  button.primario:hover:not(:disabled) { background: var(--blue-700); }
+  button.primario:disabled { background: #bcd3ea; border-color: #bcd3ea; color: #fff; cursor: not-allowed; }
+  button.secundario { background: var(--blue-50); color: var(--blue-700); border-color: var(--blue-100); }
+  button.secundario:hover:not(:disabled) { background: var(--blue-100); }
+  button.peligro { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; }
+  button.peligro:hover:not(:disabled) { background: #fadbd8; }
+  button.grande { width: 100%; font-size: 1.1rem; padding: .9rem 1rem; display: flex; align-items: center; justify-content: center; gap: .6rem; }
+  button:disabled { cursor: not-allowed; opacity: .6; }
+
+  .estado-key { font-size: .85rem; margin-top: .5rem; color: var(--muted); }
+  .estado-key.si { color: var(--ok); font-weight: 600; }
+
+  #estado-generacion {
+    display: none; margin-top: 1rem; padding: .75rem 1rem; border-radius: 10px;
+    background: var(--blue-50); color: var(--blue-700); font-size: .9rem;
+    align-items: center; gap: .6rem; border: 1px solid var(--blue-100);
+  }
+  #estado-generacion.visible { display: flex; }
+  #estado-generacion.error { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; align-items: flex-start; }
+  #estado-generacion.error #estado-texto { white-space: pre-wrap; word-break: break-word; }
+
+  #aviso-truncado {
+    margin-top: .9rem; padding: .7rem 1rem; border-radius: 10px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); color: #7a5b12; font-size: .88rem;
+  }
+
+  .spinner {
+    width: 16px; height: 16px; border: 3px solid rgba(43,108,176,.25);
+    border-top-color: currentColor; border-radius: 50%;
+    animation: girar .8s linear infinite; flex-shrink: 0;
+  }
+  button .spinner { border-color: rgba(255,255,255,.4); border-top-color: #fff; display: none; }
+  button.busy .spinner { display: inline-block; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+  /* Zona de subida de imagen */
+  .dropzone {
+    border: 2px dashed var(--border-strong); border-radius: 12px; padding: 1.4rem;
+    text-align: center; background: var(--blue-50); cursor: pointer; color: var(--blue-700);
+    font-weight: 600; transition: background .15s, border-color .15s;
+  }
+  .dropzone.dragover { background: var(--blue-100); border-color: var(--blue-600); }
+  .dropzone p { margin: .3rem 0 0; font-weight: 400; color: var(--muted); font-size: .85rem; }
+  .preview-wrap { margin-top: 1rem; text-align: center; }
+  .preview-wrap img { max-width: 100%; max-height: 320px; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .preview-wrap .botones { justify-content: center; }
+
+  /* Tarjetas de piezas del outfit */
+  .pieza-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 1rem;
+    margin-bottom: 1rem; background: var(--blue-50);
+  }
+  .pieza-card h3 { margin: 0 0 .5rem; font-size: 1rem; color: var(--blue-700); }
+  .pieza-card.modelo h3 { color: #7a5b12; }
+  .pieza-card.modelo { background: var(--warn-bg); border-color: var(--warn-border); }
+  .pieza-card.analisis { background: #f3f4f6; border-color: var(--border); }
+  .pieza-card.analisis h3 { color: var(--muted); }
+  .pieza-card.analisis textarea[readonly] { background: #e9eaec; color: var(--muted); cursor: default; }
+  .pieza-card .img-wrap { max-width: 320px; margin: .7rem auto 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 60px; display: flex; align-items: center; justify-content: center; }
+  .pieza-card .img-wrap img { display: block; width: 100%; height: auto; }
+  .pieza-card .img-wrap .placeholder { color: var(--muted); font-size: .82rem; padding: 1rem; }
+  .pieza-card .meta-pieza { font-size: .8rem; color: var(--muted); margin-top: .4rem; }
+
+  #resultado { margin-top: 1rem; }
+  .contador-coste { font-size: .82rem; color: var(--muted); margin-top: .8rem; border-top: 1px dashed var(--border); padding-top: .6rem; }
+
+  footer { text-align: center; font-size: .82rem; color: var(--muted); padding: 1.5rem 1.25rem 3rem; max-width: 1160px; margin: 0 auto; }
+  footer a { color: var(--blue-600); }
+
+  /* Historial */
+  .hist-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+  .hist-toolbar .hist-contador { color: var(--muted); font-size: .9rem; margin-right: auto; }
+  .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .hist-item { border: 1px solid var(--border); border-radius: 12px; padding: .8rem; background: #fff; }
+  .hist-item h4 { margin: 0 0 .3rem; font-size: .95rem; color: var(--blue-700); }
+  .hist-item p { margin: 0; font-size: .8rem; color: var(--muted); }
+  .hist-vacio { grid-column: 1 / -1; color: var(--muted); padding: 1rem; text-align: center; background: var(--blue-50); border: 2px dashed var(--border-strong); border-radius: 12px; }
+
+  .hidden { display: none !important; }
+  @media (max-width: 640px) { section.panel, details.panel-guia { padding: 1.1rem; } header.hero { padding: 2rem 1rem 1rem; } }
+
+  /* ================= PRO: modo de trabajo, caché y lote ================= */
+  .modepicker { display: flex; gap: .6rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+  .modepicker button {
+    flex: 1; min-width: 160px; text-align: left; font: inherit; padding: .7rem .9rem; border-radius: 10px;
+    border: 1px solid var(--border-strong); background: var(--card); color: var(--text); cursor: pointer;
+  }
+  .modepicker button b { display: block; font-size: .95rem; }
+  .modepicker button span { display: block; color: var(--muted); font-size: .78rem; margin-top: .15rem; }
+  .modepicker button[aria-pressed="true"] { background: var(--blue-700); border-color: var(--blue-700); }
+  .modepicker button[aria-pressed="true"] b, .modepicker button[aria-pressed="true"] span { color: #fff; }
+
+  .procard {
+    background: var(--gold-soft); border: 1px solid var(--gold); border-radius: 12px;
+    padding: .9rem 1.1rem; margin-bottom: 1rem;
+  }
+  .procard .prohead { display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .procard .prohead b { color: var(--gold-ink); font-size: .92rem; }
+  .procard .hint { margin-top: .3rem; }
+
+  .batch-dropzone {
+    border: 2px dashed var(--border-strong); border-radius: 12px; padding: 1.2rem;
+    text-align: center; background: var(--blue-50); cursor: pointer; color: var(--blue-700);
+    font-weight: 600; transition: background .15s, border-color .15s;
+  }
+  .batch-dropzone.dragover { background: var(--blue-100); border-color: var(--blue-600); }
+  .batch-dropzone p { margin: .3rem 0 0; font-weight: 400; color: var(--muted); font-size: .85rem; }
+  .batch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .batch-thumb { border: 1px solid var(--border); border-radius: 10px; background: #fff; overflow: hidden; position: relative; }
+  .batch-thumb img { display: block; width: 100%; height: 130px; object-fit: cover; }
+  .batch-thumb .bt-name { font-size: .74rem; color: var(--muted); padding: .35rem .5rem; word-break: break-word; }
+  .batch-thumb .bt-remove {
+    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: rgba(33,29,20,.72); color: #fff; font-size: .8rem; line-height: 1; cursor: pointer;
+  }
+  .batch-concurrency { display: flex; align-items: center; gap: .6rem; margin: .8rem 0; flex-wrap: wrap; }
+  .batch-concurrency label { margin: 0; font-size: .85rem; }
+  .batch-concurrency input[type=number] { width: 70px; }
+
+  .progress-wrap { margin: .8rem 0 1rem; }
+  .progress-track { height: 10px; border-radius: 999px; background: var(--blue-50); overflow: hidden; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: var(--blue-600); width: 0%; transition: width .3s; }
+  .progress-label { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--muted); margin-top: .4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .3rem; }
+
+  .batch-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .8rem; }
+  .batch-row {
+    display: flex; gap: .7rem; align-items: center; border: 1px solid var(--border);
+    background: #fff; border-radius: 10px; padding: .55rem .8rem; font-size: .85rem;
+  }
+  .batch-row .br-left { flex: 1; min-width: 0; }
+  .batch-row .br-left .br-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .batch-row .br-left .br-meta { color: var(--muted); font-size: .76rem; }
+  .pill {
+    font-family: 'JetBrains Mono', monospace; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+    border-radius: 999px; padding: .25rem .6rem; white-space: nowrap; flex: none; border: 1px solid transparent;
+  }
+  .pill.pend { background: var(--blue-50); color: var(--muted); }
+  .pill.run { background: var(--blue-100); color: var(--blue-700); }
+  .pill.done { background: var(--ok-bg); color: var(--ok); }
+  .pill.cachehit { background: var(--gold-soft); color: var(--gold-ink); border-color: var(--gold); }
+  .pill.err { background: var(--err-bg); color: var(--err); }
+</style>
+</head>
+<body
+  data-app-title="GenOutFit Pro"
+  data-app-description="Versión Pro de GenOutFit: a partir de la foto de una prenda, genera con IA (Claude/GPT/Gemini + FLUX vía fal.ai) un outfit completo, con caché de resultados, caché de prompts de Anthropic y modo por lotes para procesar varias prendas de una vez."
+  data-categories="ia,diseno-creatividad,generacion-contenido,docencia"
+  data-tags="Claude,OpenAI,Gemini,fal.ai,FLUX,Moda,Outfit,Pro,Caché,Lotes"
+  data-client-only="true"
+>
+
+<header class="hero">
+  <h1>GenOutFit<span class="badge-pro">PRO</span></h1>
+  <p>Sube la foto de una prenda y genera, con IA, un outfit completo a juego — con caché y lotes</p>
+  <div class="flow" aria-label="Flujo de trabajo">
+    <span class="step">Foto de la prenda</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">Análisis + prompts (IA)</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">Revisión</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">Imágenes (FLUX)</span>
+  </div>
+</header>
+<p class="pro-strip"><span>⚡ <b>Caché de resultados</b> activable</span><span>🗂 <b>Caché de prompts</b> Anthropic</span><span>📦 <b>Modo por lotes</b> — varias prendas de una vez</span><span>🧠 Catálogo de modelos ampliado</span></p>
+
+<div class="aviso">
+  <strong>Avisos:</strong> la IA puede cometer errores al identificar la prenda o al describir el outfit; revisa siempre el resultado antes de usarlo profesionalmente — esta herramienta no sustituye el criterio del diseñador. Tu API key se guarda solo en este navegador (<code>localStorage</code>) y se envía únicamente al endpoint oficial del proveedor elegido; no se recomienda este mecanismo para secretos institucionales ni aplicaciones públicas de producción.
+</div>
+
+<main>
+
+  <details class="panel-guia">
+    <summary>&#191;Cómo funciona GenOutFit Pro?</summary>
+    <p><strong>GenOutFit</strong> es una aplicación de un solo archivo HTML pensada para diseñadores de moda: a partir de la fotografía de una prenda, usa IA para identificar sus características y proponer un outfit completo de prendas afines, y genera una imagen de cada pieza con FLUX (fal.ai). Esta versión <strong>Pro</strong> añade caché de resultados, caché de prompts de Anthropic, un catálogo de modelos ampliado y un modo por lotes para procesar varias prendas de una sola vez.</p>
+    <ol>
+      <li>Subes (o arrastras) la foto de una prenda.</li>
+      <li>Eliges cuántas piezas debe tener el outfit completo y si quieres además una imagen de un/a modelo vistiendo todo el conjunto.</li>
+      <li>La IA (Claude, GPT o Gemini, a tu elección) analiza la foto y devuelve una descripción breve y un prompt en español, listo para FLUX, de cada pieza del outfit.</li>
+      <li>Puedes revisar y editar cada prompt antes de continuar.</li>
+      <li>Al pulsar "Continuar", GenOutFit genera con FLUX una imagen PNG de cada pieza y, si la pediste, la foto del modelo: esta última se compone con FLUX Kontext a partir de la prenda original y de las imágenes de las piezas ya generadas, para que el modelo lleve exactamente esas prendas y complementos.</li>
+      <li>Puedes descargar cada imagen por separado o exportarlas todas juntas en un PDF.</li>
+    </ol>
+    <p><strong>Novedades Pro:</strong></p>
+    <ul>
+      <li><strong>Caché de resultados:</strong> antes de generar, comprueba si ya existe en el historial de este navegador una generación con la misma imagen de prenda y los mismos parámetros; si la hay, la recupera al instante sin gastar nada. Se puede desactivar o vaciar desde el panel "Pro" de arriba.</li>
+      <li><strong>Caché de prompts de Anthropic:</strong> con proveedor Anthropic, marca las instrucciones del sistema con <code>cache_control</code> para abaratar llamadas consecutivas con el mismo bloque.</li>
+      <li><strong>Modo por lotes:</strong> sube varias prendas a la vez; cada una genera su propio outfit completo, de principio a fin y sin pausa de revisión, con una lista de progreso y descarga conjunta en ZIP o un PDF por outfit.</li>
+      <li><strong>Catálogo de modelos ampliado:</strong> incluye las variantes más recientes de Claude, GPT y Gemini.</li>
+    </ul>
+    <p><strong>Avisos frecuentes:</strong> error 401/403 &#8594; la clave no es válida o no tiene permisos. Error 429 &#8594; límite de uso alcanzado, espera e inténtalo de nuevo. Error 404 &#8594; el modelo no existe o no está disponible en tu cuenta. "La respuesta no tiene el formato esperado" &#8594; GenOutFit reintenta automáticamente una vez; si persiste, prueba con otro modelo o una foto más clara de la prenda.</p>
+  </details>
+
+  <section class="panel" aria-labelledby="h-config">
+    <h2 id="h-config">1. Proveedor de IA (análisis de la prenda)</h2>
+    <div class="grid3">
+      <div class="field">
+        <label for="sel-proveedor">Proveedor</label>
+        <select id="sel-proveedor">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="gemini">Google (Gemini)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sel-modelo">Modelo</label>
+        <select id="sel-modelo"></select>
+      </div>
+      <div class="field">
+        <label for="input-max-tokens">Nº máx. tokens de salida (Recomendado: 8192)</label>
+        <input type="number" id="input-max-tokens" min="256" max="9999999" step="1" value="8192">
+        <p class="hint" id="limite-tokens-modelo"></p>
+      </div>
+    </div>
+    <div class="field" id="modelo-otro-wrap" style="display:none;">
+      <label for="input-modelo-otro">Identificador de modelo</label>
+      <input type="text" id="input-modelo-otro" placeholder="Ej: claude-sonnet-4-5">
+    </div>
+
+    <div class="field">
+      <label for="input-apikey">API key del proveedor activo</label>
+      <input type="password" id="input-apikey" autocomplete="off" spellcheck="false" placeholder="Pega aquí tu API key">
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-guardar-key">Guardar clave</button>
+        <button type="button" class="secundario" id="btn-mostrar-key" aria-pressed="false">Mostrar</button>
+        <button type="button" class="peligro" id="btn-borrar-key">Borrar clave</button>
+      </div>
+      <p class="estado-key" id="estado-key">No hay ninguna clave guardada para este proveedor.</p>
+    </div>
+
+    <div class="field">
+      <label for="input-apikey-fal">API key de fal.ai (generación de imagen)</label>
+      <input type="password" id="input-apikey-fal" autocomplete="off" spellcheck="false" placeholder="Pega aquí tu API key de fal.ai">
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-guardar-key-fal">Guardar clave</button>
+        <button type="button" class="secundario" id="btn-mostrar-key-fal" aria-pressed="false">Mostrar</button>
+        <button type="button" class="peligro" id="btn-borrar-key-fal">Borrar clave</button>
+      </div>
+      <p class="estado-key" id="estado-key-fal">No hay ninguna clave guardada para fal.ai.</p>
+    </div>
+    <p class="hint">Cada clave solo se envía a su proveedor oficial. La validez definitiva la confirma la respuesta de la API.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-pro">
+    <h2 id="h-pro">Pro — modo de trabajo, caché y lotes</h2>
+    <div class="modepicker" id="modepicker" role="radiogroup" aria-label="Modo de trabajo">
+      <button type="button" data-modo="individual" aria-pressed="true"><b>Individual</b><span>Una prenda, con revisión de los prompts antes de generar</span></button>
+      <button type="button" data-modo="lote" aria-pressed="false"><b>Por lotes</b><span>Varias prendas a la vez, de principio a fin, sin pausa de revisión</span></button>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="pick-row" style="margin:0" for="chk-cache-resultados"><input type="checkbox" id="chk-cache-resultados" checked><span><b>Caché de resultados</b> — reutilizar un outfit ya generado para la misma prenda y los mismos parámetros</span></label>
+        <button type="button" class="secundario" id="btn-vaciar-cache" style="padding:.3rem .7rem;font-size:.82rem">Vaciar caché (<span id="cache-contador">0</span>)</button>
+      </div>
+      <p class="hint">Antes de llamar a la IA o a FLUX, se comprueba si ya existe en el historial de este navegador una generación con la misma imagen de prenda y los mismos parámetros (proveedor, modelo, nº de piezas, modelo incluido o no, pasos, tolerancia e instrucciones del sistema). Si la hay, se recupera al instante, sin gastar nada.</p>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="pick-row" style="margin:0" for="chk-prompt-caching"><input type="checkbox" id="chk-prompt-caching" checked><span><b>Caché de prompts de Anthropic</b> (<code>cache_control</code>) — solo con proveedor Anthropic</span></label>
+      </div>
+      <p class="hint" id="nota-prompt-caching">Marca el bloque de instrucciones del sistema como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes mientras no lo cambies. Solo hay ahorro real si el bloque supera el mínimo cacheable del modelo activo.</p>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-prenda" id="panel-individual">
+    <h2 id="h-prenda"><span id="titulo-paso-prenda">2. Foto de la prenda</span></h2>
+    <div class="field" id="zona-imagen-individual">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Subir foto de la prenda">
+        <span id="dropzone-texto">Arrastra aquí la foto de la prenda, o haz clic para elegir un archivo</span>
+        <p>Formatos admitidos: JPG, PNG, WEBP</p>
+      </div>
+      <input type="file" id="input-imagen" accept="image/png,image/jpeg,image/webp" class="hidden">
+      <div class="preview-wrap hidden" id="preview-wrap">
+        <img id="preview-img" alt="Vista previa de la prenda subida">
+        <div class="botones"><button type="button" class="secundario" id="btn-quitar-imagen">Quitar imagen</button></div>
+      </div>
+    </div>
+
+    <div class="field hidden" id="zona-imagenes-lote">
+      <label>Prendas del lote (una imagen por outfit a generar)</label>
+      <div class="batch-dropzone" id="dropzone-lote" tabindex="0" role="button" aria-label="Subir varias fotos de prendas para el lote">
+        <span>Arrastra aquí varias fotos de prendas, o haz clic para elegirlas (puedes seleccionar varias a la vez)</span>
+        <p>Formatos admitidos: JPG, PNG, WEBP · se generará un outfit completo independiente por cada una</p>
+      </div>
+      <input type="file" id="input-imagenes-lote" accept="image/png,image/jpeg,image/webp" multiple class="hidden">
+      <div class="batch-grid" id="grid-lote"></div>
+      <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna prenda añadida todavía.</p>
+    </div>
+
+    <div class="grid3" id="grid-piezas-flux">
+      <div class="field">
+        <label for="input-num-piezas" id="label-num-piezas">Nº de piezas del outfit (sin contar la prenda original, máximo 4)</label>
+        <input type="number" id="input-num-piezas" min="1" max="4" step="1" value="2">
+        <p class="hint" id="hint-num-piezas">Cuántas prendas afines debe proponer la IA, además de la que has subido. Como no vas a incluir la foto del modelo, el máximo es 4.</p>
+      </div>
+      <div class="field">
+        <label for="sel-pasos-inferencia">Pasos de inferencia (FLUX)</label>
+        <select id="sel-pasos-inferencia">
+          <option value="2" selected>2 — por defecto</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12 — más detalle</option>
+        </select>
+        <p class="hint">Más pasos = más detalle pero más lento y más caro en fal.ai.</p>
+      </div>
+      <div class="field">
+        <label for="sel-safety-tolerance">Tolerancia del filtro de seguridad (FLUX)</label>
+        <select id="sel-safety-tolerance">
+          <option value="1">1 — más estricto</option>
+          <option value="2">2</option>
+          <option value="3" selected>3 — por defecto</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6 — más permisivo</option>
+        </select>
+        <p class="hint">1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro <code>safety_tolerance</code> de fal.ai.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label class="pick-row" for="chk-incluir-modelo">
+        <input type="checkbox" id="chk-incluir-modelo">
+        <span>Incluir también una imagen de un/a modelo vistiendo todo el outfit</span>
+      </label>
+      <p class="hint">Esta foto no se genera solo a partir de texto: se compone con FLUX Kontext a partir de la prenda original y de las imágenes de cada pieza ya generadas, usándolas como referencia, para que el modelo lleve EXACTAMENTE esas prendas y complementos. Si la incluyes, el máximo de piezas pasa a 3, para que la prenda original más las piezas nunca supere las 4 imágenes de referencia que admite fal.ai por llamada y la foto del modelo se genere siempre en una sola llamada.</p>
+    </div>
+
+    <div class="field">
+      <label for="input-system-prompt">Instrucciones del sistema</label>
+      <textarea id="input-system-prompt" class="tall mono"></textarea>
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-restaurar-system">Restaurar predeterminado</button>
+      </div>
+      <p class="hint">Rol que sigue la IA al analizar la prenda y redactar los prompts. Puedes editarlo; por defecto es el definido para esta app.</p>
+    </div>
+
+    <div class="botones" id="acciones-individual">
+      <button type="button" class="primario grande" id="btn-generar" disabled>
+        <span class="spinner"></span><span id="btn-generar-texto">Generar Outfit</span>
+      </button>
+      <button type="button" class="secundario" id="btn-estimar-tokens" disabled>Estimar tokens de entrada</button>
+    </div>
+    <p class="hint" id="hint-estimar-tokens">La estimación consulta solo el conteo de tokens de ENTRADA (gratuito en los proveedores que lo ofrecen) con el mismo texto/imagen que se enviaría; los tokens de SALIDA nunca se pueden conocer antes de generar, solo se puede mostrar el techo configurado.</p>
+    <div class="contador-coste" id="estimacion-tokens" style="display:none;"></div>
+
+    <div class="botones hidden" id="acciones-lote">
+      <button type="button" class="primario grande" id="btn-lanzar-lote" disabled>
+        <span class="spinner"></span><span id="btn-lanzar-lote-texto">Lanzar lote ▶</span>
+      </button>
+      <span class="hint" style="margin:0">Cada prenda del lote se procesa de principio a fin (análisis + imágenes) una detrás de otra, para no saturar los límites de tasa del proveedor ni de fal.ai.</span>
+    </div>
+
+    <div id="estado-generacion"><div class="spinner"></div><span id="estado-texto"></span></div>
+
+    <div class="hidden" id="panel-progreso-lote">
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="lote-progress-fill"></div></div>
+        <div class="progress-label"><span id="lote-progress-texto">0 / 0</span><span id="lote-progress-estado">en cola</span></div>
+      </div>
+      <div class="batch-list" id="lote-lista"></div>
+      <div class="botones" style="margin-top:.8rem">
+        <button type="button" class="secundario" id="btn-detener-lote" disabled>Detener lote</button>
+        <button type="button" class="primario" id="btn-descargar-lote-zip" disabled>⬇ Descargar todas las imágenes (ZIP)</button>
+        <button type="button" class="secundario" id="btn-descargar-lote-pdf" disabled>⬇ Un PDF por outfit (varias descargas)</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-resultado" style="display:none;" aria-labelledby="h-resultado">
+    <h2 id="h-resultado">3. Prompts generados — revisa y edita antes de continuar</h2>
+    <p class="hint" style="margin-top:0">Cada prompt tiene su propia casilla de selección (marcada por defecto): al pulsar "Continuar" solo se generará la imagen de los prompts marcados.</p>
+    <div id="aviso-truncado" style="display:none;"></div>
+    <div id="lista-prompts"></div>
+    <div class="botones">
+      <button type="button" class="primario grande" id="btn-continuar" disabled>Continuar: generar imágenes con FLUX</button>
+      <button type="button" class="secundario" id="btn-descargar-prompts" disabled>Descargar prompts (TXT)</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-imagenes" style="display:none;" aria-labelledby="h-imagenes">
+    <h2 id="h-imagenes">4. Resultado — outfit generado</h2>
+    <div id="resultado"></div>
+    <div class="field">
+      <label for="input-nombre-pdf">Nombre del PDF a exportar</label>
+      <input type="text" id="input-nombre-pdf" value="genoutfit_outfit.pdf">
+    </div>
+    <div class="botones">
+      <button type="button" class="primario" id="btn-exportar-pdf" disabled>Exportar todas en PDF</button>
+    </div>
+    <div class="contador-coste" id="contador-coste"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-historial">
+    <h2 id="h-historial">Historial de generaciones</h2>
+    <p class="hint" style="margin-top:0">Cada outfit generado se guarda automáticamente en este navegador (IndexedDB), con sus prompts y las imágenes generadas. No incluye API keys.</p>
+    <p class="hint"><strong>Aviso:</strong> al pulsar "Ver / recuperar" en cualquier generación, el panel de resultado se sustituye por esa generación y sus imágenes ya no se pueden descargar como PNG ni exportar a PDF — tampoco las que tengas ahora mismo en pantalla sin descargar, aunque sean las últimas generadas. Descarga antes lo que necesites.</p>
+    <div class="hist-toolbar">
+      <span class="hist-contador" id="historial-contador" aria-live="polite">0 generaciones</span>
+      <button type="button" class="peligro" id="historial-vaciar" disabled>Vaciar historial</button>
+    </div>
+    <div id="historial-lista" class="hist-grid"></div>
+  </section>
+
+</main>
+
+<footer>
+  GenOutFit Pro &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 17/10/2026 01:22
+</footer>
+
+<script>
+"use strict";
+
+/* ============================================================================
+ * CONSTANTES EDITABLES
+ * ==========================================================================*/
+
+// --- System prompt de la app (rol del modelo). Literal del BLOQUE 0. --------
+const SYSTEM_PROMPT_OUTFIT = `Eres un director de arte y experto en moda, con amplio conocimiento de tejidos, patronaje, texturas y fotografía documental de producto. Tu tarea es analizar la prenda que aparece en la fotografía y, a partir de sus características (tipo de prenda, tejido, color, corte, herrajes, estado de desgaste y estilo), proponer un outfit completo y coherente formado por exactamente el número de piezas adicionales que indique el usuario.
+
+Para cada pieza del outfit:
+- Elige una prenda afín en estilo, paleta de color, nivel de formalidad y temporada a la prenda original, de modo que el conjunto funcione visualmente como un outfit real y no como piezas sueltas sin relación entre sí.
+- Descríbela con el detalle suficiente para generar una fotografía de producto realista: tipo de tejido y su comportamiento (caída, rigidez, elasticidad), color y matices, imperfecciones (arrugas, hilos sueltos, desgaste, manchas leves, pelusa), texturas táctiles (poros del cuero, trama del tejido, costuras, botones, cremalleras) y micro-detalles que delaten que es una fotografía real y no una ilustración.
+- Especifica una configuración de cámara y de luz propia de un estilo documental/editorial de moda (por ejemplo, distancia focal y apertura tipo 85mm f/1.4, luz natural direccional, fondo neutro o de estudio sencillo), manteniendo la misma configuración de cámara y de luz en todas las piezas del outfit, para que las imágenes resultantes puedan presentarse juntas de forma coherente.
+- Evita adjetivos vacíos o genéricos ("photorealistic", "hyperdetailed", "high quality", "8k"...). En su lugar, describe los detalles físicos concretos que hacen que la imagen parezca real.
+
+Si el usuario solicita una imagen adicional de un/a modelo vistiendo el outfit completo, ten en cuenta que esa imagen NO se genera solo a partir de texto: se genera a partir de la fotografía de la prenda original y de las imágenes ya generadas de cada pieza, usándolas como referencia visual directa. Por tanto, ese prompt debe:
+- Dar por hecho que las prendas y complementos (forma, color, estampado, tejido, herrajes y demás detalles) ya están definidos por las imágenes de referencia: NO vuelvas a describir el aspecto de cada prenda ni inventes variaciones de color, tejido o diseño distintas de las ya generadas.
+- Indicar explícitamente que el modelo debe llevar puestas, sin ningún cambio, exactamente las prendas y complementos de las imágenes de referencia (la prenda original más cada una de las piezas generadas), combinadas en un único outfit coherente sobre una sola persona.
+- Centrarse en describir lo que SÍ hay que decidir de nuevo: la pose, la actitud, el encuadre (de cuerpo entero), el entorno o fondo, y una configuración de cámara y de luz coherente con el resto del outfit, de forma natural y no forzada.
+
+Reglas de idioma (estrictas):
+- Todo el contenido que generes, incluido el prompt descriptivo de cada pieza para el modelo de difusión (FLUX), debe estar redactado íntegramente en español.`;
+
+const NUM_PIEZAS_MIN = 1;
+// El máximo de piezas depende de si se va a generar también la foto del
+// modelo: si se incluye, se limita a 3 para que, sumando la prenda
+// original, nunca se superen las 4 imágenes de referencia que fal.ai
+// admite por llamada a FLUX Kontext multi-imagen (ver FAL_KONTEXT_MAX_IMAGES)
+// y la foto del modelo se genere siempre en una única llamada. Si no se
+// incluye, ese límite no aplica y se permite una pieza más.
+const NUM_PIEZAS_MAX_CON_MODELO = 3;
+const NUM_PIEZAS_MAX_SIN_MODELO = 4;
+function numPiezasMaxActual(){
+  return chkIncluirModelo.checked ? NUM_PIEZAS_MAX_CON_MODELO : NUM_PIEZAS_MAX_SIN_MODELO;
+}
+
+const APP_CONFIG = {
+  requestTimeoutMs: 60000,
+  fal: {
+    baseUrl: "https://fal.run/",
+    defaultModel: "fal-ai/flux-pro/v1.1",
+    // Modelo FLUX Kontext multi-imagen: genera la foto del modelo a partir de
+    // la prenda original y de las imágenes de cada pieza ya generadas, en
+    // lugar de reinterpretarlas de nuevo solo a partir de texto. Acepta
+    // "image_urls" (URLs o data URIs, máx. 4 por llamada — ver
+    // FAL_KONTEXT_MAX_IMAGES) + "prompt" y "aspect_ratio" en vez de
+    // "image_size" / "num_inference_steps". https://fal.ai/models/fal-ai/flux-pro/kontext/multi
+    multiModel: "fal-ai/flux-pro/kontext/multi",
+    // guidance_scale algo más alto que el valor por defecto de fal.ai (3.5):
+    // prioriza seguir fielmente el prompt y las imágenes de referencia sobre
+    // la creatividad, para que el modelo vista las prendas tal cual son.
+    guidanceScaleModelo: 4.5,
+    inferenceStepsDefecto: 2,
+    inferenceStepsOpciones: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    imageSize: "portrait_4_3",
+    safetyTolerance: "3",
+    outputFormat: "png",
+    numImages: 1,
+    queueMaxWaitMs: 120000,
+    queuePollIntervalMs: 2000
+  }
+};
+
+// Equivalencia entre los valores de "image_size" (modelo de piezas) y los
+// valores de "aspect_ratio" que espera el modelo Kontext multi-imagen (foto
+// del modelo), para que ambos pasos mantengan el mismo encuadre.
+const ASPECT_RATIO_POR_IMAGE_SIZE = {
+  square_hd: "1:1", square: "1:1",
+  portrait_4_3: "3:4", portrait_16_9: "9:16",
+  landscape_4_3: "4:3", landscape_16_9: "16:9"
+};
+
+// --- Modelos por proveedor (texto/visión) ------------------------------------
+// --- PRO: catálogo de modelos ampliado y unificado con el resto de la suite
+// (mismo catálogo que SearchLogModCB), incluyendo las variantes "5.5" y el
+// mínimo cacheable de cada modelo Anthropic (CACHE_MIN_TOKENS) para la caché
+// de prompts. La lista cambia con frecuencia: revisa la documentación
+// oficial y usa "Otro…" con el identificador exacto si el modelo no aparece.
+const MODELOS_POR_PROVEEDOR = {
+  anthropic: {
+    modelos: ["claude-sonnet-5", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-sonnet-4-5", "claude-haiku-4-5-20251001", "claude-fable-5-1"],
+    porDefecto: "claude-sonnet-5"
+  },
+  openai: {
+    modelos: ["gpt-6-luna", "gpt-6-astra", "gpt-6.1-sol", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"],
+    porDefecto: "gpt-6.1-sol"
+  },
+  gemini: {
+    modelos: ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.5-flash-lite"],
+    porDefecto: "gemini-3.8-flash"
+  }
+};
+
+const LIMITE_TOKENS_DEFECTO = 8000;
+const LIMITES_TOKENS_MODELO = {
+  "claude-sonnet-5": 128000, "claude-opus-5-5": 128000, "claude-sonnet-5-5": 128000, "claude-haiku-5-5": 128000,
+  "claude-sonnet-4-5": 64000, "claude-haiku-4-5-20251001": 64000, "claude-fable-5-1": 128000,
+  "gpt-6-astra": 128000, "gpt-6.1-sol": 128000, "gpt-6-luna": 128000,
+  "gpt-4o": 16384, "gpt-4o-mini": 16384, "gpt-4.1": 32768, "gpt-4.1-mini": 32768,
+  "gemini-3.1-pro-preview": 65536, "gemini-3.8-flash": 65536, "gemini-3.5-flash-lite": 65536
+};
+function limiteTokensModelo(modelo){ return LIMITES_TOKENS_MODELO[modelo] || LIMITE_TOKENS_DEFECTO; }
+
+// --- Precios orientativos (USD por millón de tokens) -------------------------
+// AVISO: precios aproximados en el momento de escribir esta app. Verifica las
+// tarifas vigentes antes de usarlos con fines de facturación real.
+const PRECIOS_POR_MTOK = {
+  "claude-sonnet-5": {in: 2.00, out: 10.00}, "claude-opus-5-5": {in: 4.00, out: 20.00},
+  "claude-sonnet-5-5": {in: 2.00, out: 10.00}, "claude-haiku-5-5": {in: 0.10, out: 0.50},
+  "claude-sonnet-4-5": {in: 3.00, out: 15.00}, "claude-haiku-4-5-20251001": {in: 1.00, out: 5.00},
+  "claude-fable-5-1": {in: 10.00, out: 50.00},
+  "gpt-6-astra": {in: 10.00, out: 50.00}, "gpt-6.1-sol": {in: 2.00, out: 10.00}, "gpt-6-luna": {in: 0.10, out: 0.50},
+  "gpt-4o": {in: 2.50, out: 10.00}, "gpt-4o-mini": {in: 0.15, out: 0.60},
+  "gpt-4.1": {in: 2.00, out: 8.00}, "gpt-4.1-mini": {in: 0.40, out: 1.60},
+  "gemini-3.1-pro-preview": {in: 2.50, out: 15.00}, "gemini-3.8-flash": {in: 0.75, out: 3.75},
+  "gemini-3.5-flash-lite": {in: 0.30, out: 2.50}
+};
+// Mínimo de tokens del bloque "system" para que la caché de prompts de
+// Anthropic produzca ahorro real (por debajo del umbral se procesa normal,
+// sin coste extra ni ahorro). Ver https://docs.claude.com — modelos "…5.5" y
+// Haiku 5.5: 512 tok; resto de la familia Claude 5: 1024 tok.
+const CACHE_MIN_TOKENS_ANTHROPIC = {
+  "claude-sonnet-5": 1024, "claude-opus-5-5": 512, "claude-sonnet-5-5": 512, "claude-haiku-5-5": 512,
+  "claude-sonnet-4-5": 1024, "claude-haiku-4-5-20251001": 1024, "claude-fable-5-1": 512
+};
+
+const CLAVES_LOCALSTORAGE = {anthropic: "ia_anthropic_key", openai: "ia_openai_key", gemini: "ia_gemini_key"};
+const CLAVE_FAL = "ia_fal_key";
+const HISTORIAL_MAX = 30;
+
+/* ============================================================================
+ * ESTADO Y REFERENCIAS DE UI
+ * ==========================================================================*/
+const $ = (id) => document.getElementById(id);
+const selProveedor = $("sel-proveedor");
+const selModelo = $("sel-modelo");
+const modeloOtroWrap = $("modelo-otro-wrap");
+const inputModeloOtro = $("input-modelo-otro");
+const inputApiKey = $("input-apikey");
+const inputMaxTokens = $("input-max-tokens");
+const limiteTokensModeloDiv = $("limite-tokens-modelo");
+const estadoKey = $("estado-key");
+const inputApiKeyFal = $("input-apikey-fal");
+const estadoKeyFal = $("estado-key-fal");
+const dropzone = $("dropzone");
+const inputImagen = $("input-imagen");
+const previewWrap = $("preview-wrap");
+const previewImg = $("preview-img");
+const inputNumPiezas = $("input-num-piezas");
+const labelNumPiezas = $("label-num-piezas");
+const hintNumPiezas = $("hint-num-piezas");
+const selPasosInferencia = $("sel-pasos-inferencia");
+const selSafetyTolerance = $("sel-safety-tolerance");
+const chkIncluirModelo = $("chk-incluir-modelo");
+const inputSystemPrompt = $("input-system-prompt");
+const btnGenerar = $("btn-generar");
+const btnGenerarTexto = $("btn-generar-texto");
+const estadoGeneracion = $("estado-generacion");
+const estadoTexto = $("estado-texto");
+const panelResultado = $("panel-resultado");
+const avisoTruncadoDiv = $("aviso-truncado");
+const listaPrompts = $("lista-prompts");
+const btnContinuar = $("btn-continuar");
+const btnDescargarPrompts = $("btn-descargar-prompts");
+const panelImagenes = $("panel-imagenes");
+const resultadoDiv = $("resultado");
+const inputNombrePdf = $("input-nombre-pdf");
+const btnExportarPdf = $("btn-exportar-pdf");
+const contadorCoste = $("contador-coste");
+const btnEstimarTokens = $("btn-estimar-tokens");
+const estimacionTokensDiv = $("estimacion-tokens");
+
+let imagenBase64 = null;   // sin el prefijo "data:...;base64,"
+let imagenMediaType = null;
+let costeAcumulado = {entrada: 0, salida: 0, usd: 0};
+let piezasActuales = null; // [{nombre, prompt, seleccionada}], mantenidas en orden tras edición
+let modeloShotPrompt = null;
+let modeloSeleccionado = true; // casilla de selección de la foto del modelo (por defecto marcada)
+let promptAnalisisImagen = null; // prompt de texto enviado junto a la imagen subida, para visualizarlo en "Prompts generados"
+let imagenesGeneradas = []; // [{nombre, dataUrl}] tras llamar a FLUX
+
+/* ============================================================================
+ * ALMACENAMIENTO LOCAL
+ * ==========================================================================*/
+function storageGet(k){ try { return localStorage.getItem(k) || ""; } catch(e){ return ""; } }
+function storageSet(k, v){ try { localStorage.setItem(k, v); return true; } catch(e){ return false; } }
+function storageRemove(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+/* ============================================================================
+ * GESTIÓN DE PROVEEDOR / MODELO / API KEY (texto-visión)
+ * ==========================================================================*/
+function proveedorActivo(){ return selProveedor.value; }
+function modeloActivo(){ return selModelo.value === "__otro__" ? inputModeloOtro.value.trim() : selModelo.value; }
+
+// Nº de tokens de salida recomendado (y valor por defecto); el campo admite
+// cualquier valor, sin tope forzado (ver obtenerMaxTokens/ajustarLimiteTokens).
+const MAX_TOKENS_RECOMENDADO = 8192;
+
+// Esta versión (GenOutFit, no restringida) no fuerza ningún tope de tokens
+// de salida para ningún proveedor: el límite documentado del modelo activo
+// se muestra solo como información (ver ajustarLimiteTokens).
+function obtenerMaxTokens(){
+  const valor = parseInt(inputMaxTokens.value, 10);
+  return valor && valor >= 256 ? valor : MAX_TOKENS_RECOMENDADO;
+}
+function ajustarLimiteTokens(){
+  const limite = limiteTokensModelo(modeloActivo());
+  inputMaxTokens.removeAttribute("max");
+  limiteTokensModeloDiv.textContent = `Máximo documentado para este modelo: ${limite.toLocaleString("es-ES")} tokens (la aplicación no fuerza este tope: es solo informativo, puedes escribir cualquier valor).`;
+}
+function repintarModelos(){
+  const cfg = MODELOS_POR_PROVEEDOR[proveedorActivo()];
+  selModelo.innerHTML = "";
+  cfg.modelos.forEach(m => {
+    const op = document.createElement("option");
+    op.value = m; op.textContent = m + (m === cfg.porDefecto ? " (Recomendado)" : "");
+    if (m === cfg.porDefecto) op.selected = true;
+    selModelo.appendChild(op);
+  });
+  const opOtro = document.createElement("option");
+  opOtro.value = "__otro__"; opOtro.textContent = "Otro…";
+  selModelo.appendChild(opOtro);
+  modeloOtroWrap.style.display = "none";
+}
+function cargarKeyGuardada(){
+  inputApiKey.value = localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || "";
+  actualizarEstadoKey();
+}
+function actualizarEstadoKey(){
+  const hay = !!localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]);
+  estadoKey.textContent = hay ? "✅ Hay una clave guardada para este proveedor." : "No hay ninguna clave guardada para este proveedor.";
+  estadoKey.className = "estado-key" + (hay ? " si" : "");
+  actualizarBotonGenerar();
+}
+function actualizarEstadoKeyFal(){
+  const hay = !!localStorage.getItem(CLAVE_FAL);
+  estadoKeyFal.textContent = hay ? "✅ Hay una clave de fal.ai guardada." : "No hay ninguna clave guardada para fal.ai.";
+  estadoKeyFal.className = "estado-key" + (hay ? " si" : "");
+  actualizarBotonGenerar();
+}
+function validarFormatoKey(proveedor, key){
+  if (!key) return false;
+  if (proveedor === "anthropic") return key.startsWith("sk-ant-");
+  if (proveedor === "openai") return key.startsWith("sk-");
+  if (proveedor === "gemini") return key.startsWith("AIza");
+  return true;
+}
+
+selProveedor.addEventListener("change", () => { repintarModelos(); cargarKeyGuardada(); ajustarLimiteTokens(); });
+selModelo.addEventListener("change", () => {
+  modeloOtroWrap.style.display = selModelo.value === "__otro__" ? "block" : "none";
+  ajustarLimiteTokens();
+});
+inputModeloOtro.addEventListener("input", ajustarLimiteTokens);
+
+$("btn-guardar-key").addEventListener("click", () => {
+  const key = inputApiKey.value.trim();
+  if (!key){ alert("Escribe una API key antes de guardar."); return; }
+  if (!validarFormatoKey(proveedorActivo(), key)){
+    if (!confirm("El formato de la clave no parece habitual para este proveedor. ¿Guardarla igualmente?")) return;
+  }
+  localStorage.setItem(CLAVES_LOCALSTORAGE[proveedorActivo()], key);
+  actualizarEstadoKey();
+});
+$("btn-borrar-key").addEventListener("click", () => {
+  localStorage.removeItem(CLAVES_LOCALSTORAGE[proveedorActivo()]);
+  inputApiKey.value = "";
+  actualizarEstadoKey();
+});
+$("btn-mostrar-key").addEventListener("click", () => {
+  const mostrar = inputApiKey.type === "password";
+  inputApiKey.type = mostrar ? "text" : "password";
+  $("btn-mostrar-key").textContent = mostrar ? "Ocultar" : "Mostrar";
+  $("btn-mostrar-key").setAttribute("aria-pressed", String(mostrar));
+});
+
+$("btn-guardar-key-fal").addEventListener("click", () => {
+  const key = inputApiKeyFal.value.trim();
+  if (!key){ alert("Escribe una API key de fal.ai antes de guardar."); return; }
+  localStorage.setItem(CLAVE_FAL, key);
+  actualizarEstadoKeyFal();
+});
+$("btn-borrar-key-fal").addEventListener("click", () => {
+  localStorage.removeItem(CLAVE_FAL);
+  inputApiKeyFal.value = "";
+  actualizarEstadoKeyFal();
+});
+$("btn-mostrar-key-fal").addEventListener("click", () => {
+  const mostrar = inputApiKeyFal.type === "password";
+  inputApiKeyFal.type = mostrar ? "text" : "password";
+  $("btn-mostrar-key-fal").textContent = mostrar ? "Ocultar" : "Mostrar";
+  $("btn-mostrar-key-fal").setAttribute("aria-pressed", String(mostrar));
+});
+
+/* ============================================================================
+ * SUBIDA DE IMAGEN
+ * ==========================================================================*/
+function manejarArchivoImagen(file){
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)){
+    alert("Formato no admitido. Usa JPG, PNG o WEBP.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+    if (!m) { alert("No se ha podido leer la imagen."); return; }
+    imagenMediaType = m[1];
+    imagenBase64 = m[2];
+    previewImg.src = dataUrl;
+    previewWrap.classList.remove("hidden");
+    dropzone.classList.add("hidden");
+    actualizarBotonGenerar();
+  };
+  reader.onerror = () => alert("No se ha podido leer la imagen.");
+  reader.readAsDataURL(file);
+}
+dropzone.addEventListener("click", () => inputImagen.click());
+dropzone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") inputImagen.click(); });
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault(); dropzone.classList.remove("dragover");
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) manejarArchivoImagen(e.dataTransfer.files[0]);
+});
+inputImagen.addEventListener("change", () => { if (inputImagen.files[0]) manejarArchivoImagen(inputImagen.files[0]); });
+$("btn-quitar-imagen").addEventListener("click", () => {
+  imagenBase64 = null; imagenMediaType = null;
+  inputImagen.value = "";
+  previewWrap.classList.add("hidden");
+  dropzone.classList.remove("hidden");
+  actualizarBotonGenerar();
+});
+
+/* ============================================================================
+ * FORMULARIO — validación
+ * ==========================================================================*/
+function actualizarBotonGenerar(){
+  const hayKeyTexto = !!(localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || inputApiKey.value.trim());
+  const hayKeyFal = !!(localStorage.getItem(CLAVE_FAL) || inputApiKeyFal.value.trim());
+  const hayImagen = !!imagenBase64;
+  const numPiezasOk = (() => {
+    const n = parseInt(inputNumPiezas.value, 10);
+    return n >= NUM_PIEZAS_MIN && n <= numPiezasMaxActual();
+  })();
+  btnGenerar.disabled = !(hayKeyTexto && hayKeyFal && hayImagen && numPiezasOk);
+  btnEstimarTokens.disabled = !(hayKeyTexto && hayImagen && numPiezasOk);
+}
+// El máximo de piezas cambia según si se va a incluir la foto del modelo
+// (ver numPiezasMaxActual): actualiza el atributo "max" del campo, su
+// etiqueta y su texto de ayuda, y recorta el valor actual si deja de ser
+// válido.
+function actualizarLimitePiezas(){
+  const max = numPiezasMaxActual();
+  inputNumPiezas.max = String(max);
+  if (parseInt(inputNumPiezas.value, 10) > max) inputNumPiezas.value = max;
+  labelNumPiezas.textContent = `Nº de piezas del outfit (sin contar la prenda original, máximo ${max})`;
+  hintNumPiezas.textContent = chkIncluirModelo.checked
+    ? "Cuántas prendas afines debe proponer la IA, además de la que has subido. Como vas a incluir la foto del modelo, el máximo es 3 para que, junto a la prenda original, nunca se superen las 4 imágenes de referencia que fal.ai admite por llamada: así la foto del modelo se genera siempre en una sola llamada, sin pasos intermedios que puedan perder fidelidad."
+    : "Cuántas prendas afines debe proponer la IA, además de la que has subido. Como no vas a incluir la foto del modelo, ese límite de fal.ai no aplica y el máximo es 4.";
+  actualizarBotonGenerar();
+}
+inputApiKey.addEventListener("input", actualizarBotonGenerar);
+inputApiKeyFal.addEventListener("input", actualizarBotonGenerar);
+inputNumPiezas.addEventListener("input", actualizarBotonGenerar);
+chkIncluirModelo.addEventListener("change", actualizarLimitePiezas);
+
+$("btn-restaurar-system").addEventListener("click", () => { inputSystemPrompt.value = SYSTEM_PROMPT_OUTFIT; });
+
+/* ============================================================================
+ * LLAMADA UNIFICADA A LA IA DE TEXTO/VISIÓN (Anthropic / OpenAI / Gemini)
+ * ==========================================================================*/
+async function fetchConTimeout(url, opciones, timeoutMs = APP_CONFIG.requestTimeoutMs){
+  const controlador = new AbortController();
+  const id = setTimeout(() => controlador.abort(), timeoutMs);
+  try{
+    return await fetch(url, {...opciones, signal: controlador.signal});
+  } catch(e){
+    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (60 s). Inténtalo de nuevo.");
+    throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
+  } finally { clearTimeout(id); }
+}
+function mensajeErrorHttp(status, cuerpo){
+  if (status === 401 || status === 403) return "La API key no es válida o no tiene permisos (código " + status + ").";
+  if (status === 429) return "Se ha alcanzado el límite de uso de la API (código 429). Espera unos segundos e inténtalo de nuevo.";
+  if (status === 404) return "El modelo indicado no existe o no está disponible en tu cuenta (código 404). Revisa el identificador del modelo.";
+  const detalle = cuerpo && (cuerpo.error && cuerpo.error.message ? cuerpo.error.message : JSON.stringify(cuerpo).slice(0,200));
+  return "Error del proveedor (código " + status + ")" + (detalle ? ": " + detalle : ".");
+}
+// Algunos modelos de OpenAI (p. ej. la familia de razonamiento gpt-6-*) ya no
+// aceptan "max_tokens" y devuelven un error 400 pidiendo "max_completion_tokens"
+// en su lugar. Se detecta ese error concreto en el cuerpo de la respuesta para
+// reintentar la llamada una única vez renombrando el parámetro, sin necesidad
+// de mantener una lista de qué modelos lo requieren.
+function requiereMaxCompletionTokens(cuerpo){
+  const msg = cuerpo && cuerpo.error && typeof cuerpo.error.message === "string" ? cuerpo.error.message : "";
+  return /max_tokens/i.test(msg) && /max_completion_tokens/i.test(msg);
+}
+
+// userPrompt: texto. imagen: {mediaType, base64} opcional (solo en la 1ª llamada).
+async function llamarIA(systemPrompt, userPrompt, opts, imagen){
+  const {proveedor, modelo, apiKey, maxTokens} = opts;
+  let url, headers, body, extraerTexto, extraerUso, estaTruncado;
+
+  if (proveedor === "anthropic"){
+    url = "https://api.anthropic.com/v1/messages";
+    headers = {"content-type":"application/json","x-api-key": apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+    const content = [];
+    if (imagen) content.push({type:"image", source:{type:"base64", media_type: imagen.mediaType, data: imagen.base64}});
+    content.push({type:"text", text: userPrompt});
+    // PRO: caché de prompts de Anthropic — si está activada (checkbox
+    // "chk-prompt-caching"), el bloque "system" se envía como bloque de
+    // contenido con cache_control:"ephemeral" en vez de como texto plano,
+    // para que Anthropic lo reutilice entre llamadas consecutivas.
+    const systemField = ($("chk-prompt-caching") && $("chk-prompt-caching").checked)
+      ? [{type: "text", text: systemPrompt, cache_control: {type: "ephemeral"}}]
+      : systemPrompt;
+    body = {model: modelo, max_tokens: maxTokens, system: systemField, messages: [{role:"user", content}]};
+    extraerTexto = (d) => (Array.isArray(d.content) ? d.content.filter(b => b && b.type === "text").map(b => b.text).join("\n") : "");
+    extraerUso = (d) => ({entrada: d.usage?.input_tokens || 0, salida: d.usage?.output_tokens || 0});
+    estaTruncado = (d) => d.stop_reason === "max_tokens";
+  } else if (proveedor === "openai"){
+    url = "https://api.openai.com/v1/chat/completions";
+    headers = {"content-type":"application/json","Authorization":"Bearer " + apiKey};
+    const content = [{type:"text", text: userPrompt}];
+    if (imagen) content.push({type:"image_url", image_url:{url: `data:${imagen.mediaType};base64,${imagen.base64}`}});
+    body = {model: modelo, max_tokens: maxTokens, messages: [{role:"system", content: systemPrompt},{role:"user", content}]};
+    extraerTexto = (d) => (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
+    extraerUso = (d) => ({entrada: d.usage?.prompt_tokens || 0, salida: d.usage?.completion_tokens || 0});
+    estaTruncado = (d) => d.choices && d.choices[0] && d.choices[0].finish_reason === "length";
+  } else if (proveedor === "gemini"){
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelo) + ":generateContent?key=" + encodeURIComponent(apiKey);
+    headers = {"content-type":"application/json"};
+    const parts = [{text: userPrompt}];
+    if (imagen) parts.unshift({inline_data:{mime_type: imagen.mediaType, data: imagen.base64}});
+    body = {system_instruction: {parts: [{text: systemPrompt}]}, contents: [{role:"user", parts}], generationConfig: {maxOutputTokens: maxTokens}};
+    extraerTexto = (d) => {
+      const partes = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+      return Array.isArray(partes) ? partes.filter(p => p && typeof p.text === "string").map(p => p.text).join("\n") : "";
+    };
+    extraerUso = (d) => ({entrada: d.usageMetadata?.promptTokenCount || 0, salida: d.usageMetadata?.candidatesTokenCount || 0});
+    estaTruncado = (d) => d.candidates && d.candidates[0] && d.candidates[0].finishReason === "MAX_TOKENS";
+  } else {
+    throw new Error("Proveedor desconocido: " + proveedor);
+  }
+
+  let resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  let data; try { data = await resp.json(); } catch(e){ data = {}; }
+  if (!resp.ok && proveedor === "openai" && requiereMaxCompletionTokens(data)){
+    const { max_tokens, ...bodySinMaxTokens } = body;
+    const bodyAlt = { ...bodySinMaxTokens, max_completion_tokens: max_tokens };
+    resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(bodyAlt)});
+    try { data = await resp.json(); } catch(e){ data = {}; }
+  }
+  if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+
+  const texto = extraerTexto(data);
+  const uso = extraerUso(data);
+  const truncado = !!estaTruncado(data);
+  acumularCoste(modelo, uso.entrada, uso.salida);
+  return {texto, truncado, uso};
+}
+function acumularCoste(modelo, entrada, salida){
+  costeAcumulado.entrada += entrada; costeAcumulado.salida += salida;
+  const precios = PRECIOS_POR_MTOK[modelo];
+  if (precios) costeAcumulado.usd += (entrada/1e6)*precios.in + (salida/1e6)*precios.out;
+  pintarContadorCoste();
+}
+function pintarContadorCoste(){
+  const {entrada, salida, usd} = costeAcumulado;
+  const precioConocido = !!PRECIOS_POR_MTOK[modeloActivo()];
+  contadorCoste.textContent = `Tokens usados en esta sesión — entrada: ${entrada.toLocaleString("es-ES")}, salida: ${salida.toLocaleString("es-ES")}.` +
+    (precioConocido ? ` Coste estimado (solo texto/visión): $${usd.toFixed(4)} (aproximado; la generación de imagen con FLUX se factura aparte, verifica tarifas vigentes).` : " (no hay precio de referencia cargado para este modelo).");
+}
+
+/* ============================================================================
+ * ESTIMACIÓN PREVIA DE TOKENS DE ENTRADA (antes de lanzar la generación real)
+ * ==========================================================================*/
+// Cuenta los tokens de ENTRADA que consumiría la llamada real a llamarIA()
+// con este mismo systemPrompt/userPrompt/imagen, sin generar nada ni gastar
+// tokens de salida. Anthropic y Gemini ofrecen un endpoint gratuito de
+// conteo exacto; OpenAI no lo ofrece y se recurre a una estimación
+// aproximada. Los tokens de SALIDA nunca se pueden conocer de antemano
+// (dependen de lo que decida generar el modelo): lo único mostrable de la
+// salida es el techo configurado (maxTokens).
+async function contarTokensEntrada(systemPrompt, userPrompt, opts, imagen){
+  const {proveedor, modelo, apiKey} = opts;
+
+  if (proveedor === "anthropic"){
+    const url = "https://api.anthropic.com/v1/messages/count_tokens";
+    const headers = {"content-type":"application/json","x-api-key": apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+    const content = [];
+    if (imagen) content.push({type:"image", source:{type:"base64", media_type: imagen.mediaType, data: imagen.base64}});
+    content.push({type:"text", text: userPrompt});
+    const body = {model: modelo, system: systemPrompt, messages: [{role:"user", content}]};
+    const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+    let data; try { data = await resp.json(); } catch(e){ data = {}; }
+    if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+    return {entrada: data.input_tokens || 0, aproximado: false};
+  }
+
+  if (proveedor === "gemini"){
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelo) + ":countTokens?key=" + encodeURIComponent(apiKey);
+    const headers = {"content-type":"application/json"};
+    const parts = [{text: userPrompt}];
+    if (imagen) parts.unshift({inline_data:{mime_type: imagen.mediaType, data: imagen.base64}});
+    const body = {generateContentRequest: {model: "models/" + modelo, system_instruction: {parts: [{text: systemPrompt}]}, contents: [{role:"user", parts}]}};
+    const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+    let data; try { data = await resp.json(); } catch(e){ data = {}; }
+    if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+    return {entrada: data.totalTokens || 0, aproximado: false};
+  }
+
+  // OpenAI no ofrece un endpoint público de conteo de tokens: se estima con
+  // una heurística aproximada (~4 caracteres por token) más una adición fija
+  // orientativa por cada imagen adjunta.
+  const textoTotal = (systemPrompt || "") + " " + (userPrompt || "");
+  let entrada = Math.ceil(textoTotal.length / 4);
+  if (imagen) entrada += 1500;
+  return {entrada, aproximado: true};
+}
+
+function formatearEstimacionTokens(entrada, aproximado, maxTokens, modelo){
+  const precios = PRECIOS_POR_MTOK[modelo];
+  let texto = (aproximado ? "≈ " : "") + entrada.toLocaleString("es-ES") + " tokens de entrada" +
+    (aproximado
+      ? " (estimación aproximada: este proveedor no ofrece un endpoint de conteo exacto)."
+      : " (conteo exacto facilitado por el proveedor; esta consulta no tiene coste).") +
+    ` Techo de tokens de salida configurado: ${maxTokens.toLocaleString("es-ES")} (el consumo real de salida depende de lo que genere el modelo y nunca se puede conocer de antemano).`;
+  if (precios){
+    const costeEntrada = (entrada/1e6)*precios.in;
+    const costeSalidaMax = (maxTokens/1e6)*precios.out;
+    texto += ` Coste estimado: $${costeEntrada.toFixed(4)} de entrada${aproximado ? " (aprox.)" : ""} + hasta $${costeSalidaMax.toFixed(4)} de salida si se agotara el techo configurado.`;
+  } else {
+    texto += " (no hay precio de referencia cargado para este modelo).";
+  }
+  return texto;
+}
+
+btnEstimarTokens.addEventListener("click", async () => {
+  btnEstimarTokens.disabled = true;
+  estimacionTokensDiv.style.display = "none";
+  try{
+    const opts = {
+      proveedor: proveedorActivo(),
+      modelo: modeloActivo(),
+      apiKey: (inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || ""),
+      maxTokens: obtenerMaxTokens()
+    };
+    if (!opts.apiKey) throw new Error("Indica la API key del proveedor de texto/visión.");
+    if (!opts.modelo) throw new Error("Indica un identificador de modelo válido.");
+    const numPiezas = Math.min(numPiezasMaxActual(), Math.max(NUM_PIEZAS_MIN, parseInt(inputNumPiezas.value, 10) || 1));
+    const incluirModelo = chkIncluirModelo.checked;
+    const systemPrompt = inputSystemPrompt.value.trim() || SYSTEM_PROMPT_OUTFIT;
+    const userPrompt = construirMensajeUsuario(numPiezas, incluirModelo);
+    const imagen = (imagenBase64 && imagenMediaType) ? {mediaType: imagenMediaType, base64: imagenBase64} : null;
+    const {entrada, aproximado} = await contarTokensEntrada(systemPrompt, userPrompt, opts, imagen);
+    estimacionTokensDiv.textContent = formatearEstimacionTokens(entrada, aproximado, opts.maxTokens, opts.modelo);
+    estimacionTokensDiv.style.display = "block";
+  } catch(err){
+    estimacionTokensDiv.textContent = "⚠️ No se ha podido estimar: " + (err.message || err);
+    estimacionTokensDiv.style.display = "block";
+  } finally {
+    actualizarBotonGenerar();
+  }
+});
+
+/* ============================================================================
+ * EXTRACCIÓN DE JSON DE LA RESPUESTA
+ * ==========================================================================*/
+function extraerJSON(texto){
+  let limpio = texto.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try { return JSON.parse(limpio); } catch(e){}
+  const inicio = limpio.indexOf("{");
+  const fin = limpio.lastIndexOf("}");
+  if (inicio >= 0 && fin > inicio){
+    try { return JSON.parse(limpio.slice(inicio, fin+1)); } catch(e){}
+  }
+  return null;
+}
+function esquemaValido(obj){
+  return obj && Array.isArray(obj.pieces) && obj.pieces.length > 0 &&
+    obj.pieces.every(p => p && typeof p.name === "string" && typeof p.prompt === "string");
+}
+
+/* ============================================================================
+ * PASO 1 — ANALIZAR LA PRENDA Y GENERAR LOS PROMPTS DEL OUTFIT
+ * ==========================================================================*/
+function construirMensajeUsuario(numPiezas, incluirModelo){
+  return `Analiza la prenda que aparece en la imagen adjunta.
+
+Genera un outfit completo compuesto por ${numPiezas} prenda(s) afines a la prenda de la imagen (sin incluir la propia prenda de la imagen), siguiendo tu rol y reglas del sistema.
+${incluirModelo ? "Incluye además un prompt adicional para una fotografía de un/a modelo vistiendo el outfit completo (la prenda original más las piezas generadas). Esa foto se generará por imagen-a-imagen usando como referencia la prenda original y cada pieza ya generada, así que ese prompt no debe volver a describir el aspecto de las prendas: debe dar por sentado que el modelo lleva EXACTAMENTE esas prendas, sin cambios, y centrarse en pose, actitud, encuadre de cuerpo entero, entorno, cámara y luz." : "No generes ningún prompt de modelo: el usuario no lo ha solicitado."}
+
+FORMATO DE RESPUESTA (obligatorio):
+Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comentarios y sin bloques de código, con este esquema EXACTO:
+{"pieces": [{"name": "<nombre breve de la pieza, en español>", "prompt": "<prompt descriptivo en español para FLUX>"}]${incluirModelo ? `, "model_shot_prompt": "<prompt en español para la foto del modelo con el outfit completo, sin describir de nuevo las prendas: centrado en pose, actitud, encuadre, entorno, cámara y luz>"` : ""}}
+
+Cada "prompt" debe estar íntegramente en español y seguir las instrucciones del sistema (imperfecciones, texturas táctiles, micro-detalles, configuración de cámara, iluminación natural, estilo documental, sin palabras vacías).`;
+}
+
+async function analizarYGenerarPrompts(){
+  const opts = {
+    proveedor: proveedorActivo(),
+    modelo: modeloActivo(),
+    apiKey: (inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || ""),
+    maxTokens: obtenerMaxTokens()
+  };
+  if (!opts.modelo) throw new Error("Indica un identificador de modelo válido.");
+
+  const numPiezas = Math.min(numPiezasMaxActual(), Math.max(NUM_PIEZAS_MIN, parseInt(inputNumPiezas.value, 10) || 1));
+  const incluirModelo = chkIncluirModelo.checked;
+  const systemPrompt = inputSystemPrompt.value.trim() || SYSTEM_PROMPT_OUTFIT;
+  const userPrompt = construirMensajeUsuario(numPiezas, incluirModelo);
+  const imagen = {mediaType: imagenMediaType, base64: imagenBase64};
+
+  estadoTexto.textContent = "Analizando la prenda y generando los prompts del outfit…";
+  let resp = await llamarIA(systemPrompt, userPrompt, opts, imagen);
+  let datos = extraerJSON(resp.texto);
+
+  if (!esquemaValido(datos)){
+    // Reintento único: se reenvía la respuesta defectuosa pidiendo solo el JSON correcto.
+    estadoTexto.textContent = "La respuesta no tenía el formato esperado — reintentando una vez…";
+    const correccion = `Tu respuesta anterior no es un JSON válido con el esquema pedido. Respuesta recibida:\n\n${resp.texto}\n\nDevuelve ÚNICAMENTE el JSON correcto con el esquema exacto indicado antes, sin texto adicional, sin comentarios ni bloques de código markdown.`;
+    resp = await llamarIA(systemPrompt, correccion, opts);
+    datos = extraerJSON(resp.texto);
+  }
+  if (!esquemaValido(datos)){
+    if (resp.truncado){
+      throw new Error("La respuesta se ha cortado por alcanzar el límite de tokens de salida antes de completar el JSON. Sube el valor de \"Nº máx. tokens de salida\" (por ejemplo a 16000) y vuelve a generar.");
+    }
+    const muestra = (resp.texto || "").trim().slice(0, 500) || "(respuesta vacía)";
+    throw new Error(`La IA no ha devuelto un JSON con el formato esperado tras dos intentos. Esto es lo que ha respondido el modelo (primeros 500 caracteres), revísalo para ver si lo explica:\n\n${muestra}`);
+  }
+
+  if (resp.truncado){
+    avisoTruncadoDiv.style.display = "block";
+    avisoTruncadoDiv.textContent = "Aviso: la respuesta de la IA parece haberse quedado corta (límite de tokens alcanzado). Si faltan piezas, sube el número máximo de tokens de salida y vuelve a generar.";
+  } else {
+    avisoTruncadoDiv.style.display = "none";
+  }
+
+  piezasActuales = datos.pieces.map(p => ({nombre: p.name, prompt: p.prompt, seleccionada: true}));
+  modeloShotPrompt = incluirModelo ? (datos.model_shot_prompt || null) : null;
+  modeloSeleccionado = true;
+  promptAnalisisImagen = userPrompt;
+}
+
+/* ============================================================================
+ * RENDERIZADO DE LOS PROMPTS (EDITABLES) — PASO 3 DEL FORMULARIO
+ * ==========================================================================*/
+function pintarPrompts(){
+  listaPrompts.innerHTML = "";
+  if (promptAnalisisImagen){
+    const card = document.createElement("div");
+    card.className = "pieza-card analisis";
+    card.innerHTML = `<h3>Prompt de análisis de la imagen subida</h3>
+      <textarea class="tall mono" readonly>${escapeHTML(promptAnalisisImagen)}</textarea>
+      <p class="hint" style="margin-top:.4rem">Texto enviado junto con la prenda subida para pedir el análisis y los prompts del outfit. Es de solo lectura: ya se usó en esta generación, mostrarlo no la repite.</p>`;
+    listaPrompts.appendChild(card);
+  }
+  piezasActuales.forEach((pieza, i) => {
+    const card = document.createElement("div");
+    card.className = "pieza-card";
+    const seleccionada = pieza.seleccionada !== false;
+    card.innerHTML = `<label class="pick-row" style="margin-top:0;">
+        <input type="checkbox" data-tipo="pieza-sel" data-idx="${i}" ${seleccionada ? "checked" : ""}>
+        <span>Generar la imagen de esta pieza</span>
+      </label>
+      <h3>${escapeHTML(pieza.nombre)}</h3>
+      <textarea class="tall mono" data-idx="${i}" data-tipo="pieza">${escapeHTML(pieza.prompt)}</textarea>`;
+    listaPrompts.appendChild(card);
+  });
+  if (modeloShotPrompt !== null){
+    const card = document.createElement("div");
+    card.className = "pieza-card modelo";
+    card.innerHTML = `<label class="pick-row" style="margin-top:0;">
+        <input type="checkbox" data-tipo="modelo-sel" ${modeloSeleccionado ? "checked" : ""}>
+        <span>Generar esta imagen</span>
+      </label>
+      <h3>Modelo con el outfit completo</h3>
+      <textarea class="tall mono" data-tipo="modelo">${escapeHTML(modeloShotPrompt)}</textarea>`;
+    listaPrompts.appendChild(card);
+  }
+  panelResultado.style.display = "block";
+  actualizarBotonContinuar();
+  btnDescargarPrompts.disabled = false;
+}
+// Recalcula si hay al menos un prompt seleccionado (pieza o foto del modelo);
+// si no hay ninguno, no tiene sentido continuar, así que se deshabilita el botón.
+function actualizarBotonContinuar(){
+  const haySeleccion = (piezasActuales || []).some(p => p.seleccionada !== false)
+    || (modeloShotPrompt !== null && modeloSeleccionado);
+  btnContinuar.disabled = !haySeleccion;
+}
+// Delegación de eventos: al marcar/desmarcar cualquier casilla de selección,
+// se actualiza al instante el estado guardado y el botón "Continuar".
+listaPrompts.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!(t instanceof HTMLInputElement) || t.type !== "checkbox") return;
+  if (t.dataset.tipo === "pieza-sel") piezasActuales[parseInt(t.dataset.idx, 10)].seleccionada = t.checked;
+  else if (t.dataset.tipo === "modelo-sel") modeloSeleccionado = t.checked;
+  else return;
+  actualizarBotonContinuar();
+});
+function recogerPromptsEditados(){
+  listaPrompts.querySelectorAll("textarea").forEach(ta => {
+    if (ta.dataset.tipo === "pieza") piezasActuales[parseInt(ta.dataset.idx, 10)].prompt = ta.value;
+    else if (ta.dataset.tipo === "modelo") modeloShotPrompt = ta.value;
+  });
+  listaPrompts.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+    if (chk.dataset.tipo === "pieza-sel") piezasActuales[parseInt(chk.dataset.idx, 10)].seleccionada = chk.checked;
+    else if (chk.dataset.tipo === "modelo-sel") modeloSeleccionado = chk.checked;
+  });
+}
+// Descarga todos los prompts (piezas + modelo, si lo hay) en un único TXT,
+// cada uno encabezado por el título de su prenda, para poder revisarlos o
+// reutilizarlos fuera de la app. Recoge primero cualquier edición pendiente
+// en los textarea, para que el TXT refleje siempre la última versión.
+function descargarPromptsTxt(){
+  recogerPromptsEditados();
+  const bloques = [];
+  if (promptAnalisisImagen){
+    bloques.push(`### Prompt de análisis de la imagen subida\n${promptAnalisisImagen}`);
+  }
+  piezasActuales.forEach(pieza => bloques.push(`### ${pieza.nombre}\n${pieza.prompt}`));
+  if (modeloShotPrompt !== null){
+    bloques.push(`### Modelo con el outfit completo\n${modeloShotPrompt}`);
+  }
+  guardarArchivo("genoutfit_prompts.txt", bloques.join("\n\n"), "text/plain");
+}
+btnDescargarPrompts.addEventListener("click", descargarPromptsTxt);
+function escapeHTML(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ============================================================================
+ * PASO 2 — GENERACIÓN DE IMÁGENES CON FAL (FLUX)
+ * ==========================================================================*/
+function extraerImagenFal(data){
+  if (data && Array.isArray(data.images) && data.images[0] && data.images[0].url) return data.images[0].url;
+  throw new Error("fal.ai no ha devuelto ninguna imagen en la respuesta.");
+}
+async function esperarColaFal(encolado, headers){
+  const inicio = Date.now();
+  let statusUrl = encolado.status_url;
+  let responseUrl = encolado.response_url;
+  while (Date.now() - inicio < APP_CONFIG.fal.queueMaxWaitMs){
+    await new Promise(r => setTimeout(r, APP_CONFIG.fal.queuePollIntervalMs));
+    const r = await fetchConTimeout(statusUrl, {headers});
+    const d = await r.json().catch(() => ({}));
+    if (d && d.status === "COMPLETED"){
+      const r2 = await fetchConTimeout(responseUrl, {headers});
+      return await r2.json().catch(() => ({}));
+    }
+    if (d && d.status === "ERROR") throw new Error("fal.ai ha devuelto un error al procesar la imagen.");
+  }
+  throw new Error("Tiempo de espera agotado mientras fal.ai procesaba la imagen en cola.");
+}
+function obtenerPasosInferencia(){
+  const v = parseInt(selPasosInferencia.value, 10);
+  return APP_CONFIG.fal.inferenceStepsOpciones.includes(v) ? v : APP_CONFIG.fal.inferenceStepsDefecto;
+}
+function obtenerSafetyTolerance(){
+  const opciones = ["1","2","3","4","5","6"];
+  return opciones.includes(selSafetyTolerance.value) ? selSafetyTolerance.value : APP_CONFIG.fal.safetyTolerance;
+}
+async function generarImagenFal(prompt){
+  const key = inputApiKeyFal.value.trim() || localStorage.getItem(CLAVE_FAL) || "";
+  const headers = {"Authorization": "Key " + key, "Content-Type": "application/json"};
+  const url = APP_CONFIG.fal.baseUrl + APP_CONFIG.fal.defaultModel;
+  const body = {
+    prompt,
+    num_inference_steps: obtenerPasosInferencia(),
+    num_images: APP_CONFIG.fal.numImages,
+    output_format: APP_CONFIG.fal.outputFormat,
+    image_size: APP_CONFIG.fal.imageSize,
+    safety_tolerance: obtenerSafetyTolerance()
+  };
+  const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  let data; try { data = await resp.json(); } catch(e){ data = {}; }
+  if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+  if (!Array.isArray(data.images) && (data.status_url || data.response_url)){
+    data = await esperarColaFal(data, headers);
+  }
+  return extraerImagenFal(data);
+}
+
+// Data URI de la foto de la prenda original subida por el usuario, para
+// poder usarla como imagen de referencia en la foto del modelo.
+function imagenOriginalDataUrl(){
+  if (!imagenBase64 || !imagenMediaType) return null;
+  return `data:${imagenMediaType};base64,${imagenBase64}`;
+}
+
+// Genera (o amplía) la foto del modelo con FLUX Kontext multi-imagen
+// (imagen-a-imagen): en vez de partir solo de texto, toma como referencia
+// la prenda original y las imágenes ya generadas de cada pieza, para que el
+// modelo vista EXACTAMENTE esas prendas y complementos en vez de una
+// reinterpretación nueva. "imageUrls" admite tanto URLs remotas (las que
+// devuelve fal.ai al generar cada pieza o esta misma función) como data
+// URIs (la prenda original subida localmente).
+async function generarImagenModeloFal(prompt, imageUrls){
+  const key = inputApiKeyFal.value.trim() || localStorage.getItem(CLAVE_FAL) || "";
+  const headers = {"Authorization": "Key " + key, "Content-Type": "application/json"};
+  const url = APP_CONFIG.fal.baseUrl + APP_CONFIG.fal.multiModel;
+  const body = {
+    prompt,
+    image_urls: imageUrls,
+    num_images: APP_CONFIG.fal.numImages,
+    output_format: APP_CONFIG.fal.outputFormat,
+    safety_tolerance: obtenerSafetyTolerance(),
+    guidance_scale: APP_CONFIG.fal.guidanceScaleModelo,
+    aspect_ratio: ASPECT_RATIO_POR_IMAGE_SIZE[APP_CONFIG.fal.imageSize] || "3:4"
+  };
+  const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  let data; try { data = await resp.json(); } catch(e){ data = {}; }
+  if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+  if (!Array.isArray(data.images) && (data.status_url || data.response_url)){
+    data = await esperarColaFal(data, headers);
+  }
+  return extraerImagenFal(data);
+}
+
+// La API de fal.ai para FLUX Kontext multi-imagen exige entre 1 y 4
+// "image_urls" por llamada. Si no se incluye la foto del modelo se permiten
+// hasta 4 piezas además de la prenda original (NUM_PIEZAS_MAX_SIN_MODELO),
+// así que puede haber más de 4 imágenes de referencia en total.
+const FAL_KONTEXT_MAX_IMAGES = 4;
+
+// Prompt fijo para cada paso de "vestir" al modelo con una prenda adicional
+// (ver generarFotoModeloConReferencias). Deliberadamente NO describe la
+// prenda (eso lo aporta su imagen de referencia) y es explícito en no tocar
+// nada de lo que ya está decidido en la foto del modelo.
+const PROMPT_ANADIR_PIEZA_MODELO = "Añade la prenda o complemento de la segunda imagen sobre la persona de la primera imagen (la foto del modelo, ya generada). Debe llevarla puesta exactamente como aparece en su imagen de referencia: mismo color, estampado, tejido, forma y demás detalles, sin ninguna variación. No cambies la pose, la expresión, el peinado, el encuadre, el entorno, la cámara ni la luz de la primera imagen, ni ninguna otra prenda o complemento que la persona ya lleve puesto en ella.";
+
+// Genera la foto final del modelo con el outfit completo a partir de las
+// imágenes de referencia (prenda original + piezas), respetando el límite
+// de 4 "image_urls" por llamada de fal.ai. La primera llamada ya genera la
+// foto COMPLETA del modelo (pose, encuadre, entorno, cámara y luz definidos
+// por "promptPose") vistiendo las primeras prendas de referencia (hasta 4).
+// Si sobran más prendas, se añaden una a una sobre esa misma foto del
+// modelo ya generada (prompt fijo, sin repetir pose ni entorno), en vez de
+// recomponer antes un collage de las prendas sueltas: así cada prenda se
+// toma siempre de su imagen de referencia original, sin que una regeneración
+// intermedia vaya perdiendo fidelidad (incluida la de la prenda original).
+async function generarFotoModeloConReferencias(promptPose, imagenes){
+  if (imagenes.length === 0){
+    throw new Error("No hay ninguna imagen de referencia disponible (ni la prenda original ni las piezas generadas); no se puede componer la foto del modelo.");
+  }
+  const primerLote = imagenes.slice(0, FAL_KONTEXT_MAX_IMAGES);
+  const restantes = imagenes.slice(FAL_KONTEXT_MAX_IMAGES);
+  let modeloActual = await generarImagenModeloFal(promptPose, primerLote);
+  for (const pieza of restantes){
+    modeloActual = await generarImagenModeloFal(PROMPT_ANADIR_PIEZA_MODELO, [modeloActual, pieza]);
+  }
+  return modeloActual;
+}
+
+async function dataUrlDesdeImagenUrl(url){
+  // La imagen de fal.ai se descarga y se convierte a data URL para poder
+  // previsualizarla, descargarla como PNG y exportarla a PDF sin depender
+  // de que el enlace remoto siga disponible más adelante.
+  const resp = await fetchConTimeout(url, {});
+  const blob = await resp.blob();
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function pintarImagenPlaceholder(nombre, esModelo){
+  const card = document.createElement("div");
+  card.className = "pieza-card" + (esModelo ? " modelo" : "");
+  card.dataset.nombre = nombre;
+  card.innerHTML = `<h3>${escapeHTML(nombre)}</h3>
+    <div class="img-wrap"><span class="placeholder">Generando…</span></div>
+    <div class="meta-pieza"></div>
+    <div class="botones"><button type="button" class="secundario btn-descargar-png" disabled>Descargar PNG</button></div>`;
+  resultadoDiv.appendChild(card);
+  return card;
+}
+function actualizarTarjetaImagen(card, dataUrl, error, esModelo){
+  const wrap = card.querySelector(".img-wrap");
+  const meta = card.querySelector(".meta-pieza");
+  const btn = card.querySelector(".btn-descargar-png");
+  if (error){
+    wrap.innerHTML = `<span class="placeholder">⚠️ ${escapeHTML(error)}</span>`;
+    meta.textContent = "";
+    return;
+  }
+  wrap.innerHTML = `<img src="${dataUrl}" alt="${escapeHTML(card.dataset.nombre)}">`;
+  meta.textContent = esModelo
+    ? `Formato PNG · fal.ai / FLUX Kontext (multi-imagen, a partir de la prenda original y las piezas generadas) · tolerancia de seguridad ${obtenerSafetyTolerance()}`
+    : `Formato PNG · fal.ai / FLUX · ${obtenerPasosInferencia()} pasos · tolerancia de seguridad ${obtenerSafetyTolerance()}`;
+  btn.disabled = false;
+  btn.addEventListener("click", () => {
+    const nombreArchivo = card.dataset.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_") + ".png";
+    guardarArchivo(nombreArchivo, dataUrlABlob(dataUrl), "image/png");
+  });
+}
+function dataUrlABlob(dataUrl){
+  const [cab, datos] = dataUrl.split(",");
+  const mime = /data:([^;]+);/.exec(cab)[1];
+  const bin = atob(datos);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type: mime});
+}
+async function guardarArchivo(nombreArchivo, contenido, tipoMime){
+  // Dentro de un Artifact publicado se usa la capacidad "downloads" del
+  // visor. Fuera de ese entorno (fichero abierto directamente, o alojado en
+  // un servidor propio o GitHub Pages) se intenta primero abrir el selector
+  // nativo "Guardar como" del navegador (File System Access API), para que
+  // el usuario elija dónde guardar el fichero y con qué nombre; si el
+  // navegador no lo admite (o el usuario cancela), se recurre a la descarga
+  // normal del navegador.
+  let downloads = null;
+  if (window.claude && window.claude.use){
+    try { downloads = await window.claude.use("downloads"); } catch(e){ downloads = null; }
+  }
+  const datos = contenido instanceof Blob ? contenido : new Blob([contenido], {type: tipoMime});
+  if (downloads){
+    try { await downloads.save({filename: nombreArchivo, data: datos}); }
+    catch(err){ if (!err || err.code !== "declined") alert(`No se ha podido guardar "${nombreArchivo}".`); }
+    return;
+  }
+  if (window.showSaveFilePicker){
+    try {
+      const extension = (/\.([a-z0-9]+)$/i.exec(nombreArchivo) || [,""])[1].toLowerCase();
+      const handle = await window.showSaveFilePicker({
+        suggestedName: nombreArchivo,
+        types: [{
+          description: tipoMime,
+          accept: { [tipoMime]: extension ? ["." + extension] : [] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(datos);
+      await writable.close();
+      return;
+    } catch(err){
+      // AbortError: el usuario ha cancelado el diálogo a propósito, no es
+      // un error que deba mostrarse ni dar lugar a una descarga de más.
+      if (err && err.name === "AbortError") return;
+      // Cualquier otro fallo (navegador que anuncia la API pero la bloquea
+      // en este contexto, por ejemplo) cae a la descarga normal de abajo.
+    }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(datos);
+  a.download = nombreArchivo;
+  a.click();
+}
+
+async function generarTodasLasImagenes(){
+  resultadoDiv.innerHTML = "";
+  imagenesGeneradas = [];
+
+  // Imágenes de referencia para la foto del modelo: la prenda original (data
+  // URI, subida por el usuario) más la URL remota de cada pieza a medida que
+  // se va generando con éxito. Así la foto del modelo se compone a partir de
+  // estas imágenes reales, en vez de reinterpretarlas de nuevo solo con texto.
+  const imagenesReferenciaModelo = [];
+  const original = imagenOriginalDataUrl();
+  if (original){
+    imagenesReferenciaModelo.push(original);
+    // La prenda original también se incluye como una tarjeta más: así queda
+    // en el PDF exportado y en el historial de generaciones, junto al resto
+    // de piezas y a la foto del modelo.
+    const nombreOriginal = "Prenda original";
+    const cardOriginal = pintarImagenPlaceholder(nombreOriginal, false);
+    actualizarTarjetaImagen(cardOriginal, original, null, false);
+    cardOriginal.querySelector(".meta-pieza").textContent = "Imagen original subida por el usuario";
+    imagenesGeneradas.push({nombre: nombreOriginal, dataUrl: original, esOriginal: true});
+  }
+
+  // Solo se generan las imágenes de las piezas cuya casilla de selección
+  // esté marcada; las que no lo estén se omiten por completo (ni se llama a
+  // fal.ai ni aparecen como tarjeta en el resultado).
+  for (const pieza of piezasActuales.filter(p => p.seleccionada !== false)){
+    const card = pintarImagenPlaceholder(pieza.nombre, false);
+    estadoTexto.textContent = `Generando imagen: ${pieza.nombre}…`;
+    try {
+      const urlRemota = await generarImagenFal(pieza.prompt);
+      const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
+      actualizarTarjetaImagen(card, dataUrl, null, false);
+      imagenesGeneradas.push({nombre: pieza.nombre, dataUrl});
+      imagenesReferenciaModelo.push(urlRemota);
+    } catch(err){
+      actualizarTarjetaImagen(card, null, err.message || String(err), false);
+    }
+  }
+
+  if (modeloShotPrompt && modeloSeleccionado){
+    const nombreModelo = "Modelo con el outfit completo";
+    const card = pintarImagenPlaceholder(nombreModelo, true);
+    estadoTexto.textContent = imagenesReferenciaModelo.length > FAL_KONTEXT_MAX_IMAGES
+      ? `Generando imagen: ${nombreModelo} (en varios pasos, ${imagenesReferenciaModelo.length} prendas de referencia)…`
+      : `Generando imagen: ${nombreModelo}…`;
+    try {
+      const urlRemota = await generarFotoModeloConReferencias(modeloShotPrompt, imagenesReferenciaModelo);
+      const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
+      actualizarTarjetaImagen(card, dataUrl, null, true);
+      imagenesGeneradas.push({nombre: nombreModelo, dataUrl});
+    } catch(err){
+      actualizarTarjetaImagen(card, null, err.message || String(err), true);
+    }
+  }
+
+  btnExportarPdf.disabled = imagenesGeneradas.length === 0;
+  panelImagenes.style.display = "block";
+}
+
+/* ============================================================================
+ * EXPORTAR TODAS LAS IMÁGENES EN UN PDF
+ * ==========================================================================*/
+// Construye (sin guardar) un PDF jsPDF a partir de un array de imágenes
+// [{nombre, dataUrl}]; una página A4 por imagen. Reutilizada por exportarPdf()
+// (modo individual) y por el módulo PRO de lotes (un PDF por outfit del lote).
+function construirPdfDesdeImagenes(imagenes){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: "mm", format: "a4"});
+  const anchoUtil = 180, margen = 15;
+  imagenes.forEach((img, i) => {
+    if (i > 0) doc.addPage();
+    doc.setFontSize(14);
+    doc.text(img.nombre, margen, 20);
+    const propiedades = doc.getImageProperties(img.dataUrl);
+    let w = anchoUtil, h = (propiedades.height / propiedades.width) * w;
+    const altoMax = 240;
+    if (h > altoMax){ h = altoMax; w = (propiedades.width / propiedades.height) * h; }
+    doc.addImage(img.dataUrl, "PNG", margen, 30, w, h);
+  });
+  return doc;
+}
+async function exportarPdf(){
+  const doc = construirPdfDesdeImagenes(imagenesGeneradas);
+  await guardarArchivo(nombrePdfSaneado(), doc.output("blob"), "application/pdf");
+}
+// Permite al usuario especificar el nombre del PDF a exportar (campo
+// "input-nombre-pdf"); se sanea para que sea un nombre de fichero válido y
+// siempre termine en ".pdf", y se usa un nombre por defecto si se deja vacío.
+function nombrePdfSaneado(){
+  let nombre = (inputNombrePdf.value || "").trim();
+  if (!nombre) nombre = "genoutfit_outfit.pdf";
+  nombre = nombre.replace(/[\\/:*?"<>|]/g, "_");
+  if (!/\.pdf$/i.test(nombre)) nombre += ".pdf";
+  return nombre;
+}
+
+/* ============================================================================
+ * HISTORIAL LOCAL (IndexedDB) — guarda prompts e imágenes generadas.
+ * Nunca guarda API keys. Solo existe en este navegador.
+ * ==========================================================================*/
+const HISTORY_DB = "genoutfit_history";
+const HISTORY_STORE = "generaciones";
+
+function abrirHistoryDb(){
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB){ reject(new Error("IndexedDB no disponible")); return; }
+    const req = indexedDB.open(HISTORY_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(HISTORY_STORE, {keyPath: "id"});
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function historyTx(modo, accion){
+  const db = await abrirHistoryDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, modo);
+    const store = tx.objectStore(HISTORY_STORE);
+    let resultado;
+    const req = accion(store);
+    if (req) req.onsuccess = () => { resultado = req.result; };
+    tx.oncomplete = () => { db.close(); resolve(resultado); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function historyGetAll(){
+  const todos = await historyTx("readonly", s => s.getAll());
+  return (todos || []).sort((a, b) => b.createdAt - a.createdAt);
+}
+async function guardarEnHistorial(cacheKey){
+  // imagenesGeneradas: [{nombre, dataUrl, esOriginal?}] ya generadas (o, para
+  // la prenda original, ya subida) en este turno.
+  // PRO: "cacheKey" (opcional) identifica la combinación exacta de prenda +
+  // parámetros que produjo esta generación, para poder reutilizarla desde la
+  // caché de resultados la próxima vez que coincida (ver buscarEnCacheHistorial).
+  const items = imagenesGeneradas.map(img => {
+    if (img.esOriginal){
+      return { nombre: img.nombre, prompt: "", esModelo: false, esOriginal: true, blob: dataUrlABlob(img.dataUrl) };
+    }
+    const piezaOrig = piezasActuales.find(p => p.nombre === img.nombre);
+    const esModelo = !piezaOrig && modeloShotPrompt !== null && img.nombre === "Modelo con el outfit completo";
+    return {
+      nombre: img.nombre,
+      prompt: esModelo ? modeloShotPrompt : (piezaOrig ? piezaOrig.prompt : ""),
+      esModelo,
+      esOriginal: false,
+      blob: dataUrlABlob(img.dataUrl)
+    };
+  });
+  const registro = {
+    id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    createdAt: Date.now(),
+    numPiezas: piezasActuales.length,
+    incluirModelo: !!modeloShotPrompt,
+    promptAnalisis: promptAnalisisImagen || null,
+    pasosInferencia: obtenerPasosInferencia(),
+    safetyTolerance: obtenerSafetyTolerance(),
+    cacheKey: cacheKey || null,
+    items
+  };
+  await historyTx("readwrite", s => s.put(registro));
+  const todos = await historyGetAll();
+  const extra = todos.slice(HISTORIAL_MAX);
+  if (extra.length) await historyTx("readwrite", s => { extra.forEach(r => s.delete(r.id)); });
+  await renderHistorial();
+  if (typeof actualizarContadorCache === "function") await actualizarContadorCache();
+}
+function formatearFechaHist(ts){
+  return new Date(ts).toLocaleString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+async function eliminarDeHistorial(id){
+  await historyTx("readwrite", s => s.delete(id));
+  await renderHistorial();
+}
+function cargarDesdeHistorial(rec){
+  // Vuelca las imágenes y prompts guardados en el panel de resultado, sin
+  // volver a llamar a ninguna API: permite revisar una generación anterior
+  // (y continuar/editar sus prompts), aunque no descargar sus imágenes ni
+  // exportarlas a PDF — ver el aviso que se pinta más abajo.
+  piezasActuales = rec.items.filter(it => !it.esModelo && !it.esOriginal).map(it => ({nombre: it.nombre, prompt: it.prompt, seleccionada: true}));
+  modeloShotPrompt = rec.incluirModelo ? (rec.items.find(it => it.esModelo)?.prompt || null) : null;
+  modeloSeleccionado = true;
+  promptAnalisisImagen = rec.promptAnalisis || null; // ausente en generaciones guardadas antes de añadir esta visualización
+  pintarPrompts();
+
+  resultadoDiv.innerHTML = "";
+  imagenesGeneradas = [];
+  const avisoHist = document.createElement("p");
+  avisoHist.className = "hint";
+  avisoHist.textContent = "Estás viendo una generación recuperada del historial: estas imágenes no se pueden descargar como PNG ni exportar a PDF (vuelve a generarlas si las necesitas en esos formatos).";
+  resultadoDiv.appendChild(avisoHist);
+  rec.items.forEach(it => {
+    const card = pintarImagenPlaceholder(it.nombre, it.esModelo);
+    const dataUrl = URL.createObjectURL(it.blob);
+    actualizarTarjetaImagen(card, dataUrl, null, it.esModelo);
+    if (it.esOriginal) card.querySelector(".meta-pieza").textContent = "Imagen original subida por el usuario";
+    // Las imágenes recuperadas del historial usan URLs "blob:" (no "data:"),
+    // que ni la descarga de PNG ni jsPDF saben procesar: se deshabilitan sus
+    // botones de descarga para no ofrecer una acción que fallaría.
+    const btnPng = card.querySelector(".btn-descargar-png");
+    if (btnPng) btnPng.disabled = true;
+    imagenesGeneradas.push({nombre: it.nombre, dataUrl, esOriginal: !!it.esOriginal});
+  });
+  btnExportarPdf.disabled = true;
+  panelImagenes.style.display = "block";
+  panelImagenes.scrollIntoView({behavior: "smooth", block: "start"});
+}
+async function renderHistorial(){
+  const lista = $("historial-lista");
+  const contador = $("historial-contador");
+  const btnVaciar = $("historial-vaciar");
+  let registros = [];
+  try { registros = await historyGetAll(); }
+  catch(e){
+    lista.innerHTML = '<div class="hist-vacio">El historial no está disponible en este navegador.</div>';
+    contador.textContent = "0 generaciones";
+    btnVaciar.disabled = true;
+    return;
+  }
+  contador.textContent = `${registros.length} generación(es)`;
+  btnVaciar.disabled = registros.length === 0;
+  lista.innerHTML = "";
+  if (registros.length === 0){
+    lista.innerHTML = `<div class="hist-vacio">Todavía no has generado ningún outfit en este navegador.</div>`;
+    return;
+  }
+  registros.forEach(rec => {
+    const div = document.createElement("div");
+    div.className = "hist-item";
+    const miniaturas = rec.items.slice(0, 4).map(it =>
+      `<img src="${URL.createObjectURL(it.blob)}" alt="${escapeHTML(it.nombre)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`
+    ).join("");
+    div.innerHTML = `
+      <h4>${rec.numPiezas} pieza(s)${rec.incluirModelo ? " + modelo" : ""}</h4>
+      <p>${formatearFechaHist(rec.createdAt)} · ${rec.pasosInferencia || "?"} pasos · seg. ${rec.safetyTolerance || "?"}</p>
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0;">${miniaturas}</div>
+      <div class="botones">
+        <button type="button" class="secundario btn-cargar-hist">Ver / recuperar</button>
+        <button type="button" class="peligro btn-eliminar-hist">Eliminar</button>
+      </div>`;
+    div.querySelector(".btn-cargar-hist").addEventListener("click", () => {
+      const aviso = "Al recuperar esta generación, sus imágenes no se podrán descargar como PNG ni exportar a PDF — tampoco las que tengas ahora mismo en pantalla sin descargar, aunque sean las últimas generadas. ¿Continuar?";
+      if (confirm(aviso)) cargarDesdeHistorial(rec);
+    });
+    div.querySelector(".btn-eliminar-hist").addEventListener("click", () => {
+      if (confirm("¿Eliminar esta generación del historial?")) eliminarDeHistorial(rec.id);
+    });
+    lista.appendChild(div);
+  });
+}
+$("historial-vaciar").addEventListener("click", async () => {
+  if (!confirm("¿Vaciar todo el historial de este navegador? Esta acción no se puede deshacer.")) return;
+  const registros = await historyGetAll();
+  await historyTx("readwrite", s => { registros.forEach(r => s.delete(r.id)); });
+  await renderHistorial();
+});
+
+/* ============================================================================
+ * ESTADOS DE CARGA / ERRORES
+ * ==========================================================================*/
+function mostrarCargando(boton, texto){
+  boton.classList.add("busy");
+  boton.disabled = true;
+  estadoGeneracion.classList.remove("error");
+  estadoGeneracion.classList.add("visible");
+  estadoTexto.textContent = texto;
+}
+function ocultarCargando(boton){
+  boton.classList.remove("busy");
+  estadoGeneracion.classList.remove("visible");
+}
+function mostrarError(boton, err){
+  boton.classList.remove("busy");
+  estadoGeneracion.classList.add("visible", "error");
+  estadoTexto.textContent = "Error: " + (err && err.message ? err.message : String(err));
+}
+
+/* ============================================================================
+ * BOTONES PRINCIPALES
+ * ==========================================================================*/
+// PRO: clave de caché de la generación individual actual, calculada justo
+// antes de analizar la prenda y reutilizada al guardar en el historial, para
+// que la próxima generación idéntica pueda encontrarla (ver buscarEnCacheHistorial).
+let cacheKeyActual = null;
+function calcularCacheKeyIndividual(){
+  const numPiezas = Math.min(numPiezasMaxActual(), Math.max(NUM_PIEZAS_MIN, parseInt(inputNumPiezas.value, 10) || 1));
+  return calcularCacheKey({
+    proveedor: proveedorActivo(), modelo: modeloActivo(),
+    systemPrompt: (inputSystemPrompt.value.trim() || SYSTEM_PROMPT_OUTFIT),
+    numPiezas, incluirModelo: chkIncluirModelo.checked,
+    pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(),
+    imgBase64: imagenBase64
+  });
+}
+
+btnGenerar.addEventListener("click", async () => {
+  panelResultado.style.display = "none";
+  panelImagenes.style.display = "none";
+  cacheKeyActual = calcularCacheKeyIndividual();
+  if ($("chk-cache-resultados").checked){
+    mostrarCargando(btnGenerar, "Comprobando la caché de resultados…");
+    const previo = await buscarEnCacheHistorial(cacheKeyActual);
+    if (previo){
+      ocultarCargando(btnGenerar);
+      btnGenerar.disabled = false;
+      cargarDesdeHistorial(previo);
+      estadoGeneracion.classList.remove("error");
+      estadoGeneracion.classList.add("visible");
+      estadoTexto.textContent = "⚡ Resultado obtenido de la caché (historial de este navegador): misma prenda y mismos parámetros, sin llamar a ninguna API.";
+      return;
+    }
+  }
+  mostrarCargando(btnGenerar, "Analizando la prenda…");
+  try {
+    await analizarYGenerarPrompts();
+    pintarPrompts();
+    ocultarCargando(btnGenerar);
+    btnGenerar.disabled = false;
+  } catch(err){
+    mostrarError(btnGenerar, err);
+    btnGenerar.disabled = false;
+  }
+});
+
+btnContinuar.addEventListener("click", async () => {
+  recogerPromptsEditados();
+  if (!(piezasActuales || []).some(p => p.seleccionada !== false) && !(modeloShotPrompt !== null && modeloSeleccionado)){
+    alert("No has seleccionado ningún prompt: marca al menos una casilla antes de continuar.");
+    return;
+  }
+  mostrarCargando(btnContinuar, "Generando imágenes con FLUX…");
+  try {
+    await generarTodasLasImagenes();
+    ocultarCargando(btnContinuar);
+    await guardarEnHistorial($("chk-cache-resultados").checked ? cacheKeyActual : null);
+  } catch(err){
+    mostrarError(btnContinuar, err);
+  } finally {
+    actualizarBotonContinuar();
+  }
+});
+
+btnExportarPdf.addEventListener("click", async () => {
+  btnExportarPdf.disabled = true;
+  try { await exportarPdf(); }
+  catch(err){ alert("No se ha podido generar el PDF: " + (err.message || err)); }
+  finally { btnExportarPdf.disabled = false; }
+});
+
+/* ============================================================================
+ * PRO — caché de resultados, modo de trabajo y procesamiento por lotes
+ * ==========================================================================*/
+
+/* ---------- utilidades de huella/caché ---------- */
+function fnv1a(str){
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h.toString(36);
+}
+// Huella barata de una imagen en base64: longitud + hash de una muestra del
+// principio y el final, para no tener que recorrer el string completo (puede
+// pesar varios MB) y aun así distinguir imágenes distintas con fiabilidad.
+function huellaImagen(base64){
+  if (!base64) return "sin-imagen";
+  const muestra = base64.length <= 12000 ? base64 : (base64.slice(0, 6000) + base64.slice(-6000));
+  return base64.length + ":" + fnv1a(muestra);
+}
+function calcularCacheKey(p){
+  return "c_" + fnv1a([p.proveedor, p.modelo, p.systemPrompt, p.numPiezas, p.incluirModelo, p.pasos, p.safety, huellaImagen(p.imgBase64)].join("||"));
+}
+async function buscarEnCacheHistorial(cacheKey){
+  if (!cacheKey) return null;
+  try {
+    const todos = await historyGetAll();
+    return todos.find(r => r.cacheKey === cacheKey) || null;
+  } catch(e){ return null; }
+}
+async function actualizarContadorCache(){
+  try {
+    const todos = await historyGetAll();
+    $("cache-contador").textContent = todos.filter(r => !!r.cacheKey).length;
+  } catch(e){ $("cache-contador").textContent = "0"; }
+}
+$("btn-vaciar-cache").addEventListener("click", async () => {
+  if (!confirm("¿Vaciar la caché de resultados? Esto borra TODO el historial de generaciones de este navegador (la caché reutiliza el historial como almacén), no solo las entradas cacheadas.")) return;
+  const registros = await historyGetAll();
+  await historyTx("readwrite", s => { registros.forEach(r => s.delete(r.id)); });
+  await renderHistorial();
+  await actualizarContadorCache();
+});
+function actualizarNotaPromptCaching(){
+  const nota = $("nota-prompt-caching");
+  if (!nota) return;
+  if (proveedorActivo() !== "anthropic"){
+    nota.textContent = "Solo tiene efecto con el proveedor Anthropic; con " + proveedorActivo() + " esta casilla no cambia nada.";
+    return;
+  }
+  const minimo = CACHE_MIN_TOKENS_ANTHROPIC[modeloActivo()];
+  nota.textContent = "Marca el bloque de instrucciones del sistema como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes mientras no lo cambies." +
+    (minimo ? ` Mínimo cacheable del modelo activo: ${minimo.toLocaleString("es-ES")} tokens (si las instrucciones no lo alcanzan, Anthropic las procesa igual, sin coste extra ni ahorro).` : "");
+}
+selProveedor.addEventListener("change", actualizarNotaPromptCaching);
+selModelo.addEventListener("change", actualizarNotaPromptCaching);
+
+/* ---------- modo de trabajo: individual / lote ---------- */
+let modoActual = "individual";
+function cambiarModo(modo){
+  modoActual = modo;
+  $("modepicker").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.modo === modo)));
+  const esLote = modo === "lote";
+  $("zona-imagen-individual").classList.toggle("hidden", esLote);
+  $("zona-imagenes-lote").classList.toggle("hidden", !esLote);
+  $("acciones-individual").classList.toggle("hidden", esLote);
+  $("acciones-lote").classList.toggle("hidden", !esLote);
+  $("titulo-paso-prenda").textContent = esLote ? "2. Prendas del lote" : "2. Foto de la prenda";
+  if (!esLote) $("panel-progreso-lote").classList.add("hidden");
+  else { panelResultado.style.display = "none"; panelImagenes.style.display = "none"; }
+}
+$("modepicker").querySelectorAll("button").forEach(b => b.addEventListener("click", () => cambiarModo(b.dataset.modo)));
+
+/* ---------- lote: subida de varias prendas ---------- */
+let loteItems = []; // [{id, nombre, base64, mediaType, dataUrl, estado, imagenes, error}]
+function leerImagenComoBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const m = /^data:([^;]+);base64,(.*)$/.exec(reader.result);
+      if (!m) { reject(new Error("No se ha podido leer " + file.name)); return; }
+      resolve({mediaType: m[1], base64: m[2], dataUrl: reader.result});
+    };
+    reader.onerror = () => reject(new Error("No se ha podido leer " + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+async function manejarArchivosLote(fileList){
+  const archivos = Array.from(fileList).filter(f => /^image\/(png|jpeg|webp)$/.test(f.type));
+  for (const file of archivos){
+    try {
+      const { mediaType, base64, dataUrl } = await leerImagenComoBase64(file);
+      loteItems.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2,8), nombre: file.name, mediaType, base64, dataUrl, estado: "pendiente", imagenes: null, error: null });
+    } catch(e){ /* se omite el archivo que no se pudo leer */ }
+  }
+  pintarGridLote();
+}
+function quitarDeLote(id){ loteItems = loteItems.filter(it => it.id !== id); pintarGridLote(); }
+function pintarGridLote(){
+  const grid = $("grid-lote");
+  grid.innerHTML = "";
+  loteItems.forEach(it => {
+    const div = document.createElement("div");
+    div.className = "batch-thumb";
+    div.innerHTML = `<img src="${it.dataUrl}" alt="${escapeHTML(it.nombre)}"><div class="bt-name">${escapeHTML(it.nombre)}</div><button type="button" class="bt-remove" aria-label="Quitar">✕</button>`;
+    div.querySelector(".bt-remove").addEventListener("click", () => quitarDeLote(it.id));
+    grid.appendChild(div);
+  });
+  $("contador-lote").textContent = loteItems.length ? `${loteItems.length} prenda(s) en el lote.` : "Ninguna prenda añadida todavía.";
+  $("btn-lanzar-lote").disabled = loteItems.length === 0;
+}
+const dropzoneLote = $("dropzone-lote");
+const inputImagenesLote = $("input-imagenes-lote");
+dropzoneLote.addEventListener("click", () => inputImagenesLote.click());
+dropzoneLote.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); inputImagenesLote.click(); } });
+inputImagenesLote.addEventListener("change", () => { manejarArchivosLote(inputImagenesLote.files); inputImagenesLote.value = ""; });
+["dragover","dragenter"].forEach(ev => dropzoneLote.addEventListener(ev, (e) => { e.preventDefault(); dropzoneLote.classList.add("dragover"); }));
+["dragleave","drop"].forEach(ev => dropzoneLote.addEventListener(ev, (e) => { e.preventDefault(); dropzoneLote.classList.remove("dragover"); }));
+dropzoneLote.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files) manejarArchivosLote(e.dataTransfer.files); });
+
+/* ---------- lote: motor de procesamiento (secuencial) ---------- */
+let loteDetener = false;
+function pintarListaLote(){
+  const box = $("lote-lista");
+  box.innerHTML = "";
+  const mapaPill = {pendiente:["pend","Pendiente"], procesando:["run","Procesando"], hecho:["done","Hecho"], cache:["cachehit","Caché"], error:["err","Error"]};
+  loteItems.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "batch-row";
+    const p = mapaPill[it.estado] || mapaPill.pendiente;
+    row.innerHTML = `<div class="br-left"><div class="br-title">${escapeHTML(it.nombre)}</div><div class="br-meta">${it.error ? escapeHTML(it.error) : (it.imagenes ? it.imagenes.length + " imagen(es)" : "")}</div></div><span class="pill ${p[0]}">${p[1]}</span>`;
+    box.appendChild(row);
+  });
+}
+function actualizarProgresoLote(){
+  const total = loteItems.length;
+  const hechos = loteItems.filter(it => ["hecho","cache","error"].includes(it.estado)).length;
+  const pct = total ? Math.round(hechos/total*100) : 0;
+  $("lote-progress-fill").style.width = pct + "%";
+  $("lote-progress-texto").textContent = `${hechos} / ${total}`;
+  $("lote-progress-estado").textContent = hechos === total && total > 0 ? "completado" : (loteDetener ? "detenido" : "en curso");
+}
+async function ejecutarLote(){
+  if (!loteItems.length) return;
+  const apiKey = inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || "";
+  const falKey = inputApiKeyFal.value.trim() || localStorage.getItem(CLAVE_FAL) || "";
+  if (!apiKey){ alert("Indica la API key del proveedor de texto/visión."); return; }
+  if (!falKey){ alert("Indica la API key de fal.ai."); return; }
+
+  loteDetener = false;
+  $("btn-lanzar-lote").disabled = true;
+  $("btn-detener-lote").disabled = false;
+  $("btn-descargar-lote-zip").disabled = true;
+  $("btn-descargar-lote-pdf").disabled = true;
+  $("panel-progreso-lote").classList.remove("hidden");
+  loteItems.forEach(it => { it.estado = "pendiente"; it.imagenes = null; it.error = null; });
+  pintarListaLote(); actualizarProgresoLote();
+
+  const systemPrompt = inputSystemPrompt.value.trim() || SYSTEM_PROMPT_OUTFIT;
+  const numPiezas = Math.min(numPiezasMaxActual(), Math.max(NUM_PIEZAS_MIN, parseInt(inputNumPiezas.value, 10) || 1));
+  const incluirModelo = chkIncluirModelo.checked;
+  const usarCache = $("chk-cache-resultados").checked;
+
+  for (const it of loteItems){
+    if (loteDetener) { if (it.estado === "pendiente") continue; }
+    it.estado = "procesando"; pintarListaLote();
+    const claveLote = calcularCacheKey({
+      proveedor: proveedorActivo(), modelo: modeloActivo(), systemPrompt,
+      numPiezas, incluirModelo, pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(),
+      imgBase64: it.base64
+    });
+    try {
+      let previo = usarCache ? await buscarEnCacheHistorial(claveLote) : null;
+      if (previo){
+        it.imagenes = previo.items.map(x => ({nombre: x.nombre, dataUrl: URL.createObjectURL(x.blob)}));
+        it.estado = "cache";
+      } else {
+        // Se "toma prestado" el flujo individual: se colocan temporalmente
+        // los globales de imagen de este ítem del lote y se reutilizan
+        // analizarYGenerarPrompts()/generarTodasLasImagenes() tal cual.
+        imagenBase64 = it.base64; imagenMediaType = it.mediaType;
+        await analizarYGenerarPrompts();
+        await generarTodasLasImagenes();
+        pintarPrompts();
+        await guardarEnHistorial(usarCache ? claveLote : null);
+        it.imagenes = imagenesGeneradas.slice();
+        it.estado = "hecho";
+      }
+    } catch(err){
+      it.estado = "error"; it.error = err && err.message ? err.message : String(err);
+    }
+    pintarListaLote(); actualizarProgresoLote();
+  }
+
+  $("btn-lanzar-lote").disabled = false;
+  $("btn-detener-lote").disabled = true;
+  const algunoListo = loteItems.some(it => it.imagenes && it.imagenes.length);
+  $("btn-descargar-lote-zip").disabled = !algunoListo;
+  $("btn-descargar-lote-pdf").disabled = !algunoListo;
+}
+$("btn-lanzar-lote").addEventListener("click", ejecutarLote);
+$("btn-detener-lote").addEventListener("click", () => { loteDetener = true; });
+
+function nombreCarpetaLote(it, i){
+  return ("p" + (i+1) + "_" + it.nombre).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60) || ("prenda_" + (i+1));
+}
+async function descargarLoteZip(){
+  if (!window.JSZip){ alert("No se ha podido cargar JSZip."); return; }
+  const zip = new JSZip();
+  loteItems.forEach((it, i) => {
+    if (!it.imagenes || !it.imagenes.length) return;
+    const carpeta = zip.folder(nombreCarpetaLote(it, i));
+    it.imagenes.forEach((img, j) => {
+      const base64 = (img.dataUrl.split(",")[1]) || "";
+      const nombreImg = (j + "_" + img.nombre).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,50) + ".png";
+      carpeta.file(nombreImg, base64, {base64: true});
+    });
+  });
+  const blob = await zip.generateAsync({type: "blob"});
+  await guardarArchivo("genoutfit_lote.zip", blob, "application/zip");
+}
+async function descargarLotePdfs(){
+  for (let i = 0; i < loteItems.length; i++){
+    const it = loteItems[i];
+    if (!it.imagenes || !it.imagenes.length) continue;
+    const doc = construirPdfDesdeImagenes(it.imagenes);
+    await guardarArchivo(nombreCarpetaLote(it, i) + ".pdf", doc.output("blob"), "application/pdf");
+    await new Promise(r => setTimeout(r, 350)); // evita que el navegador bloquee descargas múltiples muy seguidas
+  }
+}
+$("btn-descargar-lote-zip").addEventListener("click", descargarLoteZip);
+$("btn-descargar-lote-pdf").addEventListener("click", descargarLotePdfs);
+
+/* ============================================================================
+ * INICIALIZACIÓN
+ * ==========================================================================*/
+inputSystemPrompt.value = SYSTEM_PROMPT_OUTFIT;
+repintarModelos();
+cargarKeyGuardada();
+ajustarLimiteTokens();
+actualizarLimitePiezas();
+actualizarEstadoKeyFal();
+inputApiKeyFal.value = localStorage.getItem(CLAVE_FAL) || "";
+renderHistorial();
+actualizarBotonGenerar();
+actualizarContadorCache();
+actualizarNotaPromptCaching();
+pintarGridLote();
+
+</script>
+</body>
+</html>

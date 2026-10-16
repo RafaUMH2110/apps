@@ -205,6 +205,11 @@ table.t tr:nth-child(even) td{background:var(--page-bg)}
 .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
 .bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
 .bn-in .light{flex:1;min-width:0}
+
+/* Aviso flotante (toast) */
+.toast{position:fixed;left:50%;bottom:78px;z-index:70;max-width:calc(100vw - 32px);background:var(--panel-dark);color:var(--on-dark);font:600 13.5px var(--texto);text-align:center;padding:11px 20px;border-radius:12px;box-shadow:var(--sombra-alta);opacity:0;visibility:hidden;transform:translate(-50%,8px);transition:opacity .22s ease,transform .22s ease,visibility 0s linear .22s;pointer-events:none}
+.toast.on{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .22s ease,transform .22s ease}
+@media(max-width:560px){.toast{bottom:72px;padding:10px 16px;font-size:13px}}
 @media(max-width:480px){.bn-in .btn .lbl{display:none}}
 
 /* Modal glosario */
@@ -478,7 +483,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:23</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:29</p>
 </footer>
 
 <div class="bottomnav">

@@ -220,9 +220,9 @@
   .leyenda-item{display:inline-flex; align-items:center; gap:5px;}
   .leyenda-linea{width:14px; height:2px; border-radius:1px; display:inline-block;}
   .chart-svg-caja{position:relative;}
-  .chart-svg{width:100%; height:230px; display:block; touch-action:pan-y;}
+  .chart-svg{width:100%; height:270px; display:block; touch-action:pan-y;}
   .chart-svg:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
-  .eje-texto{font-family:var(--mono); font-size:9.5px; fill:var(--muted);}
+  .eje-texto{font-family:var(--mono); font-size:12px; fill:var(--muted);}
   .rejilla{stroke:var(--gridline); stroke-width:1;}
   .linea-base{stroke:var(--baseline); stroke-width:1;}
   .crosshair-linea{stroke:var(--text-secondary); stroke-width:1; display:none; pointer-events:none;}
@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:39</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:48</div>
 </section>
 
 <script>
@@ -559,8 +559,8 @@
   const UMBRAL_TENDENCIA = 0.05;   // diferencia mínima para marcar ▲ o ▼
 
   const SVGNS = 'http://www.w3.org/2000/svg';
-  const CHART_W = 1000, CHART_H = 230;
-  const CHART_MARGIN = { left: 42, right: 12, top: 12, bottom: 22 };
+  const CHART_W = 1000, CHART_H = 270;
+  const CHART_MARGIN = { left: 46, right: 14, top: 14, bottom: 26 };
 
   // Tiles de condiciones actuales. "color" se usa en el borde superior del
   // tile y en el icono, a juego con los gráficos.
@@ -1304,6 +1304,14 @@
     return ticks;
   }
 
+  // Formatea un valor del eje con el nº de decimales justo para su paso (sin
+  // decimales si el paso es entero, 1 o 2 si es más fino), en formato es-ES
+  // (coma decimal, sin separador de miles) para que sean fáciles de leer.
+  function formatearNumeroEje(v, paso){
+    const decimales = paso >= 1 ? 0 : (paso >= 0.1 ? 1 : 2);
+    return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
+  }
+
   function redibujarGrafico(chart){
     const cfg = chart.cfg;
     const n = lecturasHoy.length;
@@ -1334,8 +1342,8 @@
       const texto = document.createElementNS(SVGNS, 'text');
       texto.setAttribute('class', 'eje-texto');
       texto.setAttribute('x', x);
-      texto.setAttribute('y', CHART_H - margin.bottom + 13);
-      texto.setAttribute('text-anchor', h === 0 ? 'start' : 'middle');
+      texto.setAttribute('y', CHART_H - margin.bottom + 16);
+      texto.setAttribute('text-anchor', h === 0 ? 'start' : (h === 18 ? 'end' : 'middle'));
       texto.textContent = pad2(h) + ':00';
       chart.gEjes.appendChild(texto);
     });
@@ -1397,6 +1405,7 @@
       const ticks = nicerTicks(globalMin, globalMax, 4);
       yMin = ticks[0]; yMax = ticks[ticks.length - 1]; rangoY = (yMax - yMin) || 1;
       plotY = (v) => margin.top + plotH - ((v - yMin) / rangoY) * plotH;
+      const pasoTicks = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
       ticks.forEach(tv => {
         if (tv < yMin - 1e-9 || tv > yMax + 1e-9) return;
         const y = plotY(tv);
@@ -1407,9 +1416,9 @@
         chart.gRejilla.appendChild(linea);
         const texto = document.createElementNS(SVGNS, 'text');
         texto.setAttribute('class', 'eje-texto');
-        texto.setAttribute('x', margin.left - 5); texto.setAttribute('y', y + 3);
+        texto.setAttribute('x', margin.left - 5); texto.setAttribute('y', y + 4);
         texto.setAttribute('text-anchor', 'end');
-        texto.textContent = String(tv);
+        texto.textContent = formatearNumeroEje(tv, pasoTicks);
         chart.gEjes.appendChild(texto);
       });
     }

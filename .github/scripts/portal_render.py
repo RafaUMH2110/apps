@@ -293,8 +293,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .card-icon svg { width: 17px; height: 17px; }
   .card h3 { font-size: 1rem; font-weight: 600; line-height: 1.3; }
   .card p.desc {
-    margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: 1;
-    max-height: 10.85em; overflow-y: auto; padding-right: 6px;
+    margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: none;
+    height: 10.85em; overflow-y: auto; padding-right: 6px;
     scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
   }
   .card p.desc::-webkit-scrollbar { width: 6px; }

@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>TeleMet iPad Lite — Panel en vivo de tu estación meteorológica</title>
+
+<!-- Instalación en pantalla de inicio (iPadOS Safari) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TeleMet iPad Lite">
+<meta name="theme-color" content="#0F2237">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E4572E'/%3E%3Cstop offset='1' stop-color='%230E7C6B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath d='M9 20a4 4 0 0 1 .6-7.96A6 6 0 0 1 21 14.5a4 4 0 0 1-1 7.5H9z' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0B1420;
+    --surface:#121C2B;
+    --surface-raised:#17212F;
+    --tile-header:#18242F;
+    --border:rgba(234,241,247,0.09);
+    --text:#EAF1F7;
+    --text-secondary:#9CB7D6;
+    --muted:#6E88A3;
+    --sidebar-bg:#070D16;
+
+    --accent:#E4572E;
+    --good:#1FBE9F;
+    --warn:#F2B341;
+    --danger:#E4572E;
+    --c-temp:#E4572E; --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-rain:#73C7EC;
+
+    --display:'Bricolage Grotesque',Georgia,serif;
+    --sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,"SF Mono","Courier New",monospace;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
+    line-height:1.4; -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit; border:none; background:none; color:inherit; cursor:pointer;}
+  h1,h2,h3{margin:0;}
+
+  /* ===================== LAYOUT DE DOS PANELES ===================== */
+  .app-shell{display:flex; min-height:100vh; align-items:stretch;}
+
+  .sidebar{
+    width:300px; flex:none; background:var(--sidebar-bg); border-right:1px solid var(--border);
+    padding: calc(24px + var(--safe-top)) 22px calc(22px + var(--safe-bottom)) calc(22px + var(--safe-left));
+    display:flex; flex-direction:column; gap:16px;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .sidebar-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .sidebar-titles{min-width:0;}
+  #nombreEstacionTitulo{font-family:var(--display); font-size:22px; font-weight:800; letter-spacing:-.02em; overflow-wrap:anywhere;}
+  .sidebar-sub{font-size:13.5px; color:var(--text-secondary); margin-top:2px;}
+  .icon-btn{
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(234,241,247,0.25); border-radius:50%; color:#fff; flex:none;
+  }
+  .icon-btn svg{width:15px; height:15px;}
+
+  .estado-linea{
+    display:flex; align-items:center; gap:7px;
+    font-size:13px; color:var(--text-secondary); font-weight:600;
+  }
+  .estado-linea .bulbo{width:9px; height:9px; border-radius:50%; background:#4C6079; flex:none; transition:all .2s;}
+  .estado-linea[data-s="ok"] .bulbo{background:#16A34A; box-shadow:0 0 0 4px rgba(22,163,74,.25); animation:pulso 1.3s ease-in-out infinite;}
+  .estado-linea[data-s="manual"] .bulbo{background:var(--text-secondary);}
+  .estado-linea[data-s="warn"] .bulbo{background:var(--warn); box-shadow:0 0 0 4px rgba(242,179,65,.25);}
+  .estado-linea[data-s="err"] .bulbo{background:var(--danger); box-shadow:0 0 0 4px rgba(228,87,46,.25);}
+  .estado-linea[data-s="off"] .bulbo{background:#4C6079;}
+  @keyframes pulso{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .sidebar-meta{
+    display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--text-secondary); font-family:var(--mono);
+  }
+
+  .aviso-banner{
+    padding:9px 11px; border-radius:10px; font-size:12.5px; display:none; align-items:center; gap:8px;
+  }
+  .aviso-banner.visible{display:flex;}
+  .aviso-banner.warn{background:rgba(242,179,65,0.15); color:#f2cf8e; border:1px solid rgba(242,179,65,0.35);}
+  .aviso-banner.danger{background:rgba(228,87,46,0.15); color:#f5a383; border:1px solid rgba(228,87,46,0.35);}
+
+  .sidebar-actions{margin-top:auto; display:flex; flex-direction:column; gap:8px; padding-top:10px; border-top:1px solid var(--border);}
+  .side-btn{
+    display:flex; align-items:center; gap:9px; padding:10px 11px; border-radius:10px; font-size:14px; font-weight:700;
+    background:rgba(234,241,247,0.05); color:#fff; position:relative;
+  }
+  .side-btn:hover{background:rgba(234,241,247,0.1);}
+  .side-btn svg{width:16px; height:16px; flex:none; color:var(--accent);}
+  .side-btn.primario{background:var(--accent); color:#fff;}
+  .side-btn.primario svg{color:#fff;}
+  .side-btn.primario:hover{background:#C9441F;}
+  .side-btn.girando svg{animation:girar .7s linear;}
+  @keyframes girar{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
+  /* ===================== CONTENIDO ===================== */
+  .content-pane{
+    flex:1; min-width:0; padding: calc(24px + var(--safe-top)) 28px calc(32px + var(--safe-bottom));
+    max-width:1200px;
+  }
+
+  .vacio-estado{
+    margin:40px auto; max-width:460px; padding:30px 24px; background:var(--surface); border-radius:16px;
+    text-align:center; color:var(--text-secondary); font-size:14.5px; display:none; border:1px solid var(--border);
+  }
+  .vacio-estado.visible{display:block;}
+  .vacio-estado button{
+    margin-top:14px; background:var(--accent); color:#fff; padding:10px 18px; border-radius:10px;
+    font-weight:700; font-size:14px;
+  }
+
+  #panelesDatos{display:none;}
+  #panelesDatos.visible{display:block;}
+
+  /* ===================== TILES ===================== */
+  .tiles-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;
+  }
+  .tile{background:var(--surface); border-radius:14px; overflow:hidden; border:1px solid var(--border); border-top:3px solid var(--c, var(--accent));}
+  .tile-header{
+    background:var(--tile-header); padding:8px 14px; font-size:13.5px; font-weight:700; color:#e4e4e6;
+    display:flex; align-items:center; gap:7px;
+  }
+  .tile-header svg{width:15px; height:15px; color:var(--c, var(--accent)); flex:none;}
+  .tile-body{padding:16px 16px 18px;}
+  .tile-valor{display:flex; align-items:baseline; gap:4px; font-family:var(--mono);}
+  .tile-valor .n{font-size:40px; font-weight:700; letter-spacing:-.02em;}
+  .tile-valor .u{font-size:14px; color:var(--text-secondary);}
+  .tile-extra{margin-top:10px; font-size:12px; color:var(--text-secondary); font-family:var(--mono);}
+  .tile-dir{font-size:12.5px; color:var(--text-secondary); margin-top:5px;}
+
+  /* ===================== DIÁLOGOS CENTRADOS (ajustes / información) ===================== */
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:30; opacity:0; pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .sheet-backdrop.visible{opacity:1; pointer-events:auto;}
+  .dialog{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-48%) scale(0.97); opacity:0; pointer-events:none;
+    background:var(--surface-raised); border-radius:18px; width:min(480px, 92vw); max-height:86vh; overflow-y:auto;
+    padding:24px 26px 26px; z-index:31; border:1px solid rgba(234,241,247,0.12);
+    box-shadow:0 24px 70px rgba(0,0,0,.5);
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .dialog.visible{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .dialog h2{font-family:var(--display); font-weight:800; font-size:20px; margin-bottom:4px;}
+  .dialog .subtitle{font-size:13px; color:var(--text-secondary); margin-bottom:16px;}
+  .dialog label{display:block; font-size:12.5px; font-weight:700; color:var(--text-secondary); margin-bottom:5px; margin-top:14px;}
+  .dialog label:first-of-type{margin-top:0;}
+  .dialog input[type="text"], .dialog input[type="password"], .dialog input[type="number"], .dialog select{
+    width:100%; padding:10px 12px; border-radius:9px; border:1px solid rgba(234,241,247,0.18);
+    background:var(--bg); color:#fff; font-size:15px; font-family:var(--sans); appearance:none;
+  }
+  .dialog select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CB7D6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; background-size:16px;}
+  .dialog .keyrow{display:flex; gap:8px;}
+  .dialog .keyrow input{flex:1;}
+  .dialog .eye{
+    width:42px; flex:none; border:1px solid rgba(234,241,247,0.18); background:var(--bg);
+    border-radius:9px; color:var(--text-secondary); display:flex; align-items:center; justify-content:center;
+  }
+  .dialog .btn{
+    width:100%; padding:12px; border-radius:11px; font-size:15px; font-weight:700; margin-top:12px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .dialog .btn svg{width:17px; height:17px;}
+  .dialog .btn.primario{background:var(--accent); color:#fff;}
+  .dialog .estado-ajustes-linea{font-size:12px; color:var(--muted); margin-top:8px; font-family:var(--mono);}
+  .dialog .nota-lite{font-size:12px; color:var(--muted); margin-top:16px; padding-top:12px; border-top:1px solid rgba(234,241,247,0.08);}
+  .dialog .cerrar-x{
+    position:absolute; top:18px; right:20px; width:28px; height:28px; border-radius:50%;
+    background:rgba(234,241,247,0.1); display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  #campoIntervalo.oculto{display:none;}
+
+  .info-sheet p{font-size:14px; color:var(--text-secondary); margin:0 0 10px;}
+  .info-sheet .glos{margin:14px 0; padding:0; list-style:none;}
+  .info-sheet .glos li{padding:9px 0; border-bottom:1px solid rgba(234,241,247,0.08); font-size:13.5px;}
+  .info-sheet .glos li:last-child{border-bottom:none;}
+  .info-sheet .glos b{display:block; font-family:var(--display); font-size:14.5px; color:#fff; margin-bottom:1px;}
+  .info-sheet .firma{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:18px;}
+  .info-sheet a{color:var(--c-hum);}
+
+  /* Split View / Slide Over estrechos: apila el sidebar sobre el contenido. */
+  @media (max-width: 700px){
+    .app-shell{flex-direction:column;}
+    .sidebar{
+      width:auto; position:relative; height:auto; border-right:none; border-bottom:1px solid var(--border);
+      padding: calc(18px + var(--safe-top)) 18px 16px;
+    }
+    .sidebar-actions{margin-top:14px;}
+    .content-pane{padding: 18px 18px calc(28px + var(--safe-bottom));}
+  }
+</style>
+</head>
+<body data-app-title="TeleMet iPad Lite" data-app-description="Versión Lite de TeleMet iPad: panel en vivo, con diseño de dos paneles pensado para el ancho de un iPad, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Muestra solo temperatura, humedad, viento y lluvia actuales, sin gráficas ni histórico. Actualización automática configurable entre 1 y 10 minutos, o manual mediante un botón. No guarda ningún dato salvo los ajustes de configuración en este dispositivo." data-categories="telemetria,automatizacion,docencia" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ipad,pwa,pantalla de inicio,panel,tiempo real,lite,ligera" data-client-only="true">
+
+<!--
+  ============================================================================
+  TeleMet iPad Lite — Notas de diseño y configuración
+  ============================================================================
+
+  QUÉ ES ESTA APP
+  Versión "Lite" de TeleMet iPad: mismo diseño de dos paneles y misma
+  paleta editorial "forja" (Bricolage Grotesque + Instrument Sans +
+  JetBrains Mono), pero reducida a lo esencial:
+    - Solo 4 tarjetas de condiciones actuales: Temperatura, Humedad,
+      Viento (con dirección) y Lluvia de hoy (con tasa actual).
+    - Sin gráficas de evolución, sin histórico del día, sin IndexedDB,
+      sin exportación a CSV.
+    - Actualización automática con intervalo configurable de 1 a 10
+      minutos, o modo manual (solo se actualiza al pulsar el botón).
+    - No persiste ninguna lectura: solo guarda en este dispositivo los
+      ajustes de configuración (nombre, ubicación, Station ID, API Key,
+      modo y frecuencia de actualización).
+
+  Comparte el Station ID y la API Key con el resto de apps TelemetriaWU
+  (misma clave de localStorage, "wu_station_id" / "wu_api_key"); sus
+  propios ajustes usan su propio prefijo ("telemetipadlite_"),
+  independiente de TeleMet iPad y TeleMet iPad Pro.
+
+  QUÉ CONSTANTES EDITAR (buscar en el <script> final)
+    - BASE_URL, DEFAULTS: endpoint y valores por defecto.
+    - TILES: qué tarjetas de condición actual se muestran (icono y color).
+    - REQUEST_TIMEOUT_MS: tiempo límite fijo de la petición.
+  ============================================================================
+-->
+
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-titles">
+        <h1 id="nombreEstacionTitulo">Mi estación</h1>
+        <div class="sidebar-sub" id="ubicacionTitulo">—</div>
+      </div>
+      <button type="button" class="icon-btn" id="btnInfo" aria-label="Información de la app">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"/></svg>
+      </button>
+    </div>
+
+    <div class="estado-linea" id="estadoLinea" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span id="estadoLineaTexto">Detenido</span></div>
+
+    <div class="sidebar-meta">
+      <span id="metaFechaHora">Sin datos todavía</span>
+      <span id="metaStationId">—</span>
+    </div>
+
+    <div class="aviso-banner" id="avisoBanner"></div>
+
+    <div class="sidebar-actions">
+      <button type="button" class="side-btn primario" id="btnActualizar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+        <span>Actualizar ahora</span>
+      </button>
+      <button type="button" class="side-btn" id="btnSettings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.5-2.3.9a7.6 7.6 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.5 2 1.5a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.5 2.3-.9a7.6 7.6 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.5-2-1.5Z"/></svg>
+        <span>Ajustes</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="content-pane">
+    <div class="vacio-estado" id="vacioEstado">
+      Configura el Station ID de tu estación en Weather Underground para empezar a ver datos en vivo.
+      <div><button type="button" id="btnAbrirAjustesVacio">Abrir ajustes</button></div>
+    </div>
+
+    <div id="panelesDatos">
+      <section class="tiles-grid" id="tilesGrid"></section>
+    </div>
+  </main>
+
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+<section class="dialog" id="settingsSheet">
+  <button type="button" class="cerrar-x" id="btnCerrarAjustes">✕</button>
+  <h2>Ajustes</h2>
+  <p class="subtitle">El Station ID y la API Key se comparten con el resto de apps TelemetriaWU en este navegador.</p>
+
+  <label for="nombreInput">Nombre mostrado</label>
+  <input type="text" id="nombreInput" placeholder="Mi estación" autocomplete="off">
+
+  <label for="ubicacionInput">Ubicación mostrada</label>
+  <input type="text" id="ubicacionInput" placeholder="Ciudad, provincia…" autocomplete="off">
+
+  <label for="stationIdInputM">Station ID</label>
+  <input type="text" id="stationIdInputM" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+
+  <label for="apiKeyInputM">API Key (opcional)</label>
+  <div class="keyrow">
+    <input type="password" id="apiKeyInputM" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
+    <button type="button" class="eye" id="btnVerApiKeyM" aria-label="Mostrar u ocultar la API Key" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="iconoOjoM"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>
+
+  <label for="modoInput">Modo de actualización</label>
+  <select id="modoInput">
+    <option value="auto">Automático</option>
+    <option value="manual">Manual (solo con el botón)</option>
+  </select>
+
+  <div id="campoIntervalo">
+    <label for="intervaloInput">Intervalo de actualización (minutos)</label>
+    <input type="number" id="intervaloInput" min="1" max="10" step="1" value="5">
+  </div>
+
+  <button type="button" class="btn primario" id="btnGuardarAjustes">Guardar</button>
+
+  <div class="estado-ajustes-linea" id="estadoAjustesLinea">—</div>
+  <div class="nota-lite">Versión Lite: no guarda histórico ni lecturas anteriores. Solo se conserva en este dispositivo la configuración de arriba.</div>
+</section>
+
+<section class="dialog info-sheet" id="infoSheet">
+  <button type="button" class="cerrar-x" id="btnCerrarInfo">✕</button>
+  <h2>TeleMet iPad Lite</h2>
+  <p>Versión reducida de TeleMet iPad: muestra solo las condiciones actuales (temperatura, humedad, viento y lluvia) de tu estación meteorológica personal, consultando la API de Weather Underground / Earth Network directamente desde el navegador. Sin gráficas ni histórico.</p>
+  <p>Sin backend propio: el Station ID y la API Key se guardan solo en este dispositivo. Para instalarla en la pantalla de inicio del iPad: botón Compartir de Safari → "Añadir a pantalla de inicio".</p>
+  <ul class="glos">
+    <li><b>Luz de estado</b>Verde: en vivo. Ámbar: error transitorio. Rojo: error fatal (Station ID o API Key inválidos). Gris: modo manual en espera, o detenido.</li>
+    <li><b>Modo automático</b>Vuelve a consultar la estación sola, cada el número de minutos que indiques (de 1 a 10).</li>
+    <li><b>Modo manual</b>No se actualiza sola: pulsa "Actualizar ahora" cuando quieras ver el dato más reciente.</li>
+  </ul>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 03:33</div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+  const REQUEST_TIMEOUT_MS = 15000;
+
+  const STORAGE_KEY_STATION = 'wu_station_id';
+  const STORAGE_KEY_APIKEY  = 'wu_api_key';
+  const SK_NOMBRE    = 'telemetipadlite_nombre';
+  const SK_UBICACION = 'telemetipadlite_ubicacion';
+  const SK_MODO      = 'telemetipadlite_modo';
+  const SK_INTERVALO = 'telemetipadlite_intervalo_min';
+
+  const DEFAULTS = { modo:'auto', intervaloMin:5 };
+
+  // Tarjetas de condiciones actuales mostradas (sin histórico ni gráficas).
+  const TILES = [
+    { id:'temp', titulo:'Temperatura', key:'temp_c', unidad:'°C', dec:1, color:'var(--c-temp)', icono:'<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>' },
+    { id:'humidity', titulo:'Humedad', key:'humidity_pct', unidad:'%', dec:0, color:'var(--c-hum)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' },
+    { id:'wind', titulo:'Viento', key:'wind_kmh', unidad:'km/h', dec:1, dir:true, color:'var(--c-wind)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
+    { id:'rain', titulo:'Lluvia (hoy)', key:'rain_total_mm', unidad:'mm', dec:1, rain:true, color:'var(--c-rain)', icono:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M16 13v8M8 13v8M12 15v8"/>' }
+  ];
+
+  /* ============================================================
+     ESTADO EN MEMORIA (solo la lectura más reciente, sin histórico)
+     ============================================================ */
+  let fetching = false;
+  let timeoutId = null;
+  let activo = null;        // ajustes activos de la estación (station id, api key, modo, intervalo)
+  let actual = null;        // última lectura: { epochMs, vals:{...} }
+
+  /* ============================================================
+     ELEMENTOS DEL DOM
+     ============================================================ */
+  const $ = (id) => document.getElementById(id);
+  const nombreEstacionTitulo = $('nombreEstacionTitulo');
+  const ubicacionTitulo = $('ubicacionTitulo');
+  const estadoLinea = $('estadoLinea');
+  const estadoLineaTexto = $('estadoLineaTexto');
+  const metaFechaHora = $('metaFechaHora');
+  const metaStationId = $('metaStationId');
+  const avisoBanner = $('avisoBanner');
+  const vacioEstado = $('vacioEstado');
+  const panelesDatos = $('panelesDatos');
+  const tilesGrid = $('tilesGrid');
+
+  const sheetBackdrop = $('sheetBackdrop');
+  const settingsSheet = $('settingsSheet');
+  const infoSheet = $('infoSheet');
+
+  const nombreInput = $('nombreInput');
+  const ubicacionInput = $('ubicacionInput');
+  const stationIdInputM = $('stationIdInputM');
+  const apiKeyInputM = $('apiKeyInputM');
+  const btnVerApiKeyM = $('btnVerApiKeyM');
+  const iconoOjoM = $('iconoOjoM');
+  const modoInput = $('modoInput');
+  const campoIntervalo = $('campoIntervalo');
+  const intervaloInput = $('intervaloInput');
+  const estadoAjustesLinea = $('estadoAjustesLinea');
+  const btnActualizar = $('btnActualizar');
+
+  /* ============================================================
+     UTILIDADES
+     ============================================================ */
+  function numOrNull(v){ return (v === undefined || v === null || Number.isNaN(v)) ? null : v; }
+  function firstDefined(){ for (let i=0;i<arguments.length;i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
+  function fmt(v, dec){
+    if (v === null || v === undefined) return '—';
+    return (typeof dec === 'number') ? v.toFixed(dec) : String(v);
+  }
+  function horaCorta(ms){ return new Date(ms).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }); }
+  function leerIntervaloMin(input, porDefecto){
+    const v = parseInt(input.value, 10);
+    if (!Number.isFinite(v)) return porDefecto;
+    return Math.min(10, Math.max(1, v));
+  }
+  const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function gradosACompass(deg){
+    if (deg === null || deg === undefined) return null;
+    const idx = Math.round(((deg % 360) / 22.5)) % 16;
+    return COMPASS[(idx + 16) % 16];
+  }
+
+  function extraerValores(obs){
+    const m = obs.metric || {};
+    return {
+      temp_c: numOrNull(m.temp),
+      humidity_pct: numOrNull(obs.humidity),
+      wind_kmh: numOrNull(m.windSpeed),
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
+      rainrate_mmh: numOrNull(m.precipRate),
+      rain_total_mm: numOrNull(m.precipTotal)
+    };
+  }
+
+  /* ============================================================
+     CARGA / GUARDADO DE AJUSTES
+     ============================================================ */
+  function aplicarModoUI(){
+    const manual = modoInput.value === 'manual';
+    campoIntervalo.classList.toggle('oculto', manual);
+  }
+
+  function cargarAjustes(){
+    nombreInput.value = localStorage.getItem(SK_NOMBRE) || '';
+    ubicacionInput.value = localStorage.getItem(SK_UBICACION) || '';
+    stationIdInputM.value = localStorage.getItem(STORAGE_KEY_STATION) || '';
+    apiKeyInputM.value = localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+    modoInput.value = localStorage.getItem(SK_MODO) || DEFAULTS.modo;
+    intervaloInput.value = localStorage.getItem(SK_INTERVALO) || DEFAULTS.intervaloMin;
+    aplicarModoUI();
+    pintarCabecera();
+  }
+
+  function guardarAjustes(){
+    localStorage.setItem(SK_NOMBRE, nombreInput.value.trim());
+    localStorage.setItem(SK_UBICACION, ubicacionInput.value.trim());
+    const stationId = stationIdInputM.value.trim();
+    const apiKey = apiKeyInputM.value.trim();
+    if (stationId) localStorage.setItem(STORAGE_KEY_STATION, stationId); else localStorage.removeItem(STORAGE_KEY_STATION);
+    if (apiKey) localStorage.setItem(STORAGE_KEY_APIKEY, apiKey); else localStorage.removeItem(STORAGE_KEY_APIKEY);
+    localStorage.setItem(SK_MODO, modoInput.value === 'manual' ? 'manual' : 'auto');
+    localStorage.setItem(SK_INTERVALO, leerIntervaloMin(intervaloInput, DEFAULTS.intervaloMin));
+    pintarCabecera();
+    estadoAjustesLinea.textContent = 'Guardado.';
+    reiniciarConAjustesActuales();
+  }
+
+  function pintarCabecera(){
+    nombreEstacionTitulo.textContent = nombreInput.value.trim() || localStorage.getItem(SK_NOMBRE) || 'Mi estación';
+    ubicacionTitulo.textContent = ubicacionInput.value.trim() || localStorage.getItem(SK_UBICACION) || '—';
+    const stationId = stationIdInputM.value.trim() || localStorage.getItem(STORAGE_KEY_STATION) || '';
+    metaStationId.textContent = stationId || '—';
+  }
+
+  function pintarMeta(){
+    metaFechaHora.textContent = actual ? ('Última lectura: ' + horaCorta(actual.epochMs)) : 'Sin datos todavía';
+  }
+
+  /* ============================================================
+     LUZ DE ESTADO
+     ============================================================ */
+  function fijarEstado(estado, texto){
+    estadoLinea.dataset.s = estado;
+    estadoLineaTexto.textContent = texto;
+  }
+
+  function mostrarAviso(tipo, texto){
+    avisoBanner.className = 'aviso-banner visible ' + tipo;
+    avisoBanner.textContent = texto;
+  }
+  function ocultarAviso(){
+    avisoBanner.className = 'aviso-banner';
+    avisoBanner.textContent = '';
+  }
+
+  function actualizarVisibilidad(){
+    const hayEstacion = !!(localStorage.getItem(STORAGE_KEY_STATION) || '').trim();
+    vacioEstado.classList.toggle('visible', !hayEstacion);
+    panelesDatos.classList.toggle('visible', hayEstacion);
+  }
+
+  /* ============================================================
+     RENDERIZADO: TILES (solo la lectura más reciente, sin mín/máx)
+     ============================================================ */
+  function construirTiles(){
+    tilesGrid.innerHTML = '';
+    TILES.forEach(cfg => {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.id = 'tile-' + cfg.id;
+      tile.style.setProperty('--c', cfg.color);
+      tile.innerHTML =
+        '<div class="tile-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + cfg.icono + '</svg><span>' + cfg.titulo + '</span></div>' +
+        '<div class="tile-body" id="tile-body-' + cfg.id + '"></div>';
+      tilesGrid.appendChild(tile);
+    });
+  }
+
+  function pintarTiles(){
+    const vals = actual ? actual.vals : {};
+    TILES.forEach(cfg => {
+      const cuerpo = $('tile-body-' + cfg.id);
+      if (!cuerpo) return;
+      const valor = vals[cfg.key];
+      let html = '<div class="tile-valor"><span class="n">' + fmt(valor, cfg.dec) + '</span><span class="u">' + cfg.unidad + '</span></div>';
+      if (cfg.dir){
+        const dirDeg = vals.wind_dir_deg;
+        const comp = gradosACompass(dirDeg);
+        html += '<div class="tile-dir">' + (comp ? comp + ' · ' + Math.round(dirDeg) + '°' : '—') + '</div>';
+      }
+      if (cfg.rain){
+        html += '<div class="tile-extra">Tasa actual: ' + fmt(vals.rainrate_mmh, 1) + ' mm/h</div>';
+      }
+      cuerpo.innerHTML = html;
+    });
+  }
+
+  /* ============================================================
+     PETICIÓN CON TIEMPO LÍMITE (AbortController)
+     ============================================================ */
+  async function fetchConTimeout(url, timeoutMs){
+    const controller = new AbortController();
+    const idTimeout = setTimeout(() => controller.abort(), timeoutMs);
+    try { return await fetch(url, { signal: controller.signal }); }
+    finally { clearTimeout(idTimeout); }
+  }
+
+  function construirURL(stationId, apiKey){
+    const params = new URLSearchParams({ stationId, format:'json', numericPrecision:'decimal', units:'m' });
+    if (apiKey) params.set('apiKey', apiKey);
+    return BASE_URL + '?' + params.toString();
+  }
+
+  /* ============================================================
+     CICLO DE CONSULTA — una única lectura, sin histórico
+     ============================================================ */
+  async function ciclo(manual){
+    if (!activo || fetching) return;
+    fetching = true;
+    if (timeoutId){ clearTimeout(timeoutId); timeoutId = null; }
+    if (manual) girarIconoActualizar();
+    fijarEstado(estadoLinea.dataset.s === 'err' ? 'err' : 'warn', 'Actualizando…');
+
+    let response;
+    try { response = await fetchConTimeout(construirURL(activo.stationId, activo.apiKey), REQUEST_TIMEOUT_MS); }
+    catch (err) {
+      const motivo = (err && err.name === 'AbortError') ? 'tiempo límite agotado' : 'fallo de red';
+      mostrarAviso('warn', 'Error transitorio (' + motivo + ').');
+      fijarEstado('warn', 'Error: ' + motivo);
+      fetching = false;
+      programarSiguiente();
+      return;
+    }
+
+    if (response.status === 401){ pararFatal('401: API Key inválida o no autorizada.'); fetching = false; return; }
+    if (response.status === 404){ pararFatal('404: Station ID no encontrado.'); fetching = false; return; }
+    if (!response.ok){
+      mostrarAviso('warn', 'Error transitorio (HTTP ' + response.status + ').');
+      fijarEstado('warn', 'Error HTTP ' + response.status);
+      fetching = false;
+      programarSiguiente();
+      return;
+    }
+
+    let data;
+    try { data = await response.json(); }
+    catch (err) {
+      mostrarAviso('warn', 'Error transitorio (respuesta no válida).');
+      fijarEstado('warn', 'Respuesta no válida');
+      fetching = false;
+      programarSiguiente();
+      return;
+    }
+
+    const obs = (data.observations || [])[0];
+    if (obs){
+      ocultarAviso();
+      const epochMs = obs.epoch ? obs.epoch * 1000 : Date.now();
+      actual = { epochMs, vals: extraerValores(obs) };
+      pintarTiles();
+      pintarMeta();
+      fijarEstado(activo.modo === 'manual' ? 'manual' : 'ok', activo.modo === 'manual' ? 'Manual · al día' : 'En vivo');
+    } else {
+      mostrarAviso('warn', 'La estación no devolvió ninguna lectura.');
+      fijarEstado('warn', 'Sin lectura');
+    }
+
+    fetching = false;
+    programarSiguiente();
+  }
+
+  function programarSiguiente(){
+    if (!activo || activo.modo === 'manual') return;
+    timeoutId = setTimeout(() => ciclo(false), activo.intervaloMs);
+  }
+
+  function pararFatal(motivo){
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = null;
+    mostrarAviso('danger', motivo);
+    fijarEstado('err', 'Error fatal');
+  }
+
+  function girarIconoActualizar(){
+    btnActualizar.classList.remove('girando');
+    void btnActualizar.offsetWidth; // reinicia la animación aunque se pulse varias veces seguidas
+    btnActualizar.classList.add('girando');
+  }
+
+  /* ============================================================
+     ARRANQUE / REINICIO CON LOS AJUSTES ACTIVOS
+     ============================================================ */
+  function iniciar(){
+    const stationId = (localStorage.getItem(STORAGE_KEY_STATION) || '').trim();
+    actualizarVisibilidad();
+    if (!stationId) { fijarEstado('off', 'Detenido'); return; }
+
+    const modo = localStorage.getItem(SK_MODO) === 'manual' ? 'manual' : 'auto';
+    activo = {
+      stationId,
+      apiKey: (localStorage.getItem(STORAGE_KEY_APIKEY) || '').trim(),
+      modo,
+      intervaloMs: leerIntervaloMin({ value: localStorage.getItem(SK_INTERVALO) }, DEFAULTS.intervaloMin) * 60000
+    };
+
+    fijarEstado(modo === 'manual' ? 'manual' : 'warn', modo === 'manual' ? 'Manual · pulsa Actualizar' : 'Actualizando…');
+    ciclo(false);
+  }
+
+  function reiniciarConAjustesActuales(){
+    if (timeoutId) clearTimeout(timeoutId);
+    iniciar();
+  }
+
+  /* ============================================================
+     DIÁLOGOS
+     ============================================================ */
+  function abrirHoja(hoja){
+    sheetBackdrop.classList.add('visible');
+    hoja.classList.add('visible');
+  }
+  function cerrarHoja(hoja){
+    hoja.classList.remove('visible');
+    if (!settingsSheet.classList.contains('visible') && !infoSheet.classList.contains('visible')){
+      sheetBackdrop.classList.remove('visible');
+    }
+  }
+  function cerrarTodasLasHojas(){
+    [settingsSheet, infoSheet].forEach(h => h.classList.remove('visible'));
+    sheetBackdrop.classList.remove('visible');
+  }
+
+  sheetBackdrop.addEventListener('click', cerrarTodasLasHojas);
+  $('btnSettings').addEventListener('click', () => { cargarAjustes(); abrirHoja(settingsSheet); });
+  $('btnInfo').addEventListener('click', () => abrirHoja(infoSheet));
+  $('btnCerrarAjustes').addEventListener('click', () => cerrarHoja(settingsSheet));
+  $('btnCerrarInfo').addEventListener('click', () => cerrarHoja(infoSheet));
+  $('btnAbrirAjustesVacio').addEventListener('click', () => { cargarAjustes(); abrirHoja(settingsSheet); });
+
+  modoInput.addEventListener('change', aplicarModoUI);
+  $('btnGuardarAjustes').addEventListener('click', guardarAjustes);
+
+  btnVerApiKeyM.addEventListener('click', () => {
+    const mostrar = apiKeyInputM.type === 'password';
+    apiKeyInputM.type = mostrar ? 'text' : 'password';
+    btnVerApiKeyM.setAttribute('aria-pressed', String(mostrar));
+    iconoOjoM.innerHTML = mostrar
+      ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 4.22-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.9 19.9 0 0 1-2.22 3.2M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"/>'
+      : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+  });
+
+  btnActualizar.addEventListener('click', () => {
+    if (!activo){ cargarAjustes(); abrirHoja(settingsSheet); return; }
+    ciclo(true);
+  });
+
+  /* ============================================================
+     ARRANQUE
+     ============================================================ */
+  construirTiles();
+  cargarAjustes();
+  iniciar();
+
+})();
+</script>
+</body>
+</html>

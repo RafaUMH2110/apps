@@ -16,7 +16,7 @@
   /* Marca — constante en claro y oscuro */
   --brasa:#E4572E; --brasa-osc:#C9441F;
   --forjado:#0E7C6B;
-  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado);
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9;
   --r:14px;
   --display:'Bricolage Grotesque',Georgia,serif;
   --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -43,7 +43,7 @@
     --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
     --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
     --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
-    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
     --forjado:#1FBE9F;
     --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
     --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
@@ -199,7 +199,9 @@ button{font-family:var(--texto);cursor:pointer}
 .progreso-etiqueta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
 
 /* Tarjetas de métricas */
-.datos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:4px}
+.datos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+@media(max-width:760px){.datos-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.datos-grid{grid-template-columns:1fr}}
 .feat{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:14px 15px;border-top:4px solid var(--c)}
 .feat .fi{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,var(--card-bg));color:var(--c);display:grid;place-items:center;margin-bottom:9px}
 .feat .fi svg{width:18px;height:18px}
@@ -523,7 +525,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
     <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
       <table class="t">
-        <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Dirección</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
         <tbody id="historialCuerpo"></tbody>
       </table>
     </div>
@@ -538,7 +540,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:53</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:59</p>
 </footer>
 
 <div class="bottomnav">
@@ -561,6 +563,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Sensación térmica</b><span>Con calor (≥ 27 °C) usa el índice de calor (temperatura + humedad); con frío (≤ 10 °C y algo de viento) usa la sensación de frío por viento; en el resto de casos coincide con la temperatura del aire. Se calcula en el navegador, sin llamadas adicionales a la API.</span></div>
         <div><b>Punto de rocío</b><span>Temperatura a la que el aire, enfriándose, llegaría a saturarse de humedad y empezaría a condensar. Cuanto más cerca está de la temperatura del aire, más húmedo (bochornoso) se percibe el ambiente.</span></div>
         <div><b>Lluvia acumulada</b><span>Total de lluvia (mm) que la propia estación lleva acumulado, normalmente desde la medianoche local; se reinicia por sí sola cada día en el hardware, no en esta app.</span></div>
+        <div><b>Dirección del viento</b><span>De dónde viene el viento, en grados (0-360°, con 0°/360° = Norte) y como punto cardinal (N, NO, SE...). Al ser una magnitud circular, la flecha de tendencia puede ser poco intuitiva justo al cruzar los 0°/360°.</span></div>
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
@@ -606,6 +609,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     pressure_hpa:  { min: 850,  max: 1085 },
     wind_kmh:      { min: 0,    max: 250  },
     gust_kmh:      { min: 0,    max: 300  },
+    wind_dir_deg:  { min: 0,    max: 360  },
     rainrate_mmh:  { min: 0,    max: 500  },
     rain_total_mm: { min: 0,    max: 1000 },
     solarradiation_wm2: { min: 0, max: 1500 },
@@ -621,6 +625,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { key: 'pressure_hpa', etiqueta: 'Presión',        unidad: 'hPa',  icono: 'gauge',       color: 'var(--c-pres)' },
     { key: 'wind_kmh',     etiqueta: 'Viento',         unidad: 'km/h', icono: 'wind',        color: 'var(--c-wind)' },
     { key: 'gust_kmh',     etiqueta: 'Racha',          unidad: 'km/h', icono: 'wind',        color: 'var(--c-gust)' },
+    { key: 'wind_dir_deg', etiqueta: 'Dirección del viento', unidad: '°', icono: 'wind',    color: 'var(--c-dir)'  },
     { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h', icono: 'cloud-rain',  color: 'var(--c-rain)' },
     { key: 'rain_total_mm', etiqueta: 'Lluvia acumulada', unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)' },
     { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun',  color: 'var(--c-solar)' },
@@ -942,6 +947,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
   function firstDefined(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
+
+  // Mismos 16 rumbos que usan TeleMet iPad/Mobile Pro para traducir los
+  // grados de dirección del viento a un punto cardinal legible.
+  const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function gradosACompass(deg){
+    if (deg === null || deg === undefined || !Number.isFinite(deg)) return null;
+    const idx = Math.round(((deg % 360) / 22.5)) % 16;
+    return COMPASS[(idx + 16) % 16];
+  }
   function fmt(valor){ return (valor === null || valor === undefined) ? '—' : String(valor); }
 
   // Sensación térmica: índice de calor (NWS/Rothfusz) con temperaturas altas
@@ -1130,6 +1144,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const el = document.querySelector('#tile-' + m.key + ' .valor-num');
       el.textContent = fmt(t[m.key]);
       actualizarTendencia(m.key, t[m.key]);
+      if (m.key === 'wind_dir_deg'){
+        // Además del número, muestra el rumbo (NO, SE...) junto al símbolo
+        // de grados: un "243°" solo dice poco sin el punto cardinal.
+        const elUnidad = document.querySelector('#tile-wind_dir_deg .unidad');
+        const comp = gradosACompass(t.wind_dir_deg);
+        elUnidad.textContent = comp ? ('° ' + comp) : '°';
+      }
     });
     valorCalidad.textContent = fmt(t.quality_code);
     metaLinea.textContent = 'Última lectura: ' + new Date().toLocaleTimeString('es-ES') +
@@ -1162,6 +1183,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       '<td>' + fmt(t.pressure_hpa) + '</td>' +
       '<td>' + fmt(t.wind_kmh) + '</td>' +
       '<td>' + fmt(t.gust_kmh) + '</td>' +
+      '<td>' + fmt(t.wind_dir_deg !== null ? Math.round(t.wind_dir_deg) + '° ' + (gradosACompass(t.wind_dir_deg) || '') : null) + '</td>' +
       '<td>' + fmt(t.rainrate_mmh) + '</td>' +
       '<td>' + fmt(t.rain_total_mm) + '</td>' +
       '<td>' + fmt(t.solarradiation_wm2) + '</td>' +
@@ -1185,7 +1207,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function descargarCSV(){
     if (filasHistorial.length === 0) return;
-    const columnas = ['hora', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
+    const columnas = ['hora', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
     const lineas = [columnas.join(',')];
     filasHistorial.forEach(r => {
       lineas.push(columnas.map(c => {
@@ -1276,6 +1298,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       pressure_hpa: numOrNull(metric.pressure),
       wind_kmh: windKmh,
       gust_kmh: numOrNull(metric.windGust),
+      // "winddir" (grados, 0-360) va suelto en la raíz de obs, igual que
+      // solarRadiation/qcStatus: no depende de unidades, así que no está
+      // dentro de metric/imperial.
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
       rainrate_mmh: numOrNull(metric.precipRate),
       rain_total_mm: numOrNull(metric.precipTotal),
       // Nombre oficial de la API (PWS current/history): "solarRadiation" en

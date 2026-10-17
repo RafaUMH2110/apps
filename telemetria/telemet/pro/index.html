@@ -475,7 +475,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
     <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
       <table class="t">
-        <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Freshness</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Hora</th><th>Temp.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Lluvia</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
         <tbody id="historialCuerpo"></tbody>
       </table>
     </div>
@@ -490,7 +490,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 16 de octubre de 2026, 17:52</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 20:20</p>
 </footer>
 
 <div class="bottomnav">
@@ -941,6 +941,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       '<td>' + fmt(t.humidity_pct) + '</td>' +
       '<td>' + fmt(t.pressure_hpa) + '</td>' +
       '<td>' + fmt(t.wind_kmh) + '</td>' +
+      '<td>' + fmt(t.gust_kmh) + '</td>' +
+      '<td>' + fmt(t.rainrate_mmh) + '</td>' +
+      '<td>' + fmt(t.solarradiation_wm2) + '</td>' +
+      '<td>' + fmt(t.uv_index) + '</td>' +
+      '<td>' + fmt(t.quality_code) + '</td>' +
       '<td>' + t.staleness_s.toFixed(1) + 's</td>' +
       '<td>' + estadoTexto + '</td>';
     historialCuerpo.appendChild(fila);

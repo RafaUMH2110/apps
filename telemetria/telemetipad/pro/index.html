@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 03:10</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:18</div>
 </section>
 
 <script>
@@ -541,6 +541,7 @@
   const SK_BACKOFF_B = 'telemetipadpro_backoff_base_s';
   const SK_BACKOFF_M = 'telemetipadpro_backoff_max_s';
   const SK_STALE     = 'telemetipadpro_stale_threshold_s';
+  const SK_HIST_DIAS = 'telemetipadpro_historial_dias_cache';
 
   const DEFAULTS = {
     pollIntervalS: 60,
@@ -1078,12 +1079,35 @@
     return { tempMax, tempMin, rainTotal, gustMax, n: lecturas.length };
   }
 
+  // Además de las lecturas detalladas en IndexedDB, los resúmenes ya
+  // calculados (máx/mín/lluvia/racha por día) se guardan en localStorage
+  // para poder pintar la tarjeta "Últimos días" al instante al arrancar,
+  // sin esperar a las consultas a IndexedDB. Esa consulta posterior sigue
+  // siendo la fuente de verdad y sobrescribe esta caché en cuanto termina.
+  function guardarHistorialDiasEnStorage(stationId){
+    try {
+      localStorage.setItem(SK_HIST_DIAS, JSON.stringify({ stationId, dias: historialDiasCache }));
+    } catch (err) { /* almacenamiento lleno o no disponible: se ignora */ }
+  }
+
+  function cargarHistorialDiasDeStorage(stationId){
+    try {
+      const raw = localStorage.getItem(SK_HIST_DIAS);
+      if (!raw) return false;
+      const datos = JSON.parse(raw);
+      if (!datos || datos.stationId !== stationId || !datos.dias) return false;
+      historialDiasCache = datos.dias;
+      return true;
+    } catch (err) { return false; }
+  }
+
   async function refrescarHistorialDiasCache(){
     if (!activo) return;
     const claves = dayKeysRecientes(DIAS_HISTORIAL).filter(k => k !== dayKeyActual);
     const resultados = await Promise.all(claves.map(k => consultarDia(activo.stationId, k)));
     historialDiasCache = {};
     claves.forEach((k, i) => { historialDiasCache[k] = resumenDeLecturas(resultados[i]); });
+    guardarHistorialDiasEnStorage(activo.stationId);
   }
 
   function pintarHistorialDias(){
@@ -1820,6 +1844,12 @@
     const stationId = (localStorage.getItem(STORAGE_KEY_STATION) || '').trim();
     if (stationId){
       dayKeyActual = dayKeyLocal(new Date());
+
+      // Pinta de inmediato el histórico de días anteriores con lo que haya
+      // en caché (si lo hay), sin esperar a las consultas a IndexedDB de
+      // abajo, que son la fuente de verdad y repintan en cuanto terminan.
+      if (cargarHistorialDiasDeStorage(stationId)) pintarHistorialDias();
+
       try {
         lecturasHoy = (await consultarDia(stationId, dayKeyActual)).map(r => ({ epochMs:r.epochMs, vals:r.vals }));
         lecturasHoy.sort((a,b) => a.epochMs - b.epochMs);

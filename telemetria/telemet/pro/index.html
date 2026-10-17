@@ -524,7 +524,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     </div>
   </details>
 
-  <details class="acc-evol" id="accEvol7d">
+  <details class="acc-evol" id="accEvol7d" open>
     <summary><svg class="i"><use href="#i-archive"></use></svg>Evolución de los últimos 7 días<svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
       <p class="evol-nota">Un punto por día (máximo/mínimo o total, según la variable). Al iniciar el monitor se intenta rellenar automáticamente con el histórico de la API para los días sin datos locales; si ese histórico no está disponible, la gráfica se completa solo con lo registrado desde este navegador.</p>
@@ -554,7 +554,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:35</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:27</p>
 </footer>
 
 <div class="bottomnav">
@@ -607,6 +607,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const STORAGE_KEY_STALE     = 'telemetpro_stale_threshold_s';
   const STORAGE_KEY_HISTLEN   = 'telemetpro_history_len';
   const STORAGE_KEY_EJE_X     = 'telemetpro_eje_x_modo';
+  const STORAGE_KEY_EVOL7D    = 'telemetpro_evolucion_7d_cache';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
@@ -1802,6 +1803,80 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     });
   }
 
+  // Agrega las lecturas en bruto de un día a un único resumen, con una
+  // clave por cada combinación (variable, agregación) que usan las
+  // gráficas de 7 días. Ese resumen, mucho más compacto que las lecturas
+  // en bruto, es lo que se guarda en localStorage para poder repintar las
+  // gráficas al instante al arrancar.
+  function agregarValoresDia(valsDelDia){
+    const resumen = {};
+    CHART_GROUPS_7D.forEach(grupo => {
+      grupo.series.forEach(s => {
+        const valores = valsDelDia.map(v => v[s.clave]).filter(v => v !== null && v !== undefined);
+        if (valores.length === 0) return;
+        let agregado;
+        if (s.agregacion === 'max') agregado = Math.max.apply(null, valores);
+        else if (s.agregacion === 'min') agregado = Math.min.apply(null, valores);
+        else agregado = valores.reduce((a, b) => a + b, 0) / valores.length;
+        resumen[s.clave + '_' + s.agregacion] = agregado;
+      });
+    });
+    return resumen;
+  }
+
+  function pintarGraficos7dDesdeResumenes(resumenesPorDia, xTicks, divisor){
+    charts7d.innerHTML = '';
+    CHART_GROUPS_7D.forEach(grupo => {
+      const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
+      charts7d.appendChild(card.el);
+      const series = grupo.series.map(s => {
+        const puntos = [];
+        resumenesPorDia.forEach((resumen, idx) => {
+          const v = resumen ? resumen[s.clave + '_' + s.agregacion] : null;
+          if (v === null || v === undefined) return;
+          puntos.push({ x: idx / divisor, y: v });
+        });
+        return { etiqueta: s.etiqueta, color: s.color, puntos: puntos };
+      });
+      // En 7 días, xTicks ya es un punto por día: sirve igual como lista
+      // de posiciones de "engancho" para el cursor.
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, xTicks);
+    });
+  }
+
+  function claveDia(d){
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  // Igual que con las fichas de "Últimos días" de TeleMet Mobile/iPad Pro:
+  // además de las lecturas en bruto en IndexedDB, el resumen ya agregado
+  // de cada día se guarda en localStorage para pintar las gráficas de 7
+  // días al instante al arrancar, sin esperar a la consulta a IndexedDB
+  // (que sigue siendo la fuente de verdad y repinta en cuanto termina).
+  function guardarEvolucion7dEnStorage(stationId, dias, resumenesPorDia){
+    try {
+      localStorage.setItem(STORAGE_KEY_EVOL7D, JSON.stringify({
+        stationId, dias: dias.map(claveDia), resumenes: resumenesPorDia
+      }));
+    } catch (err) { /* almacenamiento lleno o no disponible: se ignora */ }
+  }
+
+  function pintarEvolucion7dDesdeCache(stationId){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_EVOL7D);
+      if (!raw) return false;
+      const datos = JSON.parse(raw);
+      if (!datos || datos.stationId !== stationId || !datos.dias || !datos.resumenes) return false;
+      const divisor = datos.dias.length > 1 ? datos.dias.length - 1 : 1;
+      const xTicks = datos.dias.map((k, i) => {
+        const d = new Date(k + 'T00:00:00');
+        return { frac: i / divisor, etiqueta: pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) };
+      });
+      pintarGraficos7dDesdeResumenes(datos.resumenes, xTicks, divisor);
+      return true;
+    } catch (err) { return false; }
+  }
+
   async function dibujarEvolucion7d(){
     const stationId = estacionParaEvolucion();
     if (!stationId){ charts7d.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
@@ -1825,28 +1900,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     });
     const divisor = dias.length > 1 ? dias.length - 1 : 1;
     const xTicks = dias.map((d, i) => ({ frac: i / divisor, etiqueta: pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) }));
+    const resumenesPorDia = porDia.map(agregarValoresDia);
 
-    charts7d.innerHTML = '';
-    CHART_GROUPS_7D.forEach(grupo => {
-      const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
-      charts7d.appendChild(card.el);
-      const series = grupo.series.map(s => {
-        const puntos = [];
-        porDia.forEach((valsDelDia, idx) => {
-          const valores = valsDelDia.map(v => v[s.clave]).filter(v => v !== null && v !== undefined);
-          if (valores.length === 0) return;
-          let agregado;
-          if (s.agregacion === 'max') agregado = Math.max.apply(null, valores);
-          else if (s.agregacion === 'min') agregado = Math.min.apply(null, valores);
-          else agregado = valores.reduce((a, b) => a + b, 0) / valores.length;
-          puntos.push({ x: idx / divisor, y: agregado });
-        });
-        return { etiqueta: s.etiqueta, color: s.color, puntos: puntos };
-      });
-      // En 7 días, xTicks ya es un punto por día: sirve igual como lista
-      // de posiciones de "engancho" para el cursor.
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, xTicks);
-    });
+    pintarGraficos7dDesdeResumenes(resumenesPorDia, xTicks, divisor);
+    guardarEvolucion7dEnStorage(stationId, dias, resumenesPorDia);
   }
 
   function redibujarEvolucionSiAbierta(){
@@ -1891,6 +1948,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   construirTarjetas();
   cargarConfig();
+
+  // El panel de "Evolución de los últimos 7 días" está abierto por
+  // defecto: se pinta de inmediato con lo que haya en caché (si lo hay),
+  // y en cuanto a continuación termine la consulta real a IndexedDB se
+  // repinta con los datos definitivos.
+  {
+    const stationIdInicial = estacionParaEvolucion();
+    if (stationIdInicial) pintarEvolucion7dDesdeCache(stationIdInicial);
+  }
+  redibujarEvolucionSiAbierta();
 })();
 </script>
 </body>

@@ -161,6 +161,30 @@ button{font-family:var(--texto);cursor:pointer}
 .acc[open]>summary .chev{transform:rotate(180deg)}
 .acc .inner{padding-top:14px}
 
+/* Acordeón de evolución (gráficas de 12 h / 7 días), mismo patrón que .acc
+   pero como su propio bloque con fondo de tarjeta (no anidado en una). */
+.acc-evol{border:1px solid var(--line);border-radius:var(--r);background:var(--card-bg);box-shadow:var(--sombra);padding:16px 18px;margin-bottom:14px}
+.acc-evol>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);font-family:var(--display)}
+.acc-evol>summary::-webkit-details-marker{display:none}
+.acc-evol>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc-evol[open]>summary .chev{transform:rotate(180deg)}
+.acc-evol .inner{padding-top:16px}
+.evol-nota{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.evol-vacio{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+
+.chart-card{margin-bottom:16px}
+.chart-card:last-child{margin-bottom:0}
+.chart-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 16px;margin:0 0 6px}
+.chart-head h4{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0;letter-spacing:-.01em}
+.chart-leyenda{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+.leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chart-svg{width:100%;height:160px;display:block;background:var(--page-bg);border-radius:10px}
+.chart-svg .grafico-linea{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
+.chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+.chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.5}
+
 /* Estadísticas */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
 @media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
@@ -469,10 +493,26 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <div class="datos-grid" style="margin-top:12px">
     <div class="feat tile-calidad" style="--c:#2E4B6B">
       <div class="fi"><svg class="i"><use href="#i-check"></use></svg></div>
-      <div class="etiqueta">Calidad del dato (qualityControlFlag)</div>
+      <div class="etiqueta">Calidad del dato (qcStatus)</div>
       <div class="valor" id="valorCalidad">—</div>
     </div>
   </div>
+
+  <details class="acc-evol" id="accEvol12h">
+    <summary><svg class="i"><use href="#i-activity"></use></svg>Evolución de las últimas 12 horas<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha.</p>
+      <div id="charts12h"><p class="evol-vacio">Todavía no hay datos suficientes. Inicia el monitor y deja que pasen unos minutos.</p></div>
+    </div>
+  </details>
+
+  <details class="acc-evol" id="accEvol7d">
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Evolución de los últimos 7 días<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-nota">Un punto por día (máximo/mínimo o total, según la variable). Al iniciar el monitor se intenta rellenar automáticamente con el histórico de la API para los días sin datos locales; si ese histórico no está disponible, la gráfica se completa solo con lo registrado desde este navegador.</p>
+      <div id="charts7d"><p class="evol-vacio">Todavía no hay datos suficientes.</p></div>
+    </div>
+  </details>
 
   <!-- ============ SECCIÓN 4 · HISTÓRICO DE LA SESIÓN ============ -->
   <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Histórico de esta sesión</h2><p class="sh-lede">Se reinicia al recargar la página; no se guarda en ningún sitio. Se conservan como máximo las últimas <span id="maxFilasTexto">500</span> lecturas.</p></div></header>
@@ -496,7 +536,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 21:32</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 22:50</p>
 </footer>
 
 <div class="bottomnav">
@@ -522,6 +562,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
+        <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales.</span></div>
       </div>
     </div>
   </div>
@@ -586,6 +627,48 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   const UMBRAL_TENDENCIA = 0.05;
 
+  // Histórico local (IndexedDB) para las gráficas de evolución de 12 h / 7 días.
+  const HISTORY_URL = 'https://api.weather.com/v2/pws/history/all';
+  const DB_NAME = 'telemetpro_db';
+  const DB_VERSION = 1;
+  const DB_STORE = 'lecturas';
+  const VENTANA_12H_MS = 12 * 60 * 60 * 1000;
+  const DIAS_SEMANA = 7;
+  const RETENCION_LOCAL_DIAS = 9; // algo más de 7 días, margen para el backfill
+
+  // Grupos de gráficos de "últimas 12 horas" (eje de tiempo continuo).
+  // Cada grupo puede combinar varias variables de GRAFICABLES en una sola gráfica.
+  const CHART_GROUPS_12H = [
+    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
+    { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
+    { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
+    { titulo: 'Tasa de lluvia', unidad: 'mm/h', claves: ['rainrate_mmh'] },
+    { titulo: 'Lluvia acumulada', unidad: 'mm', claves: ['rain_total_mm'] },
+    { titulo: 'Radiación solar', unidad: 'W/m²', claves: ['solarradiation_wm2'] },
+    { titulo: 'Índice UV', unidad: '', claves: ['uv_index'] }
+  ];
+
+  // Grupos de gráficos de "últimos 7 días" (un punto por día; agregación indicada).
+  const CHART_GROUPS_7D = [
+    { titulo: 'Temperatura (máx./mín. del día)', unidad: '°C', series: [
+        { clave: 'temp_c', agregacion: 'max', etiqueta: 'Máx.', color: 'var(--c-temp)' },
+        { clave: 'temp_c', agregacion: 'min', etiqueta: 'Mín.', color: 'var(--c-wind)' }
+      ] },
+    { titulo: 'Humedad (media del día)', unidad: '%', series: [
+        { clave: 'humidity_pct', agregacion: 'avg', etiqueta: 'Media', color: 'var(--c-hum)' }
+      ] },
+    { titulo: 'Lluvia acumulada (total del día)', unidad: 'mm', series: [
+        { clave: 'rain_total_mm', agregacion: 'max', etiqueta: 'Total', color: 'var(--c-rain)' }
+      ] },
+    { titulo: 'Presión (media del día)', unidad: 'hPa', series: [
+        { clave: 'pressure_hpa', agregacion: 'avg', etiqueta: 'Media', color: 'var(--c-pres)' }
+      ] },
+    { titulo: 'Racha máxima del día', unidad: 'km/h', series: [
+        { clave: 'gust_kmh', agregacion: 'max', etiqueta: 'Máx.', color: 'var(--c-gust)' }
+      ] }
+  ];
+
   /* ============================================================
      ELEMENTOS DEL DOM
      ============================================================ */
@@ -627,6 +710,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const btnEjeTiempo = document.getElementById('btnEjeTiempo');
   const btnReiniciarGraficas = document.getElementById('btnReiniciarGraficas');
 
+  const accEvol12h = document.getElementById('accEvol12h');
+  const accEvol7d = document.getElementById('accEvol7d');
+  const charts12h = document.getElementById('charts12h');
+  const charts7d = document.getElementById('charts7d');
+
   const historialVacio = document.getElementById('historialVacio');
   const historialEnvoltorio = document.getElementById('historialEnvoltorio');
   const historialCuerpo = document.getElementById('historialCuerpo');
@@ -660,6 +748,88 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const filasHistorial = [];
 
   GRAFICABLES.forEach(m => { series[m.key] = []; ultimoValor[m.key] = null; });
+  let dbPromise = null;
+  let backfillEnCurso = false;
+
+  /* ============================================================
+     PERSISTENCIA LOCAL (IndexedDB) — histórico para las gráficas
+     de evolución de 12 h / 7 días. Independiente del "histórico de
+     esta sesión" (sección 4), que vive solo en memoria y se pierde
+     al recargar: este guarda cada lectura en el navegador y
+     persiste entre sesiones, con purga pasados RETENCION_LOCAL_DIAS.
+     ============================================================ */
+  function abrirDB(){
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB){ dbPromise = Promise.reject(new Error('IndexedDB no disponible en este navegador')); return dbPromise; }
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(DB_STORE)){
+          const store = db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('por_estacion', 'stationId', { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  async function guardarLectura(stationId, epochMs, vals){
+    try {
+      const db = await abrirDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).add({ stationId: stationId, epochMs: epochMs, vals: vals });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      // El histórico local es un complemento; si falla (modo privado, cuota, etc.)
+      // el resto de la app sigue funcionando con normalidad, solo sin gráficas de evolución.
+    }
+  }
+
+  async function consultarRango(stationId, tDesdeMs, tHastaMs){
+    try {
+      const db = await abrirDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const idx = tx.objectStore(DB_STORE).index('por_estacion');
+        const out = [];
+        const req = idx.openCursor(IDBKeyRange.only(stationId));
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur){ resolve(out); return; }
+          const r = cur.value;
+          if (r.epochMs >= tDesdeMs && r.epochMs <= tHastaMs) out.push(r);
+          cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      return [];
+    }
+  }
+
+  async function purgarAntiguos(stationId, tLimiteMs){
+    try {
+      const db = await abrirDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const idx = tx.objectStore(DB_STORE).index('por_estacion');
+        const req = idx.openCursor(IDBKeyRange.only(stationId));
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur){ resolve(); return; }
+          if (cur.value.epochMs < tLimiteMs) cur.delete();
+          cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) { /* purga best-effort */ }
+  }
 
   /* ============================================================
      CONSTRUCCIÓN DE LAS TARJETAS DE MÉTRICA (una vez, al cargar)
@@ -1087,6 +1257,37 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   /* ============================================================
+     EXTRACCIÓN DE VALORES DE UNA OBSERVACIÓN (compartida por el
+     motor en vivo y por el backfill histórico, para no duplicar
+     el mapeo de campos de la API ni sus nombres/fallbacks).
+     ============================================================ */
+  function extraerValores(obs){
+    const metric = obs.metric || {};
+    const tempC = numOrNull(metric.temp);
+    const humPct = numOrNull(obs.humidity);
+    const windKmh = numOrNull(metric.windSpeed);
+    return {
+      temp_c: tempC,
+      heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewpoint)),
+      humidity_pct: humPct,
+      pressure_hpa: numOrNull(metric.pressure),
+      wind_kmh: windKmh,
+      gust_kmh: numOrNull(metric.windGust),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      rain_total_mm: numOrNull(metric.precipTotal),
+      // Nombre oficial de la API (PWS current/history): "solarRadiation" en
+      // camelCase y "qcStatus" para el control de calidad, ambos sueltos en
+      // la raíz de obs (no dentro de metric/imperial). Se mantiene un
+      // fallback a variantes en minúsculas / el nombre antiguo por si tu
+      // estación llega a través de una pasarela que las reporte así.
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation)),
+      uv_index: numOrNull(obs.uv),
+      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
+    };
+  }
+
+  /* ============================================================
      MOTOR DEL MONITOR
      ============================================================ */
   async function cicloConsulta(){
@@ -1127,35 +1328,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     contReintentos.textContent = '0';
     ocultarError();
 
-    const metric = obs.metric || {};
     const ahoraMs = Date.now();
     const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
     const stalenessS = (ahoraMs - obsMs) / 1000;
 
-    const tempC = numOrNull(metric.temp);
-    const humPct = numOrNull(obs.humidity);
-    const windKmh = numOrNull(metric.windSpeed);
-    const t = {
-      temp_c: tempC,
-      heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
-      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewpoint)),
-      humidity_pct: humPct,
-      pressure_hpa: numOrNull(metric.pressure),
-      wind_kmh: windKmh,
-      gust_kmh: numOrNull(metric.windGust),
-      rainrate_mmh: numOrNull(metric.precipRate),
-      rain_total_mm: numOrNull(metric.precipTotal),
-      // Nombre oficial de la API (PWS current obs): "solarRadiation" en
-      // camelCase y "qcStatus" para el control de calidad, ambos sueltos en
-      // la raíz de obs (no dentro de metric/imperial). Se mantiene un
-      // fallback a variantes en minúsculas / el nombre antiguo por si tu
-      // estación llega a través de una pasarela que las reporte así.
-      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation)),
-      uv_index: numOrNull(obs.uv),
-      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A'),
+    const t = Object.assign(extraerValores(obs), {
       staleness_s: stalenessS,
       latency_ms: latenciaMs
-    };
+    });
 
     lecturasRecibidas += 1;
     contLecturas.textContent = lecturasRecibidas;
@@ -1163,6 +1343,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     pintarValoresActuales(t);
     registrarEnSeries(t);
     anadirAlHistorial(t, activo.staleThresholdS);
+    guardarLectura(activo.stationId, obsMs, t);
+    redibujarEvolucionSiAbierta();
 
     if (!esPlausible(t)) avisoPlausibilidad.style.display = 'flex';
     else avisoPlausibilidad.style.display = 'none';
@@ -1207,6 +1389,53 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     INPUTS_CONFIG.forEach(i => { i.disabled = false; });
   }
 
+  /* ============================================================
+     BACKFILL HISTÓRICO (mejor esfuerzo) PARA LAS GRÁFICAS DE 7 DÍAS
+     ============================================================ */
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function fechaYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+
+  function construirURLHistorico(stationId, apiKey, fechaYmd){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm', date: fechaYmd });
+    if (apiKey) params.set('apiKey', apiKey);
+    return HISTORY_URL + '?' + params.toString();
+  }
+
+  // Rellena, día a día, los últimos DIAS_SEMANA días que todavía no tengan
+  // ninguna lectura local, consultando el histórico de la API. Es un
+  // complemento de "mejor esfuerzo": si un día falla (estación sin
+  // histórico disponible, error de red, etc.) simplemente se omite y la
+  // gráfica de 7 días se completa solo con lo que haya en IndexedDB.
+  async function backfillSiNecesario(stationId, apiKey){
+    if (backfillEnCurso) return;
+    backfillEnCurso = true;
+    try {
+      for (let i = 0; i < DIAS_SEMANA; i++){
+        if (!running) break; // el usuario pudo pulsar "Detener" mientras tanto
+        const fecha = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const inicioDiaMs = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 0, 0, 0, 0).getTime();
+        const finDiaMs = inicioDiaMs + 24 * 60 * 60 * 1000 - 1;
+        const existentes = await consultarRango(stationId, inicioDiaMs, finDiaMs);
+        if (existentes.length > 0) continue; // ya hay datos locales de ese día: no se duplica
+
+        try {
+          const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(fecha));
+          const resp = await fetchConTimeout(url, 15000);
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          const obsArr = data.observations || [];
+          for (const obs of obsArr){
+            if (!obs.epoch) continue;
+            await guardarLectura(stationId, obs.epoch * 1000, extraerValores(obs));
+          }
+        } catch (err) { /* un día sin histórico disponible no detiene el resto */ }
+      }
+    } finally {
+      backfillEnCurso = false;
+      redibujarEvolucionSiAbierta();
+    }
+  }
+
   function iniciarMonitor(){
     const stationId = stationIdInput.value.trim();
     if (!stationId) return;
@@ -1233,10 +1462,178 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     fijarLuz('ok', 'En ejecución');
     progresoEtiqueta.textContent = 'Realizando la primera consulta…';
 
+    const limiteMs = Date.now() - RETENCION_LOCAL_DIAS * 24 * 60 * 60 * 1000;
+    purgarAntiguos(stationId, limiteMs);
+    backfillSiNecesario(stationId, activo.apiKey);
+
     cicloConsulta();
   }
 
   function detenerMonitor(){ pararMonitor('manual', null); }
+
+  /* ============================================================
+     GRÁFICAS DE EVOLUCIÓN (12 h / 7 días) — opcionales, se dibujan
+     solo cuando el panel correspondiente está abierto, a partir del
+     histórico local en IndexedDB (no del histórico de sesión).
+     ============================================================ */
+  function escHTML(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function construirTarjetaGrafico(titulo, unidad){
+    const el = document.createElement('div');
+    el.className = 'chart-card';
+    el.innerHTML =
+      '<div class="chart-head"><h4>' + escHTML(titulo) + (unidad ? ' (' + escHTML(unidad) + ')' : '') + '</h4><div class="chart-leyenda"></div></div>' +
+      '<svg class="chart-svg" viewBox="0 0 600 180" preserveAspectRatio="none"></svg>';
+    return { el: el, leyenda: el.querySelector('.chart-leyenda'), svg: el.querySelector('.chart-svg') };
+  }
+
+  // Dibuja (o redibuja) una gráfica de líneas simple dentro de un <svg> ya
+  // insertado en el DOM. "series" es [{ etiqueta, color, puntos:[{x,y}] }]
+  // con x ya normalizada a 0..1; "xTicks" es [{ frac, etiqueta }].
+  function dibujarGraficoSVG(svg, leyendaEl, series, xTicks){
+    const W = 600, H = 180;
+    const M = { l: 44, r: 10, t: 10, b: 22 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+
+    leyendaEl.innerHTML = '';
+    const conPuntos = series.filter(s => s.puntos.length > 0);
+    if (conPuntos.length === 0){
+      svg.innerHTML = '<text class="grafico-etiqueta" x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle">Sin datos en este periodo</text>';
+      return;
+    }
+
+    let yMin = Infinity, yMax = -Infinity;
+    conPuntos.forEach(s => s.puntos.forEach(p => { if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y; }));
+    if (yMin === yMax){ yMin -= 1; yMax += 1; }
+    const relleno = (yMax - yMin) * 0.08;
+    yMin -= relleno; yMax += relleno;
+
+    const xPix = f => M.l + f * pw;
+    const yPix = v => M.t + (1 - (v - yMin) / (yMax - yMin)) * ph;
+
+    let svgInner = '';
+    for (let i = 0; i <= 2; i++){
+      const frac = i / 2;
+      const val = yMax - frac * (yMax - yMin);
+      const y = M.t + frac * ph;
+      svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y + '" y2="' + y + '"></line>';
+      svgInner += '<text class="grafico-etiqueta" x="' + (M.l - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + val.toFixed(1) + '</text>';
+    }
+    (xTicks || []).forEach(tk => {
+      svgInner += '<text class="grafico-etiqueta" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle">' + escHTML(tk.etiqueta) + '</text>';
+    });
+
+    conPuntos.forEach(s => {
+      const pts = s.puntos.slice().sort((a, b) => a.x - b.x);
+      const puntosSVG = pts.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
+      svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
+      const ultimo = pts[pts.length - 1];
+      svgInner += '<circle class="grafico-punto" cx="' + xPix(ultimo.x).toFixed(1) + '" cy="' + yPix(ultimo.y).toFixed(1) + '" r="3.5" style="fill:' + s.color + '"></circle>';
+    });
+    svg.innerHTML = svgInner;
+
+    if (series.length > 1){
+      series.forEach(s => {
+        const item = document.createElement('span');
+        item.className = 'leyenda-item';
+        item.innerHTML = '<span class="leyenda-linea" style="background:' + s.color + '"></span>' + escHTML(s.etiqueta);
+        leyendaEl.appendChild(item);
+      });
+    }
+  }
+
+  function construirTicksTiempo(desdeMs, hastaMs, n){
+    const ticks = [];
+    for (let i = 0; i <= n; i++){
+      const frac = i / n;
+      const d = new Date(desdeMs + frac * (hastaMs - desdeMs));
+      ticks.push({ frac: frac, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) });
+    }
+    return ticks;
+  }
+
+  function estacionParaEvolucion(){
+    return activo ? activo.stationId : stationIdInput.value.trim();
+  }
+
+  async function dibujarEvolucion12h(){
+    const stationId = estacionParaEvolucion();
+    if (!stationId){ charts12h.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
+
+    const hastaMs = Date.now();
+    const desdeMs = hastaMs - VENTANA_12H_MS;
+    const filas = await consultarRango(stationId, desdeMs, hastaMs);
+    if (filas.length === 0){
+      charts12h.innerHTML = '<p class="evol-vacio">Todavía no hay datos de las últimas 12 horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.</p>';
+      return;
+    }
+    filas.sort((a, b) => a.epochMs - b.epochMs);
+    const xTicks = construirTicksTiempo(desdeMs, hastaMs, 4);
+
+    charts12h.innerHTML = '';
+    CHART_GROUPS_12H.forEach(grupo => {
+      const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
+      charts12h.appendChild(card.el);
+      const series = grupo.claves.map(key => {
+        const def = GRAFICABLES.find(m => m.key === key);
+        const puntos = filas
+          .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
+          .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
+        return { etiqueta: def ? def.etiqueta : key, color: def ? def.color : 'var(--c-temp)', puntos: puntos };
+      });
+      dibujarGraficoSVG(card.svg, card.leyenda, series, xTicks);
+    });
+  }
+
+  async function dibujarEvolucion7d(){
+    const stationId = estacionParaEvolucion();
+    if (!stationId){ charts7d.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
+
+    const hoy = new Date();
+    const dias = [];
+    for (let i = DIAS_SEMANA - 1; i >= 0; i--){
+      dias.push(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i, 0, 0, 0, 0));
+    }
+    const desdeMs = dias[0].getTime();
+    const hastaMs = dias[dias.length - 1].getTime() + 24 * 60 * 60 * 1000 - 1;
+    const filas = await consultarRango(stationId, desdeMs, hastaMs);
+    if (filas.length === 0){
+      charts7d.innerHTML = '<p class="evol-vacio">Todavía no hay datos de los últimos 7 días en este navegador. Inicia el monitor para que se complete con el tiempo (y, si es posible, con el histórico de la API).</p>';
+      return;
+    }
+    const porDia = dias.map(() => []);
+    filas.forEach(f => {
+      const idx = Math.floor((f.epochMs - desdeMs) / (24 * 60 * 60 * 1000));
+      if (idx >= 0 && idx < porDia.length) porDia[idx].push(f.vals);
+    });
+    const divisor = dias.length > 1 ? dias.length - 1 : 1;
+    const xTicks = dias.map((d, i) => ({ frac: i / divisor, etiqueta: pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) }));
+
+    charts7d.innerHTML = '';
+    CHART_GROUPS_7D.forEach(grupo => {
+      const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
+      charts7d.appendChild(card.el);
+      const series = grupo.series.map(s => {
+        const puntos = [];
+        porDia.forEach((valsDelDia, idx) => {
+          const valores = valsDelDia.map(v => v[s.clave]).filter(v => v !== null && v !== undefined);
+          if (valores.length === 0) return;
+          let agregado;
+          if (s.agregacion === 'max') agregado = Math.max.apply(null, valores);
+          else if (s.agregacion === 'min') agregado = Math.min.apply(null, valores);
+          else agregado = valores.reduce((a, b) => a + b, 0) / valores.length;
+          puntos.push({ x: idx / divisor, y: agregado });
+        });
+        return { etiqueta: s.etiqueta, color: s.color, puntos: puntos };
+      });
+      dibujarGraficoSVG(card.svg, card.leyenda, series, xTicks);
+    });
+  }
+
+  function redibujarEvolucionSiAbierta(){
+    if (accEvol12h.open) dibujarEvolucion12h();
+    if (accEvol7d.open) dibujarEvolucion7d();
+  }
 
   /* ============================================================
      EVENTOS
@@ -1253,6 +1650,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   btnEjeUniforme.addEventListener('click', () => fijarEjeXModo('uniforme'));
   btnEjeTiempo.addEventListener('click', () => fijarEjeXModo('tiempo'));
   btnReiniciarGraficas.addEventListener('click', reiniciarGraficas);
+  accEvol12h.addEventListener('toggle', () => { if (accEvol12h.open) dibujarEvolucion12h(); });
+  accEvol7d.addEventListener('toggle', () => { if (accEvol7d.open) dibujarEvolucion7d(); });
 
   btnVerApiKey.addEventListener('click', () => {
     const mostrar = apiKeyInput.type === 'password';

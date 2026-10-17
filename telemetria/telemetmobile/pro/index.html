@@ -217,6 +217,9 @@
   .dia-card .dc-relleno{position:absolute; top:0; bottom:0; border-radius:2px; background:linear-gradient(90deg, var(--c-hum), var(--c-temp));}
   .dia-card .dc-extra{font-size:10px; color:var(--text-secondary); font-family:var(--mono); display:flex; justify-content:space-between; gap:4px;}
   .dias-vacio{padding:16px 12px; font-size:12px; color:var(--muted); font-style:italic;}
+  .dia-card.dia-info{display:flex; flex-direction:column; justify-content:center; background:linear-gradient(135deg, rgba(228,87,46,0.14), rgba(31,190,159,0.09)); border:1px dashed rgba(234,241,247,0.18);}
+  .dia-card.dia-info .dc-info-titulo{font-family:var(--display); font-weight:800; font-size:13px; color:#fff; letter-spacing:-.01em;}
+  .dia-card.dia-info .dc-info-texto{font-size:10px; color:var(--text-secondary); line-height:1.35; margin-top:4px;}
 
   /* ===================== BARRA INFERIOR ===================== */
   .tab-bar{
@@ -499,7 +502,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 21:11</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 00:22</div>
 </section>
 
 <script>
@@ -1086,7 +1089,7 @@
     });
     const hayRango = Number.isFinite(globalMin) && Number.isFinite(globalMax) && globalMax > globalMin;
 
-    diasGrid.innerHTML = claves.map((k, i) => {
+    let diasHtml = claves.map((k, i) => {
       const r = resumenes[i];
       const esHoy = k === dayKeyActual;
       const etiquetaFecha = esHoy ? 'Hoy' : new Date(k + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'short', day:'numeric' });
@@ -1106,6 +1109,18 @@
         '<div class="dc-extra"><span>💧' + fmt(r.rainTotal, 1) + 'mm</span><span>' + fmt(r.gustMax, 0) + 'km/h</span></div>' +
       '</div>';
     }).join('');
+
+    // Con un número impar de días (DIAS_HISTORIAL=7) la cuadrícula de 2
+    // columnas deja un hueco libre en la última fila; se rellena con una
+    // ficha de presentación de la app en vez de dejarlo vacío.
+    if (claves.length % 2 !== 0){
+      diasHtml += '<div class="dia-card dia-info">' +
+        '<div class="dc-info-titulo">TeleMet Mobile Pro</div>' +
+        '<div class="dc-info-texto">Panel en vivo de tu estación Vevor YT60234 (u otra compatible) en Weather Underground.</div>' +
+      '</div>';
+    }
+
+    diasGrid.innerHTML = diasHtml;
   }
 
   /* ============================================================

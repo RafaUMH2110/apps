@@ -48,11 +48,11 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
+  html{height:100%;}
   body{
     margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
     line-height:1.4; -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
-    padding-bottom: calc(110px + var(--safe-bottom));
+    padding-bottom: calc(64px + var(--safe-bottom));
   }
   button{font-family:inherit; border:none; background:none; color:inherit; cursor:pointer;}
   h1,h2,h3{margin:0;}
@@ -205,7 +205,7 @@
   .chart-tooltip .tt-valor{font-weight:700; color:#fff;}
 
   /* ===================== HISTÓRICO DE VARIOS DÍAS ===================== */
-  .historial-card{background:var(--surface); border-radius:12px; border:1px solid var(--border); overflow:hidden; margin:0 14px 28px;}
+  .historial-card{background:var(--surface); border-radius:12px; border:1px solid var(--border); overflow:hidden; margin:0 14px 14px;}
   .dias-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px; padding:12px;}
   .dia-card{background:var(--tile-header); border-radius:10px; padding:9px 10px; text-align:left;}
   .dia-card.hoy{outline:1.5px solid var(--accent); outline-offset:-1.5px;}
@@ -498,7 +498,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 03:17</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 04:16</div>
 </section>
 
 <script>

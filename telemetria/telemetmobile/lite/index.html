@@ -119,6 +119,7 @@
   .tile-valor .u{font-size:13px; color:var(--text-secondary);}
   .tile-extra{margin-top:8px; font-size:11.5px; color:var(--text-secondary); font-family:var(--mono);}
   .tile-dir{font-size:11.5px; color:var(--text-secondary); margin-top:4px;}
+  .tile-hora{margin-top:7px; font-size:10.5px; color:var(--muted); font-family:var(--mono);}
 
   /* ===================== BARRA INFERIOR ===================== */
   .tab-bar{
@@ -315,7 +316,7 @@
     <li><b>Modo automático</b>Vuelve a consultar la estación sola, cada el número de minutos que indiques (de 1 a 10).</li>
     <li><b>Modo manual</b>No se actualiza sola: pulsa el botón de actualizar (↻) cuando quieras ver el dato más reciente.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 03:33</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 04:01</div>
 </section>
 
 <script>
@@ -518,6 +519,7 @@
       if (cfg.rain){
         html += '<div class="tile-extra">Tasa actual: ' + fmt(vals.rainrate_mmh, 1) + ' mm/h</div>';
       }
+      html += '<div class="tile-hora">' + (actual ? ('Hora: ' + horaCorta(actual.epochMs)) : 'Hora: —') + '</div>';
       cuerpo.innerHTML = html;
     });
   }

@@ -179,13 +179,27 @@ button{font-family:var(--texto);cursor:pointer}
 .chart-leyenda{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
 .leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
-.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px}
+.chart-plot{position:relative}
+.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px;cursor:crosshair}
 .chart-svg .grafico-linea{fill:none;stroke-width:1.25;stroke-linejoin:round;stroke-linecap:round}
 .chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
 .chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
 .chart-svg .grafico-etiqueta-eje{font-size:10px;font-weight:600;fill:var(--ink)}
 .chart-svg .grafico-etiqueta-final{font-family:var(--display);font-size:11px;font-weight:700;fill:var(--ink)}
 .chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.25}
+.chart-svg .grafico-crosshair{stroke:var(--steel-soft);stroke-width:1;pointer-events:none;opacity:0}
+.chart-svg .grafico-punto-hover{stroke:var(--card-bg);stroke-width:1.5;pointer-events:none;opacity:0}
+
+/* Tooltip al pasar el cursor sobre una gráfica de evolución */
+.chart-tooltip{position:absolute;top:0;left:0;pointer-events:none;opacity:0;z-index:2;
+  background:var(--card-bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sombra-alta);
+  padding:7px 10px;font-size:12px;white-space:nowrap;transition:opacity .08s linear}
+.tt-cab{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.tt-fila{display:flex;align-items:center;gap:7px}
+.tt-fila+.tt-fila{margin-top:3px}
+.tt-fila .leyenda-linea{flex:none}
+.tt-val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tt-nombre{color:var(--muted);margin-left:auto;padding-left:8px}
 
 /* Estadísticas */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
@@ -540,7 +554,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:59</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:35</p>
 </footer>
 
 <div class="bottomnav">
@@ -567,7 +581,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
-        <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales.</span></div>
+        <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales. Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura o día.</span></div>
       </div>
     </div>
   </div>
@@ -1511,8 +1525,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     el.className = 'chart-card';
     el.innerHTML =
       '<div class="chart-head"><h4>' + escHTML(titulo) + (unidad ? ' (' + escHTML(unidad) + ')' : '') + '</h4><div class="chart-leyenda"></div></div>' +
-      '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>';
-    return { el: el, leyenda: el.querySelector('.chart-leyenda'), svg: el.querySelector('.chart-svg') };
+      '<div class="chart-plot">' +
+        '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>' +
+        '<div class="chart-tooltip" role="status" aria-live="polite"></div>' +
+      '</div>';
+    return {
+      el: el,
+      leyenda: el.querySelector('.chart-leyenda'),
+      svg: el.querySelector('.chart-svg'),
+      tooltip: el.querySelector('.chart-tooltip')
+    };
   }
 
   // Redondea a un "número bonito" (1, 2, 5, 10, 20, 50...) para que los
@@ -1565,9 +1587,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   // Dibuja (o redibuja) una gráfica de líneas simple dentro de un <svg> ya
-  // insertado en el DOM. "series" es [{ etiqueta, color, puntos:[{x,y}] }]
-  // con x ya normalizada a 0..1; "xTicks" es [{ frac, etiqueta }].
-  function dibujarGraficoSVG(svg, leyendaEl, series, xTicks){
+  // insertado en el DOM, con una capa de interacción (línea de referencia +
+  // tooltip al pasar el cursor, también con el teclado vía foco). "series"
+  // es [{ etiqueta, color, puntos:[{x,y}] }] con x ya normalizada a 0..1;
+  // "xTicks" son las marcas visibles del eje X ([{ frac, etiqueta }]);
+  // "puntosX" son TODAS las posiciones reales de muestra a las que puede
+  // "enganchar" el cursor (una por lectura en 12h, una por día en 7d) —
+  // suele ser una lista más fina que xTicks.
+  function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX){
     const W = 600, H = 230;
     const M = { l: 46, r: 14, t: 14, b: 28 };
     const pw = W - M.l - M.r, ph = H - M.t - M.b;
@@ -1604,6 +1631,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
     conPuntos.forEach(s => {
       const pts = s.puntos.slice().sort((a, b) => a.x - b.x);
+      s._ptsOrdenados = pts; // reutilizado por la capa de interacción, más abajo
       const puntosSVG = pts.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
       svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
       const ultimo = pts[pts.length - 1];
@@ -1621,6 +1649,99 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       }
     });
     svg.innerHTML = svgInner;
+
+    // Capa de interacción: línea de referencia + punto resaltado por serie +
+    // tooltip, enganchados al punto de muestra más cercano al cursor (nunca
+    // a un píxel exacto). El valor mostrado siempre coincide con uno real;
+    // nada de lo que enseña el tooltip deja de estar también en el eje, la
+    // leyenda o la etiqueta del último valor.
+    if (tooltipEl && puntosX && puntosX.length > 0){
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const crosshair = document.createElementNS(SVGNS, 'line');
+      crosshair.setAttribute('class', 'grafico-crosshair');
+      crosshair.setAttribute('y1', M.t); crosshair.setAttribute('y2', H - M.b);
+      svg.appendChild(crosshair);
+      const puntosHover = conPuntos.map(s => {
+        const c = document.createElementNS(SVGNS, 'circle');
+        c.setAttribute('class', 'grafico-punto-hover');
+        c.setAttribute('r', '4');
+        c.setAttribute('style', 'fill:' + s.color);
+        svg.appendChild(c);
+        return c;
+      });
+
+      const pasoMedio = puntosX.length > 1 ? 1 / (puntosX.length - 1) : 1;
+      const toleranciaX = Math.max(pasoMedio * 0.75, 0.01);
+
+      function alMover(e){
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const svgX = (e.clientX - rect.left) * (W / rect.width);
+        const frac = Math.max(0, Math.min(1, (svgX - M.l) / pw));
+
+        let masCercano = puntosX[0], dist = Infinity;
+        puntosX.forEach(p => { const d = Math.abs(p.frac - frac); if (d < dist){ dist = d; masCercano = p; } });
+
+        const xCross = xPix(masCercano.frac).toFixed(1);
+        crosshair.setAttribute('x1', xCross); crosshair.setAttribute('x2', xCross);
+        crosshair.style.opacity = '1';
+
+        tooltipEl.textContent = '';
+        const cab = document.createElement('div');
+        cab.className = 'tt-cab';
+        cab.textContent = masCercano.etiqueta;
+        tooltipEl.appendChild(cab);
+
+        conPuntos.forEach((s, i) => {
+          let pCercano = null, dMin = Infinity;
+          s._ptsOrdenados.forEach(p => { const d = Math.abs(p.x - masCercano.frac); if (d < dMin){ dMin = d; pCercano = p; } });
+          const dot = puntosHover[i];
+          if (pCercano && dMin <= toleranciaX){
+            dot.setAttribute('cx', xPix(pCercano.x).toFixed(1));
+            dot.setAttribute('cy', yPix(pCercano.y).toFixed(1));
+            dot.style.opacity = '1';
+            const fila = document.createElement('div');
+            fila.className = 'tt-fila';
+            const key = document.createElement('span');
+            key.className = 'leyenda-linea';
+            key.style.background = s.color;
+            const val = document.createElement('span');
+            val.className = 'tt-val';
+            val.textContent = formatearNumeroEje(pCercano.y, escala.paso);
+            fila.appendChild(key);
+            fila.appendChild(val);
+            if (conPuntos.length > 1){
+              const nom = document.createElement('span');
+              nom.className = 'tt-nombre';
+              nom.textContent = s.etiqueta;
+              fila.appendChild(nom);
+            }
+            tooltipEl.appendChild(fila);
+          } else {
+            dot.style.opacity = '0';
+          }
+        });
+        tooltipEl.style.opacity = '1';
+
+        const wrapRect = svg.parentElement.getBoundingClientRect();
+        let left = (e.clientX - wrapRect.left) + 14;
+        let top = (e.clientY - wrapRect.top) - 10;
+        const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+        if (left + tw > wrapRect.width - 4) left = (e.clientX - wrapRect.left) - tw - 14;
+        left = Math.max(4, left);
+        top = Math.max(4, Math.min(top, wrapRect.height - th - 4));
+        tooltipEl.style.left = left.toFixed(0) + 'px';
+        tooltipEl.style.top = top.toFixed(0) + 'px';
+      }
+      function alSalir(){
+        crosshair.style.opacity = '0';
+        puntosHover.forEach(d => { d.style.opacity = '0'; });
+        tooltipEl.style.opacity = '0';
+      }
+      svg.onpointermove = alMover;
+      svg.onpointerleave = alSalir;
+      svg.onpointercancel = alSalir;
+    }
 
     if (series.length > 1){
       series.forEach(s => {
@@ -1659,6 +1780,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     }
     filas.sort((a, b) => a.epochMs - b.epochMs);
     const xTicks = construirTicksTiempo(desdeMs, hastaMs, 4);
+    // Una posición de "engancho" para el cursor por cada lectura real
+    // (más fina que las 4-5 marcas visibles del eje X).
+    const puntosX = filas.map(f => {
+      const d = new Date(f.epochMs);
+      return { frac: (f.epochMs - desdeMs) / VENTANA_12H_MS, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+    });
 
     charts12h.innerHTML = '';
     CHART_GROUPS_12H.forEach(grupo => {
@@ -1671,7 +1798,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
         return { etiqueta: def ? def.etiqueta : key, color: def ? def.color : 'var(--c-temp)', puntos: puntos };
       });
-      dibujarGraficoSVG(card.svg, card.leyenda, series, xTicks);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX);
     });
   }
 
@@ -1716,7 +1843,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         });
         return { etiqueta: s.etiqueta, color: s.color, puntos: puntos };
       });
-      dibujarGraficoSVG(card.svg, card.leyenda, series, xTicks);
+      // En 7 días, xTicks ya es un punto por día: sirve igual como lista
+      // de posiciones de "engancho" para el cursor.
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, xTicks);
     });
   }
 

@@ -316,7 +316,7 @@
     <li><b>Modo automático</b>Vuelve a consultar la estación sola, cada el número de minutos que indiques (de 1 a 10).</li>
     <li><b>Modo manual</b>No se actualiza sola: pulsa el botón de actualizar (↻) cuando quieras ver el dato más reciente.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 04:01</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:39</div>
 </section>
 
 <script>
@@ -651,18 +651,26 @@
     sheetBackdrop.classList.add('visible');
     hoja.classList.add('visible');
   }
+  // Si se cierra la hoja sin que el campo haya perdido el foco antes (p. ej. al tocar
+  // el fondo u otro botón de cierre), el teclado en iOS/iPadOS se queda visible aunque
+  // el campo ya no se vea: forzamos blur() del elemento enfocado en cada cierre.
   function cerrarHoja(hoja){
+    if (document.activeElement && hoja.contains(document.activeElement)) document.activeElement.blur();
     hoja.classList.remove('visible');
     if (!settingsSheet.classList.contains('visible') && !infoSheet.classList.contains('visible')){
       sheetBackdrop.classList.remove('visible');
     }
   }
   function cerrarTodasLasHojas(){
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     [settingsSheet, infoSheet].forEach(h => h.classList.remove('visible'));
     sheetBackdrop.classList.remove('visible');
   }
 
   sheetBackdrop.addEventListener('click', cerrarTodasLasHojas);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  });
   $('btnSettings').addEventListener('click', () => { cargarAjustes(); abrirHoja(settingsSheet); });
   $('btnInfo').addEventListener('click', () => abrirHoja(infoSheet));
   $('btnCerrarAjustes').addEventListener('click', () => cerrarHoja(settingsSheet));

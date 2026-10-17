@@ -180,12 +180,12 @@ button{font-family:var(--texto);cursor:pointer}
 .leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
 .chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px}
-.chart-svg .grafico-linea{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .grafico-linea{fill:none;stroke-width:1.25;stroke-linejoin:round;stroke-linecap:round}
 .chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
 .chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
 .chart-svg .grafico-etiqueta-eje{font-size:10px;font-weight:600;fill:var(--ink)}
-.chart-svg .grafico-etiqueta-final{font-family:var(--display);font-size:15px;font-weight:700;fill:var(--ink)}
-.chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:2}
+.chart-svg .grafico-etiqueta-final{font-family:var(--display);font-size:13px;font-weight:700;fill:var(--ink)}
+.chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.25}
 
 /* Estadísticas */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
@@ -538,7 +538,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:38</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:45</p>
 </footer>
 
 <div class="bottomnav">
@@ -1582,7 +1582,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
       const ultimo = pts[pts.length - 1];
       const ux = xPix(ultimo.x), uy = yPix(ultimo.y);
-      svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="4" style="fill:' + s.color + '"></circle>';
+      svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
 
       // Etiqueta directa con el último valor: solo si esta gráfica tiene una
       // única serie (con varias, se amontonarían al converger en el borde

@@ -179,10 +179,11 @@ button{font-family:var(--texto);cursor:pointer}
 .chart-leyenda{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
 .leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
-.chart-svg{width:100%;height:160px;display:block;background:var(--page-bg);border-radius:10px}
-.chart-svg .grafico-linea{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px}
+.chart-svg .grafico-linea{fill:none;stroke-width:2.25;stroke-linejoin:round;stroke-linecap:round}
 .chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
-.chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+.chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11.5px;fill:var(--muted)}
+.chart-svg .grafico-etiqueta-eje{fill:var(--steel)}
 .chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.5}
 
 /* Estadísticas */
@@ -536,7 +537,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 22:50</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 23:08</p>
 </footer>
 
 <div class="bottomnav">
@@ -1483,16 +1484,58 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     el.className = 'chart-card';
     el.innerHTML =
       '<div class="chart-head"><h4>' + escHTML(titulo) + (unidad ? ' (' + escHTML(unidad) + ')' : '') + '</h4><div class="chart-leyenda"></div></div>' +
-      '<svg class="chart-svg" viewBox="0 0 600 180" preserveAspectRatio="none"></svg>';
+      '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>';
     return { el: el, leyenda: el.querySelector('.chart-leyenda'), svg: el.querySelector('.chart-svg') };
+  }
+
+  // Redondea a un "número bonito" (1, 2, 5, 10, 20, 50...) para que los
+  // valores del eje Y sean fáciles de leer en vez de decimales sueltos.
+  function numeroBonito(x, redondear){
+    if (x === 0) return 0;
+    const exp = Math.floor(Math.log10(Math.abs(x)));
+    const f = Math.abs(x) / Math.pow(10, exp);
+    let nf;
+    if (redondear){
+      if (f < 1.5) nf = 1;
+      else if (f < 3) nf = 2;
+      else if (f < 7) nf = 5;
+      else nf = 10;
+    } else {
+      if (f <= 1) nf = 1;
+      else if (f <= 2) nf = 2;
+      else if (f <= 5) nf = 5;
+      else nf = 10;
+    }
+    return (x < 0 ? -1 : 1) * nf * Math.pow(10, exp);
+  }
+
+  // Calcula un rango y una serie de marcas "bonitas" para el eje Y, en vez
+  // de interpolar linealmente entre el mínimo y el máximo exactos de los
+  // datos (que da números como 23,7 / 15,2 / 6,8, difíciles de leer).
+  function escalaBonitaEje(min, max, nMarcasAprox){
+    if (min === max){ min -= 1; max += 1; }
+    const paso = numeroBonito((max - min) / Math.max(1, nMarcasAprox - 1), true);
+    const minBonito = Math.floor(min / paso) * paso;
+    const maxBonito = Math.ceil(max / paso) * paso;
+    const marcas = [];
+    for (let v = minBonito; v <= maxBonito + paso * 0.5; v += paso) marcas.push(Math.round(v / paso) * paso);
+    return { min: minBonito, max: maxBonito, paso: paso, marcas: marcas };
+  }
+
+  // Formatea un valor del eje con el nº de decimales justo para su paso
+  // (sin decimales si el paso es entero, 1 o 2 si es más fino), con coma
+  // decimal (es-ES) y sin separador de miles (evita confundir "1.013" con mil).
+  function formatearNumeroEje(v, paso){
+    const decimales = paso >= 1 ? 0 : (paso >= 0.1 ? 1 : 2);
+    return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
   // Dibuja (o redibuja) una gráfica de líneas simple dentro de un <svg> ya
   // insertado en el DOM. "series" es [{ etiqueta, color, puntos:[{x,y}] }]
   // con x ya normalizada a 0..1; "xTicks" es [{ frac, etiqueta }].
   function dibujarGraficoSVG(svg, leyendaEl, series, xTicks){
-    const W = 600, H = 180;
-    const M = { l: 44, r: 10, t: 10, b: 22 };
+    const W = 600, H = 230;
+    const M = { l: 46, r: 14, t: 14, b: 28 };
     const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
     leyendaEl.innerHTML = '';
@@ -1502,25 +1545,27 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       return;
     }
 
-    let yMin = Infinity, yMax = -Infinity;
-    conPuntos.forEach(s => s.puntos.forEach(p => { if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y; }));
-    if (yMin === yMax){ yMin -= 1; yMax += 1; }
-    const relleno = (yMax - yMin) * 0.08;
-    yMin -= relleno; yMax += relleno;
+    let yMinDatos = Infinity, yMaxDatos = -Infinity;
+    conPuntos.forEach(s => s.puntos.forEach(p => { if (p.y < yMinDatos) yMinDatos = p.y; if (p.y > yMaxDatos) yMaxDatos = p.y; }));
+    const escala = escalaBonitaEje(yMinDatos, yMaxDatos, 4);
+    const yMin = escala.min, yMax = escala.max;
+    const rango = (yMax - yMin) || 1;
 
     const xPix = f => M.l + f * pw;
-    const yPix = v => M.t + (1 - (v - yMin) / (yMax - yMin)) * ph;
+    const yPix = v => M.t + (1 - (v - yMin) / rango) * ph;
 
     let svgInner = '';
-    for (let i = 0; i <= 2; i++){
-      const frac = i / 2;
-      const val = yMax - frac * (yMax - yMin);
-      const y = M.t + frac * ph;
-      svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y + '" y2="' + y + '"></line>';
-      svgInner += '<text class="grafico-etiqueta" x="' + (M.l - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + val.toFixed(1) + '</text>';
-    }
-    (xTicks || []).forEach(tk => {
-      svgInner += '<text class="grafico-etiqueta" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle">' + escHTML(tk.etiqueta) + '</text>';
+    escala.marcas.forEach(val => {
+      const y = yPix(val);
+      svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
+      svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + formatearNumeroEje(val, escala.paso) + '</text>';
+    });
+    const ultimoTick = (xTicks || []).length - 1;
+    (xTicks || []).forEach((tk, i) => {
+      // Las marcas de los extremos se anclan hacia dentro (start/end) en
+      // vez de centrarse, para que no queden cortadas contra el borde.
+      const anchor = i === 0 ? 'start' : (i === ultimoTick ? 'end' : 'middle');
+      svgInner += '<text class="grafico-etiqueta" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + escHTML(tk.etiqueta) + '</text>';
     });
 
     conPuntos.forEach(s => {
@@ -1528,7 +1573,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const puntosSVG = pts.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
       svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
       const ultimo = pts[pts.length - 1];
-      svgInner += '<circle class="grafico-punto" cx="' + xPix(ultimo.x).toFixed(1) + '" cy="' + yPix(ultimo.y).toFixed(1) + '" r="3.5" style="fill:' + s.color + '"></circle>';
+      svgInner += '<circle class="grafico-punto" cx="' + xPix(ultimo.x).toFixed(1) + '" cy="' + yPix(ultimo.y).toFixed(1) + '" r="4" style="fill:' + s.color + '"></circle>';
     });
     svg.innerHTML = svgInner;
 

@@ -492,13 +492,14 @@
     <li><b>Luz de estado</b>Verde: en vivo. Ámbar: reintentando o dato obsoleto. Rojo: error fatal (Station ID o API Key inválidos). Gris: pausado o detenido.</li>
     <li><b>Tendencia (▲ ▼ —)</b>Compara la última lectura de temperatura, humedad, presión, viento y racha con la anterior: sube, baja o se mantiene estable.</li>
     <li><b>Sensación térmica</b>Temperatura percibida, calculada a partir de la temperatura, la humedad y el viento (índice de calor con calor húmedo, sensación de frío con viento y temperaturas bajas). Solo se muestra cuando difiere de la temperatura real.</li>
+    <li><b>Punto de rocío</b>Temperatura a la que el aire se satura y condensa en forma de rocío. Cuanto más cerca está de la temperatura actual, más bochornoso se percibe el ambiente.</li>
     <li><b>Resumen del día</b>Máxima y mínima de temperatura, lluvia acumulada, racha máxima y hora de la última lectura, de un vistazo.</li>
     <li><b>Últimos días</b>Resumen diario (máxima, mínima, lluvia y racha) de hasta 7 días, a partir de lo acumulado en este dispositivo.</li>
     <li><b>Obsoleto tras</b>Segundos desde la última lectura a partir de los cuales se considera que el dato ya no es fiable.</li>
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 04:16</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 21:11</div>
 </section>
 
 <script>
@@ -549,7 +550,8 @@
     { id:'wind', titulo:'Viento (sostenido)', key:'wind_kmh', unidad:'km/h', dec:1, minmax:true, dir:true, tendencia:true, color:'var(--c-wind)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
     { id:'gust', titulo:'Racha', key:'gust_kmh', unidad:'km/h', dec:1, minmax:true, tendencia:true, color:'var(--c-gust)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
     { id:'rain', titulo:'Lluvia (hoy)', key:'rain_total_mm', unidad:'mm', dec:1, rain:true, color:'var(--c-rain)', icono:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M16 13v8M8 13v8M12 15v8"/>' },
-    { id:'solar', titulo:'Radiación solar / UV', key:'solar_wm2', unidad:'W/m²', dec:0, solar:true, color:'var(--warn)', icono:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>' }
+    { id:'solar', titulo:'Radiación solar / UV', key:'solar_wm2', unidad:'W/m²', dec:0, solar:true, color:'var(--warn)', icono:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>' },
+    { id:'dewpoint', titulo:'Punto de rocío', key:'dewpoint_c', unidad:'°C', dec:1, minmax:true, tendencia:true, color:'var(--c-dew)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' }
   ];
 
   // Gráficos de evolución del día (un único eje Y por gráfico siempre).

@@ -16,7 +16,7 @@
   /* Marca — constante en claro y oscuro */
   --brasa:#E4572E; --brasa-osc:#C9441F;
   --forjado:#0E7C6B;
-  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado);
   --r:14px;
   --display:'Bricolage Grotesque',Georgia,serif;
   --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -481,7 +481,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
     <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
       <table class="t">
-        <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Lluvia</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
         <tbody id="historialCuerpo"></tbody>
       </table>
     </div>
@@ -496,7 +496,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 20:35</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 17 de octubre de 2026, 21:32</p>
 </footer>
 
 <div class="bottomnav">
@@ -517,6 +517,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Freshness</b><span>Segundos transcurridos entre el instante en que la estación registró la lectura y el instante actual. Si supera el umbral configurado, la lectura se marca como obsoleta ("stale").</span></div>
         <div><b>Tendencia (▲ ▼ —)</b><span>Compara el último valor de cada variable con el anterior: sube, baja o se mantiene estable.</span></div>
         <div><b>Sensación térmica</b><span>Con calor (≥ 27 °C) usa el índice de calor (temperatura + humedad); con frío (≤ 10 °C y algo de viento) usa la sensación de frío por viento; en el resto de casos coincide con la temperatura del aire. Se calcula en el navegador, sin llamadas adicionales a la API.</span></div>
+        <div><b>Punto de rocío</b><span>Temperatura a la que el aire, enfriándose, llegaría a saturarse de humedad y empezaría a condensar. Cuanto más cerca está de la temperatura del aire, más húmedo (bochornoso) se percibe el ambiente.</span></div>
+        <div><b>Lluvia acumulada</b><span>Total de lluvia (mm) que la propia estación lleva acumulado, normalmente desde la medianoche local; se reinicia por sí sola cada día en el hardware, no en esta app.</span></div>
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
@@ -556,11 +558,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const SANITY_CHECK = {
     temp_c:        { min: -60,  max: 60   },
     heat_index_c:  { min: -60,  max: 70   },
+    dewpoint_c:    { min: -60,  max: 60   },
     humidity_pct:  { min: 0,    max: 100  },
     pressure_hpa:  { min: 850,  max: 1085 },
     wind_kmh:      { min: 0,    max: 250  },
     gust_kmh:      { min: 0,    max: 300  },
     rainrate_mmh:  { min: 0,    max: 500  },
+    rain_total_mm: { min: 0,    max: 1000 },
     solarradiation_wm2: { min: 0, max: 1500 },
     uv_index:      { min: 0,    max: 20   }
   };
@@ -569,11 +573,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const GRAFICABLES = [
     { key: 'temp_c',       etiqueta: 'Temperatura',    unidad: '°C',   icono: 'thermometer', color: 'var(--c-temp)' },
     { key: 'heat_index_c', etiqueta: 'Sensación térmica', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)' },
+    { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C',   icono: 'droplet',     color: 'var(--c-dew)'  },
     { key: 'humidity_pct', etiqueta: 'Humedad',        unidad: '%',    icono: 'droplet',     color: 'var(--c-hum)'  },
     { key: 'pressure_hpa', etiqueta: 'Presión',        unidad: 'hPa',  icono: 'gauge',       color: 'var(--c-pres)' },
     { key: 'wind_kmh',     etiqueta: 'Viento',         unidad: 'km/h', icono: 'wind',        color: 'var(--c-wind)' },
     { key: 'gust_kmh',     etiqueta: 'Racha',          unidad: 'km/h', icono: 'wind',        color: 'var(--c-gust)' },
     { key: 'rainrate_mmh', etiqueta: 'Lluvia',         unidad: 'mm/h', icono: 'cloud-rain',  color: 'var(--c-rain)' },
+    { key: 'rain_total_mm', etiqueta: 'Lluvia acumulada', unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)' },
     { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun',  color: 'var(--c-solar)' },
     { key: 'uv_index',     etiqueta: 'Índice UV',      unidad: '',     icono: 'sun',         color: 'var(--c-uv)'   }
   ];
@@ -763,6 +769,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
+  function firstDefined(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
   function fmt(valor){ return (valor === null || valor === undefined) ? '—' : String(valor); }
 
   // Sensación térmica: índice de calor (NWS/Rothfusz) con temperaturas altas
@@ -777,12 +784,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       + 0.00085282 * tF * rh * rh - 0.00000199 * tF * tF * rh * rh;
     if (rh < 13 && tF >= 80 && tF <= 112) hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(tF - 95)) / 17);
     else if (rh > 85 && tF >= 80 && tF <= 87) hi += ((rh - 85) / 10) * ((87 - tF) / 5);
-    return (hi - 32) * 5 / 9;
+    return Math.max((hi - 32) * 5 / 9, tC); // nunca por debajo de la temperatura real
   }
 
   function sensacionFrioC(tC, vientoKmh){
     if (vientoKmh === null || !Number.isFinite(vientoKmh) || vientoKmh <= 4.8) return tC;
-    return 13.12 + 0.6215 * tC - 11.37 * Math.pow(vientoKmh, 0.16) + 0.3965 * tC * Math.pow(vientoKmh, 0.16);
+    const v = Math.pow(vientoKmh, 0.16);
+    const sf = 13.12 + 0.6215 * tC - 11.37 * v + 0.3965 * tC * v;
+    return Math.min(sf, tC); // nunca por encima de la temperatura real
   }
 
   function sensacionTermicaC(tC, rh, vientoKmh){
@@ -976,11 +985,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       '<td>' + new Date().toLocaleTimeString('es-ES') + '</td>' +
       '<td>' + fmt(t.temp_c) + '</td>' +
       '<td>' + fmt(t.heat_index_c !== null ? t.heat_index_c.toFixed(1) : null) + '</td>' +
+      '<td>' + fmt(t.dewpoint_c) + '</td>' +
       '<td>' + fmt(t.humidity_pct) + '</td>' +
       '<td>' + fmt(t.pressure_hpa) + '</td>' +
       '<td>' + fmt(t.wind_kmh) + '</td>' +
       '<td>' + fmt(t.gust_kmh) + '</td>' +
       '<td>' + fmt(t.rainrate_mmh) + '</td>' +
+      '<td>' + fmt(t.rain_total_mm) + '</td>' +
       '<td>' + fmt(t.solarradiation_wm2) + '</td>' +
       '<td>' + fmt(t.uv_index) + '</td>' +
       '<td>' + fmt(t.quality_code) + '</td>' +
@@ -1002,7 +1013,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function descargarCSV(){
     if (filasHistorial.length === 0) return;
-    const columnas = ['hora', 'temp_c', 'heat_index_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'rainrate_mmh', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
+    const columnas = ['hora', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
     const lineas = [columnas.join(',')];
     filasHistorial.forEach(r => {
       lineas.push(columnas.map(c => {
@@ -1127,18 +1138,21 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const t = {
       temp_c: tempC,
       heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewpoint)),
       humidity_pct: humPct,
       pressure_hpa: numOrNull(metric.pressure),
       wind_kmh: windKmh,
       gust_kmh: numOrNull(metric.windGust),
       rainrate_mmh: numOrNull(metric.precipRate),
-      // "solarradiation"/"uv" son los nombres de clave habituales en payloads
-      // de Fine Offset (sin variante métrica/imperial, van sueltos en la raíz
-      // de obs); si tu estación los reporta pero las tarjetas se quedan
-      // siempre en —, vuelca un payload crudo y ajusta estas dos claves.
-      solarradiation_wm2: numOrNull(obs.solarradiation),
+      rain_total_mm: numOrNull(metric.precipTotal),
+      // Nombre oficial de la API (PWS current obs): "solarRadiation" en
+      // camelCase y "qcStatus" para el control de calidad, ambos sueltos en
+      // la raíz de obs (no dentro de metric/imperial). Se mantiene un
+      // fallback a variantes en minúsculas / el nombre antiguo por si tu
+      // estación llega a través de una pasarela que las reporte así.
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation)),
       uv_index: numOrNull(obs.uv),
-      quality_code: (obs.qualityControlFlag !== undefined && obs.qualityControlFlag !== null) ? obs.qualityControlFlag : 'N/A',
+      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A'),
       staleness_s: stalenessS,
       latency_ms: latenciaMs
     };

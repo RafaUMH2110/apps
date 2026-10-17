@@ -292,7 +292,15 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .card-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--surface-sunk); color: var(--blue-700); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border); }
   .card-icon svg { width: 17px; height: 17px; }
   .card h3 { font-size: 1rem; font-weight: 600; line-height: 1.3; }
-  .card p.desc { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: 1; }
+  .card p.desc {
+    margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: 1;
+    max-height: 6.2em; overflow-y: auto; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  }
+  .card p.desc::-webkit-scrollbar { width: 6px; }
+  .card p.desc::-webkit-scrollbar-track { background: transparent; }
+  .card p.desc::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+  .card p.desc::-webkit-scrollbar-thumb:hover { background: var(--muted); }
   .badges { display: flex; flex-wrap: wrap; gap: 6px; }
   .badge { font-family: var(--font-mono); font-size: .68rem; padding: 3px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--blue-700); border: 1px solid var(--border); }
   .card a.open { margin-top: 2px; text-decoration: none; background: var(--blue-700); color: #fff; text-align: center; padding: 10px; border-radius: var(--radius-sm); font-size: .86rem; font-weight: 600; transition: background .14s ease; }

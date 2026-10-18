@@ -186,7 +186,6 @@ button{font-family:var(--texto);cursor:pointer}
 .chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
 .chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
 .chart-svg .grafico-etiqueta-eje{font-size:10px;font-weight:600;fill:var(--ink)}
-.chart-svg .grafico-etiqueta-final{font-family:var(--display);font-size:11px;font-weight:700;fill:var(--ink)}
 .chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.25}
 .chart-svg .grafico-crosshair{stroke:var(--steel-soft);stroke-width:1;pointer-events:none;opacity:0}
 .chart-svg .grafico-punto-hover{stroke:var(--card-bg);stroke-width:1.5;pointer-events:none;opacity:0}
@@ -232,7 +231,24 @@ button{font-family:var(--texto);cursor:pointer}
 .sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
 .eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
-.tile-calidad{grid-column:1/-1}
+.tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+.tile-calidad .fi{margin-bottom:0;flex-shrink:0}
+.tile-calidad .valor-linea{font-size:14px;color:var(--ink)}
+.tile-calidad .valor-linea b{font-family:var(--display);font-weight:700}
+
+.dias-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px}
+@media(max-width:760px){.dias-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:480px){.dias-grid{grid-template-columns:repeat(3,1fr)}}
+.dia-card{background:var(--card-bg);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+.dia-card.hoy{box-shadow:inset 0 0 0 1.5px var(--brasa)}
+.dia-card .dc-fecha{font-size:11px;font-weight:700;color:var(--steel-soft);text-transform:uppercase;letter-spacing:.03em}
+.dia-card .dc-temps{font-family:var(--display);font-weight:700;margin-top:7px;display:flex;justify-content:center;gap:6px;font-size:15px}
+.dia-card .dc-max{color:var(--c-temp)}
+.dia-card .dc-min{color:var(--steel-soft)}
+.dia-card .dc-barra{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
+.dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:var(--c-temp);border-radius:2px}
+.dia-card .dc-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.dias-vacio{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
 
 .meta-linea{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
 
@@ -529,11 +545,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <!-- Las tarjetas se generan por JS (ver GRAFICABLES) para incluir icono, color y sparkline -->
   </div>
 
-  <div class="datos-grid" style="margin-top:12px">
+  <div class="datos-grid" style="margin:12px 0 28px">
     <div class="feat tile-calidad" style="--c:#2E4B6B">
       <div class="fi"><svg class="i"><use href="#i-check"></use></svg></div>
-      <div class="etiqueta">Calidad del dato (qcStatus)</div>
-      <div class="valor" id="valorCalidad">—</div>
+      <div class="valor-linea">Calidad del dato (qcStatus): <b id="valorCalidad">—</b></div>
     </div>
   </div>
 
@@ -553,8 +568,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     </div>
   </details>
 
-  <!-- ============ SECCIÓN 4 · HISTÓRICO DE LA SESIÓN ============ -->
-  <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Histórico de esta sesión</h2><p class="sh-lede">Se reinicia al recargar la página; no se guarda en ningún sitio. Se conservan como máximo las últimas <span id="maxFilasTexto">500</span> lecturas.</p></div></header>
+  <!-- ============ SECCIÓN 4 · RESUMEN DE LOS ÚLTIMOS 7 DÍAS ============ -->
+  <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Resumen de los últimos 7 días</h2><p class="sh-lede">Máximo y mínimo de temperatura y lluvia acumulada por día, a partir del histórico guardado en este navegador (completado con el de la API cuando hace falta).</p></div></header>
+
+  <div class="dias-grid" id="diasGrid">
+    <p class="dias-vacio">Todavía no hay histórico de días anteriores.</p>
+  </div>
+
+  <!-- ============ SECCIÓN 5 · HISTÓRICO DE LA SESIÓN ============ -->
+  <header class="sh" style="--c:#6B4FD8;margin-top:28px"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">05 · El detalle</p><h2>Histórico de esta sesión</h2><p class="sh-lede">Se reinicia al recargar la página; no se guarda en ningún sitio. Se conservan como máximo las últimas <span id="maxFilasTexto">500</span> lecturas.</p></div></header>
 
   <details class="acc-evol" id="accHistorial" open>
     <summary><svg class="i"><use href="#i-archive"></use></svg>Tabla de histórico de esta sesión<svg class="i chev"><use href="#i-down"></use></svg></summary>
@@ -578,7 +600,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:25</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:41</p>
 </footer>
 
 <div class="bottomnav">
@@ -751,6 +773,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const metaLinea = document.getElementById('metaLinea');
   const datosGrid = document.getElementById('datosGrid');
   const valorCalidad = document.getElementById('valorCalidad');
+  const diasGrid = document.getElementById('diasGrid');
   const btnEjeUniforme = document.getElementById('btnEjeUniforme');
   const btnEjeTiempo = document.getElementById('btnEjeTiempo');
   const btnReiniciarGraficas = document.getElementById('btnReiniciarGraficas');
@@ -1273,7 +1296,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         elUnidad.textContent = comp ? ('° ' + comp) : '°';
       }
     });
-    valorCalidad.textContent = fmt(t.quality_code);
+    valorCalidad.textContent = '"' + fmt(t.quality_code) + '"';
     const ahoraMs = Date.now();
     metaLinea.textContent = 'Última lectura: ' + new Date(ahoraMs).toLocaleTimeString('es-ES') +
       ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';
@@ -1771,24 +1794,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const ultimo = pts[pts.length - 1];
       const ux = xPix(ultimo.x), uy = yPix(ultimo.y);
       svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
-
-      // Etiqueta directa con el último valor: solo si esta gráfica tiene una
-      // única serie (con varias, se amontonarían al converger en el borde
-      // derecho; ahí ya basta con la leyenda y los ejes). Se desplaza arriba
-      // o abajo del punto según el hueco disponible, para no salirse del marco.
-      if (conPuntos.length === 1){
-        const haciaAbajo = (uy - M.t) < ph * 0.18;
-        const dy = haciaAbajo ? 17 : -11;
-        svgInner += '<text class="grafico-etiqueta-final" x="' + (ux - 9).toFixed(1) + '" y="' + (uy + dy).toFixed(1) + '" text-anchor="end">' + formatearNumeroEje(ultimo.y, escala.paso) + '</text>';
-      }
     });
     svg.innerHTML = svgInner;
 
     // Capa de interacción: línea de referencia + punto resaltado por serie +
     // tooltip, enganchados al punto de muestra más cercano al cursor (nunca
     // a un píxel exacto). El valor mostrado siempre coincide con uno real;
-    // nada de lo que enseña el tooltip deja de estar también en el eje, la
-    // leyenda o la etiqueta del último valor.
+    // nada de lo que enseña el tooltip deja de estar también en el eje o la
+    // leyenda.
     if (tooltipEl && puntosX && puntosX.length > 0){
       const SVGNS = 'http://www.w3.org/2000/svg';
       const crosshair = document.createElementNS(SVGNS, 'line');
@@ -2045,6 +2058,83 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   function redibujarEvolucionSiAbierta(){
     if (accEvol12h.open) dibujarEvolucion12h();
     if (accEvol7d.open) dibujarEvolucion7d();
+    pintarResumenDias();
+  }
+
+  /* ============================================================
+     RESUMEN DE LOS ÚLTIMOS 7 DÍAS (fichas con máx/mín de temperatura y
+     lluvia acumulada), a partir del mismo histórico local (IndexedDB)
+     que ya usan las gráficas de evolución de 7 días.
+     ============================================================ */
+  const DIAS_RESUMEN = 7;
+
+  function resumenDeLecturasDia(filas){
+    let tempMax = null, tempMin = null, rainTotal = null;
+    filas.forEach(r => {
+      const t = r.vals.temp_c;
+      if (t !== null && t !== undefined){
+        if (tempMax === null || t > tempMax) tempMax = t;
+        if (tempMin === null || t < tempMin) tempMin = t;
+      }
+      const rt = r.vals.rain_total_mm;
+      if (rt !== null && rt !== undefined && (rainTotal === null || rt > rainTotal)) rainTotal = rt;
+    });
+    return { tempMax, tempMin, rainTotal, n: filas.length };
+  }
+
+  let pintarResumenDiasEnCurso = false;
+  async function pintarResumenDias(){
+    const stationId = estacionParaEvolucion();
+    if (!stationId){
+      diasGrid.innerHTML = '<p class="dias-vacio">Configura tu estación para ver el resumen de los últimos días.</p>';
+      return;
+    }
+    // Evita solapar varias pasadas si se llama varias veces seguidas
+    // (nueva lectura + backfill terminando casi a la vez).
+    if (pintarResumenDiasEnCurso) return;
+    pintarResumenDiasEnCurso = true;
+    try {
+      const hoy = new Date();
+      const dias = [];
+      for (let i = DIAS_RESUMEN - 1; i >= 0; i--){
+        const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+        const inicioDiaMs = fecha.getTime();
+        const finDiaMs = inicioDiaMs + 24 * 3600 * 1000 - 1;
+        const filas = await consultarRango(stationId, inicioDiaMs, finDiaMs);
+        dias.push({ fecha, esHoy: i === 0, r: resumenDeLecturasDia(filas) });
+      }
+
+      let globalMin = Infinity, globalMax = -Infinity;
+      dias.forEach(({ r }) => {
+        if (r.tempMax !== null && r.tempMax > globalMax) globalMax = r.tempMax;
+        if (r.tempMin !== null && r.tempMin < globalMin) globalMin = r.tempMin;
+      });
+      const hayRango = Number.isFinite(globalMin) && Number.isFinite(globalMax) && globalMax > globalMin;
+
+      diasGrid.innerHTML = dias.map(({ fecha, esHoy, r }) => {
+        const etiquetaFecha = esHoy ? 'Hoy' : fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+        if (r.n === 0){
+          return '<div class="dia-card' + (esHoy ? ' hoy' : '') + '"><div class="dc-fecha">' + etiquetaFecha + '</div><div class="dc-extra">Sin datos</div></div>';
+        }
+        let barraHtml = '';
+        if (hayRango && r.tempMax !== null && r.tempMin !== null){
+          const left = ((r.tempMin - globalMin) / (globalMax - globalMin)) * 100;
+          const width = Math.max(4, ((r.tempMax - r.tempMin) / (globalMax - globalMin)) * 100);
+          barraHtml = '<div class="dc-barra"><div class="dc-relleno" style="left:' + left.toFixed(1) + '%;width:' + width.toFixed(1) + '%;"></div></div>';
+        }
+        const maxTxt = r.tempMax !== null ? r.tempMax.toFixed(1) + '°' : '—';
+        const minTxt = r.tempMin !== null ? r.tempMin.toFixed(1) + '°' : '—';
+        const rainTxt = r.rainTotal !== null ? r.rainTotal.toFixed(1) + ' mm' : '';
+        return '<div class="dia-card' + (esHoy ? ' hoy' : '') + '">' +
+          '<div class="dc-fecha">' + etiquetaFecha + '</div>' +
+          '<div class="dc-temps"><span class="dc-max">' + maxTxt + '</span><span class="dc-min">' + minTxt + '</span></div>' +
+          barraHtml +
+          (rainTxt ? '<div class="dc-extra">' + rainTxt + '</div>' : '') +
+          '</div>';
+      }).join('');
+    } finally {
+      pintarResumenDiasEnCurso = false;
+    }
   }
 
   /* ============================================================

@@ -231,10 +231,11 @@ button{font-family:var(--texto);cursor:pointer}
 .sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
 .eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
-.tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+.tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:14px}
 .tile-calidad .fi{margin-bottom:0;flex-shrink:0}
-.tile-calidad .valor-linea{font-size:14px;color:var(--ink)}
-.tile-calidad .valor-linea b{font-family:var(--display);font-weight:700}
+.tile-calidad .valor{font-size:17px;margin-top:1px}
+.tile-calidad .valor.ok{color:#16A34A}
+.tile-calidad .valor.duda{color:var(--muted)}
 
 .dias-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px}
 @media(max-width:760px){.dias-grid{grid-template-columns:repeat(4,1fr)}}
@@ -547,8 +548,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   <div class="datos-grid" style="margin:12px 0 28px">
     <div class="feat tile-calidad" style="--c:#2E4B6B">
-      <div class="fi"><svg class="i"><use href="#i-check"></use></svg></div>
-      <div class="valor-linea">Calidad del dato (qcStatus): <b id="valorCalidad">—</b></div>
+      <div class="fi"><svg class="i" id="iconoCalidad"><use href="#i-help"></use></svg></div>
+      <div>
+        <div class="etiqueta">Calidad del dato</div>
+        <div class="valor duda" id="valorCalidad">—</div>
+      </div>
     </div>
   </div>
 
@@ -600,7 +604,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:49</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 05:17</p>
 </footer>
 
 <div class="bottomnav">
@@ -773,6 +777,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const metaLinea = document.getElementById('metaLinea');
   const datosGrid = document.getElementById('datosGrid');
   const valorCalidad = document.getElementById('valorCalidad');
+  const iconoCalidad = document.getElementById('iconoCalidad');
   const diasGrid = document.getElementById('diasGrid');
   const btnEjeUniforme = document.getElementById('btnEjeUniforme');
   const btnEjeTiempo = document.getElementById('btnEjeTiempo');
@@ -1090,6 +1095,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
   function fmt(valor){ return (valor === null || valor === undefined) ? '—' : String(valor); }
 
+  // La API de Weather Underground solo documenta oficialmente el valor 1 de
+  // qcStatus ("pasa el control de calidad"); el resto de valores (-1, 0 u
+  // otros) no están especificados como "fallo" concreto, así que se muestran
+  // como "sin verificar" en vez de arriesgarse a decir que el dato es malo
+  // cuando en realidad puede que la estación simplemente no lo haya evaluado.
+  function textoCalidad(code){
+    if (code === 1 || code === '1') return { texto: 'Verificada', clase: 'ok', icono: 'check' };
+    if (code === null || code === undefined || code === 'N/A') return { texto: 'Sin dato', clase: 'duda', icono: 'help' };
+    return { texto: 'Sin verificar', clase: 'duda', icono: 'help' };
+  }
+
   // Sensación térmica: índice de calor (NWS/Rothfusz) con temperaturas altas
   // y humedad alta, sensación de frío por viento (Environment Canada) con
   // temperaturas bajas y viento apreciable; en el resto de casos, la propia
@@ -1296,7 +1312,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         elUnidad.textContent = comp ? ('° ' + comp) : '°';
       }
     });
-    valorCalidad.textContent = fmt(t.quality_code);
+    const cal = textoCalidad(t.quality_code);
+    valorCalidad.textContent = cal.texto;
+    valorCalidad.className = 'valor ' + cal.clase;
+    iconoCalidad.querySelector('use').setAttribute('href', '#i-' + cal.icono);
     const ahoraMs = Date.now();
     metaLinea.textContent = 'Última lectura: ' + new Date(ahoraMs).toLocaleTimeString('es-ES') +
       ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';

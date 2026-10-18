@@ -502,7 +502,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 02:00</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:00</div>
 </section>
 
 <script>
@@ -594,6 +594,14 @@
   let timeoutId = null;
   let activo = null;
   let db = null;
+  let dbAbriendo = null;
+  // Último error real al abrir/leer IndexedDB, si lo hubo. Antes, si
+  // abrirDB() fallaba una sola vez al arrancar (p. ej. la primera vez que
+  // se abre esta app instalada en la pantalla de inicio en iOS, con su
+  // propio almacenamiento aparte del de Safari), "db" se quedaba en null
+  // para TODA la sesión: cada lectura y consulta posterior se convertía
+  // en un no-op silencioso, indistinguible de "todavía no hay histórico".
+  let ultimoErrorHistorialLocal = null;
   let dayKeyActual = null;
   let lecturasHoy = []; // [{ epochMs, vals:{...} }], ordenadas por epochMs
   let fuenteHistorico = 'local'; // 'api' | 'local'
@@ -648,6 +656,7 @@
   function fechaYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()); }
   function inicioDiaLocalMs(d){ const c = new Date(d); c.setHours(0,0,0,0); return c.getTime(); }
   function horaCorta(ms){ return new Date(ms).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }); }
+  function escHTML(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function numOrNull(v){ return (v === undefined || v === null || Number.isNaN(v)) ? null : v; }
   function firstDefined(){ for (let i=0;i<arguments.length;i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
   function fmt(v, dec){
@@ -759,53 +768,80 @@
     });
   }
 
-  function guardarLectura(stationId, dayKey, epochMs, vals){
-    if (!db) return;
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).add({ stationId, dayKey, epochMs, vals });
+  // Abre (o reutiliza) la conexión a IndexedDB, reintentando si el
+  // intento anterior falló en vez de dejar "db" en null para siempre
+  // (ver el comentario junto a su declaración más arriba).
+  async function asegurarDB(){
+    if (db) return db;
+    if (!dbAbriendo) dbAbriendo = abrirDB().catch(err => { dbAbriendo = null; throw err; });
+    db = await dbAbriendo;
+    ultimoErrorHistorialLocal = null;
+    return db;
   }
 
-  function consultarDia(stationId, dayKey){
-    return new Promise((resolve, reject) => {
-      if (!db) { resolve([]); return; }
-      const tx = db.transaction(STORE, 'readonly');
-      const idx = tx.objectStore(STORE).index('por_estacion_dia');
-      const rango = IDBKeyRange.only([stationId, dayKey]);
-      const resultado = [];
-      idx.openCursor(rango).onsuccess = (ev) => {
+  async function guardarLectura(stationId, dayKey, epochMs, vals){
+    try {
+      const conexion = await asegurarDB();
+      const tx = conexion.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).add({ stationId, dayKey, epochMs, vals });
+    } catch (err) {
+      ultimoErrorHistorialLocal = err;
+      // El histórico local es un complemento; si falla (modo privado,
+      // cuota, bloqueo del navegador...) el resto de la app sigue
+      // funcionando con normalidad, solo sin histórico de días anteriores.
+    }
+  }
+
+  async function consultarDia(stationId, dayKey){
+    try {
+      const conexion = await asegurarDB();
+      return await new Promise((resolve, reject) => {
+        const tx = conexion.transaction(STORE, 'readonly');
+        const idx = tx.objectStore(STORE).index('por_estacion_dia');
+        const rango = IDBKeyRange.only([stationId, dayKey]);
+        const resultado = [];
+        idx.openCursor(rango).onsuccess = (ev) => {
+          const cursor = ev.target.result;
+          if (cursor){ resultado.push(cursor.value); cursor.continue(); }
+          else resolve(resultado);
+        };
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      ultimoErrorHistorialLocal = err;
+      return [];
+    }
+  }
+
+  async function borrarDia(stationId, dayKey){
+    try {
+      const conexion = await asegurarDB();
+      await new Promise((resolve) => {
+        const tx = conexion.transaction(STORE, 'readwrite');
+        const idx = tx.objectStore(STORE).index('por_estacion_dia');
+        const rango = IDBKeyRange.only([stationId, dayKey]);
+        idx.openCursor(rango).onsuccess = (ev) => {
+          const cursor = ev.target.result;
+          if (cursor){ cursor.delete(); cursor.continue(); }
+        };
+        tx.oncomplete = () => resolve();
+      });
+    } catch (err) { ultimoErrorHistorialLocal = err; }
+  }
+
+  async function purgarAntiguos(stationId, dayKeyLimite){
+    try {
+      const conexion = await asegurarDB();
+      const tx = conexion.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      store.openCursor().onsuccess = (ev) => {
         const cursor = ev.target.result;
-        if (cursor){ resultado.push(cursor.value); cursor.continue(); }
-        else resolve(resultado);
+        if (!cursor) return;
+        const v = cursor.value;
+        if (v.stationId === stationId && v.dayKey < dayKeyLimite) cursor.delete();
+        cursor.continue();
       };
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
-  function borrarDia(stationId, dayKey){
-    return new Promise((resolve) => {
-      if (!db) { resolve(); return; }
-      const tx = db.transaction(STORE, 'readwrite');
-      const idx = tx.objectStore(STORE).index('por_estacion_dia');
-      const rango = IDBKeyRange.only([stationId, dayKey]);
-      idx.openCursor(rango).onsuccess = (ev) => {
-        const cursor = ev.target.result;
-        if (cursor){ cursor.delete(); cursor.continue(); }
-      };
-      tx.oncomplete = () => resolve();
-    });
-  }
-
-  function purgarAntiguos(stationId, dayKeyLimite){
-    if (!db) return;
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
-    store.openCursor().onsuccess = (ev) => {
-      const cursor = ev.target.result;
-      if (!cursor) return;
-      const v = cursor.value;
-      if (v.stationId === stationId && v.dayKey < dayKeyLimite) cursor.delete();
-      cursor.continue();
-    };
+    } catch (err) { ultimoErrorHistorialLocal = err; }
   }
 
   /* ============================================================
@@ -1132,7 +1168,9 @@
     const resumenes = claves.map(k => k === dayKeyActual ? resumenDeLecturas(lecturasHoy) : (historialDiasCache[k] || null));
 
     if (!resumenes.some(r => r && r.n > 0)){
-      diasGrid.innerHTML = '<div class="dias-vacio">Todavía no hay histórico de días anteriores en este dispositivo.</div>';
+      diasGrid.innerHTML = ultimoErrorHistorialLocal
+        ? '<div class="dias-vacio">No se ha podido leer el histórico guardado en este dispositivo (' + escHTML(ultimoErrorHistorialLocal.message || ultimoErrorHistorialLocal.name || 'motivo desconocido') + '). Puede estar bloqueado por el modo privado, los ajustes de cookies y datos de sitios, o poca memoria disponible.</div>'
+        : '<div class="dias-vacio">Todavía no hay histórico de días anteriores en este dispositivo.</div>';
       return;
     }
 
@@ -1876,7 +1914,7 @@
     actualizarVisibilidad();
     fijarEstado('off', 'Detenido');
 
-    try { db = await abrirDB(); } catch (err) { db = null; }
+    await asegurarDB().catch(() => {}); // intento inicial; cada función vuelve a intentarlo si este falla
 
     const stationId = (localStorage.getItem(STORAGE_KEY_STATION) || '').trim();
     if (stationId){

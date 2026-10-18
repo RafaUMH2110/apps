@@ -107,6 +107,7 @@ main{max-width:1100px;margin:0 auto;padding:26px 16px 10px}
 @media(max-width:560px){.sh-ico{width:42px;height:42px;border-radius:12px}.sh-ico svg{width:21px;height:21px}}
 
 .card{background:var(--card-bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sombra);padding:20px;margin-bottom:16px}
+.config-resumen-fila{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .card h3{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 4px}
 .card .sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -202,7 +203,7 @@ button{font-family:var(--texto);cursor:pointer}
 .tt-nombre{color:var(--muted);margin-left:auto;padding-left:8px}
 
 /* Estadísticas */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
 @media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
 .stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
 .stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
@@ -227,7 +228,7 @@ button{font-family:var(--texto);cursor:pointer}
 .feat .tendencia.subida{color:#16A34A}
 .feat .tendencia.bajada{color:var(--brasa)}
 .feat .tendencia.estable{color:var(--steel-soft)}
-.sparkline{width:100%;height:28px;display:block;margin-top:7px}
+.sparkline{width:100%;height:13px;display:block;margin-top:5px}
 .sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
 .eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
@@ -399,72 +400,88 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <!-- ============ SECCIÓN 1 · CONFIGURACIÓN ============ -->
   <header class="sh" style="--c:#2E4B6B" id="seccionConfig"><div class="sh-ico"><svg class="i"><use href="#i-sliders"></use></svg></div><div><p class="sh-step">01 · Antes de empezar</p><h2>Configuración</h2><p class="sh-lede">El Station ID y la API Key se guardan solo en este navegador. Los campos se bloquean mientras el monitor está en marcha.</p></div></header>
 
-  <div class="card">
-    <h3>Estación</h3>
-    <p class="sub">El identificador de tu estación en wunderground.com (My Profile → My Devices).</p>
-    <div class="grid2">
-      <div class="field">
-        <label for="stationIdInput">Station ID</label>
-        <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+  <!-- Vista compacta: una vez hay Station ID guardado, se oculta todo el
+       formulario y solo se muestra el nombre de la estación, para no tener
+       que ver siempre los mismos campos ya rellenados. -->
+  <div class="card" id="configResumen" style="display:none">
+    <div class="config-resumen-fila">
+      <div>
+        <h3 style="margin-bottom:2px">Estación configurada</h3>
+        <p class="sub" style="margin:0" id="configResumenNombre">—</p>
       </div>
-      <div class="field">
-        <label for="apiKeyInput">API Key (opcional)</label>
-        <div class="keyrow">
-          <input type="password" id="apiKeyInput" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
-          <button type="button" class="eye" id="btnVerApiKey" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
-        </div>
-      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnEditarConfig"><svg class="i"><use href="#i-sliders"></use></svg>Editar</button>
     </div>
   </div>
 
-  <div class="card">
-    <h3>Sondeo</h3>
-    <p class="sub">Cada cuánto se consulta la API y cuántos puntos recientes se muestran en los minigráficos.</p>
-    <div class="grid2">
-      <div class="field">
-        <label for="pollIntervalInput">Intervalo de sondeo (s)</label>
-        <input type="number" id="pollIntervalInput" min="5" step="1" value="60">
-      </div>
-      <div class="field">
-        <label for="historyLenInput">Puntos en los minigráficos</label>
-        <input type="number" id="historyLenInput" min="5" max="200" step="1" value="40">
-      </div>
-    </div>
-
-    <details class="acc">
-      <summary><svg class="i"><use href="#i-sliders"></use></svg>Ajustes avanzados<svg class="i chev"><use href="#i-down"></use></svg></summary>
-      <div class="inner">
-        <div class="grid2">
-          <div class="field">
-            <label for="requestTimeoutInput">Tiempo límite de la petición (s)</label>
-            <input type="number" id="requestTimeoutInput" min="3" step="1" value="15">
-            <p class="help">Si la API no responde en este tiempo, se cancela y se trata como error transitorio.</p>
-          </div>
-          <div class="field">
-            <label for="staleThresholdInput">Umbral de dato obsoleto (s)</label>
-            <input type="number" id="staleThresholdInput" min="5" step="5" value="120">
-            <p class="help">A partir de cuántos segundos de antigüedad una lectura se marca como obsoleta.</p>
-          </div>
-          <div class="field">
-            <label for="backoffBaseInput">Backoff inicial (s)</label>
-            <input type="number" id="backoffBaseInput" min="0.5" step="0.5" value="2">
-            <p class="help">Espera tras el primer error transitorio; se duplica en cada reintento.</p>
-          </div>
-          <div class="field">
-            <label for="backoffMaxInput">Backoff máximo (s)</label>
-            <input type="number" id="backoffMaxInput" min="5" step="5" value="300">
-            <p class="help">Tope de espera entre reintentos, por muchos que se acumulen.</p>
+  <div id="configCuerpo">
+    <div class="card">
+      <h3>Estación</h3>
+      <p class="sub">El identificador de tu estación en wunderground.com (My Profile → My Devices).</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="stationIdInput">Station ID</label>
+          <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="apiKeyInput">API Key (opcional)</label>
+          <div class="keyrow">
+            <input type="password" id="apiKeyInput" placeholder="Solo si tu cuenta la exige" autocomplete="off" spellcheck="false">
+            <button type="button" class="eye" id="btnVerApiKey" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
           </div>
         </div>
       </div>
-    </details>
-
-    <div class="actions" style="margin-top:14px">
-      <button type="button" class="btn btn-dark" id="btnGuardarConfig"><svg class="i"><use href="#i-check"></use></svg>Guardar</button>
-      <button type="button" class="btn btn-ghost" id="btnBorrarConfig"><svg class="i"><use href="#i-trash"></use></svg>Borrar de este navegador</button>
     </div>
-    <div class="okbox" id="estadoConfig" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración guardada en este navegador</span></div>
-    <div class="okbox" id="guardadoFlash" role="status" aria-live="polite" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Guardado</span></div>
+
+    <div class="card">
+      <h3>Sondeo</h3>
+      <p class="sub">Cada cuánto se consulta la API y cuántos puntos recientes se muestran en los minigráficos.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="pollIntervalInput">Intervalo de sondeo (s)</label>
+          <input type="number" id="pollIntervalInput" min="5" step="1" value="60">
+        </div>
+        <div class="field">
+          <label for="historyLenInput">Puntos en los minigráficos</label>
+          <input type="number" id="historyLenInput" min="5" max="200" step="1" value="40">
+        </div>
+      </div>
+
+      <details class="acc">
+        <summary><svg class="i"><use href="#i-sliders"></use></svg>Ajustes avanzados<svg class="i chev"><use href="#i-down"></use></svg></summary>
+        <div class="inner">
+          <div class="grid2">
+            <div class="field">
+              <label for="requestTimeoutInput">Tiempo límite de la petición (s)</label>
+              <input type="number" id="requestTimeoutInput" min="3" step="1" value="15">
+              <p class="help">Si la API no responde en este tiempo, se cancela y se trata como error transitorio.</p>
+            </div>
+            <div class="field">
+              <label for="staleThresholdInput">Umbral de dato obsoleto (s)</label>
+              <input type="number" id="staleThresholdInput" min="5" step="5" value="120">
+              <p class="help">A partir de cuántos segundos de antigüedad una lectura se marca como obsoleta.</p>
+            </div>
+            <div class="field">
+              <label for="backoffBaseInput">Backoff inicial (s)</label>
+              <input type="number" id="backoffBaseInput" min="0.5" step="0.5" value="2">
+              <p class="help">Espera tras el primer error transitorio; se duplica en cada reintento.</p>
+            </div>
+            <div class="field">
+              <label for="backoffMaxInput">Backoff máximo (s)</label>
+              <input type="number" id="backoffMaxInput" min="5" step="5" value="300">
+              <p class="help">Tope de espera entre reintentos, por muchos que se acumulen.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-dark" id="btnGuardarConfig"><svg class="i"><use href="#i-check"></use></svg>Guardar</button>
+        <button type="button" class="btn btn-ghost" id="btnBorrarConfig"><svg class="i"><use href="#i-trash"></use></svg>Borrar de este navegador</button>
+        <button type="button" class="btn btn-ghost" id="btnOcultarConfig" style="display:none"><svg class="i"><use href="#i-down"></use></svg>Ocultar</button>
+      </div>
+      <div class="okbox" id="estadoConfig" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración guardada en este navegador</span></div>
+      <div class="okbox" id="guardadoFlash" role="status" aria-live="polite" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Guardado</span></div>
+    </div>
   </div>
 
   <!-- ============ SECCIÓN 2 · CONTROL Y ESTADO ============ -->
@@ -482,6 +499,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
     <div class="stats">
       <div class="stat"><b id="horaInicioValor">—</b><span>Hora de inicio</span></div>
+      <div class="stat"><b id="ultimaActValor">—</b><span>Última actualización</span></div>
+      <div class="stat"><b id="tiempoUsoValor">—</b><span>Tiempo de uso</span></div>
       <div class="stat"><b id="contLecturas">0</b><span>Lecturas recibidas</span></div>
       <div class="stat"><b id="contReintentos">0</b><span>Reintentos actuales</span></div>
       <div class="stat"><b id="contLatencia">—</b><span>Latencia última (ms)</span></div>
@@ -537,26 +556,29 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <!-- ============ SECCIÓN 4 · HISTÓRICO DE LA SESIÓN ============ -->
   <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Histórico de esta sesión</h2><p class="sh-lede">Se reinicia al recargar la página; no se guarda en ningún sitio. Se conservan como máximo las últimas <span id="maxFilasTexto">500</span> lecturas.</p></div></header>
 
-  <div class="card">
-    <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
-    <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
-      <table class="t">
-        <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Dirección</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
-        <tbody id="historialCuerpo"></tbody>
-      </table>
+  <details class="acc-evol" id="accHistorial" open>
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Tabla de histórico de esta sesión<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
+      <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
+        <table class="t">
+          <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Dirección</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
+          <tbody id="historialCuerpo"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnDescargarCSV" disabled><svg class="i"><use href="#i-download"></use></svg>Descargar histórico (CSV)</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnLimpiarHistorial" disabled><svg class="i"><use href="#i-trash"></use></svg>Limpiar histórico</button>
+      </div>
     </div>
-    <div class="actions" style="margin-top:14px">
-      <button type="button" class="btn btn-ghost btn-sm" id="btnDescargarCSV" disabled><svg class="i"><use href="#i-download"></use></svg>Descargar histórico (CSV)</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="btnLimpiarHistorial" disabled><svg class="i"><use href="#i-trash"></use></svg>Limpiar histórico</button>
-    </div>
-  </div>
+  </details>
 
 </main>
 
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:51</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:25</p>
 </footer>
 
 <div class="bottomnav">
@@ -700,6 +722,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const estadoConfig       = document.getElementById('estadoConfig');
   const guardadoFlash      = document.getElementById('guardadoFlash');
   const draftEstacion      = document.getElementById('draftEstacion');
+  const configResumen       = document.getElementById('configResumen');
+  const configCuerpo        = document.getElementById('configCuerpo');
+  const configResumenNombre = document.getElementById('configResumenNombre');
+  const btnEditarConfig     = document.getElementById('btnEditarConfig');
+  const btnOcultarConfig    = document.getElementById('btnOcultarConfig');
 
   const btnIniciar  = document.getElementById('btnIniciar');
   const btnDetener  = document.getElementById('btnDetener');
@@ -713,6 +740,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const progresoFill = document.getElementById('progresoFill');
   const progresoEtiqueta = document.getElementById('progresoEtiqueta');
   const horaInicioValor = document.getElementById('horaInicioValor');
+  const ultimaActValor = document.getElementById('ultimaActValor');
+  const tiempoUsoValor = document.getElementById('tiempoUsoValor');
   const contLecturas = document.getElementById('contLecturas');
   const contReintentos = document.getElementById('contReintentos');
   const contLatencia = document.getElementById('contLatencia');
@@ -758,6 +787,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   let countdownIntervalId = null;
   let activo = null;
   let ejeXModo = 'uniforme'; // 'uniforme' (por lectura) | 'tiempo' (por marca de tiempo real)
+  let horaInicioMs = null; // marca de tiempo real del último "Iniciar", para la ficha "Tiempo de uso"
+  let configForzarExpandida = false; // true tras pulsar "Editar" en el resumen de configuración ya guardada
   const series = {};
   const seriesTiempos = []; // marca de tiempo (ms) de cada punto, compartida por todas las series: todas se registran juntas en cada lectura
   const ultimoValor = {};
@@ -950,6 +981,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     localStorage.setItem(STORAGE_KEY_BACKOFF_M, leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS));
     localStorage.setItem(STORAGE_KEY_STALE, leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS));
     localStorage.setItem(STORAGE_KEY_HISTLEN, leerNumero(historyLenInput, DEFAULTS.historyLen));
+    configForzarExpandida = false; // "Guardar" = fin de la edición: vuelve a la vista compacta
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
     mostrarGuardadoFlash();
@@ -977,6 +1009,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     backoffMaxInput.value = DEFAULTS.backoffMaxS;
     staleThresholdInput.value = DEFAULTS.staleThresholdS;
     historyLenInput.value = DEFAULTS.historyLen;
+    configForzarExpandida = false;
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
   }
@@ -987,6 +1020,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     draftEstacion.innerHTML = guardado
       ? '<svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración ya guardada para la estación <b>' + localStorage.getItem(STORAGE_KEY_STATION) + '</b>.</span>'
       : '';
+    actualizarVisibilidadConfig(guardado);
+  }
+
+  // Una vez hay Station ID guardado, se oculta todo el formulario
+  // (Estación/Sondeo/Ajustes avanzados) y solo se muestra el nombre de la
+  // estación, para no tener que ver siempre los mismos campos ya
+  // rellenados. "Editar" fuerza a mostrarlo de nuevo; "Guardar" u "Ocultar"
+  // vuelven a la vista compacta.
+  function actualizarVisibilidadConfig(guardado){
+    const expandir = !guardado || configForzarExpandida;
+    configCuerpo.style.display = expandir ? '' : 'none';
+    configResumen.style.display = (guardado && !expandir) ? 'block' : 'none';
+    btnOcultarConfig.style.display = (guardado && expandir) ? '' : 'none';
+    if (guardado) configResumenNombre.textContent = localStorage.getItem(STORAGE_KEY_STATION);
   }
 
   function actualizarEstadoBotonIniciar(){
@@ -1091,6 +1138,18 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function fmtHora(ms){
     return new Date(ms).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  // Formatea una duración (ms) para la ficha "Tiempo de uso" (inicio →
+  // última lectura), con la unidad justa según la magnitud.
+  function formatearDuracion(ms){
+    const totalS = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(totalS / 3600);
+    const m = Math.floor((totalS % 3600) / 60);
+    const s = totalS % 60;
+    if (h > 0) return h + ' h ' + m + ' min';
+    if (m > 0) return m + ' min ' + s + ' s';
+    return s + ' s';
   }
 
   function actualizarSparkline(key){
@@ -1215,9 +1274,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       }
     });
     valorCalidad.textContent = fmt(t.quality_code);
-    metaLinea.textContent = 'Última lectura: ' + new Date().toLocaleTimeString('es-ES') +
+    const ahoraMs = Date.now();
+    metaLinea.textContent = 'Última lectura: ' + new Date(ahoraMs).toLocaleTimeString('es-ES') +
       ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';
     contLatencia.textContent = t.latency_ms.toFixed(0);
+    ultimaActValor.textContent = new Date(ahoraMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    if (horaInicioMs !== null) tiempoUsoValor.textContent = formatearDuracion(ahoraMs - horaInicioMs);
   }
 
   /* ============================================================
@@ -1564,7 +1626,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     running = true;
     retryCount = 0;
     contReintentos.textContent = '0';
-    horaInicioValor.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    horaInicioMs = Date.now();
+    horaInicioValor.textContent = new Date(horaInicioMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    ultimaActValor.textContent = '—';
+    tiempoUsoValor.textContent = '0 s';
     ocultarError();
     avisoPlausibilidad.style.display = 'none';
 
@@ -2008,7 +2073,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   });
 
   btnIrConfig.addEventListener('click', () => {
+    configForzarExpandida = true;
+    actualizarEstadoConfig();
     document.getElementById('seccionConfig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  btnEditarConfig.addEventListener('click', () => {
+    configForzarExpandida = true;
+    actualizarEstadoConfig();
+  });
+  btnOcultarConfig.addEventListener('click', () => {
+    configForzarExpandida = false;
+    actualizarEstadoConfig();
   });
   goHome.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   btnHelp.addEventListener('click', abrirModal);

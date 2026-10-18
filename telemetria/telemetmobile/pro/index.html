@@ -241,10 +241,18 @@
   .sheet{
     position:fixed; left:0; right:0; bottom:0; max-height:86vh; overflow-y:auto;
     background:var(--surface-raised); border-radius:20px 20px 0 0; z-index:31; padding:10px 20px calc(24px + var(--safe-bottom));
-    transform:translateY(100%); transition:transform .25s cubic-bezier(.32,.72,0,1);
+    transform:translateY(100%); pointer-events:none; visibility:hidden;
+    transition:transform .25s cubic-bezier(.32,.72,0,1), visibility 0s linear .25s;
     border-top:1px solid rgba(234,241,247,0.12);
   }
-  .sheet.visible{transform:translateY(0);}
+  /* visibility:hidden (no solo transform fuera de pantalla) para que los
+     campos de dentro —incluido el de la API Key, type="password"— queden
+     realmente fuera de la jugada mientras la hoja está cerrada: si no,
+     Safari/WebKit puede seguir tratándolos como un formulario de login
+     presente en la página y disparar su propio teclado/AutoFill por su
+     cuenta, sin que nuestro JS de foco pueda evitarlo. Transición
+     retrasada para no cortar en seco la animación de cierre. */
+  .sheet.visible{transform:translateY(0); pointer-events:auto; visibility:visible; transition:transform .25s cubic-bezier(.32,.72,0,1);}
   .sheet-handle{width:36px; height:4px; background:rgba(234,241,247,0.25); border-radius:2px; margin:4px auto 14px;}
   .sheet h2{font-family:var(--display); font-weight:800; font-size:19px; margin-bottom:4px;}
   .sheet .subtitle{font-size:13px; color:var(--text-secondary); margin-bottom:16px;}
@@ -502,7 +510,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:51</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:56</div>
 </section>
 
 <script>

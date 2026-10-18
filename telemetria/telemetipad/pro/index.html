@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:40</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:51</div>
 </section>
 
 <script>
@@ -1862,7 +1862,17 @@
 
   sheetBackdrop.addEventListener('click', cerrarTodosLosDialogos);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    if (document.hidden){
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    } else {
+      // Al volver a primer plano (p. ej. al reabrir la app desde el dock o
+      // el selector de apps sin que iOS llegue a matar del todo el
+      // proceso) por si el teclado se había quedado "pegado" a un campo
+      // del diálogo de ajustes desde antes de pasar a segundo plano: el
+      // diálogo puede seguir invisible (opacity:0) pero con el foco
+      // todavía dentro, y eso basta para que el teclado reaparezca solo.
+      cerrarTodosLosDialogos();
+    }
   });
   $('btnSettings').addEventListener('click', () => { cargarAjustes(); abrirHoja(settingsSheet); });
   btnToggleCharts.addEventListener('click', () => mostrarGraficas(!chartsStack.classList.contains('visible')));
@@ -1992,6 +2002,10 @@
     }
   }
 
+  // Si el proceso se reanuda (en vez de recargar del todo) con el foco y/o
+  // el teclado "pegados" a un campo de un diálogo de ajustes desde antes de
+  // cerrar la app, se limpia antes de arrancar.
+  cerrarTodosLosDialogos();
   arrancar();
 })();
 </script>

@@ -556,7 +556,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:14</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:27</p>
 </footer>
 
 <div class="bottomnav">
@@ -854,6 +854,38 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         req.onerror = () => reject(req.error);
       });
     } catch (err) { /* purga best-effort */ }
+  }
+
+  // Borra todas las filas guardadas de una estación dentro de un rango de
+  // tiempo. Se usa para purgar un día de histórico que se guardó con el
+  // bug de extraerValores() (solo lluvia, el resto a null) antes de
+  // volver a pedirlo a la API ya corregida; sin esto, backfillSiNecesario()
+  // vería que el día "ya tiene datos" y nunca lo repetiría.
+  async function borrarRango(stationId, tDesdeMs, tHastaMs){
+    try {
+      const db = await abrirDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const idx = tx.objectStore(DB_STORE).index('por_estacion');
+        const req = idx.openCursor(IDBKeyRange.only(stationId));
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur){ resolve(); return; }
+          if (cur.value.epochMs >= tDesdeMs && cur.value.epochMs <= tHastaMs) cur.delete();
+          cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) { /* best-effort */ }
+  }
+
+  // Detecta filas guardadas por el bug anterior de extraerValores(): el
+  // histórico de la API llegaba con nombres de campo distintos a los del
+  // endpoint en vivo, así que todo salvo la lluvia se guardaba a null. Si
+  // NINGUNA fila del día tiene temperatura, se trata como "incompleto" y
+  // se vuelve a pedir, en vez de asumir que ya está completo.
+  function diaIncompleto(filas){
+    return filas.length > 0 && filas.every(f => !f.vals || f.vals.temp_c === null);
   }
 
   /* ============================================================
@@ -1345,7 +1377,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // "winddir" (grados, 0-360) va suelto en la raíz de obs, igual que
       // solarRadiation/qcStatus: no depende de unidades, así que no está
       // dentro de metric/imperial.
-      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir, obs.winddirAvg)),
       rainrate_mmh: numOrNull(metric.precipRate),
       rain_total_mm: numOrNull(metric.precipTotal),
       // Nombre oficial de la API (PWS current/history): "solarRadiation" en
@@ -1489,7 +1521,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const inicioDiaMs = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 0, 0, 0, 0).getTime();
         const finDiaMs = inicioDiaMs + 24 * 60 * 60 * 1000 - 1;
         const existentes = await consultarRango(stationId, inicioDiaMs, finDiaMs);
-        if (existentes.length > 0) continue; // ya hay datos locales de ese día: no se duplica
+        if (existentes.length > 0 && !diaIncompleto(existentes)) continue; // ya hay datos locales completos de ese día: no se duplica
+        if (existentes.length > 0) await borrarRango(stationId, inicioDiaMs, finDiaMs); // datos incompletos de antes del fix: se purgan para volver a pedirlos
 
         try {
           const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(fecha));

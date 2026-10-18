@@ -502,7 +502,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:14</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:27</div>
 </section>
 
 <script>
@@ -755,7 +755,7 @@
       pressure_hpa: numOrNull(firstDefined(m.pressure, presionHist)),
       wind_kmh: numOrNull(firstDefined(m.windSpeed, m.windspeedAvg)),
       gust_kmh: numOrNull(firstDefined(m.windGust, m.windgustAvg)),
-      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir, obs.winddirAvg)),
       rainrate_mmh: numOrNull(m.precipRate),
       rain_total_mm: numOrNull(m.precipTotal),
       solar_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarRadiationHigh)),
@@ -841,6 +841,15 @@
         tx.oncomplete = () => resolve();
       });
     } catch (err) { ultimoErrorHistorialLocal = err; }
+  }
+
+  // Detecta filas guardadas por el bug anterior de extraerValores(): el
+  // histórico de la API llegaba con nombres de campo distintos a los del
+  // endpoint en vivo, así que todo salvo la lluvia se guardaba a null. Si
+  // NINGUNA fila del día tiene temperatura, se trata como "incompleto" y
+  // se vuelve a pedir, en vez de asumir que ya está completo.
+  function diaIncompleto(filas){
+    return filas.length > 0 && filas.every(f => !f.vals || f.vals.temp_c === null);
   }
 
   async function purgarAntiguos(stationId, dayKeyLimite){
@@ -1169,7 +1178,8 @@
     const claves = dayKeysRecientes(DIAS_HISTORIAL).filter(k => k !== dayKeyActual);
     const resultados = await Promise.all(claves.map(async k => {
       const locales = await consultarDia(activo.stationId, k);
-      if (locales.length > 0) return locales;
+      if (locales.length > 0 && !diaIncompleto(locales)) return locales;
+      if (locales.length > 0) await borrarDia(activo.stationId, k); // datos incompletos de antes del fix de extraerValores(): se purgan para volver a pedirlos
       return backfillDiaAntiguoDesdeAPI(activo.stationId, activo.apiKey, k);
     }));
     historialDiasCache = {};

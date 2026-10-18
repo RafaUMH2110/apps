@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:27</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:40</div>
 </section>
 
 <script>
@@ -1167,36 +1167,47 @@
   // rellenar ese día una sola vez desde el endpoint de histórico, igual que
   // ya se hace con el día de hoy, y se guarda en IndexedDB para no repetir
   // la consulta la próxima vez.
+  // Devuelve las lecturas SIN guardarlas todavía: quien llama decide cuándo
+  // (y si) tocar lo que ya hay guardado. null = fallo de red/API (hay que
+  // conservar lo que hubiera); [] = la API respondió pero sin lecturas ese
+  // día.
   async function backfillDiaAntiguoDesdeAPI(stationId, apiKey, dayKey){
     try {
       const url = construirURLHistoria(stationId, apiKey, dayKey.replace(/-/g, ''));
       const resp = await fetch(url);
-      if (!resp.ok) return [];
+      if (!resp.ok) return null;
       const data = await resp.json();
       const obsArr = data.observations || [];
       const lecturas = [];
       obsArr.forEach(obs => {
         const epochMs = obs.epoch ? obs.epoch * 1000 : null;
         if (!epochMs) return;
-        const vals = extraerValores(obs);
-        lecturas.push({ epochMs, vals });
-        guardarLectura(stationId, dayKey, epochMs, vals);
+        lecturas.push({ epochMs, vals: extraerValores(obs) });
       });
       return lecturas;
     } catch (err) {
-      return [];
+      return null;
     }
   }
 
   async function refrescarHistorialDiasCache(){
     if (!activo) return;
     const claves = dayKeysRecientes(DIAS_HISTORIAL).filter(k => k !== dayKeyActual);
-    const resultados = await Promise.all(claves.map(async k => {
+    // Secuencial (no Promise.all): pedir los 6 días en paralelo justo al
+    // arrancar la app es lo que probablemente hacía fallar el backfill en
+    // iOS (ráfaga de peticiones simultáneas a la API de WU al arrancar en
+    // frío) y, combinado con el borrado antes de confirmar éxito, dejaba el
+    // día vacío del todo ("Sin datos") en vez de solo incompleto.
+    const resultados = [];
+    for (const k of claves){
       const locales = await consultarDia(activo.stationId, k);
-      if (locales.length > 0 && !diaIncompleto(locales)) return locales;
-      if (locales.length > 0) await borrarDia(activo.stationId, k); // datos incompletos de antes del fix de extraerValores(): se purgan para volver a pedirlos
-      return backfillDiaAntiguoDesdeAPI(activo.stationId, activo.apiKey, k);
-    }));
+      if (locales.length > 0 && !diaIncompleto(locales)){ resultados.push(locales); continue; }
+      const nuevas = await backfillDiaAntiguoDesdeAPI(activo.stationId, activo.apiKey, k);
+      if (nuevas === null){ resultados.push(locales); continue; } // fallo de red: nos quedamos con lo que había (aunque esté incompleto) en vez de perderlo
+      if (locales.length > 0) await borrarDia(activo.stationId, k); // ya tenemos el reemplazo bueno: ahora sí se purgan las filas incompletas
+      for (const l of nuevas) await guardarLectura(activo.stationId, k, l.epochMs, l.vals);
+      resultados.push(nuevas);
+    }
     historialDiasCache = {};
     claves.forEach((k, i) => { historialDiasCache[k] = resumenDeLecturas(resultados[i]); });
     guardarHistorialDiasEnStorage(activo.stationId);

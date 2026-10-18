@@ -556,7 +556,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:27</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:40</p>
 </footer>
 
 <div class="bottomnav">
@@ -1522,19 +1522,23 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const finDiaMs = inicioDiaMs + 24 * 60 * 60 * 1000 - 1;
         const existentes = await consultarRango(stationId, inicioDiaMs, finDiaMs);
         if (existentes.length > 0 && !diaIncompleto(existentes)) continue; // ya hay datos locales completos de ese día: no se duplica
-        if (existentes.length > 0) await borrarRango(stationId, inicioDiaMs, finDiaMs); // datos incompletos de antes del fix: se purgan para volver a pedirlos
 
         try {
           const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(fecha));
           const resp = await fetchConTimeout(url, 15000);
-          if (!resp.ok) continue;
+          if (!resp.ok) continue; // fallo de red/API: nos quedamos con lo que hubiera (aunque esté incompleto) en vez de perderlo
           const data = await resp.json();
           const obsArr = data.observations || [];
+          // Solo se purgan las filas incompletas de antes del fix una vez
+          // confirmado que la nueva petición ha funcionado; si se borrara
+          // antes de intentar la petición, un fallo de red dejaría el día
+          // completamente vacío en vez de solo incompleto.
+          if (existentes.length > 0) await borrarRango(stationId, inicioDiaMs, finDiaMs);
           for (const obs of obsArr){
             if (!obs.epoch) continue;
             await guardarLectura(stationId, obs.epoch * 1000, extraerValores(obs));
           }
-        } catch (err) { /* un día sin histórico disponible no detiene el resto */ }
+        } catch (err) { /* un día sin histórico disponible no detiene el resto; se conserva lo que hubiera */ }
       }
     } finally {
       backfillEnCurso = false;

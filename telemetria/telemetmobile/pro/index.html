@@ -502,7 +502,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 01:48</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 02:00</div>
 </section>
 
 <script>
@@ -1086,10 +1086,42 @@
     } catch (err) { return false; }
   }
 
+  // Si este dispositivo no tiene lecturas locales de un día anterior (p. ej.
+  // la primera vez que se abre la app en modo standalone desde la pantalla
+  // de inicio en iOS, que usa un almacenamiento de IndexedDB/localStorage
+  // independiente del de Safari aunque sea la misma web), se intenta
+  // rellenar ese día una sola vez desde el endpoint de histórico, igual que
+  // ya se hace con el día de hoy, y se guarda en IndexedDB para no repetir
+  // la consulta la próxima vez.
+  async function backfillDiaAntiguoDesdeAPI(stationId, apiKey, dayKey){
+    try {
+      const url = construirURLHistoria(stationId, apiKey, dayKey.replace(/-/g, ''));
+      const resp = await fetch(url);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      const obsArr = data.observations || [];
+      const lecturas = [];
+      obsArr.forEach(obs => {
+        const epochMs = obs.epoch ? obs.epoch * 1000 : null;
+        if (!epochMs) return;
+        const vals = extraerValores(obs);
+        lecturas.push({ epochMs, vals });
+        guardarLectura(stationId, dayKey, epochMs, vals);
+      });
+      return lecturas;
+    } catch (err) {
+      return [];
+    }
+  }
+
   async function refrescarHistorialDiasCache(){
     if (!activo) return;
     const claves = dayKeysRecientes(DIAS_HISTORIAL).filter(k => k !== dayKeyActual);
-    const resultados = await Promise.all(claves.map(k => consultarDia(activo.stationId, k)));
+    const resultados = await Promise.all(claves.map(async k => {
+      const locales = await consultarDia(activo.stationId, k);
+      if (locales.length > 0) return locales;
+      return backfillDiaAntiguoDesdeAPI(activo.stationId, activo.apiKey, k);
+    }));
     historialDiasCache = {};
     claves.forEach((k, i) => { historialDiasCache[k] = resumenDeLecturas(resultados[i]); });
     guardarHistorialDiasEnStorage(activo.stationId);

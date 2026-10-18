@@ -246,7 +246,7 @@ button{font-family:var(--texto);cursor:pointer}
 .dia-card .dc-max{color:var(--c-temp)}
 .dia-card .dc-min{color:var(--steel-soft)}
 .dia-card .dc-barra{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
-.dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:var(--c-temp);border-radius:2px}
+.dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--c-hum),var(--c-temp));border-radius:2px}
 .dia-card .dc-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .dias-vacio{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
 
@@ -600,7 +600,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:41</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 04:49</p>
 </footer>
 
 <div class="bottomnav">
@@ -1296,7 +1296,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         elUnidad.textContent = comp ? ('° ' + comp) : '°';
       }
     });
-    valorCalidad.textContent = '"' + fmt(t.quality_code) + '"';
+    valorCalidad.textContent = fmt(t.quality_code);
     const ahoraMs = Date.now();
     metaLinea.textContent = 'Última lectura: ' + new Date(ahoraMs).toLocaleTimeString('es-ES') +
       ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';

@@ -202,7 +202,7 @@ button{font-family:var(--texto);cursor:pointer}
 .tt-nombre{color:var(--muted);margin-left:auto;padding-left:8px}
 
 /* Estadísticas */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
 @media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
 .stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
 .stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
@@ -464,6 +464,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       <button type="button" class="btn btn-ghost" id="btnBorrarConfig"><svg class="i"><use href="#i-trash"></use></svg>Borrar de este navegador</button>
     </div>
     <div class="okbox" id="estadoConfig" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Configuración guardada en este navegador</span></div>
+    <div class="okbox" id="guardadoFlash" role="status" aria-live="polite" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Guardado</span></div>
   </div>
 
   <!-- ============ SECCIÓN 2 · CONTROL Y ESTADO ============ -->
@@ -480,6 +481,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div class="progreso-etiqueta" id="progresoEtiqueta" aria-live="polite">Sin actividad.</div>
 
     <div class="stats">
+      <div class="stat"><b id="horaInicioValor">—</b><span>Hora de inicio</span></div>
       <div class="stat"><b id="contLecturas">0</b><span>Lecturas recibidas</span></div>
       <div class="stat"><b id="contReintentos">0</b><span>Reintentos actuales</span></div>
       <div class="stat"><b id="contLatencia">—</b><span>Latencia última (ms)</span></div>
@@ -554,7 +556,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 02:08</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 02:30</p>
 </footer>
 
 <div class="bottomnav">
@@ -696,6 +698,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
   const btnBorrarConfig    = document.getElementById('btnBorrarConfig');
   const estadoConfig       = document.getElementById('estadoConfig');
+  const guardadoFlash      = document.getElementById('guardadoFlash');
   const draftEstacion      = document.getElementById('draftEstacion');
 
   const btnIniciar  = document.getElementById('btnIniciar');
@@ -709,6 +712,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   ];
   const progresoFill = document.getElementById('progresoFill');
   const progresoEtiqueta = document.getElementById('progresoEtiqueta');
+  const horaInicioValor = document.getElementById('horaInicioValor');
   const contLecturas = document.getElementById('contLecturas');
   const contReintentos = document.getElementById('contReintentos');
   const contLatencia = document.getElementById('contLatencia');
@@ -762,6 +766,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   GRAFICABLES.forEach(m => { series[m.key] = []; ultimoValor[m.key] = null; });
   let dbPromise = null;
   let backfillEnCurso = false;
+  // Último error real al leer el histórico local (IndexedDB), si lo hubo.
+  // Permite distinguir, en las gráficas de evolución, "todavía no hay
+  // datos" (consulta correcta, sin filas) de "no se ha podido consultar
+  // el histórico" (modo privado, cuota, bloqueo del navegador...), que
+  // de lo contrario se ven exactamente igual: un array vacío.
+  let ultimoErrorHistorialLocal = null;
 
   /* ============================================================
      PERSISTENCIA LOCAL (IndexedDB) — histórico para las gráficas
@@ -806,7 +816,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   async function consultarRango(stationId, tDesdeMs, tHastaMs){
     try {
       const db = await abrirDB();
-      return await new Promise((resolve, reject) => {
+      const resultado = await new Promise((resolve, reject) => {
         const tx = db.transaction(DB_STORE, 'readonly');
         const idx = tx.objectStore(DB_STORE).index('por_estacion');
         const out = [];
@@ -820,7 +830,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         };
         req.onerror = () => reject(req.error);
       });
+      ultimoErrorHistorialLocal = null;
+      return resultado;
     } catch (err) {
+      ultimoErrorHistorialLocal = err;
       return [];
     }
   }
@@ -907,6 +920,18 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     localStorage.setItem(STORAGE_KEY_HISTLEN, leerNumero(historyLenInput, DEFAULTS.historyLen));
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
+    mostrarGuardadoFlash();
+  }
+
+  // Confirmación visible de que el botón "Guardar" ha hecho algo, aunque
+  // la configuración ya estuviera guardada de antes (en ese caso el
+  // aviso fijo de "ya guardado" no cambia de estado y, sin esto, el
+  // clic no se notaría). Se muestra siempre un instante y se oculta sola.
+  let guardadoFlashTimeout = null;
+  function mostrarGuardadoFlash(){
+    guardadoFlash.style.display = 'inline-flex';
+    clearTimeout(guardadoFlashTimeout);
+    guardadoFlashTimeout = setTimeout(() => { guardadoFlash.style.display = 'none'; }, 2500);
   }
 
   function borrarConfig(){
@@ -1487,6 +1512,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     running = true;
     retryCount = 0;
     contReintentos.textContent = '0';
+    horaInicioValor.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     ocultarError();
     avisoPlausibilidad.style.display = 'none';
 
@@ -1758,6 +1784,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return activo ? activo.stationId : stationIdInput.value.trim();
   }
 
+  // Mensaje para el panel cuando no hay puntos que pintar: distingue "la
+  // consulta fue bien, simplemente no hay datos todavía" (mensajeVacio)
+  // de "no se ha podido ni consultar el histórico local" (el array vacío
+  // que devuelve consultarRango es idéntico en ambos casos, así que sin
+  // esto el segundo caso se confunde con el primero y parece que "no hay
+  // datos" cuando en realidad el navegador está bloqueando IndexedDB).
+  function mensajeHistorialVacio(mensajeVacio){
+    if (ultimoErrorHistorialLocal){
+      const detalle = ultimoErrorHistorialLocal.message || ultimoErrorHistorialLocal.name || 'motivo desconocido';
+      return '<p class="evol-vacio">No se ha podido leer el histórico guardado en este navegador (' + escHTML(detalle) + '). Puede estar bloqueado por el modo privado/incógnito, los ajustes de cookies y datos de sitios, o una extensión; en ese caso la gráfica seguirá vacía aunque el monitor lleve tiempo funcionando.</p>';
+    }
+    return '<p class="evol-vacio">' + mensajeVacio + '</p>';
+  }
+
   async function dibujarEvolucion12h(){
     const stationId = estacionParaEvolucion();
     if (!stationId){ charts12h.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
@@ -1766,7 +1806,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const desdeMs = hastaMs - VENTANA_12H_MS;
     const filas = await consultarRango(stationId, desdeMs, hastaMs);
     if (filas.length === 0){
-      charts12h.innerHTML = '<p class="evol-vacio">Todavía no hay datos de las últimas 12 horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.</p>';
+      charts12h.innerHTML = mensajeHistorialVacio('Todavía no hay datos de las últimas 12 horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.');
       return;
     }
     filas.sort((a, b) => a.epochMs - b.epochMs);
@@ -1857,7 +1897,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const hastaMs = Date.now();
     const filas = await consultarRango(stationId, desdeMs, hastaMs);
     if (filas.length === 0){
-      charts7d.innerHTML = '<p class="evol-vacio">Todavía no hay datos de los últimos 7 días en este navegador. Inicia el monitor para que se complete con el tiempo (y, si es posible, con el histórico de la API).</p>';
+      charts7d.innerHTML = mensajeHistorialVacio('Todavía no hay datos de los últimos 7 días en este navegador. Inicia el monitor para que se complete con el tiempo (y, si es posible, con el histórico de la API).');
       return;
     }
     filas.sort((a, b) => a.epochMs - b.epochMs);

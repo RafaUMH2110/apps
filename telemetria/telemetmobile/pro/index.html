@@ -502,7 +502,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:00</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:14</div>
 </section>
 
 <script>
@@ -734,18 +734,32 @@
      ============================================================ */
   function extraerValores(obs){
     const m = obs.metric || {};
+    // El endpoint de histórico (history/all) NO usa los mismos nombres de
+    // campo que el de lectura en vivo (current): en vez de un valor
+    // puntual (temp, windSpeed, windGust, dewpt, humidity, pressure...)
+    // da máximo/mínimo/media del periodo (tempAvg, windspeedAvg,
+    // windgustAvg, dewptAvg, humidityAvg, pressureMax/Min...). Sin este
+    // fallback, el backfill guardaba esas lecturas con casi todo a null
+    // (solo sobrevivían precipRate/precipTotal, que sí se llaman igual en
+    // los dos endpoints) y las gráficas/fichas se veían vacías para todo
+    // excepto la lluvia. Se usa el valor en vivo si existe y, si no, la
+    // media del histórico (o el promedio de máximo y mínimo cuando no hay
+    // media, como en la presión).
+    const presionHist = (Number.isFinite(m.pressureMax) && Number.isFinite(m.pressureMin))
+      ? (m.pressureMax + m.pressureMin) / 2
+      : firstDefined(m.pressureMax, m.pressureMin);
     return {
-      temp_c: numOrNull(m.temp),
-      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, m.dewpt, m.dewpoint)),
-      humidity_pct: numOrNull(obs.humidity),
-      pressure_hpa: numOrNull(m.pressure),
-      wind_kmh: numOrNull(m.windSpeed),
-      gust_kmh: numOrNull(m.windGust),
+      temp_c: numOrNull(firstDefined(m.temp, m.tempAvg)),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, m.dewpt, m.dewptAvg, m.dewpoint)),
+      humidity_pct: numOrNull(firstDefined(obs.humidity, obs.humidityAvg)),
+      pressure_hpa: numOrNull(firstDefined(m.pressure, presionHist)),
+      wind_kmh: numOrNull(firstDefined(m.windSpeed, m.windspeedAvg)),
+      gust_kmh: numOrNull(firstDefined(m.windGust, m.windgustAvg)),
       wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
       rainrate_mmh: numOrNull(m.precipRate),
       rain_total_mm: numOrNull(m.precipTotal),
-      solar_wm2: numOrNull(obs.solarRadiation),
-      uv_index: numOrNull(obs.uv),
+      solar_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarRadiationHigh)),
+      uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
       quality_code: firstDefined(obs.qualityControlFlag, obs.qcStatus, 'N/A')
     };
   }

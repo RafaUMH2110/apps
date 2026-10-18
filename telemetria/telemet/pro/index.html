@@ -556,7 +556,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 02:30</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 03:14</p>
 </footer>
 
 <div class="bottomnav">
@@ -1317,17 +1317,31 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      ============================================================ */
   function extraerValores(obs){
     const metric = obs.metric || {};
-    const tempC = numOrNull(metric.temp);
-    const humPct = numOrNull(obs.humidity);
-    const windKmh = numOrNull(metric.windSpeed);
+    // El endpoint de histórico (history/all) NO usa los mismos nombres de
+    // campo que el de lectura en vivo (current): en vez de un valor
+    // puntual (temp, windSpeed, windGust, dewpt, humidity, pressure...)
+    // da máximo/mínimo/media del periodo (tempAvg, windspeedAvg,
+    // windgustAvg, dewptAvg, humidityAvg, pressureMax/Min...). Sin este
+    // fallback, el backfill guardaba esas lecturas con casi todo a null
+    // (solo sobrevivían precipRate/precipTotal, que sí se llaman igual en
+    // los dos endpoints) y las gráficas/fichas se veían vacías para todo
+    // excepto la lluvia. Se usa el valor en vivo si existe y, si no, la
+    // media del histórico (o el promedio de máximo y mínimo cuando no hay
+    // media, como en la presión).
+    const tempC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
+    const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
+    const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
+    const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
+      ? (metric.pressureMax + metric.pressureMin) / 2
+      : firstDefined(metric.pressureMax, metric.pressureMin);
     return {
       temp_c: tempC,
       heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
-      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewpoint)),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewptAvg, metric.dewpoint)),
       humidity_pct: humPct,
-      pressure_hpa: numOrNull(metric.pressure),
+      pressure_hpa: numOrNull(firstDefined(metric.pressure, presionHist)),
       wind_kmh: windKmh,
-      gust_kmh: numOrNull(metric.windGust),
+      gust_kmh: numOrNull(firstDefined(metric.windGust, metric.windgustAvg)),
       // "winddir" (grados, 0-360) va suelto en la raíz de obs, igual que
       // solarRadiation/qcStatus: no depende de unidades, así que no está
       // dentro de metric/imperial.
@@ -1337,10 +1351,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // Nombre oficial de la API (PWS current/history): "solarRadiation" en
       // camelCase y "qcStatus" para el control de calidad, ambos sueltos en
       // la raíz de obs (no dentro de metric/imperial). Se mantiene un
-      // fallback a variantes en minúsculas / el nombre antiguo por si tu
-      // estación llega a través de una pasarela que las reporte así.
-      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation)),
-      uv_index: numOrNull(obs.uv),
+      // fallback a variantes en minúsculas / el nombre antiguo, y a la
+      // variante "...High" del histórico, por si tu estación llega a
+      // través de una pasarela que las reporte así.
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh)),
+      uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
       quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
     };
   }

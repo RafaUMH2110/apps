@@ -508,6 +508,7 @@
 
   <button type="button" class="btn primario" id="btnGuardarAjustes">Guardar</button>
   <button type="button" class="btn secundario" id="btnPausarReanudar">Pausar sondeo</button>
+  <button type="button" class="btn secundario" id="btnSondeoManual">Sondeo manual (consultar ahora)</button>
   <button type="button" class="btn secundario" id="btnReintentarHistorico">Volver a intentar histórico del día</button>
   <button type="button" class="btn secundario" id="btnDescargarCSVM">Descargar CSV de hoy</button>
   <button type="button" class="btn peligro" id="btnBorrarDia">Borrar datos de hoy en este dispositivo</button>
@@ -530,7 +531,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 05:09</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 19 de octubre de 2026, 14:44</div>
 </section>
 
 <script>
@@ -620,6 +621,7 @@
   let retryCount = 0;
   let timeoutId = null;
   let activo = null;
+  let peticionEnCurso = false; // evita dos cicloConsulta() a la vez (p.ej. sondeo manual mientras ya hay una petición en vuelo)
   let db = null;
   let dbAbriendo = null;
   // Último error real al abrir/leer IndexedDB, si lo hubo. Antes, si
@@ -673,6 +675,7 @@
   const backoffMaxInputM = $('backoffMaxInputM');
   const estadoAjustesLinea = $('estadoAjustesLinea');
   const btnPausarReanudar = $('btnPausarReanudar');
+  const btnSondeoManual = $('btnSondeoManual');
 
   /* ============================================================
      UTILIDADES DE FECHA / NÚMERO
@@ -1003,6 +1006,11 @@
   function fijarEstado(estado, texto){
     estadoLinea.dataset.s = estado;
     estadoLineaTexto.textContent = texto;
+  }
+
+  // El sondeo manual solo tiene sentido con el monitor activo y sin pausar.
+  function actualizarBotonSondeoManual(){
+    btnSondeoManual.disabled = !running || pausado;
   }
 
   function evaluarFrescura(){
@@ -1732,55 +1740,77 @@
 
   async function cicloConsulta(){
     if (!running || pausado || !activo) return;
+    // Evita dos peticiones en vuelo a la vez: puede pasar si se pulsa
+    // "Sondeo manual" justo cuando ya hay una consulta ordinaria o un
+    // reintento en curso.
+    if (peticionEnCurso) return;
+    peticionEnCurso = true;
+    try {
+      const hoyKey = dayKeyLocal(new Date());
+      if (hoyKey !== dayKeyActual){
+        dayKeyActual = hoyKey;
+        lecturasHoy = [];
+        fuenteHistorico = 'local';
+        await intentarBackfillDia();
+        redibujarTodosLosGraficos();
+        pintarTiles();
+        pintarMeta();
+        pintarResumen();
+        await refrescarHistorialDiasCache();
+        pintarHistorialDias();
+      }
 
-    const hoyKey = dayKeyLocal(new Date());
-    if (hoyKey !== dayKeyActual){
-      dayKeyActual = hoyKey;
-      lecturasHoy = [];
-      fuenteHistorico = 'local';
-      await intentarBackfillDia();
-      redibujarTodosLosGraficos();
-      pintarTiles();
-      pintarMeta();
-      pintarResumen();
-      await refrescarHistorialDiasCache();
-      pintarHistorialDias();
+      let response;
+      try { response = await fetchConTimeout(construirURL(activo.stationId, activo.apiKey), activo.requestTimeoutMs); }
+      catch (err) {
+        const motivo = (err && err.name === 'AbortError')
+          ? 'tiempo límite de ' + (activo.requestTimeoutMs / 1000).toFixed(0) + ' s agotado'
+          : 'fallo de red';
+        programarReintento(motivo);
+        return;
+      }
+
+      if (response.status === 401){ pararMonitor('fatal', '401: API Key inválida o no autorizada.'); return; }
+      if (response.status === 404){ pararMonitor('fatal', '404: Station ID no encontrado.'); return; }
+      if (!response.ok){ programarReintento('HTTP ' + response.status); return; }
+
+      let data;
+      try { data = await response.json(); }
+      catch (err) { programarReintento('respuesta no es JSON válido'); return; }
+
+      const obs = (data.observations || [])[0];
+      if (obs){
+        retryCount = 0;
+        ocultarAviso();
+        const epochMs = obs.epoch ? obs.epoch * 1000 : Date.now();
+        if (!yaExiste(epochMs)) insertarLectura(epochMs, extraerValores(obs));
+        pintarTiles();
+        pintarMeta();
+        redibujarTodosLosGraficos();
+        pintarResumen();
+        pintarHistorialDias();
+      } else {
+        evaluarFrescura();
+      }
+
+      programarSiguienteCicloOrdinario();
+    } finally {
+      peticionEnCurso = false;
     }
+  }
 
-    let response;
-    try { response = await fetchConTimeout(construirURL(activo.stationId, activo.apiKey), activo.requestTimeoutMs); }
-    catch (err) {
-      const motivo = (err && err.name === 'AbortError')
-        ? 'tiempo límite de ' + (activo.requestTimeoutMs / 1000).toFixed(0) + ' s agotado'
-        : 'fallo de red';
-      programarReintento(motivo);
-      return;
-    }
-
-    if (response.status === 401){ pararMonitor('fatal', '401: API Key inválida o no autorizada.'); return; }
-    if (response.status === 404){ pararMonitor('fatal', '404: Station ID no encontrado.'); return; }
-    if (!response.ok){ programarReintento('HTTP ' + response.status); return; }
-
-    let data;
-    try { data = await response.json(); }
-    catch (err) { programarReintento('respuesta no es JSON válido'); return; }
-
-    const obs = (data.observations || [])[0];
-    if (obs){
-      retryCount = 0;
-      ocultarAviso();
-      const epochMs = obs.epoch ? obs.epoch * 1000 : Date.now();
-      if (!yaExiste(epochMs)) insertarLectura(epochMs, extraerValores(obs));
-      pintarTiles();
-      pintarMeta();
-      redibujarTodosLosGraficos();
-      pintarResumen();
-      pintarHistorialDias();
-    } else {
-      evaluarFrescura();
-    }
-
-    programarSiguienteCicloOrdinario();
+  // Fuerza una consulta inmediata sin esperar al intervalo programado,
+  // cancelando el ciclo/reintento pendiente (si lo hay) para que se
+  // reprograme desde cero a partir de ahora. Solo tiene efecto con el
+  // monitor activo y sin pausar.
+  async function sondeoManual(){
+    if (!running || pausado || !activo || peticionEnCurso) return;
+    if (timeoutId){ clearTimeout(timeoutId); timeoutId = null; }
+    btnSondeoManual.disabled = true;
+    estadoAjustesLinea.textContent = 'Sondeo manual en curso…';
+    await cicloConsulta();
+    btnSondeoManual.disabled = !running || pausado;
+    if (!estadoAjustesLinea.textContent.startsWith('Error')) estadoAjustesLinea.textContent = 'Sondeo manual completado.';
   }
 
   function programarSiguienteCicloOrdinario(){
@@ -1803,6 +1833,7 @@
     timeoutId = null;
     if (tipo === 'fatal'){ mostrarAviso('danger', motivo); fijarEstado('err', 'Error fatal'); }
     else fijarEstado('off', 'Detenido');
+    actualizarBotonSondeoManual();
   }
 
   function iniciarMonitor(){
@@ -1823,6 +1854,7 @@
     ocultarAviso();
     fijarEstado('ok', 'En vivo');
     actualizarVisibilidad();
+    actualizarBotonSondeoManual();
     cicloConsulta();
   }
 
@@ -1830,6 +1862,7 @@
     if (timeoutId) clearTimeout(timeoutId);
     running = false;
     actualizarVisibilidad();
+    actualizarBotonSondeoManual();
     const stationId = (localStorage.getItem(STORAGE_KEY_STATION) || '').trim();
     if (!stationId) { fijarEstado('off', 'Detenido'); return; }
     const hoyKey = dayKeyLocal(new Date());
@@ -1910,7 +1943,10 @@
     if (pausado){ if (timeoutId){ clearTimeout(timeoutId); timeoutId = null; } fijarEstado('pausado', 'Pausado'); }
     else if (running) cicloConsulta();
     else iniciarMonitor();
+    actualizarBotonSondeoManual();
   });
+
+  btnSondeoManual.addEventListener('click', sondeoManual);
 
   $('btnReintentarHistorico').addEventListener('click', async () => {
     if (!activo) return;
@@ -1981,6 +2017,7 @@
     cargarAjustes();
     actualizarVisibilidad();
     fijarEstado('off', 'Detenido');
+    actualizarBotonSondeoManual();
 
     await asegurarDB().catch(() => {}); // intento inicial; cada función vuelve a intentarlo si este falla
 

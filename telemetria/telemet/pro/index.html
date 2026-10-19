@@ -271,6 +271,8 @@ table.t tr:nth-child(even) td:first-child{background:var(--page-bg)}
 .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
 .bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
 .bn-in .light{flex:1;min-width:0}
+.bn-in .btn-ghost{background:transparent;color:var(--on-dark);border-color:var(--panel-line)}
+.bn-in .btn-ghost:hover:not(:disabled){border-color:var(--brasa)}
 
 @media(max-width:480px){.bn-in .btn .lbl{display:none}}
 
@@ -508,6 +510,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div class="actions">
       <button type="button" class="btn btn-ok" id="btnIniciar" disabled><svg class="i"><use href="#i-play"></use></svg>Iniciar monitor</button>
       <button type="button" class="btn btn-primary" id="btnDetener" disabled><svg class="i"><use href="#i-pause"></use></svg>Detener</button>
+      <button type="button" class="btn btn-ghost" id="btnSondeoManual" disabled title="Hace la consulta ya, sin esperar al intervalo"><svg class="i"><use href="#i-refresh"></use></svg>Sondeo manual</button>
       <div class="light" id="luzEstado" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTexto">Detenido</span></div>
     </div>
 
@@ -604,7 +607,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 18 de octubre de 2026, 05:17</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 19 de octubre de 2026, 14:44</p>
 </footer>
 
 <div class="bottomnav">
@@ -612,6 +615,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     <div class="light" id="luzEstadoBar" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoBar">Monitor detenido</span></div>
     <button type="button" class="btn btn-ok btn-sm" id="btnIniciarBar" disabled><svg class="i"><use href="#i-play"></use></svg><span class="lbl">Iniciar</span></button>
     <button type="button" class="btn btn-primary btn-sm" id="btnDetenerBar" disabled><svg class="i"><use href="#i-pause"></use></svg><span class="lbl">Detener</span></button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnSondeoManualBar" disabled title="Sondeo manual"><svg class="i"><use href="#i-refresh"></use></svg><span class="lbl">Sondear</span></button>
   </div>
 </div>
 
@@ -758,6 +762,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const btnDetener  = document.getElementById('btnDetener');
   const btnIniciarBar = document.getElementById('btnIniciarBar');
   const btnDetenerBar = document.getElementById('btnDetenerBar');
+  const btnSondeoManual    = document.getElementById('btnSondeoManual');
+  const btnSondeoManualBar = document.getElementById('btnSondeoManualBar');
   const luces = [
     { el: document.getElementById('luzEstado'),    txt: document.getElementById('luzTexto') },
     { el: document.getElementById('luzEstadoTop'), txt: document.getElementById('luzTextoTop') },
@@ -814,6 +820,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   let timeoutId = null;
   let countdownIntervalId = null;
   let activo = null;
+  let peticionEnCurso = false; // evita dos cicloConsulta() a la vez (p.ej. sondeo manual mientras ya hay una petición en vuelo)
   let ejeXModo = 'uniforme'; // 'uniforme' (por lectura) | 'tiempo' (por marca de tiempo real)
   let horaInicioMs = null; // marca de tiempo real del último "Iniciar", para la ficha "Tiempo de uso"
   let configForzarExpandida = false; // true tras pulsar "Editar" en el resumen de configuración ya guardada
@@ -1434,6 +1441,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     btnIniciarBar.disabled = iniciarDisabled;
     btnDetener.disabled = detenerDisabled;
     btnDetenerBar.disabled = detenerDisabled;
+    // El sondeo manual solo tiene sentido con el monitor en marcha: sigue
+    // la misma condición que "Detener".
+    btnSondeoManual.disabled = detenerDisabled;
+    btnSondeoManualBar.disabled = detenerDisabled;
   }
 
   function mostrarError(mensaje){
@@ -1501,67 +1512,91 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      ============================================================ */
   async function cicloConsulta(){
     if (!running || !activo) return;
-
-    const url = construirURL(activo.stationId, activo.apiKey);
-    const inicio = performance.now();
-    let response;
+    // Evita dos peticiones en vuelo a la vez: puede pasar si se pulsa
+    // "Sondeo manual" justo cuando ya hay una consulta ordinaria o un
+    // reintento en curso.
+    if (peticionEnCurso) return;
+    peticionEnCurso = true;
     try {
-      response = await fetchConTimeout(url, activo.requestTimeoutMs);
-    } catch (err) {
-      const motivo = (err && err.name === 'AbortError')
-        ? 'tiempo límite de ' + (activo.requestTimeoutMs / 1000).toFixed(0) + ' s agotado'
-        : 'fallo de red (¿bloqueador de contenido o conexión caída?)';
-      programarReintento(motivo);
-      return;
-    }
-    if (!running) return; // el usuario pudo pulsar "Detener" mientras la petición estaba en curso
-    const latenciaMs = performance.now() - inicio;
+      const url = construirURL(activo.stationId, activo.apiKey);
+      const inicio = performance.now();
+      let response;
+      try {
+        response = await fetchConTimeout(url, activo.requestTimeoutMs);
+      } catch (err) {
+        const motivo = (err && err.name === 'AbortError')
+          ? 'tiempo límite de ' + (activo.requestTimeoutMs / 1000).toFixed(0) + ' s agotado'
+          : 'fallo de red (¿bloqueador de contenido o conexión caída?)';
+        programarReintento(motivo);
+        return;
+      }
+      if (!running) return; // el usuario pudo pulsar "Detener" mientras la petición estaba en curso
+      const latenciaMs = performance.now() - inicio;
 
-    if (response.status === 401){ pararMonitor('fatal', '401: API Key inválida o no autorizada.'); return; }
-    if (response.status === 404){ pararMonitor('fatal', '404: Station ID no encontrado o endpoint obsoleto.'); return; }
-    if (!response.ok){ programarReintento('HTTP ' + response.status); return; }
+      if (response.status === 401){ pararMonitor('fatal', '401: API Key inválida o no autorizada.'); return; }
+      if (response.status === 404){ pararMonitor('fatal', '404: Station ID no encontrado o endpoint obsoleto.'); return; }
+      if (!response.ok){ programarReintento('HTTP ' + response.status); return; }
 
-    let data;
-    try { data = await response.json(); }
-    catch (err) { programarReintento('respuesta no es JSON válido'); return; }
-    if (!running) return; // el usuario pudo pulsar "Detener" mientras se parseaba la respuesta
+      let data;
+      try { data = await response.json(); }
+      catch (err) { programarReintento('respuesta no es JSON válido'); return; }
+      if (!running) return; // el usuario pudo pulsar "Detener" mientras se parseaba la respuesta
 
-    const obs = (data.observations || [])[0];
-    if (!obs){
-      fijarLuz('ok', 'En ejecución (sin datos nuevos)');
+      const obs = (data.observations || [])[0];
+      if (!obs){
+        fijarLuz('ok', 'En ejecución (sin datos nuevos)');
+        programarSiguienteCicloOrdinario();
+        return;
+      }
+
+      retryCount = 0;
+      contReintentos.textContent = '0';
+      ocultarError();
+
+      const ahoraMs = Date.now();
+      const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
+      const stalenessS = (ahoraMs - obsMs) / 1000;
+
+      const t = Object.assign(extraerValores(obs), {
+        staleness_s: stalenessS,
+        latency_ms: latenciaMs
+      });
+
+      lecturasRecibidas += 1;
+      contLecturas.textContent = lecturasRecibidas;
+
+      pintarValoresActuales(t);
+      registrarEnSeries(t);
+      anadirAlHistorial(t, activo.staleThresholdS);
+      guardarLectura(activo.stationId, obsMs, t);
+      redibujarEvolucionSiAbierta();
+
+      if (!esPlausible(t)) avisoPlausibilidad.style.display = 'flex';
+      else avisoPlausibilidad.style.display = 'none';
+
+      if (stalenessS <= activo.staleThresholdS) fijarLuz('ok', 'En ejecución');
+      else fijarLuz('warn', 'En ejecución (dato stale)');
+
       programarSiguienteCicloOrdinario();
-      return;
+    } finally {
+      peticionEnCurso = false;
     }
+  }
 
-    retryCount = 0;
-    contReintentos.textContent = '0';
-    ocultarError();
-
-    const ahoraMs = Date.now();
-    const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
-    const stalenessS = (ahoraMs - obsMs) / 1000;
-
-    const t = Object.assign(extraerValores(obs), {
-      staleness_s: stalenessS,
-      latency_ms: latenciaMs
-    });
-
-    lecturasRecibidas += 1;
-    contLecturas.textContent = lecturasRecibidas;
-
-    pintarValoresActuales(t);
-    registrarEnSeries(t);
-    anadirAlHistorial(t, activo.staleThresholdS);
-    guardarLectura(activo.stationId, obsMs, t);
-    redibujarEvolucionSiAbierta();
-
-    if (!esPlausible(t)) avisoPlausibilidad.style.display = 'flex';
-    else avisoPlausibilidad.style.display = 'none';
-
-    if (stalenessS <= activo.staleThresholdS) fijarLuz('ok', 'En ejecución');
-    else fijarLuz('warn', 'En ejecución (dato stale)');
-
-    programarSiguienteCicloOrdinario();
+  // Fuerza una consulta inmediata sin esperar al intervalo programado,
+  // cancelando la cuenta atrás/reintento pendiente (si lo hay) para que
+  // el ciclo ordinario se reprograme desde cero a partir de ahora.
+  async function sondeoManual(){
+    if (!running || !activo || peticionEnCurso) return;
+    if (timeoutId){ clearTimeout(timeoutId); timeoutId = null; }
+    if (countdownIntervalId){ clearInterval(countdownIntervalId); countdownIntervalId = null; }
+    btnSondeoManual.disabled = true;
+    btnSondeoManualBar.disabled = true;
+    progresoFill.style.width = '0%';
+    progresoEtiqueta.textContent = 'Sondeo manual en curso…';
+    await cicloConsulta();
+    btnSondeoManual.disabled = !running;
+    btnSondeoManualBar.disabled = !running;
   }
 
   function programarSiguienteCicloOrdinario(){
@@ -1744,7 +1779,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     // decenas...) un paso menor que 1 añade un decimal a un número que ya
     // tiene varias cifras ("1013,2"), demasiado ancho para el margen del eje
     // y que se corta. Con esa magnitud, el detalle decimal tampoco aporta
-    // nada que el valor exacto (en la etiqueta del último punto) no diga ya.
+    // nada que el valor exacto (disponible en el tooltip) no diga ya.
     const magnitud = Math.max(Math.abs(min), Math.abs(max));
     if (magnitud >= 50) paso = Math.max(paso, 1);
     const minBonito = Math.floor(min / paso) * paso;
@@ -2166,6 +2201,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   btnDetener.addEventListener('click', detenerMonitor);
   btnIniciarBar.addEventListener('click', iniciarMonitor);
   btnDetenerBar.addEventListener('click', detenerMonitor);
+  btnSondeoManual.addEventListener('click', sondeoManual);
+  btnSondeoManualBar.addEventListener('click', sondeoManual);
   btnDescargarCSV.addEventListener('click', descargarCSV);
   btnLimpiarHistorial.addEventListener('click', limpiarHistorial);
   btnEjeUniforme.addEventListener('click', () => fijarEjeXModo('uniforme'));

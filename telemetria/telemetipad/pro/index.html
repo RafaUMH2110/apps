@@ -531,7 +531,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 19 de octubre de 2026, 17:43</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 19 de octubre de 2026, 23:54</div>
 </section>
 
 <script>
@@ -578,11 +578,13 @@
   // tile y en el icono, a juego con los gráficos.
   const TILES = [
     { id:'temp', titulo:'Temperatura', key:'temp_c', unidad:'°C', dec:1, minmax:true, tendencia:true, color:'var(--c-temp)', icono:'<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>' },
+    { id:'dewpoint', titulo:'Punto de rocío', key:'dewpoint_c', unidad:'°C', dec:1, minmax:true, tendencia:true, color:'var(--c-dew)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' },
     { id:'humidity', titulo:'Humedad', key:'humidity_pct', unidad:'%', dec:0, minmax:true, tendencia:true, color:'var(--c-hum)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' },
     { id:'pressure', titulo:'Presión', key:'pressure_hpa', unidad:'hPa', dec:1, minmax:true, tendencia:true, color:'var(--c-pres)', icono:'<path d="M3.5 15a8.5 8.5 0 1 1 17 0"/><path d="M12 15l3.3-3.3"/><circle cx="12" cy="15" r="1.3"/>' },
     { id:'wind', titulo:'Viento (sostenido)', key:'wind_kmh', unidad:'km/h', dec:1, minmax:true, dir:true, tendencia:true, color:'var(--c-wind)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
     { id:'gust', titulo:'Racha', key:'gust_kmh', unidad:'km/h', dec:1, minmax:true, tendencia:true, color:'var(--c-gust)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
     { id:'rain', titulo:'Lluvia (hoy)', key:'rain_total_mm', unidad:'mm', dec:1, rain:true, color:'var(--c-rain)', icono:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M16 13v8M8 13v8M12 15v8"/>' },
+    { id:'rain_total', titulo:'Lluvia acumulada', key:'rain_total_mm', unidad:'mm', dec:1, color:'var(--c-rain)', icono:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M16 13v8M8 13v8M12 15v8"/>' },
     { id:'solar', titulo:'Radiación solar / UV', key:'solar_wm2', unidad:'W/m²', dec:0, solar:true, color:'var(--warn)', icono:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>' }
   ];
 

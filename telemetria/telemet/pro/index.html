@@ -613,7 +613,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 00:20</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 00:37</p>
 </footer>
 
 <div class="bottomnav">
@@ -951,13 +951,26 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     } catch (err) { /* best-effort */ }
   }
 
-  // Detecta filas guardadas por el bug anterior de extraerValores(): el
-  // histórico de la API llegaba con nombres de campo distintos a los del
-  // endpoint en vivo, así que todo salvo la lluvia se guardaba a null. Si
-  // NINGUNA fila del día tiene temperatura, se trata como "incompleto" y
-  // se vuelve a pedir, en vez de asumir que ya está completo.
-  function diaIncompleto(filas){
-    return filas.length > 0 && filas.every(f => !f.vals || f.vals.temp_c === null);
+  // Un día se trata como "incompleto" (y se vuelve a pedir a la API) en dos
+  // casos, en vez de asumir que, por tener alguna fila, ya está completo:
+  //   1) NINGUNA fila tiene temperatura: el bug anterior de extraerValores(),
+  //      cuyo histórico llegaba con nombres de campo distintos a los del
+  //      endpoint en vivo, así que todo salvo la lluvia se guardaba a null.
+  //   2) Las filas válidas solo cubren una fracción pequeña de la ventana
+  //      del día (menos del 70%): pasa cuando el monitor solo estuvo en
+  //      marcha un rato suelto ese día (p. ej. una sesión de pruebas de
+  //      unos minutos cerca de medianoche), dejando el resto sin ninguna
+  //      lectura local. Sin esto, esas pocas filas sueltas bastaban para
+  //      que el backfill diera el día por completo y nunca rellenara el
+  //      hueco, dejando huecos enormes en las gráficas de 12h/7 días.
+  function diaIncompleto(filas, inicioMs, finMs){
+    const validas = filas.filter(f => f.vals && f.vals.temp_c !== null);
+    if (validas.length === 0) return filas.length > 0;
+    if (inicioMs === undefined || finMs === undefined) return false;
+    const epochs = validas.map(f => f.epochMs);
+    const cobertura = Math.max(...epochs) - Math.min(...epochs);
+    const ventana = Math.max(finMs - inicioMs, 1);
+    return (cobertura / ventana) < 0.7;
   }
 
   /* ============================================================
@@ -1665,8 +1678,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const fecha = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const inicioDiaMs = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 0, 0, 0, 0).getTime();
         const finDiaMs = inicioDiaMs + 24 * 60 * 60 * 1000 - 1;
+        // Para "hoy" (i=0) no se exige cobertura hasta medianoche, que
+        // todavía no ha pasado: la ventana relevante termina en "ahora".
+        const finVentanaMs = Math.min(finDiaMs, Date.now());
         const existentes = await consultarRango(stationId, inicioDiaMs, finDiaMs);
-        if (existentes.length > 0 && !diaIncompleto(existentes)) continue; // ya hay datos locales completos de ese día: no se duplica
+        if (existentes.length > 0 && !diaIncompleto(existentes, inicioDiaMs, finVentanaMs)) continue; // ya hay datos locales con cobertura suficiente: no se duplica
 
         try {
           const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(fecha));

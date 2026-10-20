@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
 <title>TeleMet Cal Pro · Monitor con corrección del sensor de temperatura</title>
-<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia, con ajuste automático de k en cada lectura a partir de esa referencia, y con un filtro de saltos bruscos entre lecturas consecutivas.">
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia, con ajuste automático de k en cada lectura a partir de esa referencia, con un filtro de saltos bruscos entre lecturas consecutivas y un filtro de estabilización que evita que la corrección esté bailando entre décimas de grado.">
 <meta name="author" content="Rafael Puerto">
 <!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
      data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
@@ -305,7 +305,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Cal Pro" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, un ajuste automático de esa sensibilidad (k) en cada lectura en vivo nueva a partir de esa misma referencia (sin necesitar un sensor externo continuo), y un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real). La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos,ajuste automatico de k" data-client-only="true">
+<body data-app-title="TeleMet Cal Pro" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, un ajuste automático de esa sensibilidad (k) en cada lectura en vivo nueva a partir de esa misma referencia (sin necesitar un sensor externo continuo), un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real), y un filtro de estabilización que evita que la temperatura corregida mostrada esté constantemente variando en décimas de grado sin que haya pasado nada real. La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos,ajuste automatico de k,filtro de estabilizacion" data-client-only="true">
 
 <!--
   ============================================================================
@@ -375,6 +375,28 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   aplicarla a la misma lectura sería circular y dejaría la temperatura
   corregida congelada para siempre. No se recalcula con una lectura que
   el filtro de saltos bruscos haya descartado, ni durante el backfill.
+
+  FILTRO DE ESTABILIZACIÓN (solo lecturas en vivo, ver
+  estabilizarTemperatura()): al contrario que el filtro de saltos
+  bruscos (que descarta cambios DEMASIADO grandes), este descarta
+  cambios DEMASIADO pequeños sostenidos en el tiempo — el vaivén de
+  décimas de grado que, sin filtrar, haría que la temperatura corregida
+  mostrada estuviera constantemente cambiando sin que pase nada real.
+  Mientras la variación (máximo − mínimo) de las últimas "Nº de lecturas
+  para confirmar un cambio" lecturas (ya pasadas por el filtro de saltos
+  bruscos) se mantenga dentro de "Umbral de estabilización" (por
+  defecto 0,3°C), se sigue mostrando el mismo valor ya fijado; en
+  cuanto esa variación supera el umbral, se da el cambio por real, se
+  fija el nuevo valor y se reinicia la ventana de observación. Ambos
+  valores se editan en tiempo real igual que el resto de parámetros de
+  corrección. Igual que el filtro de saltos bruscos: no se aplica al
+  backfill histórico ni al recálculo en vivo de la ficha actual, y se
+  reinicia con cualquier cambio de configuración de corrección en vivo
+  o al activar el ajuste automático de k. Una lectura que mantiene el
+  valor fijado se marca igual que una congelada por el filtro de saltos
+  a efectos del ajuste automático de k (no se recalcula k con ella,
+  porque no aporta información nueva), y en pantalla se ve un aviso
+  bajo la tarjeta de temperatura ("estabilizado").
 
   Por lo demás, misma lógica de sondeo que TeleMet (apps/telemetria/telemet),
   con el mismo rediseño editorial tipo "forja":
@@ -579,6 +601,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       </div>
 
       <hr>
+      <div class="subtitulo-sub">Filtro de estabilización</div>
+      <p class="sub" style="margin-bottom:10px">Evita que la temperatura corregida esté bailando entre décimas de grado de una lectura a otra. Mientras la variación entre las últimas lecturas se mantenga dentro del umbral, se sigue mostrando el mismo valor; solo se actualiza cuando el cambio, sostenido durante esas lecturas, supera el umbral (se confirma como real, no ruido). Solo afecta a lecturas en vivo nuevas, no al backfill histórico ni a lo ya guardado.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="estabUmbralInput">Umbral de estabilización (°C)</label>
+          <input type="number" id="estabUmbralInput" step="0.1" min="0.1" value="0.3">
+        </div>
+        <div class="field">
+          <label for="estabMuestrasInput">Nº de lecturas para confirmar un cambio</label>
+          <input type="number" id="estabMuestrasInput" step="1" min="2" value="5">
+        </div>
+      </div>
+
+      <hr>
       <div class="subtitulo-sub">Calibrar con un sensor de referencia</div>
       <p class="sub" style="margin-bottom:10px">Si tienes a mano, en este mismo instante, la lectura de otro termómetro de confianza, introdúcela aquí: se calculan el offset fijo y (si hay sol) la sensibilidad k del modo dinámico a partir de la diferencia con la última lectura en vivo de esta estación.</p>
       <div class="field">
@@ -755,7 +791,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:56</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 17:18</p>
 </footer>
 
 <div class="bottomnav">
@@ -787,7 +823,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
         <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
         <div><b>Filtro de saltos bruscos</b><span>Si la temperatura corregida cambia de golpe más del umbral configurado entre dos lecturas en vivo seguidas, se mantiene la anterior (probable pico espurio). Si el cambio se repite "Lecturas congeladas..." veces seguidas, se da por real y se resincroniza. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
-        <div><b>Ajuste automático de k</b><span>En modo "Dinámica", recalcula k en cada lectura en vivo nueva usando la temperatura corregida de la lectura anterior como referencia (sin necesitar un sensor externo continuo). Se activa desde la calibración de un punto. No se recalcula con una lectura descartada por el filtro de saltos bruscos.</span></div>
+        <div><b>Filtro de estabilización</b><span>Evita que la temperatura corregida esté bailando entre décimas de grado sin que pase nada real: mientras la variación entre las últimas lecturas (ya pasadas por el filtro de saltos bruscos) se mantenga dentro del umbral, se sigue mostrando el mismo valor. Solo se actualiza cuando esa variación, sostenida durante el número de lecturas configurado, supera el umbral. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
+        <div><b>Ajuste automático de k</b><span>En modo "Dinámica", recalcula k en cada lectura en vivo nueva usando la temperatura corregida de la lectura anterior como referencia (sin necesitar un sensor externo continuo). Se activa desde la calibración de un punto. No se recalcula con una lectura descartada por el filtro de saltos bruscos o mantenida por el filtro de estabilización.</span></div>
       </div>
     </div>
   </div>
@@ -820,6 +857,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const STORAGE_KEY_CORR_C      = 'telemetcalvivo_corr_c';
   const STORAGE_KEY_FILTRO_UMBRAL = 'telemetcalvivo_filtro_umbral';
   const STORAGE_KEY_FILTRO_RESYNC = 'telemetcalvivo_filtro_resync';
+  const STORAGE_KEY_ESTAB_UMBRAL   = 'telemetcalvivo_estab_umbral';
+  const STORAGE_KEY_ESTAB_MUESTRAS = 'telemetcalvivo_estab_muestras';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
@@ -881,6 +920,67 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   // ------------------------------------------------------------
+  // Filtro de estabilización: a diferencia del filtro de saltos bruscos
+  // (que descarta cambios DEMASIADO grandes entre dos lecturas), este
+  // descarta cambios DEMASIADO pequeños sostenidos en el tiempo — el
+  // ruido de fondo de décimas de grado que, de no filtrarse, haría que
+  // la temperatura corregida mostrada estuviera constantemente bailando
+  // sin que haya pasado nada real. Mientras las últimas "muestras"
+  // lecturas (ya pasadas por el filtro de saltos bruscos) se mantengan
+  // dentro de "umbral" °C unas de otras, se sigue mostrando el mismo
+  // valor ya fijado; solo cuando esa variación supera el umbral se da
+  // el cambio por real y se fija un nuevo valor.
+  //
+  // Ventana deslizante de tamaño "muestras": mientras no esté completa,
+  // o mientras su variación (máximo − mínimo) no supere el umbral, se
+  // mantiene el valor fijado y la ventana se desliza (se descarta la
+  // lectura más antigua) para seguir vigilando hacia delante. En cuanto
+  // la variación supera el umbral, se fija el valor nuevo (la lectura
+  // más reciente) y la ventana se reinicia vacía, para evaluar el
+  // siguiente tramo desde cero.
+  const ESTAB_DEFAULTS = { umbral: 0.3, muestras: 5 };
+  let estabConfig = Object.assign({}, ESTAB_DEFAULTS);
+  let valorEstabilizado = null;
+  let ventanaEstab = [];
+
+  function reiniciarEstabilizacion(){
+    valorEstabilizado = null;
+    ventanaEstab = [];
+  }
+
+  // Solo se usa con lecturas EN VIVO reales, encadenado justo después de
+  // filtrarSaltoBrusco() (mismo motivo que ese filtro: no tiene sentido
+  // con el backfill histórico, que no sigue un orden cronológico
+  // estricto, ni con el recálculo en vivo de la ficha actual al tocar
+  // los parámetros de corrección).
+  function estabilizarTemperatura(tempCorregida){
+    if (tempCorregida === null) return { valor: tempCorregida, mantenido: false };
+    if (valorEstabilizado === null){
+      valorEstabilizado = tempCorregida;
+      ventanaEstab = [];
+      return { valor: tempCorregida, mantenido: false };
+    }
+    const umbral = (Number.isFinite(estabConfig.umbral) && estabConfig.umbral > 0) ? estabConfig.umbral : ESTAB_DEFAULTS.umbral;
+    const muestras = (Number.isFinite(estabConfig.muestras) && estabConfig.muestras >= 2) ? Math.round(estabConfig.muestras) : ESTAB_DEFAULTS.muestras;
+    ventanaEstab.push(tempCorregida);
+    if (ventanaEstab.length < muestras){
+      return { valor: valorEstabilizado, mantenido: true };
+    }
+    const variacion = Math.max.apply(null, ventanaEstab) - Math.min.apply(null, ventanaEstab);
+    if (variacion <= umbral){
+      // Variación dentro de ruido: se mantiene el valor fijado y la
+      // ventana se desliza (descarta la lectura más antigua) para
+      // seguir vigilando con las próximas lecturas.
+      ventanaEstab.shift();
+      return { valor: valorEstabilizado, mantenido: true };
+    }
+    // Variación sostenida por encima del umbral: cambio real, se fija.
+    valorEstabilizado = tempCorregida;
+    ventanaEstab = [];
+    return { valor: tempCorregida, mantenido: false };
+  }
+
+  // ------------------------------------------------------------
   // Ajuste automático de k EN CADA MUESTRA (modo dinámico): al no haber
   // más dato de referencia disponible que uno puntual, se activa desde
   // una lectura real de un sensor de referencia (como la calibración de
@@ -903,11 +1003,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // — por eso el desfase de una muestra es intencional, no un descuido.
   //
   // No se recalcula k con una muestra que el filtro de saltos bruscos
-  // haya descartado (filtro_salto_congelado): no conviene recalibrar
-  // con un dato que el propio filtro considera sospechoso. Solo se usa
-  // con lecturas en vivo reales, nunca con el backfill histórico (mismo
-  // motivo que el filtro de saltos: el backfill no sigue un orden
-  // cronológico estricto).
+  // haya descartado (filtro_salto_congelado), ni con una que el filtro
+  // de estabilización haya mantenido sin cambios (filtro_estabilizado_
+  // mantenido): en ambos casos t.temp_c ya es el mismo valor de antes
+  // (no hay información nueva), así que recalibrar k con ella sería
+  // recalibrar con ruido. Solo se usa con lecturas en vivo reales,
+  // nunca con el backfill histórico (mismo motivo que los dos filtros:
+  // el backfill no sigue un orden cronológico estricto).
   // ------------------------------------------------------------
   let kAutoActivo = false;
   let tempCorregidaAnteriorParaK = null;
@@ -949,6 +1051,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!kAutoActivo) return;
     if (corrConfig.modo !== CORR_MODOS.DINAMICO) return;
     if (t.filtro_salto_congelado) return;
+    if (t.filtro_estabilizado_mantenido) return;
     if (t.temp_c_bruta === null || t.temp_c === null) return;
 
     const solar = t.solarradiation_wm2;
@@ -1068,6 +1171,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const corrDinamicoGrupo = document.getElementById('corrDinamicoGrupo');
   const filtroUmbralInput = document.getElementById('filtroUmbralInput');
   const filtroResyncInput = document.getElementById('filtroResyncInput');
+  const estabUmbralInput = document.getElementById('estabUmbralInput');
+  const estabMuestrasInput = document.getElementById('estabMuestrasInput');
   const calibRefTempInput = document.getElementById('calibRefTempInput');
   const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
   const calibResultado = document.getElementById('calibResultado');
@@ -1141,7 +1246,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // marcha (ver aplicarCorreccionEnVivo()), así que quedan fuera de este
   // bloqueo: solo lo que sí exige reiniciar el monitor para aplicarse
   // (Station ID, intervalos, etc.) se deshabilita mientras está activo.
-  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput, filtroUmbralInput, filtroResyncInput];
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput, filtroUmbralInput, filtroResyncInput, estabUmbralInput, estabMuestrasInput];
   const INPUTS_BLOQUEABLES_EN_MARCHA = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
 
   /* ============================================================
@@ -1369,8 +1474,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrCInput.value = localStorage.getItem(STORAGE_KEY_CORR_C) || CORR_DEFAULTS.c;
     filtroUmbralInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_UMBRAL) || FILTRO_DEFAULTS.umbral;
     filtroResyncInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_RESYNC) || FILTRO_DEFAULTS.resync;
+    estabUmbralInput.value = localStorage.getItem(STORAGE_KEY_ESTAB_UMBRAL) || ESTAB_DEFAULTS.umbral;
+    estabMuestrasInput.value = localStorage.getItem(STORAGE_KEY_ESTAB_MUESTRAS) || ESTAB_DEFAULTS.muestras;
     actualizarCorrConfigDesdeInputs();
     actualizarFiltroConfigDesdeInputs();
+    actualizarEstabConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1427,6 +1535,32 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     }, 400);
   }
 
+  // Lee los 2 campos del filtro de estabilización y actualiza
+  // estabConfig, con la misma política que los demás filtros/ajustes.
+  function actualizarEstabConfigDesdeInputs(){
+    const nuevoUmbral = parseFloat(estabUmbralInput.value);
+    const nuevasMuestras = parseInt(estabMuestrasInput.value, 10);
+    estabConfig = {
+      umbral: (Number.isFinite(nuevoUmbral) && nuevoUmbral > 0) ? nuevoUmbral : estabConfig.umbral,
+      muestras: (Number.isFinite(nuevasMuestras) && nuevasMuestras >= 2) ? nuevasMuestras : estabConfig.muestras
+    };
+  }
+
+  // Igual que aplicarFiltroEnVivo() pero para el filtro de
+  // estabilización: solo actualiza estabConfig y persiste con el mismo
+  // pequeño retardo (no hace falta reiniciar la ventana al cambiar estos
+  // dos campos, igual que el filtro de saltos bruscos no se reinicia al
+  // cambiar su umbral/resync).
+  let estabAutoguardadoTimeoutId = null;
+  function aplicarEstabilizacionEnVivo(){
+    actualizarEstabConfigDesdeInputs();
+    if (estabAutoguardadoTimeoutId) clearTimeout(estabAutoguardadoTimeoutId);
+    estabAutoguardadoTimeoutId = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY_ESTAB_UMBRAL, estabConfig.umbral);
+      localStorage.setItem(STORAGE_KEY_ESTAB_MUESTRAS, estabConfig.muestras);
+    }, 400);
+  }
+
   // ------------------------------------------------------------
   // Corrección EN TIEMPO REAL: cada tecla en el modo/offset/k/c de
   // Ajustes (sin esperar a "Guardar") actualiza corrConfig, recalcula
@@ -1442,10 +1576,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     actualizarCorrConfigDesdeInputs();
     recalcularYRepintarConCorreccionActual();
     // Un cambio de modo/offset/k/c altera legítimamente la temperatura
-    // corregida de golpe: no es un salto brusco del sensor, así que el
-    // filtro de saltos no debe comparar la siguiente lectura en vivo
-    // contra el valor "antiguo" con la configuración anterior.
+    // corregida de golpe: no es un salto brusco del sensor ni una deriva
+    // real a confirmar, así que ni el filtro de saltos ni el de
+    // estabilización deben comparar la siguiente lectura en vivo contra
+    // un valor "antiguo" calculado con la configuración anterior.
     reiniciarFiltroSaltoBrusco();
+    reiniciarEstabilizacion();
     actualizarEstadoKAuto(); // por si el cambio de modo pausa o reanuda el ajuste automático de k
     if (corrAutoguardadoTimeoutId) clearTimeout(corrAutoguardadoTimeoutId);
     corrAutoguardadoTimeoutId = setTimeout(() => {
@@ -1589,7 +1725,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   function borrarConfig(){
-    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C, STORAGE_KEY_FILTRO_UMBRAL, STORAGE_KEY_FILTRO_RESYNC]
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C, STORAGE_KEY_FILTRO_UMBRAL, STORAGE_KEY_FILTRO_RESYNC, STORAGE_KEY_ESTAB_UMBRAL, STORAGE_KEY_ESTAB_MUESTRAS]
       .forEach(k => localStorage.removeItem(k));
     stationIdInput.value = '';
     apiKeyInput.value = '';
@@ -1607,7 +1743,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     filtroUmbralInput.value = FILTRO_DEFAULTS.umbral;
     filtroResyncInput.value = FILTRO_DEFAULTS.resync;
     actualizarFiltroConfigDesdeInputs();
+    estabUmbralInput.value = ESTAB_DEFAULTS.umbral;
+    estabMuestrasInput.value = ESTAB_DEFAULTS.muestras;
+    actualizarEstabConfigDesdeInputs();
     reiniciarFiltroSaltoBrusco();
+    reiniciarEstabilizacion();
     desactivarAjusteAutomaticoK();
     actualizarVisibilidadCorrGrupos();
     calibRefTempInput.value = '';
@@ -1891,16 +2031,22 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         // muestra si hay una corrección activa y de verdad cambió algo
         // (modo "dinámico" sin sol, por ejemplo, deja temp_c == bruta).
         // Si además el filtro de saltos bruscos ha mantenido la lectura
-        // corregida anterior, se añade un aviso aparte (ver
-        // filtrarSaltoBrusco()).
+        // corregida anterior, o el filtro de estabilización ha
+        // mantenido el valor ya fijado, se añade un aviso aparte (ver
+        // filtrarSaltoBrusco() / estabilizarTemperatura()). Si ambos
+        // aplicasen a la vez solo se muestra el de saltos bruscos, que
+        // es la causa real de fondo (el valor que llega a estabilizar ya
+        // viene repetido del filtro de saltos).
         const sub = document.getElementById('tempBrutaSub');
         const corrigiendo = corrConfig.modo !== CORR_MODOS.NINGUNA &&
           t.temp_c_bruta !== null && t.temp_c !== null && t.temp_c_bruta !== t.temp_c;
         const congelado = !!t.filtro_salto_congelado;
-        sub.style.display = (corrigiendo || congelado) ? 'block' : 'none';
-        if (corrigiendo || congelado){
+        const estabilizado = !congelado && !!t.filtro_estabilizado_mantenido;
+        sub.style.display = (corrigiendo || congelado || estabilizado) ? 'block' : 'none';
+        if (corrigiendo || congelado || estabilizado){
           let texto = corrigiendo ? ('Sin corregir: ' + fmt(t.temp_c_bruta) + ' °C') : '';
           if (congelado) texto += (texto ? ' · ' : '') + 'salto brusco filtrado (mantiene la lectura anterior)';
+          else if (estabilizado) texto += (texto ? ' · ' : '') + 'estabilizado (variación dentro del umbral)';
           sub.textContent = texto;
         }
       }
@@ -2113,10 +2259,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const solarWm2 = numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh));
     let tempC = corregirTemperatura(tempBrutaC, solarWm2, windKmh);
     let filtroSaltoCongelado = false;
+    let estabilizacionMantenida = false;
     if (opts.filtrarSaltos){
       const resultadoFiltro = filtrarSaltoBrusco(tempC);
       tempC = resultadoFiltro.valor;
       filtroSaltoCongelado = resultadoFiltro.congelado;
+      const resultadoEstab = estabilizarTemperatura(tempC);
+      tempC = resultadoEstab.valor;
+      estabilizacionMantenida = resultadoEstab.mantenido;
     }
     const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
       ? (metric.pressureMax + metric.pressureMin) / 2
@@ -2133,6 +2283,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // filtrarSaltoBrusco()); false si no aplica el filtro (backfill,
       // recálculo en vivo) o si la lectura se aceptó tal cual.
       filtro_salto_congelado: filtroSaltoCongelado,
+      // true si el filtro de estabilización ha mantenido el valor ya
+      // fijado en vez de seguir la variación de esta lectura, por
+      // quedarse dentro del umbral configurado (ver
+      // estabilizarTemperatura()); false si no aplica (backfill,
+      // recálculo en vivo) o si se confirmó un cambio real.
+      filtro_estabilizado_mantenido: estabilizacionMantenida,
       heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
       dewpoint_c: calcularPuntoRocio(tempC, humPct),
       humidity_pct: humPct,
@@ -2361,6 +2517,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     retryCount = 0;
     contReintentos.textContent = '0';
     reiniciarFiltroSaltoBrusco(); // cada arranque del monitor empieza sin lectura previa que comparar
+    reiniciarEstabilizacion(); // igual: sin valor fijado previo que mantener
     desactivarAjusteAutomaticoK(); // requiere una referencia real nueva cada vez que se (re)arranca
     horaInicioMs = Date.now();
     horaInicioValor.textContent = new Date(horaInicioMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -2879,6 +3036,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   corrCInput.addEventListener('input', aplicarCorreccionEnVivo);
   filtroUmbralInput.addEventListener('input', aplicarFiltroEnVivo);
   filtroResyncInput.addEventListener('input', aplicarFiltroEnVivo);
+  estabUmbralInput.addEventListener('input', aplicarEstabilizacionEnVivo);
+  estabMuestrasInput.addEventListener('input', aplicarEstabilizacionEnVivo);
   btnCalcularCalibracion.addEventListener('click', calcularCalibracionDesdeReferencia);
   btnBorrarHistorialLocal.addEventListener('click', borrarHistorialLocalEstacion);
   stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);

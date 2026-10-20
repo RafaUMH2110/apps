@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
 <title>TeleMet Cal Pro · Monitor con corrección del sensor de temperatura</title>
-<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia y con un filtro de saltos bruscos entre lecturas consecutivas.">
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia, con ajuste automático de k en cada lectura a partir de esa referencia, y con un filtro de saltos bruscos entre lecturas consecutivas.">
 <meta name="author" content="Rafael Puerto">
 <!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
      data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
@@ -305,7 +305,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Cal Pro" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, y un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real). La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos" data-client-only="true">
+<body data-app-title="TeleMet Cal Pro" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, un ajuste automático de esa sensibilidad (k) en cada lectura en vivo nueva a partir de esa misma referencia (sin necesitar un sensor externo continuo), y un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real). La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos,ajuste automatico de k" data-client-only="true">
 
 <!--
   ============================================================================
@@ -356,6 +356,25 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   de la ficha actual al tocar los parámetros de corrección (misma
   lectura bruta, no una lectura nueva). Cuando filtra una lectura, se
   ve un aviso bajo la tarjeta de temperatura ("salto brusco filtrado").
+  Un cambio de configuración de corrección en vivo (modo/offset/k/c) o
+  activar el ajuste automático de k reinicia este filtro: el salto que
+  produce ese cambio es legítimo, no un pico del sensor.
+
+  AJUSTE AUTOMÁTICO DE k (solo modo "Dinámica", ver
+  activarAjusteAutomaticoK()/aplicarAjusteAutomaticoK()): al no haber
+  más referencia disponible que la calibración puntual con un sensor
+  externo, este modo repite esa misma calibración en cada lectura en
+  vivo nueva, usando como "referencia" la propia temperatura corregida
+  de la lectura anterior (la mejor estimación disponible sin más
+  datos). Se activa desde el botón "Activar ajuste automático de k a
+  partir de esta referencia" de la calibración de un punto; a partir de
+  ahí k se recalcula solo en cada lectura (c se mantiene al valor
+  configurado: con una sola ecuación no se pueden despejar k y c a la
+  vez). Por diseño hay un desfase de una muestra (la k nueva se calcula
+  con esta lectura pero se aplica a la siguiente): despejarla y
+  aplicarla a la misma lectura sería circular y dejaría la temperatura
+  corregida congelada para siempre. No se recalcula con una lectura que
+  el filtro de saltos bruscos haya descartado, ni durante el backfill.
 
   Por lo demás, misma lógica de sondeo que TeleMet (apps/telemetria/telemet),
   con el mismo rediseño editorial tipo "forja":
@@ -570,6 +589,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <button type="button" class="btn btn-primary btn-sm" id="btnCalcularCalibracion">Calcular corrección con esta referencia</button>
       </div>
       <div class="calib-caja" id="calibResultado" style="display:none;margin-top:12px"></div>
+      <div class="calib-caja" id="kAutoEstado" style="display:none;margin-top:12px"></div>
 
       <hr>
       <div class="actions" style="margin-top:10px">
@@ -735,7 +755,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:31</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:56</p>
 </footer>
 
 <div class="bottomnav">
@@ -767,6 +787,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
         <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
         <div><b>Filtro de saltos bruscos</b><span>Si la temperatura corregida cambia de golpe más del umbral configurado entre dos lecturas en vivo seguidas, se mantiene la anterior (probable pico espurio). Si el cambio se repite "Lecturas congeladas..." veces seguidas, se da por real y se resincroniza. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
+        <div><b>Ajuste automático de k</b><span>En modo "Dinámica", recalcula k en cada lectura en vivo nueva usando la temperatura corregida de la lectura anterior como referencia (sin necesitar un sensor externo continuo). Se activa desde la calibración de un punto. No se recalcula con una lectura descartada por el filtro de saltos bruscos.</span></div>
       </div>
     </div>
   </div>
@@ -857,6 +878,96 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     ultimoTempCorregidaAceptada = tempCorregida;
     muestrasCongeladasSeguidas = 0;
     return { valor: tempCorregida, congelado: false };
+  }
+
+  // ------------------------------------------------------------
+  // Ajuste automático de k EN CADA MUESTRA (modo dinámico): al no haber
+  // más dato de referencia disponible que uno puntual, se activa desde
+  // una lectura real de un sensor de referencia (como la calibración de
+  // un punto de más abajo) y, a partir de ahí, cada lectura en vivo
+  // nueva vuelve a despejar k comparando su temperatura BRUTA con la
+  // ÚLTIMA temperatura corregida aceptada — el propio resultado de la
+  // lectura anterior, que pasa a hacer de "referencia" porque es la
+  // mejor estimación disponible de la temperatura real en ese instante.
+  // Mismo límite que la calibración manual: con una sola ecuación
+  // (error = k·G/(v+c)) no se pueden despejar k Y c a la vez, así que
+  // c se mantiene al valor configurado — solo se recalcula k.
+  //
+  // La k recién calculada en la muestra t se guarda para corregir LA
+  // SIGUIENTE muestra (t+1): la muestra t ya se corrigió con la k
+  // vigente hasta ese momento (ver aplicarAjusteAutomaticoK(), llamada
+  // en cicloConsulta() después de extraerValores()). Despejar k y
+  // aplicarla a la MISMA muestra sería circular — haría que la
+  // temperatura corregida se quedara congelada para siempre en el
+  // primer valor de referencia, en vez de seguir las variaciones reales
+  // — por eso el desfase de una muestra es intencional, no un descuido.
+  //
+  // No se recalcula k con una muestra que el filtro de saltos bruscos
+  // haya descartado (filtro_salto_congelado): no conviene recalibrar
+  // con un dato que el propio filtro considera sospechoso. Solo se usa
+  // con lecturas en vivo reales, nunca con el backfill histórico (mismo
+  // motivo que el filtro de saltos: el backfill no sigue un orden
+  // cronológico estricto).
+  // ------------------------------------------------------------
+  let kAutoActivo = false;
+  let tempCorregidaAnteriorParaK = null;
+
+  function activarAjusteAutomaticoK(refTemp){
+    tempCorregidaAnteriorParaK = refTemp;
+    kAutoActivo = true;
+    actualizarEstadoKAuto();
+  }
+
+  function desactivarAjusteAutomaticoK(){
+    kAutoActivo = false;
+    tempCorregidaAnteriorParaK = null;
+    actualizarEstadoKAuto();
+  }
+
+  function actualizarEstadoKAuto(){
+    if (!kAutoEstado) return;
+    if (!kAutoActivo){
+      kAutoEstado.style.display = 'none';
+      kAutoEstado.innerHTML = '';
+      return;
+    }
+    kAutoEstado.style.display = 'block';
+    const enPausa = corrConfig.modo !== CORR_MODOS.DINAMICO;
+    let html = 'Ajuste automático de k: <b>' + (enPausa ? 'activo, mas en pausa (el modo no es "Dinámica")' : 'activo') + '</b><br>';
+    html += '<span style="color:var(--muted);font-size:12.5px">Última temperatura de referencia (propia o calculada): ' +
+      (tempCorregidaAnteriorParaK !== null ? fmt(redondear1(tempCorregidaAnteriorParaK)) + ' °C' : '—') +
+      ' · k actual: ' + corrConfig.k + '</span><br>';
+    html += '<button type="button" class="btn btn-ghost btn-sm" id="btnDesactivarKAuto" style="margin-top:6px">Desactivar ajuste automático</button>';
+    kAutoEstado.innerHTML = html;
+    const btn = document.getElementById('btnDesactivarKAuto');
+    if (btn) btn.addEventListener('click', desactivarAjusteAutomaticoK);
+  }
+
+  // Se llama desde cicloConsulta() con la lectura YA extraída (t), justo
+  // después de extraerValores(); nunca desde el backfill.
+  function aplicarAjusteAutomaticoK(t){
+    if (!kAutoActivo) return;
+    if (corrConfig.modo !== CORR_MODOS.DINAMICO) return;
+    if (t.filtro_salto_congelado) return;
+    if (t.temp_c_bruta === null || t.temp_c === null) return;
+
+    const solar = t.solarradiation_wm2;
+    const viento = (t.wind_kmh === null || t.wind_kmh < 0) ? 0 : t.wind_kmh;
+    if (tempCorregidaAnteriorParaK !== null && solar !== null && solar > 0){
+      const error = t.temp_c_bruta - tempCorregidaAnteriorParaK; // > 0: el sensor lee por encima de la referencia
+      if (error > 0){
+        const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
+        const nuevaK = Math.round((error * (viento + cActual) / solar) * 1000) / 1000;
+        corrConfig.k = nuevaK;
+        corrKInput.value = nuevaK;
+        localStorage.setItem(STORAGE_KEY_CORR_K, nuevaK);
+      }
+    }
+    // El ancla avanza a la temperatura corregida de ESTA muestra (ya
+    // calculada con la k vigente hasta ahora), para que la siguiente
+    // muestra se compare contra ella.
+    tempCorregidaAnteriorParaK = t.temp_c;
+    actualizarEstadoKAuto();
   }
 
   const MAX_FILAS_TABLA = 500;
@@ -960,6 +1071,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const calibRefTempInput = document.getElementById('calibRefTempInput');
   const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
   const calibResultado = document.getElementById('calibResultado');
+  const kAutoEstado = document.getElementById('kAutoEstado');
   const btnBorrarHistorialLocal = document.getElementById('btnBorrarHistorialLocal');
   const avisoHistorialLocalBorrado = document.getElementById('avisoHistorialLocalBorrado');
   const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
@@ -1329,6 +1441,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     actualizarVisibilidadCorrGrupos();
     actualizarCorrConfigDesdeInputs();
     recalcularYRepintarConCorreccionActual();
+    // Un cambio de modo/offset/k/c altera legítimamente la temperatura
+    // corregida de golpe: no es un salto brusco del sensor, así que el
+    // filtro de saltos no debe comparar la siguiente lectura en vivo
+    // contra el valor "antiguo" con la configuración anterior.
+    reiniciarFiltroSaltoBrusco();
+    actualizarEstadoKAuto(); // por si el cambio de modo pausa o reanuda el ajuste automático de k
     if (corrAutoguardadoTimeoutId) clearTimeout(corrAutoguardadoTimeoutId);
     corrAutoguardadoTimeoutId = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY_CORR_MODO, corrConfig.modo);
@@ -1394,6 +1512,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     let html = 'Con la lectura bruta actual (<b>' + fmt(bruta) + ' °C</b>) y tu referencia (<b>' + fmt(refTemp) + ' °C</b>):<br>';
     html += 'Offset fijo calculado: <b>' + (offsetCalculado >= 0 ? '+' : '') + offsetCalculado + ' °C</b>';
     html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarOffsetCalculado">Usar este offset</button><br>';
+    html += '<button type="button" class="btn btn-ok btn-sm" id="btnActivarKAuto" style="margin-top:8px">Activar ajuste automático de k a partir de esta referencia</button>';
+    html += '<br><span style="color:var(--muted);font-size:12.5px">Toma esta referencia como ancla y, desde la siguiente lectura en vivo, recalcula k en cada muestra comparándola con la temperatura corregida de la muestra anterior (no hay otro dato de referencia continuo disponible). El modo pasa a "Dinámica" si no lo estaba ya.</span>';
 
     if (solar !== null && solar > 0 && error > 0){
       const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
@@ -1421,6 +1541,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       corrModoInput.value = CORR_MODOS.DINAMICO;
       corrKInput.value = kCalculado;
       aplicarCorreccionEnVivo();
+    });
+    const btnActivarKAuto = document.getElementById('btnActivarKAuto');
+    if (btnActivarKAuto) btnActivarKAuto.addEventListener('click', () => {
+      corrModoInput.value = CORR_MODOS.DINAMICO;
+      aplicarCorreccionEnVivo();
+      activarAjusteAutomaticoK(refTemp);
     });
   }
 
@@ -1482,6 +1608,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     filtroResyncInput.value = FILTRO_DEFAULTS.resync;
     actualizarFiltroConfigDesdeInputs();
     reiniciarFiltroSaltoBrusco();
+    desactivarAjusteAutomaticoK();
     actualizarVisibilidadCorrGrupos();
     calibRefTempInput.value = '';
     calibResultado.style.display = 'none';
@@ -2089,6 +2216,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       contLecturas.textContent = lecturasRecibidas;
 
       ultimaLectura = t;
+      aplicarAjusteAutomaticoK(t);
       pintarValoresActuales(t);
       registrarEnSeries(t);
       anadirAlHistorial(t, activo.staleThresholdS);
@@ -2233,6 +2361,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     retryCount = 0;
     contReintentos.textContent = '0';
     reiniciarFiltroSaltoBrusco(); // cada arranque del monitor empieza sin lectura previa que comparar
+    desactivarAjusteAutomaticoK(); // requiere una referencia real nueva cada vez que se (re)arranca
     horaInicioMs = Date.now();
     horaInicioValor.textContent = new Date(horaInicioMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     ultimaActValor.textContent = '—';

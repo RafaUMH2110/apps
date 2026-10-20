@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
-<title>TeleMet Cal Vivo · Monitor con corrección del sensor de temperatura</title>
-<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real y calibrable comparando con un sensor de referencia.">
+<title>TeleMet Cal Pro · Monitor con corrección del sensor de temperatura</title>
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia y con un filtro de saltos bruscos entre lecturas consecutivas.">
 <meta name="author" content="Rafael Puerto">
 <!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
      data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
@@ -19,7 +19,7 @@
   /* Marca — constante en claro y oscuro */
   --brasa:#E4572E; --brasa-osc:#C9441F;
   --forjado:#0E7C6B;
-  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9; --c-temp-bruta:#9AA9B8;
   --r:14px;
   --display:'Bricolage Grotesque',Georgia,serif;
   --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -305,11 +305,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Cal Vivo" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha) y una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion" data-client-only="true">
+<body data-app-title="TeleMet Cal Pro" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, y un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real). La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos" data-client-only="true">
 
 <!--
   ============================================================================
-  TeleMet Cal Vivo — Notas de diseño y configuración
+  TeleMet Cal Pro — Notas de diseño y configuración
   ============================================================================
 
   QUÉ ES ESTA APP
@@ -334,11 +334,28 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   histórico local y las gráficas quedan coherentes entre sí. Se guarda
   también la temperatura bruta (sin corregir) junto a cada lectura, que
   se muestra como referencia bajo la tarjeta de temperatura cuando hay
-  una corrección activa. Cambiar la configuración de corrección solo
-  afecta a las lecturas nuevas (en vivo o backfill); las ya guardadas en
-  este navegador conservan la corrección con la que se guardaron — usa
-  "Limpiar histórico local" para que las gráficas repartan desde cero
-  con la configuración actual.
+  una corrección activa, y como serie aparte ("Temperatura sin
+  corregir", gris) en la gráfica de evolución de temperatura de 12h/7
+  días, junto a la corregida — ver GRAFICABLES_EXTRA_CHART. Cambiar la
+  configuración de corrección solo afecta a las lecturas nuevas (en
+  vivo o backfill); las ya guardadas en este navegador conservan la
+  corrección con la que se guardaron — usa "Limpiar histórico local"
+  para que las gráficas repartan desde cero con la configuración actual.
+
+  FILTRO DE SALTOS BRUSCOS (solo lecturas en vivo, ver
+  filtrarSaltoBrusco()): si la temperatura ya corregida de una lectura
+  nueva difiere en más de "Umbral de salto brusco" (por defecto 0,5°C)
+  de la última corregida aceptada, se descarta y se repite esa última
+  en su lugar (probable pico espurio del sensor o de la API). Para no
+  quedarse "congelado" si el cambio resulta ser real, al cabo de
+  "Lecturas congeladas antes de resincronizar" (por defecto 10) lecturas
+  seguidas descartadas se acepta la siguiente tal cual y se
+  resincroniza. Ambos valores se editan en tiempo real igual que
+  offset/k/c. No se aplica al backfill histórico (que reconstruye días
+  pasados fuera de orden cronológico estricto) ni al recálculo en vivo
+  de la ficha actual al tocar los parámetros de corrección (misma
+  lectura bruta, no una lectura nueva). Cuando filtra una lectura, se
+  ve un aviso bajo la tarjeta de temperatura ("salto brusco filtrado").
 
   Por lo demás, misma lógica de sondeo que TeleMet (apps/telemetria/telemet),
   con el mismo rediseño editorial tipo "forja":
@@ -433,7 +450,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <div class="topbar">
   <div class="tb-in">
-    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Cal</em></span></button>
+    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Cal Pro</em></span></button>
     <div class="tb-right">
       <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
       <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
@@ -527,6 +544,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         </div>
       </div>
       <p class="help" style="margin-top:-4px">Los cambios se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual y a las lecturas nuevas (en vivo o backfill). Las lecturas ya guardadas en este navegador conservan la corrección con la que se guardaron: usa "Borrar histórico local" para que se vuelvan a calcular con el ajuste actual.</p>
+
+      <hr>
+      <div class="subtitulo-sub">Filtro de saltos bruscos</div>
+      <p class="sub" style="margin-bottom:10px">Si la temperatura ya corregida cambia de golpe más de la cuenta entre dos lecturas en vivo seguidas, se mantiene la lectura corregida anterior en vez de aceptar el salto (probable pico espurio del sensor). Si el cambio resulta ser real, se acepta igualmente al cabo de unas cuantas lecturas seguidas "congeladas", para no quedarse atascado. Solo afecta a lecturas en vivo nuevas, no al backfill histórico ni a lo ya guardado.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="filtroUmbralInput">Umbral de salto brusco (°C)</label>
+          <input type="number" id="filtroUmbralInput" step="0.1" min="0.1" value="0.5">
+        </div>
+        <div class="field">
+          <label for="filtroResyncInput">Lecturas congeladas antes de resincronizar</label>
+          <input type="number" id="filtroResyncInput" step="1" min="1" value="10">
+        </div>
+      </div>
 
       <hr>
       <div class="subtitulo-sub">Calibrar con un sensor de referencia</div>
@@ -703,8 +734,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <footer class="app-footer">
   <hr>
-  <p>TeleMet Cal Vivo. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:10</p>
+  <p>TeleMet Cal Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:31</p>
 </footer>
 
 <div class="bottomnav">
@@ -735,6 +766,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales. Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
         <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
         <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
+        <div><b>Filtro de saltos bruscos</b><span>Si la temperatura corregida cambia de golpe más del umbral configurado entre dos lecturas en vivo seguidas, se mantiene la anterior (probable pico espurio). Si el cambio se repite "Lecturas congeladas..." veces seguidas, se da por real y se resincroniza. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
       </div>
     </div>
   </div>
@@ -752,7 +784,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // Mismas claves de localStorage que el resto de la familia TelemetriaWU.
   const STORAGE_KEY_STATION = 'wu_station_id';
   const STORAGE_KEY_APIKEY  = 'wu_api_key';
-  // Claves propias de TeleMet Cal Vivo, independientes de TeleMet Pro y del resto.
+  // Claves propias de TeleMet Cal Pro, independientes de TeleMet Pro y del resto.
   const STORAGE_KEY_POLL      = 'telemetcalvivo_poll_interval_s';
   const STORAGE_KEY_TIMEOUT   = 'telemetcalvivo_request_timeout_s';
   const STORAGE_KEY_BACKOFF_B = 'telemetcalvivo_backoff_base_s';
@@ -765,6 +797,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const STORAGE_KEY_CORR_OFFSET = 'telemetcalvivo_corr_offset';
   const STORAGE_KEY_CORR_K      = 'telemetcalvivo_corr_k';
   const STORAGE_KEY_CORR_C      = 'telemetcalvivo_corr_c';
+  const STORAGE_KEY_FILTRO_UMBRAL = 'telemetcalvivo_filtro_umbral';
+  const STORAGE_KEY_FILTRO_RESYNC = 'telemetcalvivo_filtro_resync';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
@@ -778,6 +812,52 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // extracción (en vivo o backfill). Vive en una variable de módulo en vez
   // de releerse de localStorage en cada lectura por simple eficiencia.
   let corrConfig = Object.assign({}, CORR_DEFAULTS);
+
+  // Filtro de saltos bruscos entre lecturas EN VIVO consecutivas: si la
+  // temperatura ya corregida cambia de golpe más de "umbral" °C respecto
+  // a la última corregida aceptada, se mantiene esa última (en vez del
+  // nuevo valor) — ver filtrarSaltoBrusco(). Para no quedarse "congelado"
+  // para siempre si el cambio resulta ser real (no un pico espurio del
+  // sensor), tras "resync" lecturas seguidas congeladas se acepta la
+  // siguiente lectura tal cual, se resincroniza el filtro.
+  const FILTRO_DEFAULTS = { umbral: 0.5, resync: 10 };
+  let filtroConfig = Object.assign({}, FILTRO_DEFAULTS);
+  let ultimoTempCorregidaAceptada = null;
+  let muestrasCongeladasSeguidas = 0;
+
+  function reiniciarFiltroSaltoBrusco(){
+    ultimoTempCorregidaAceptada = null;
+    muestrasCongeladasSeguidas = 0;
+  }
+
+  // Solo se usa con lecturas EN VIVO reales (ver extraerValores(obs,
+  // { filtrarSaltos: true }) en cicloConsulta()), nunca con el backfill
+  // histórico: el backfill reconstruye días pasados fuera de orden
+  // cronológico estricto (hoy primero, luego ayer, etc. — ver
+  // backfillSiNecesario()), así que comparar "con la lectura anterior"
+  // no tendría sentido ahí. Tampoco se usa en el recálculo en vivo de
+  // recalcularYRepintarConCorreccionActual(): eso vuelve a corregir la
+  // MISMA lectura bruta con otros parámetros, no es una lectura nueva.
+  function filtrarSaltoBrusco(tempCorregida){
+    if (tempCorregida === null) return { valor: tempCorregida, congelado: false };
+    if (ultimoTempCorregidaAceptada === null){
+      ultimoTempCorregidaAceptada = tempCorregida;
+      muestrasCongeladasSeguidas = 0;
+      return { valor: tempCorregida, congelado: false };
+    }
+    const umbral = (Number.isFinite(filtroConfig.umbral) && filtroConfig.umbral > 0) ? filtroConfig.umbral : FILTRO_DEFAULTS.umbral;
+    const resync = (Number.isFinite(filtroConfig.resync) && filtroConfig.resync >= 1) ? Math.round(filtroConfig.resync) : FILTRO_DEFAULTS.resync;
+    const salto = Math.abs(tempCorregida - ultimoTempCorregidaAceptada);
+    if (salto > umbral && muestrasCongeladasSeguidas < resync){
+      muestrasCongeladasSeguidas += 1;
+      return { valor: ultimoTempCorregidaAceptada, congelado: true };
+    }
+    // O no hay salto brusco, o ya se lleva "resync" lecturas seguidas
+    // congeladas: se da el cambio por real y se resincroniza.
+    ultimoTempCorregidaAceptada = tempCorregida;
+    muestrasCongeladasSeguidas = 0;
+    return { valor: tempCorregida, congelado: false };
+  }
 
   const MAX_FILAS_TABLA = 500;
 
@@ -798,7 +878,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   // Variable, icono y color (debe existir como var(--c-xxx) en :root).
   const GRAFICABLES = [
-    { key: 'temp_c',       etiqueta: 'Temperatura',    unidad: '°C',   icono: 'thermometer', color: 'var(--c-temp)' },
+    { key: 'temp_c',       etiqueta: 'Temperatura corregida', unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)' },
     { key: 'heat_index_c', etiqueta: 'Sensación térmica', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)' },
     { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C',   icono: 'droplet',     color: 'var(--c-dew)'  },
     { key: 'humidity_pct', etiqueta: 'Humedad',        unidad: '%',    icono: 'droplet',     color: 'var(--c-hum)'  },
@@ -811,6 +891,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun',  color: 'var(--c-solar)' },
     { key: 'uv_index',     etiqueta: 'Índice UV',      unidad: '',     icono: 'sun',         color: 'var(--c-uv)'   }
   ];
+
+  // Series "extra" que solo aparecen en las gráficas de evolución (12h/7
+  // días), no como ficha propia en el panel principal (que ya muestra
+  // "Sin corregir" junto a la temperatura corregida, ver pintarValoresActuales()).
+  // CHART_GROUPS_12H/CHART_GROUPS_7D la referencian igual que a GRAFICABLES.
+  const GRAFICABLES_EXTRA_CHART = [
+    { key: 'temp_c_bruta', etiqueta: 'Temperatura sin corregir', color: 'var(--c-temp-bruta)' }
+  ];
+  function buscarDefGrafico(key){
+    return GRAFICABLES.find(m => m.key === key) || GRAFICABLES_EXTRA_CHART.find(m => m.key === key);
+  }
 
   const UMBRAL_TENDENCIA = 0.05;
 
@@ -826,7 +917,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // Grupos de gráficos de "últimas 12 horas" (eje de tiempo continuo).
   // Cada grupo puede combinar varias variables de GRAFICABLES en una sola gráfica.
   const CHART_GROUPS_12H = [
-    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Temperatura (corregida y sin corregir), sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'temp_c_bruta', 'heat_index_c', 'dewpoint_c'] },
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
@@ -839,7 +930,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // Grupos de gráficos de "últimos 7 días": histórico completo (una lectura
   // real por punto, igual que en la gráfica de 12 horas), no un resumen diario.
   const CHART_GROUPS_7D = [
-    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Temperatura (corregida y sin corregir), sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'temp_c_bruta', 'heat_index_c', 'dewpoint_c'] },
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
@@ -864,6 +955,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const corrCInput        = document.getElementById('corrCInput');
   const corrFijoGrupo     = document.getElementById('corrFijoGrupo');
   const corrDinamicoGrupo = document.getElementById('corrDinamicoGrupo');
+  const filtroUmbralInput = document.getElementById('filtroUmbralInput');
+  const filtroResyncInput = document.getElementById('filtroResyncInput');
   const calibRefTempInput = document.getElementById('calibRefTempInput');
   const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
   const calibResultado = document.getElementById('calibResultado');
@@ -936,7 +1029,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // marcha (ver aplicarCorreccionEnVivo()), así que quedan fuera de este
   // bloqueo: solo lo que sí exige reiniciar el monitor para aplicarse
   // (Station ID, intervalos, etc.) se deshabilita mientras está activo.
-  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput];
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput, filtroUmbralInput, filtroResyncInput];
   const INPUTS_BLOQUEABLES_EN_MARCHA = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
 
   /* ============================================================
@@ -1162,7 +1255,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrOffsetInput.value = localStorage.getItem(STORAGE_KEY_CORR_OFFSET) || CORR_DEFAULTS.offset;
     corrKInput.value = localStorage.getItem(STORAGE_KEY_CORR_K) || CORR_DEFAULTS.k;
     corrCInput.value = localStorage.getItem(STORAGE_KEY_CORR_C) || CORR_DEFAULTS.c;
+    filtroUmbralInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_UMBRAL) || FILTRO_DEFAULTS.umbral;
+    filtroResyncInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_RESYNC) || FILTRO_DEFAULTS.resync;
     actualizarCorrConfigDesdeInputs();
+    actualizarFiltroConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1190,6 +1286,33 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   function actualizarVisibilidadCorrGrupos(){
     corrFijoGrupo.style.display = corrModoInput.value === CORR_MODOS.FIJO ? 'grid' : 'none';
     corrDinamicoGrupo.style.display = corrModoInput.value === CORR_MODOS.DINAMICO ? 'grid' : 'none';
+  }
+
+  // Lee los 2 campos del filtro de saltos bruscos y actualiza
+  // filtroConfig, con la misma política de "valor en blanco conserva el
+  // último válido" que actualizarCorrConfigDesdeInputs().
+  function actualizarFiltroConfigDesdeInputs(){
+    const nuevoUmbral = parseFloat(filtroUmbralInput.value);
+    const nuevoResync = parseInt(filtroResyncInput.value, 10);
+    filtroConfig = {
+      umbral: (Number.isFinite(nuevoUmbral) && nuevoUmbral > 0) ? nuevoUmbral : filtroConfig.umbral,
+      resync: (Number.isFinite(nuevoResync) && nuevoResync >= 1) ? nuevoResync : filtroConfig.resync
+    };
+  }
+
+  // Igual que aplicarCorreccionEnVivo() pero para el filtro de saltos
+  // bruscos: no hace falta recalcular ni repintar la ficha actual (el
+  // filtro no cambia la última lectura ya mostrada, solo cómo se tratan
+  // las siguientes), así que solo actualiza filtroConfig y persiste con
+  // el mismo pequeño retardo.
+  let filtroAutoguardadoTimeoutId = null;
+  function aplicarFiltroEnVivo(){
+    actualizarFiltroConfigDesdeInputs();
+    if (filtroAutoguardadoTimeoutId) clearTimeout(filtroAutoguardadoTimeoutId);
+    filtroAutoguardadoTimeoutId = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY_FILTRO_UMBRAL, filtroConfig.umbral);
+      localStorage.setItem(STORAGE_KEY_FILTRO_RESYNC, filtroConfig.resync);
+    }, 400);
   }
 
   // ------------------------------------------------------------
@@ -1319,6 +1442,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
     localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
     localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
+    actualizarFiltroConfigDesdeInputs();
+    localStorage.setItem(STORAGE_KEY_FILTRO_UMBRAL, filtroConfig.umbral);
+    localStorage.setItem(STORAGE_KEY_FILTRO_RESYNC, filtroConfig.resync);
     configForzarExpandida = false; // "Guardar" = fin de la edición: vuelve a la vista compacta
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1337,7 +1463,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   function borrarConfig(){
-    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C]
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C, STORAGE_KEY_FILTRO_UMBRAL, STORAGE_KEY_FILTRO_RESYNC]
       .forEach(k => localStorage.removeItem(k));
     stationIdInput.value = '';
     apiKeyInput.value = '';
@@ -1352,6 +1478,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrKInput.value = CORR_DEFAULTS.k;
     corrCInput.value = CORR_DEFAULTS.c;
     actualizarCorrConfigDesdeInputs();
+    filtroUmbralInput.value = FILTRO_DEFAULTS.umbral;
+    filtroResyncInput.value = FILTRO_DEFAULTS.resync;
+    actualizarFiltroConfigDesdeInputs();
+    reiniciarFiltroSaltoBrusco();
     actualizarVisibilidadCorrGrupos();
     calibRefTempInput.value = '';
     calibResultado.style.display = 'none';
@@ -1633,11 +1763,19 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         // Referencia visible de cuánto se está corrigiendo: solo se
         // muestra si hay una corrección activa y de verdad cambió algo
         // (modo "dinámico" sin sol, por ejemplo, deja temp_c == bruta).
+        // Si además el filtro de saltos bruscos ha mantenido la lectura
+        // corregida anterior, se añade un aviso aparte (ver
+        // filtrarSaltoBrusco()).
         const sub = document.getElementById('tempBrutaSub');
         const corrigiendo = corrConfig.modo !== CORR_MODOS.NINGUNA &&
           t.temp_c_bruta !== null && t.temp_c !== null && t.temp_c_bruta !== t.temp_c;
-        sub.style.display = corrigiendo ? 'block' : 'none';
-        if (corrigiendo) sub.textContent = 'Sin corregir: ' + fmt(t.temp_c_bruta) + ' °C';
+        const congelado = !!t.filtro_salto_congelado;
+        sub.style.display = (corrigiendo || congelado) ? 'block' : 'none';
+        if (corrigiendo || congelado){
+          let texto = corrigiendo ? ('Sin corregir: ' + fmt(t.temp_c_bruta) + ' °C') : '';
+          if (congelado) texto += (texto ? ' · ' : '') + 'salto brusco filtrado (mantiene la lectura anterior)';
+          sub.textContent = texto;
+        }
       }
     });
     const cal = textoCalidad(t.quality_code);
@@ -1828,7 +1966,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      motor en vivo y por el backfill histórico, para no duplicar
      el mapeo de campos de la API ni sus nombres/fallbacks).
      ============================================================ */
-  function extraerValores(obs){
+  function extraerValores(obs, opts){
+    opts = opts || {};
     const metric = obs.metric || {};
     // El endpoint de histórico (history/all) NO usa los mismos nombres de
     // campo que el de lectura en vivo (current): en vez de un valor
@@ -1845,7 +1984,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
     const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
     const solarWm2 = numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh));
-    const tempC = corregirTemperatura(tempBrutaC, solarWm2, windKmh);
+    let tempC = corregirTemperatura(tempBrutaC, solarWm2, windKmh);
+    let filtroSaltoCongelado = false;
+    if (opts.filtrarSaltos){
+      const resultadoFiltro = filtrarSaltoBrusco(tempC);
+      tempC = resultadoFiltro.valor;
+      filtroSaltoCongelado = resultadoFiltro.congelado;
+    }
     const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
       ? (metric.pressureMax + metric.pressureMin) / 2
       : firstDefined(metric.pressureMax, metric.pressureMin);
@@ -1856,6 +2001,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // pintarValoresActuales()) y para no perder el dato bruto aunque
       // cambie la configuración de corrección más adelante.
       temp_c_bruta: tempBrutaC,
+      // true si el filtro de saltos bruscos ha mantenido la temperatura
+      // corregida anterior en vez de aceptar esta lectura (ver
+      // filtrarSaltoBrusco()); false si no aplica el filtro (backfill,
+      // recálculo en vivo) o si la lectura se aceptó tal cual.
+      filtro_salto_congelado: filtroSaltoCongelado,
       heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
       dewpoint_c: calcularPuntoRocio(tempC, humPct),
       humidity_pct: humPct,
@@ -1930,7 +2080,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
       const stalenessS = (ahoraMs - obsMs) / 1000;
 
-      const t = Object.assign(extraerValores(obs), {
+      const t = Object.assign(extraerValores(obs, { filtrarSaltos: true }), {
         staleness_s: stalenessS,
         latency_ms: latenciaMs
       });
@@ -2052,6 +2202,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           if (existentes.length > 0) await borrarRango(stationId, inicioDiaMs, finDiaMs);
           for (const obs of obsArr){
             if (!obs.epoch) continue;
+            // Sin { filtrarSaltos: true }: el backfill no pasa por el
+            // filtro de saltos bruscos (ver nota junto a filtrarSaltoBrusco()).
             await guardarLectura(stationId, obs.epoch * 1000, extraerValores(obs));
           }
         } catch (err) { /* un día sin histórico disponible no detiene el resto; se conserva lo que hubiera */ }
@@ -2080,6 +2232,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     running = true;
     retryCount = 0;
     contReintentos.textContent = '0';
+    reiniciarFiltroSaltoBrusco(); // cada arranque del monitor empieza sin lectura previa que comparar
     horaInicioMs = Date.now();
     horaInicioValor.textContent = new Date(horaInicioMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     ultimaActValor.textContent = '—';
@@ -2384,7 +2537,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
       charts12h.appendChild(card.el);
       const series = grupo.claves.map(key => {
-        const def = GRAFICABLES.find(m => m.key === key);
+        const def = buscarDefGrafico(key);
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
@@ -2403,7 +2556,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       titulo: grupo.titulo,
       unidad: grupo.unidad,
       series: grupo.claves.map(key => {
-        const def = GRAFICABLES.find(m => m.key === key);
+        const def = buscarDefGrafico(key);
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - desdeMs) / rangoMs, y: f.vals[key] }));
@@ -2595,6 +2748,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   corrOffsetInput.addEventListener('input', aplicarCorreccionEnVivo);
   corrKInput.addEventListener('input', aplicarCorreccionEnVivo);
   corrCInput.addEventListener('input', aplicarCorreccionEnVivo);
+  filtroUmbralInput.addEventListener('input', aplicarFiltroEnVivo);
+  filtroResyncInput.addEventListener('input', aplicarFiltroEnVivo);
   btnCalcularCalibracion.addEventListener('click', calcularCalibracionDesdeReferencia);
   btnBorrarHistorialLocal.addEventListener('click', borrarHistorialLocalEstacion);
   stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);

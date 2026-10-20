@@ -156,6 +156,12 @@ button{font-family:var(--texto);cursor:pointer}
 .aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
 .aviso svg{width:20px;height:20px;flex:none;margin-top:1px}
 .okbox{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forjado);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
+.card > hr{border:0;border-top:1px solid var(--line);margin:18px 0 16px}
+.subtitulo-sub{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0 0 6px;color:var(--ink)}
+.calib-caja{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--ink);line-height:1.5}
+.calib-caja b{font-family:var(--mono)}
+.calib-caja .calib-aviso{color:var(--aviso-ink)}
+.calib-acciones{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 
 /* Acordeón de ajustes avanzados */
 .acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
@@ -520,7 +526,21 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           <p class="help">Evita dividir por cero con viento en calma y modera la corrección cuando sí sopla (más ventilación, menos calentamiento del sensor).</p>
         </div>
       </div>
-      <p class="help" style="margin-top:-4px">Cambiar este ajuste solo afecta a las lecturas nuevas (en vivo o backfill): las que ya están guardadas en este navegador conservan la corrección con la que se guardaron.</p>
+      <p class="help" style="margin-top:-4px">Los cambios se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual y a las lecturas nuevas (en vivo o backfill). Las lecturas ya guardadas en este navegador conservan la corrección con la que se guardaron: usa "Borrar histórico local" para que se vuelvan a calcular con el ajuste actual.</p>
+
+      <hr>
+      <div class="subtitulo-sub">Calibrar con un sensor de referencia</div>
+      <p class="sub" style="margin-bottom:10px">Si tienes a mano, en este mismo instante, la lectura de otro termómetro de confianza, introdúcela aquí: se calculan el offset fijo y (si hay sol) la sensibilidad k del modo dinámico a partir de la diferencia con la última lectura en vivo de esta estación.</p>
+      <div class="field">
+        <label for="calibRefTempInput">Temperatura de referencia (°C)</label>
+        <input type="number" id="calibRefTempInput" step="0.1" placeholder="p. ej. 24.5">
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-sm" id="btnCalcularCalibracion">Calcular corrección con esta referencia</button>
+      </div>
+      <div class="calib-caja" id="calibResultado" style="display:none;margin-top:12px"></div>
+
+      <hr>
       <div class="actions" style="margin-top:10px">
         <button type="button" class="btn btn-ghost btn-sm" id="btnBorrarHistorialLocal"><svg class="i"><use href="#i-trash"></use></svg>Borrar histórico local de esta estación</button>
       </div>
@@ -684,7 +704,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 14:11</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 15:35</p>
 </footer>
 
 <div class="bottomnav">
@@ -713,6 +733,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
         <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales. Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
+        <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
+        <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
       </div>
     </div>
   </div>
@@ -842,6 +864,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const corrCInput        = document.getElementById('corrCInput');
   const corrFijoGrupo     = document.getElementById('corrFijoGrupo');
   const corrDinamicoGrupo = document.getElementById('corrDinamicoGrupo');
+  const calibRefTempInput = document.getElementById('calibRefTempInput');
+  const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
+  const calibResultado = document.getElementById('calibResultado');
   const btnBorrarHistorialLocal = document.getElementById('btnBorrarHistorialLocal');
   const avisoHistorialLocalBorrado = document.getElementById('avisoHistorialLocalBorrado');
   const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
@@ -906,7 +931,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   document.getElementById('maxFilasTexto').textContent = MAX_FILAS_TABLA;
 
+  // Los 4 campos de corrección (corrModoInput/corrOffsetInput/corrKInput/
+  // corrCInput) se editan EN TIEMPO REAL, incluso con el sondeo en
+  // marcha (ver aplicarCorreccionEnVivo()), así que quedan fuera de este
+  // bloqueo: solo lo que sí exige reiniciar el monitor para aplicarse
+  // (Station ID, intervalos, etc.) se deshabilita mientras está activo.
   const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput];
+  const INPUTS_BLOQUEABLES_EN_MARCHA = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
 
   /* ============================================================
      ESTADO EN MEMORIA
@@ -935,6 +966,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // el histórico" (modo privado, cuota, bloqueo del navegador...), que
   // de lo contrario se ven exactamente igual: un array vacío.
   let ultimoErrorHistorialLocal = null;
+
+  // Última lectura recibida de la API, con sus valores brutos
+  // (temp_c_bruta, wind_kmh, solarradiation_wm2, humidity_pct) intactos. Permite
+  // recalcular la corrección al vuelo —al tocar los campos de
+  // Ajustes— sin esperar a la siguiente consulta, y es la base de la
+  // calibración con sensor de referencia (ver calcularCalibracionDesdeReferencia()).
+  let ultimaLectura = null;
 
   /* ============================================================
      PERSISTENCIA LOCAL (IndexedDB) — histórico para las gráficas
@@ -1130,25 +1168,137 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     actualizarEstadoBotonIniciar();
   }
 
-  // Lee los 4 campos de corrección y actualiza tanto corrConfig (lo que
-  // de verdad usa corregirTemperatura() en cada lectura) como localStorage.
-  // Se llama al cargar y al guardar: así corrConfig siempre refleja lo
-  // último guardado, no lo que haya tecleado el usuario sin pulsar Guardar.
+  // Lee los 4 campos de corrección y actualiza corrConfig (lo que de
+  // verdad usa corregirTemperatura() en cada lectura). Se llama al
+  // cargar, a cada tecla en los campos de corrección (ver
+  // aplicarCorreccionEnVivo()) y al guardar el resto de ajustes. Un
+  // valor en blanco o no numérico a medio escribir CONSERVA el último
+  // valor válido de corrConfig en vez de saltar al valor por defecto
+  // de fábrica: así no "parpadea" mientras el usuario está tecleando.
   function actualizarCorrConfigDesdeInputs(){
+    const nuevoOffset = parseFloat(corrOffsetInput.value);
+    const nuevoK = parseFloat(corrKInput.value);
+    const nuevoC = parseFloat(corrCInput.value);
     corrConfig = {
       modo: corrModoInput.value,
-      offset: parseFloat(corrOffsetInput.value),
-      k: parseFloat(corrKInput.value),
-      c: parseFloat(corrCInput.value)
+      offset: Number.isFinite(nuevoOffset) ? nuevoOffset : corrConfig.offset,
+      k: (Number.isFinite(nuevoK) && nuevoK >= 0) ? nuevoK : corrConfig.k,
+      c: (Number.isFinite(nuevoC) && nuevoC > 0) ? nuevoC : corrConfig.c
     };
-    if (!Number.isFinite(corrConfig.offset)) corrConfig.offset = CORR_DEFAULTS.offset;
-    if (!Number.isFinite(corrConfig.k) || corrConfig.k < 0) corrConfig.k = CORR_DEFAULTS.k;
-    if (!Number.isFinite(corrConfig.c) || corrConfig.c <= 0) corrConfig.c = CORR_DEFAULTS.c;
   }
 
   function actualizarVisibilidadCorrGrupos(){
     corrFijoGrupo.style.display = corrModoInput.value === CORR_MODOS.FIJO ? 'grid' : 'none';
     corrDinamicoGrupo.style.display = corrModoInput.value === CORR_MODOS.DINAMICO ? 'grid' : 'none';
+  }
+
+  // ------------------------------------------------------------
+  // Corrección EN TIEMPO REAL: cada tecla en el modo/offset/k/c de
+  // Ajustes (sin esperar a "Guardar") actualiza corrConfig, recalcula
+  // la ficha de temperatura actual a partir de la última lectura bruta
+  // (sin esperar al siguiente sondeo) y persiste el cambio en
+  // localStorage con un pequeño retardo para no escribir en cada
+  // pulsación. El resto de ajustes (Station ID, intervalo de sondeo,
+  // etc.) siguen requiriendo pulsar "Guardar" como hasta ahora.
+  // ------------------------------------------------------------
+  let corrAutoguardadoTimeoutId = null;
+  function aplicarCorreccionEnVivo(){
+    actualizarVisibilidadCorrGrupos();
+    actualizarCorrConfigDesdeInputs();
+    recalcularYRepintarConCorreccionActual();
+    if (corrAutoguardadoTimeoutId) clearTimeout(corrAutoguardadoTimeoutId);
+    corrAutoguardadoTimeoutId = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY_CORR_MODO, corrConfig.modo);
+      localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
+      localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
+      localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
+    }, 400);
+  }
+
+  // Vuelve a aplicar corregirTemperatura() (con el corrConfig que esté
+  // vigente en ese instante) a la temperatura BRUTA de la última
+  // lectura recibida, y repinta la ficha actual con el resultado. No
+  // toca lo ya guardado en el histórico de sesión ni en IndexedDB: ver
+  // "Borrar histórico local" para recalcular también lo ya guardado.
+  function recalcularYRepintarConCorreccionActual(){
+    if (!ultimaLectura) return;
+    const base = ultimaLectura;
+    const tempC = corregirTemperatura(base.temp_c_bruta, base.solarradiation_wm2, base.wind_kmh);
+    const actualizada = Object.assign({}, base, {
+      temp_c: tempC,
+      heat_index_c: sensacionTermicaC(tempC, base.humidity_pct, base.wind_kmh),
+      dewpoint_c: calcularPuntoRocio(tempC, base.humidity_pct)
+    });
+    ultimaLectura = actualizada;
+    pintarValoresActuales(actualizada);
+  }
+
+  // ------------------------------------------------------------
+  // Calibración con sensor de referencia: a partir de la temperatura
+  // BRUTA de la última lectura en vivo y una temperatura de
+  // referencia que da el usuario (otro termómetro fiable, medido en
+  // el mismo instante), calcula:
+  //   - el offset fijo que igualaría ambas temperaturas ahora mismo.
+  //   - la sensibilidad k del modo dinámico que, con el viento base
+  //     (c) configurado y la radiación/viento de este instante,
+  //     produciría ese mismo error. Solo es posible con sol (radiación
+  //     > 0) y si el sensor está leyendo por ENCIMA de la referencia.
+  // Es una calibración de un solo punto: razonable para un primer
+  // ajuste rápido, pero lo ideal es repetirla en otro momento del día
+  // (con distinta radiación/viento) y comparar si se quiere afinar
+  // más "c", que aquí se mantiene al valor ya configurado.
+  // ------------------------------------------------------------
+  function calcularCalibracionDesdeReferencia(){
+    if (!ultimaLectura || ultimaLectura.temp_c_bruta === null){
+      calibResultado.innerHTML = '<span class="calib-aviso">Todavía no hay ninguna lectura en vivo de esta estación con la que comparar. Inicia el sondeo y espera a la primera lectura.</span>';
+      calibResultado.style.display = 'block';
+      return;
+    }
+    const refTemp = parseFloat(calibRefTempInput.value);
+    if (!Number.isFinite(refTemp)){
+      calibResultado.innerHTML = '<span class="calib-aviso">Introduce primero una temperatura de referencia válida.</span>';
+      calibResultado.style.display = 'block';
+      return;
+    }
+
+    const bruta = ultimaLectura.temp_c_bruta;
+    const solar = ultimaLectura.solarradiation_wm2;
+    const viento = (ultimaLectura.wind_kmh === null || ultimaLectura.wind_kmh < 0) ? 0 : ultimaLectura.wind_kmh;
+    const error = redondear1(bruta - refTemp); // > 0: el sensor lee por encima de la referencia
+    const offsetCalculado = redondear1(refTemp - bruta);
+    let kCalculado = null;
+
+    let html = 'Con la lectura bruta actual (<b>' + fmt(bruta) + ' °C</b>) y tu referencia (<b>' + fmt(refTemp) + ' °C</b>):<br>';
+    html += 'Offset fijo calculado: <b>' + (offsetCalculado >= 0 ? '+' : '') + offsetCalculado + ' °C</b>';
+    html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarOffsetCalculado">Usar este offset</button><br>';
+
+    if (solar !== null && solar > 0 && error > 0){
+      const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
+      kCalculado = Math.round((error * (viento + cActual) / solar) * 1000) / 1000;
+      html += 'Sensibilidad k calculada (con viento base c = ' + cActual + '): <b>' + kCalculado + '</b>';
+      html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarKCalculado">Usar esta k</button>';
+      html += '<br><span style="color:var(--muted);font-size:12.5px">Radiación actual: ' + fmt(solar, 0) + ' W/m² · viento: ' + viento.toFixed(1) + ' km/h. Calibración de un solo punto: repítela otro día con distinta radiación/viento y compara si quieres afinar más "c".</span>';
+    } else if (solar !== null && solar > 0){
+      html += '<br><span class="calib-aviso">El sensor no está leyendo por encima de la referencia ahora mismo: no hace falta corrección dinámica con este punto.</span>';
+    } else {
+      html += '<br><span class="calib-aviso">No hay radiación solar en esta lectura (de noche, o la estación no la reporta): la k dinámica no se puede calcular ahora. Repite la calibración con el sensor a pleno sol.</span>';
+    }
+
+    calibResultado.innerHTML = html;
+    calibResultado.style.display = 'block';
+
+    const btnUsarOffset = document.getElementById('btnUsarOffsetCalculado');
+    if (btnUsarOffset) btnUsarOffset.addEventListener('click', () => {
+      corrModoInput.value = CORR_MODOS.FIJO;
+      corrOffsetInput.value = offsetCalculado;
+      aplicarCorreccionEnVivo();
+    });
+    const btnUsarK = document.getElementById('btnUsarKCalculado');
+    if (btnUsarK) btnUsarK.addEventListener('click', () => {
+      corrModoInput.value = CORR_MODOS.DINAMICO;
+      corrKInput.value = kCalculado;
+      aplicarCorreccionEnVivo();
+    });
   }
 
   function guardarConfig(){
@@ -1203,6 +1353,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrCInput.value = CORR_DEFAULTS.c;
     actualizarCorrConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
+    calibRefTempInput.value = '';
+    calibResultado.style.display = 'none';
     configForzarExpandida = false;
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1786,6 +1938,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       lecturasRecibidas += 1;
       contLecturas.textContent = lecturasRecibidas;
 
+      ultimaLectura = t;
       pintarValoresActuales(t);
       registrarEnSeries(t);
       anadirAlHistorial(t, activo.staleThresholdS);
@@ -1935,7 +2088,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     avisoPlausibilidad.style.display = 'none';
 
     setBotonesIniciarDetener(true, false);
-    INPUTS_CONFIG.forEach(i => { i.disabled = true; });
+    INPUTS_BLOQUEABLES_EN_MARCHA.forEach(i => { i.disabled = true; });
     fijarLuz('ok', 'En ejecución');
     progresoEtiqueta.textContent = 'Realizando la primera consulta…';
 
@@ -2438,7 +2591,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      ============================================================ */
   btnGuardarConfig.addEventListener('click', guardarConfig);
   btnBorrarConfig.addEventListener('click', borrarConfig);
-  corrModoInput.addEventListener('change', actualizarVisibilidadCorrGrupos);
+  corrModoInput.addEventListener('change', aplicarCorreccionEnVivo);
+  corrOffsetInput.addEventListener('input', aplicarCorreccionEnVivo);
+  corrKInput.addEventListener('input', aplicarCorreccionEnVivo);
+  corrCInput.addEventListener('input', aplicarCorreccionEnVivo);
+  btnCalcularCalibracion.addEventListener('click', calcularCalibracionDesdeReferencia);
   btnBorrarHistorialLocal.addEventListener('click', borrarHistorialLocalEstacion);
   stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);
   btnIniciar.addEventListener('click', iniciarMonitor);

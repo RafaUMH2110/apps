@@ -791,7 +791,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 17:18</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 17:36</p>
 </footer>
 
 <div class="bottomnav">
@@ -1432,9 +1432,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       div.className = 'feat';
       div.id = 'tile-' + m.key;
       div.style.setProperty('--c', m.color);
+      // La tarjeta de temperatura arranca con la etiqueta neutra
+      // ("Temperatura"): actualizarEtiquetaTemperatura() la cambia a
+      // "Temperatura corregida" solo cuando de verdad hay una corrección
+      // aplicándose (ver esa función). El resto de tarjetas usan la
+      // etiqueta tal cual de GRAFICABLES (la de temp_c en GRAFICABLES
+      // sigue siendo "Temperatura corregida": la usa la gráfica de
+      // evolución para distinguir la serie corregida de la sin corregir).
+      const etiquetaInicial = m.key === 'temp_c' ? 'Temperatura' : m.etiqueta;
       div.innerHTML =
         '<div class="fi"><svg class="i"><use href="#i-' + m.icono + '"></use></svg></div>' +
-        '<div class="etiqueta">' + m.etiqueta + '</div>' +
+        '<div class="etiqueta">' + etiquetaInicial + '</div>' +
         '<div class="valor"><span class="valor-num">—</span><span class="unidad">' + m.unidad + '</span><span class="tendencia estable" aria-hidden="true"></span></div>' +
         (m.key === 'temp_c' ? '<div class="temp-bruta" id="tempBrutaSub" style="display:none"></div>' : '') +
         '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""/></svg>' +
@@ -1480,6 +1488,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     actualizarFiltroConfigDesdeInputs();
     actualizarEstabConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
+    actualizarEtiquetaTemperatura();
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
   }
@@ -1506,6 +1515,21 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   function actualizarVisibilidadCorrGrupos(){
     corrFijoGrupo.style.display = corrModoInput.value === CORR_MODOS.FIJO ? 'grid' : 'none';
     corrDinamicoGrupo.style.display = corrModoInput.value === CORR_MODOS.DINAMICO ? 'grid' : 'none';
+  }
+
+  // Etiqueta de la tarjeta de temperatura: solo dice "Temperatura
+  // corregida" cuando de verdad se está aplicando una corrección ahora
+  // mismo; el resto del tiempo dice simplemente "Temperatura". Se llama
+  // con el booleano ya calculado (el mismo "corrigiendo" por muestra que
+  // decide el aviso "Sin corregir: X °C", ver pintarValoresActuales()) o,
+  // sin argumento, con un valor por defecto basado solo en el modo
+  // configurado (para el estado inicial, antes de la primera lectura, o
+  // justo al cambiar de modo en Ajustes).
+  function actualizarEtiquetaTemperatura(corrigiendo){
+    const el = document.querySelector('#tile-temp_c .etiqueta');
+    if (!el) return;
+    const activa = (corrigiendo === undefined) ? (corrConfig.modo !== CORR_MODOS.NINGUNA) : corrigiendo;
+    el.textContent = activa ? 'Temperatura corregida' : 'Temperatura';
   }
 
   // Lee los 2 campos del filtro de saltos bruscos y actualiza
@@ -1574,6 +1598,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   function aplicarCorreccionEnVivo(){
     actualizarVisibilidadCorrGrupos();
     actualizarCorrConfigDesdeInputs();
+    // Si aún no hay ninguna lectura en vivo, recalcularYRepintarConCorreccionActual()
+    // no hace nada (no hay nada que repintar): este fallback deja la
+    // etiqueta de la tarjeta ya correcta para cuando llegue la primera.
+    // Si sí hay lectura, pintarValoresActuales() (llamada desde ahí) la
+    // vuelve a fijar con el valor exacto por muestra, así que esta
+    // llamada no sobra.
+    actualizarEtiquetaTemperatura();
     recalcularYRepintarConCorreccionActual();
     // Un cambio de modo/offset/k/c altera legítimamente la temperatura
     // corregida de golpe: no es un salto brusco del sensor ni una deriva
@@ -1750,6 +1781,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     reiniciarEstabilizacion();
     desactivarAjusteAutomaticoK();
     actualizarVisibilidadCorrGrupos();
+    actualizarEtiquetaTemperatura();
     calibRefTempInput.value = '';
     calibResultado.style.display = 'none';
     configForzarExpandida = false;
@@ -2049,6 +2081,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           else if (estabilizado) texto += (texto ? ' · ' : '') + 'estabilizado (variación dentro del umbral)';
           sub.textContent = texto;
         }
+        actualizarEtiquetaTemperatura(corrigiendo);
       }
     });
     const cal = textoCalidad(t.quality_code);

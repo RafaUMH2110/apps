@@ -49,7 +49,13 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  *{
+    box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
+  input, textarea{
+    -webkit-touch-callout:default; -webkit-user-select:text; user-select:text;
+  }
   html{height:100%;}
   body{
     margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
@@ -513,12 +519,21 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 09:57</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 11:46</div>
 </section>
 
 <script>
 (function(){
   "use strict";
+
+  /* Evita el menú contextual (copiar/seleccionar/compartir) al mantener
+     pulsado sobre la pantalla; los campos de texto de Ajustes quedan
+     excluidos para poder pegar la API key, el ID de estación, etc. */
+  document.addEventListener('contextmenu', function(e){
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    e.preventDefault();
+  });
 
   /* ============================================================
      CONSTANTES EDITABLES

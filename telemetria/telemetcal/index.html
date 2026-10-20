@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
 <title>TeleMet Cal · Monitor con corrección del sensor de temperatura</title>
-<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo, dinámica radiación/viento, o por regresión con sesgo base ajustado a partir de tus propios puntos de calibración).">
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento).">
 <meta name="author" content="Rafael Puerto">
 <!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
      data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
@@ -162,8 +162,6 @@ button{font-family:var(--texto);cursor:pointer}
 .calib-caja b{font-family:var(--mono)}
 .calib-caja .calib-aviso{color:var(--aviso-ink)}
 .calib-acciones{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.fila-borrar{background:none;border:0;color:var(--brasa);cursor:pointer;font-size:15px;line-height:1;padding:2px 6px;font-family:var(--texto)}
-.fila-borrar:hover{color:var(--brasa-osc)}
 
 /* Acordeón de ajustes avanzados */
 .acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
@@ -307,7 +305,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Cal" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor, con tres modos: offset fijo, dinámica (radiación solar + viento) o por regresión (separa el sesgo propio del sensor del calentamiento adicional por sol, con coeficientes ajustados a partir de tus propios puntos de calibración frente a otro termómetro). Modo y parámetros se aplican en tiempo real, sin pulsar Guardar. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,regresion" data-client-only="true">
+<body data-app-title="TeleMet Cal" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo calibrable comparando con una estación de referencia, o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta). El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion" data-client-only="true">
 
 <!--
   ============================================================================
@@ -319,28 +317,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   CORRECCIÓN CONFIGURABLE DEL SENSOR DE TEMPERATURA: muchas estaciones
   domésticas no llevan un blindaje de radiación adecuado y el sensor se
   calienta por encima del aire real cuando le da el sol directo, sobre
-  todo con poco viento (poca ventilación). Tres modos, en la sección
+  todo con poco viento (poca ventilación). Dos modos, en la sección
   "Corrección de temperatura" de Configuración:
     - "Offset fijo": resta siempre el mismo valor en °C. Sencillo de
       calibrar comparando con una estación de referencia cercana, pero
       no se adapta a si hace sol, está nublado o sopla el viento.
     - "Dinámica (radiación + viento)": estima el calentamiento en cada
-      lectura con error(°C) = k·radiación / (viento + c).
-    - "Regresión (sesgo + radiación/viento)": separa el sesgo propio
-      del sensor (e_base, una constante medida de noche o con
-      radiación casi nula) del calentamiento adicional por sol:
-      T_corr = T_bruta − e_base − (β1·G + β2·G/(v+v0)), con G la
-      radiación (W/m²) y v el viento en m/s (convertido de km/h). β1
-      y β2 se fuerzan a ser ≥ 0 para que el término solar nunca
-      "enfríe". e_base, β1 y β2 pueden teclearse a mano o calcularse a
-      partir de los "Puntos de calibración" (ver más abajo): e_base es
-      la mediana de (bruta − referencia) en los puntos con radiación
-      ≤ UMBRAL_NOCTURNO_WM2 (5 W/m² por defecto); β1 y β2 se ajustan
-      por mínimos cuadrados no negativos (2 incógnitas, resuelto a
-      mano con el método de conjunto activo — ver
-      ajustarBetaNoNegativo()) sobre el resto, usando v0 como
-      constante fija (no se reajusta por regresión).
-  Ver corregirTemperatura() en el <script> para los tres modos.
+      lectura con error(°C) = k·radiación / (viento + c) — ver
+      corregirTemperatura() en el <script>. Requiere que la estación
+      reporte radiación solar (solarRadiation); si no la reporta, este
+      modo no corrige nada (no hay forma de estimarlo sin ese dato).
   La corrección se aplica en extraerValores(), antes de calcular la
   sensación térmica y el punto de rocío (recalculado localmente con la
   temperatura ya corregida, en vez de usar el que reporta la API, que
@@ -348,28 +334,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   histórico local y las gráficas quedan coherentes entre sí. Se guarda
   también la temperatura bruta (sin corregir) junto a cada lectura, que
   se muestra como referencia bajo la tarjeta de temperatura cuando hay
-  una corrección activa.
-
-  CORRECCIÓN EN TIEMPO REAL: a diferencia del resto de ajustes, el modo
-  y los parámetros de corrección (offset/k/c/e_base/v0/β1/β2) se
-  aplican al instante —sin pulsar "Guardar"— a la ficha de temperatura
-  actual (recalculada desde la última lectura bruta, ver
-  recalcularYRepintarConCorreccionActual()) y se autoguardan en
-  localStorage con un pequeño retardo (aplicarCorreccionEnVivo()). Por
-  eso esos campos quedan FUERA de INPUTS_BLOQUEABLES_EN_MARCHA y siguen
-  editables con el sondeo en marcha. Esto solo afecta a las lecturas
-  nuevas (en vivo o backfill); las ya guardadas en este navegador
-  conservan la corrección con la que se guardaron — usa "Borrar
-  histórico local" para que las gráficas repartan desde cero con la
-  configuración actual.
-
-  PUNTOS DE CALIBRACIÓN: lista editable (localStorage,
-  STORAGE_KEY_CALIB_PUNTOS) de {hora, temperatura bruta, temperatura de
-  referencia, radiación, viento}, añadidos a mano comparando con otro
-  termómetro. Independiente de la config y del histórico local: no se
-  borra con "Borrar configuración" ni con "Borrar histórico local",
-  solo con su propio botón "Vaciar puntos". Alimenta el cálculo de
-  e_base/β1/β2 del modo "Regresión" (ajustarRegresionCalibracion()).
+  una corrección activa. Cambiar la configuración de corrección solo
+  afecta a las lecturas nuevas (en vivo o backfill); las ya guardadas en
+  este navegador conservan la corrección con la que se guardaron — usa
+  "Limpiar histórico local" para que las gráficas repartan desde cero
+  con la configuración actual.
 
   Por lo demás, misma lógica de sondeo que TeleMet (apps/telemetria/telemet),
   con el mismo rediseño editorial tipo "forja":
@@ -534,7 +503,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           <option value="ninguna">Ninguna (temperatura tal cual la reporta el sensor)</option>
           <option value="fijo">Offset fijo</option>
           <option value="dinamico">Dinámica (radiación solar + viento)</option>
-          <option value="regresion">Regresión (sesgo + radiación/viento, ajustada con tus registros)</option>
         </select>
       </div>
 
@@ -558,55 +526,19 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           <p class="help">Evita dividir por cero con viento en calma y modera la corrección cuando sí sopla (más ventilación, menos calentamiento del sensor).</p>
         </div>
       </div>
-
-      <div class="grid2" id="corrRegresionGrupo" style="display:none">
-        <div class="field">
-          <label for="corrEBaseInput">Sesgo base e<sub>base</sub> (°C)</label>
-          <input type="number" id="corrEBaseInput" step="0.1" value="0">
-          <p class="help">Diferencia típica del sensor frente a la referencia SIN apenas sol (mediana de tus puntos nocturnos o de radiación casi nula). Se resta siempre, haya sol o no.</p>
-        </div>
-        <div class="field">
-          <label for="corrV0Input">Viento de referencia v₀ (m/s)</label>
-          <input type="number" id="corrV0Input" step="0.1" min="0.1" value="0.5">
-          <p class="help">Evita dividir por viento cero en el término radiativo. Se parte de 0,5 m/s; no se reajusta por regresión, solo e_base, β₁ y β₂.</p>
-        </div>
-        <div class="field">
-          <label for="corrBeta1Input">β₁ (°C por W/m²)</label>
-          <input type="number" id="corrBeta1Input" step="0.0001" min="0" value="0">
-        </div>
-        <div class="field">
-          <label for="corrBeta2Input">β₂ (°C·m/s por W/m²)</label>
-          <input type="number" id="corrBeta2Input" step="0.0001" min="0" value="0">
-        </div>
-        <div class="field" style="grid-column:1 / -1">
-          <p class="help" style="margin-top:-6px">ΔT<sub>solar</sub> = β₁·G + β₂·G/(v+v₀); T<sub>corr</sub> = T<sub>bruta</sub> − e<sub>base</sub> − ΔT<sub>solar</sub>, con G la radiación solar (W/m²) y v el viento en m/s. β₁ y β₂ se fuerzan a ≥ 0 para que el término solar nunca enfríe. Ajusta los tres a partir de tus puntos de calibración, más abajo, o cámbialos a mano.</p>
-        </div>
-      </div>
       <p class="help" style="margin-top:-4px">Los cambios se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual y a las lecturas nuevas (en vivo o backfill). Las lecturas ya guardadas en este navegador conservan la corrección con la que se guardaron: usa "Borrar histórico local" para que se vuelvan a calcular con el ajuste actual.</p>
 
       <hr>
-      <div class="subtitulo-sub">Puntos de calibración (sesgo + regresión solar)</div>
-      <p class="sub" style="margin-bottom:10px">Añade puntos en distintos momentos —de noche o con poco sol, y también a pleno sol con distinto viento— con la temperatura que marca en ese instante otro termómetro de confianza. Con ellos se calculan el sesgo base e<sub>base</sub> y, si hay puntos con sol, β₁ y β₂.</p>
+      <div class="subtitulo-sub">Calibrar con un sensor de referencia</div>
+      <p class="sub" style="margin-bottom:10px">Si tienes a mano, en este mismo instante, la lectura de otro termómetro de confianza, introdúcela aquí: se calculan el offset fijo y (si hay sol) la sensibilidad k del modo dinámico a partir de la diferencia con la última lectura en vivo de esta estación.</p>
       <div class="field">
-        <label for="calibRefTempInput">Temperatura de referencia ahora mismo (°C)</label>
+        <label for="calibRefTempInput">Temperatura de referencia (°C)</label>
         <input type="number" id="calibRefTempInput" step="0.1" placeholder="p. ej. 24.5">
       </div>
       <div class="actions">
-        <button type="button" class="btn btn-ghost btn-sm" id="btnAnadirPuntoCalibracion">Añadir punto con la lectura actual</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnCalcularCalibracion">Calcular corrección con esta referencia</button>
       </div>
-      <div class="calib-caja" id="calibAvisoPunto" style="display:none;margin-top:10px"></div>
-
-      <div class="tbl-wrap" id="calibTablaEnvoltorio" style="display:none;margin-top:12px">
-        <table class="t">
-          <thead><tr><th>Hora</th><th>Bruta</th><th>Referencia</th><th>Diferencia</th><th>Radiación</th><th>Viento</th><th></th></tr></thead>
-          <tbody id="calibPuntosCuerpo"></tbody>
-        </table>
-      </div>
-      <div class="actions" style="margin-top:10px">
-        <button type="button" class="btn btn-primary btn-sm" id="btnAjustarRegresion">Calcular sesgo y regresión con estos puntos</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="btnVaciarPuntosCalibracion">Vaciar puntos</button>
-      </div>
-      <div class="calib-caja" id="calibResultadoRegresion" style="display:none;margin-top:12px"></div>
+      <div class="calib-caja" id="calibResultado" style="display:none;margin-top:12px"></div>
 
       <hr>
       <div class="actions" style="margin-top:10px">
@@ -772,7 +704,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 16:10</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 15:45</p>
 </footer>
 
 <div class="bottomnav">
@@ -801,9 +733,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
         <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días sin datos locales. Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
-        <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo, de forma dinámica (radiación + viento, con "c") o por regresión (sesgo base + radiación/viento, con β₁/β₂ ajustados con tus propios puntos de calibración). Los cambios en cualquier campo se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
-        <div><b>Modo regresión</b><span>T<sub>corr</sub> = T<sub>bruta</sub> − e<sub>base</sub> − (β₁·G + β₂·G/(v+v₀)), separando el sesgo propio del sensor (e_base, constante) del calentamiento adicional por sol (que depende de la radiación G y del viento v). β₁ y β₂ se fuerzan a ≥ 0 para que el término solar nunca enfríe.</span></div>
-        <div><b>Puntos de calibración</b><span>Cada punto guarda, en un instante, la temperatura bruta de esta estación y la de otro termómetro de confianza (más la radiación y el viento de ese momento). El sesgo base se calcula como la mediana de los puntos con radiación casi nula (de noche); β₁ y β₂ se ajustan por regresión con los puntos que sí tienen sol — hacen falta al menos 2, a ser posible con viento distinto.</span></div>
+        <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
+        <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
       </div>
     </div>
   </div>
@@ -834,32 +765,19 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const STORAGE_KEY_CORR_OFFSET = 'telemetcal_corr_offset';
   const STORAGE_KEY_CORR_K      = 'telemetcal_corr_k';
   const STORAGE_KEY_CORR_C      = 'telemetcal_corr_c';
-  const STORAGE_KEY_CORR_EBASE  = 'telemetcal_corr_ebase';
-  const STORAGE_KEY_CORR_V0     = 'telemetcal_corr_v0';
-  const STORAGE_KEY_CORR_BETA1  = 'telemetcal_corr_beta1';
-  const STORAGE_KEY_CORR_BETA2  = 'telemetcal_corr_beta2';
-  const STORAGE_KEY_CALIB_PUNTOS = 'telemetcal_calib_puntos';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
     staleThresholdS: 120, historyLen: 40
   };
 
-  const CORR_MODOS = { NINGUNA: 'ninguna', FIJO: 'fijo', DINAMICO: 'dinamico', REGRESION: 'regresion' };
-  const CORR_DEFAULTS = { modo: CORR_MODOS.NINGUNA, offset: -1.5, k: 0.02, c: 2, eBase: 0, v0: 0.5, beta1: 0, beta2: 0 };
-  // Por debajo de este umbral (W/m²) una lectura se considera "sin sol"
-  // a efectos del sesgo base e_base: de noche o con cielo muy cubierto.
-  const UMBRAL_NOCTURNO_WM2 = 5;
+  const CORR_MODOS = { NINGUNA: 'ninguna', FIJO: 'fijo', DINAMICO: 'dinamico' };
+  const CORR_DEFAULTS = { modo: CORR_MODOS.NINGUNA, offset: -1.5, k: 0.02, c: 2 };
   // Configuración de corrección actualmente cargada; la actualizan
   // cargarConfig()/guardarConfig() y la lee corregirTemperatura() en cada
   // extracción (en vivo o backfill). Vive en una variable de módulo en vez
   // de releerse de localStorage en cada lectura por simple eficiencia.
   let corrConfig = Object.assign({}, CORR_DEFAULTS);
-  // Puntos de calibración (temperatura de referencia frente a la lectura
-  // en vivo de esta estación, en distintos momentos) para ajustar e_base,
-  // β1 y β2 por regresión. Persisten en localStorage; ver
-  // cargarPuntosCalibracion()/guardarPuntosCalibracion().
-  let puntosCalibracion = [];
 
   const MAX_FILAS_TABLA = 500;
 
@@ -946,19 +864,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const corrCInput        = document.getElementById('corrCInput');
   const corrFijoGrupo     = document.getElementById('corrFijoGrupo');
   const corrDinamicoGrupo = document.getElementById('corrDinamicoGrupo');
-  const corrRegresionGrupo = document.getElementById('corrRegresionGrupo');
-  const corrEBaseInput = document.getElementById('corrEBaseInput');
-  const corrV0Input    = document.getElementById('corrV0Input');
-  const corrBeta1Input = document.getElementById('corrBeta1Input');
-  const corrBeta2Input = document.getElementById('corrBeta2Input');
   const calibRefTempInput = document.getElementById('calibRefTempInput');
-  const btnAnadirPuntoCalibracion = document.getElementById('btnAnadirPuntoCalibracion');
-  const calibAvisoPunto = document.getElementById('calibAvisoPunto');
-  const calibTablaEnvoltorio = document.getElementById('calibTablaEnvoltorio');
-  const calibPuntosCuerpo = document.getElementById('calibPuntosCuerpo');
-  const btnAjustarRegresion = document.getElementById('btnAjustarRegresion');
-  const btnVaciarPuntosCalibracion = document.getElementById('btnVaciarPuntosCalibracion');
-  const calibResultadoRegresion = document.getElementById('calibResultadoRegresion');
+  const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
+  const calibResultado = document.getElementById('calibResultado');
   const btnBorrarHistorialLocal = document.getElementById('btnBorrarHistorialLocal');
   const avisoHistorialLocalBorrado = document.getElementById('avisoHistorialLocalBorrado');
   const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
@@ -1028,7 +936,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // marcha (ver aplicarCorreccionEnVivo()), así que quedan fuera de este
   // bloqueo: solo lo que sí exige reiniciar el monitor para aplicarse
   // (Station ID, intervalos, etc.) se deshabilita mientras está activo.
-  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput, corrEBaseInput, corrV0Input, corrBeta1Input, corrBeta2Input];
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput];
   const INPUTS_BLOQUEABLES_EN_MARCHA = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
 
   /* ============================================================
@@ -1254,18 +1162,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrOffsetInput.value = localStorage.getItem(STORAGE_KEY_CORR_OFFSET) || CORR_DEFAULTS.offset;
     corrKInput.value = localStorage.getItem(STORAGE_KEY_CORR_K) || CORR_DEFAULTS.k;
     corrCInput.value = localStorage.getItem(STORAGE_KEY_CORR_C) || CORR_DEFAULTS.c;
-    corrEBaseInput.value = localStorage.getItem(STORAGE_KEY_CORR_EBASE) || CORR_DEFAULTS.eBase;
-    corrV0Input.value = localStorage.getItem(STORAGE_KEY_CORR_V0) || CORR_DEFAULTS.v0;
-    corrBeta1Input.value = localStorage.getItem(STORAGE_KEY_CORR_BETA1) || CORR_DEFAULTS.beta1;
-    corrBeta2Input.value = localStorage.getItem(STORAGE_KEY_CORR_BETA2) || CORR_DEFAULTS.beta2;
     actualizarCorrConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
-    cargarPuntosCalibracion();
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
   }
 
-  // Lee los campos de corrección y actualiza corrConfig (lo que de
+  // Lee los 4 campos de corrección y actualiza corrConfig (lo que de
   // verdad usa corregirTemperatura() en cada lectura). Se llama al
   // cargar, a cada tecla en los campos de corrección (ver
   // aplicarCorreccionEnVivo()) y al guardar el resto de ajustes. Un
@@ -1276,26 +1179,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const nuevoOffset = parseFloat(corrOffsetInput.value);
     const nuevoK = parseFloat(corrKInput.value);
     const nuevoC = parseFloat(corrCInput.value);
-    const nuevoEBase = parseFloat(corrEBaseInput.value);
-    const nuevoV0 = parseFloat(corrV0Input.value);
-    const nuevoBeta1 = parseFloat(corrBeta1Input.value);
-    const nuevoBeta2 = parseFloat(corrBeta2Input.value);
     corrConfig = {
       modo: corrModoInput.value,
       offset: Number.isFinite(nuevoOffset) ? nuevoOffset : corrConfig.offset,
       k: (Number.isFinite(nuevoK) && nuevoK >= 0) ? nuevoK : corrConfig.k,
-      c: (Number.isFinite(nuevoC) && nuevoC > 0) ? nuevoC : corrConfig.c,
-      eBase: Number.isFinite(nuevoEBase) ? nuevoEBase : corrConfig.eBase,
-      v0: (Number.isFinite(nuevoV0) && nuevoV0 > 0) ? nuevoV0 : corrConfig.v0,
-      beta1: (Number.isFinite(nuevoBeta1) && nuevoBeta1 >= 0) ? nuevoBeta1 : corrConfig.beta1,
-      beta2: (Number.isFinite(nuevoBeta2) && nuevoBeta2 >= 0) ? nuevoBeta2 : corrConfig.beta2
+      c: (Number.isFinite(nuevoC) && nuevoC > 0) ? nuevoC : corrConfig.c
     };
   }
 
   function actualizarVisibilidadCorrGrupos(){
     corrFijoGrupo.style.display = corrModoInput.value === CORR_MODOS.FIJO ? 'grid' : 'none';
     corrDinamicoGrupo.style.display = corrModoInput.value === CORR_MODOS.DINAMICO ? 'grid' : 'none';
-    corrRegresionGrupo.style.display = corrModoInput.value === CORR_MODOS.REGRESION ? 'grid' : 'none';
   }
 
   // ------------------------------------------------------------
@@ -1318,10 +1212,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
       localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
       localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
-      localStorage.setItem(STORAGE_KEY_CORR_EBASE, corrConfig.eBase);
-      localStorage.setItem(STORAGE_KEY_CORR_V0, corrConfig.v0);
-      localStorage.setItem(STORAGE_KEY_CORR_BETA1, corrConfig.beta1);
-      localStorage.setItem(STORAGE_KEY_CORR_BETA2, corrConfig.beta2);
     }, 400);
   }
 
@@ -1344,217 +1234,69 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   // ------------------------------------------------------------
-  // Puntos de calibración: cada uno guarda, en un instante dado, la
-  // temperatura BRUTA de esta estación junto a la que marca otro
-  // termómetro de confianza (y la radiación/viento de ese momento).
-  // Persisten en localStorage (independientes de "Borrar configuración"
-  // y de "Borrar histórico local") y son la base para ajustar el sesgo
-  // base e_base y, por regresión, β1 y β2 — ver
-  // ajustarRegresionCalibracion() más abajo.
+  // Calibración con sensor de referencia: a partir de la temperatura
+  // BRUTA de la última lectura en vivo y una temperatura de
+  // referencia que da el usuario (otro termómetro fiable, medido en
+  // el mismo instante), calcula:
+  //   - el offset fijo que igualaría ambas temperaturas ahora mismo.
+  //   - la sensibilidad k del modo dinámico que, con el viento base
+  //     (c) configurado y la radiación/viento de este instante,
+  //     produciría ese mismo error. Solo es posible con sol (radiación
+  //     > 0) y si el sensor está leyendo por ENCIMA de la referencia.
+  // Es una calibración de un solo punto: razonable para un primer
+  // ajuste rápido, pero lo ideal es repetirla en otro momento del día
+  // (con distinta radiación/viento) y comparar si se quiere afinar
+  // más "c", que aquí se mantiene al valor ya configurado.
   // ------------------------------------------------------------
-  function cargarPuntosCalibracion(){
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_CALIB_PUNTOS);
-      puntosCalibracion = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(puntosCalibracion)) puntosCalibracion = [];
-    } catch (err) {
-      puntosCalibracion = [];
-    }
-    renderizarPuntosCalibracion();
-  }
-
-  function guardarPuntosCalibracion(){
-    try { localStorage.setItem(STORAGE_KEY_CALIB_PUNTOS, JSON.stringify(puntosCalibracion)); }
-    catch (err) { /* cuota de localStorage llena o modo privado: se sigue usando en memoria para esta sesión */ }
-  }
-
-  function renderizarPuntosCalibracion(){
-    if (puntosCalibracion.length === 0){
-      calibTablaEnvoltorio.style.display = 'none';
-      calibPuntosCuerpo.innerHTML = '';
-      return;
-    }
-    calibTablaEnvoltorio.style.display = 'block';
-    calibPuntosCuerpo.innerHTML = puntosCalibracion.map((p, i) => {
-      const diff = redondear1(p.tempBruta - p.tempRef);
-      return '<tr>' +
-        '<td>' + new Date(p.ts).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>' +
-        '<td>' + fmt(p.tempBruta) + ' °C</td>' +
-        '<td>' + fmt(p.tempRef) + ' °C</td>' +
-        '<td>' + (diff >= 0 ? '+' : '') + diff + ' °C</td>' +
-        '<td>' + (p.solarWm2 === null ? '—' : fmt(p.solarWm2, 0) + ' W/m²') + '</td>' +
-        '<td>' + (p.windKmh === null ? '—' : p.windKmh.toFixed(1) + ' km/h') + '</td>' +
-        '<td><button type="button" class="fila-borrar" data-idx="' + i + '" aria-label="Borrar este punto">✕</button></td>' +
-      '</tr>';
-    }).join('');
-    calibPuntosCuerpo.querySelectorAll('.fila-borrar').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.idx, 10);
-        puntosCalibracion.splice(idx, 1);
-        guardarPuntosCalibracion();
-        renderizarPuntosCalibracion();
-      });
-    });
-  }
-
-  // Añade un punto con la última lectura en vivo (temperatura bruta,
-  // radiación y viento de ESTE instante) y la referencia que escriba
-  // el usuario. No usa la temperatura YA corregida (t.temp_c): siempre
-  // parte de la bruta, sea cual sea el modo de corrección activo.
-  function anadirPuntoCalibracion(){
+  function calcularCalibracionDesdeReferencia(){
     if (!ultimaLectura || ultimaLectura.temp_c_bruta === null){
-      calibAvisoPunto.innerHTML = '<span class="calib-aviso">Todavía no hay ninguna lectura en vivo de esta estación. Inicia el sondeo y espera a la primera lectura.</span>';
-      calibAvisoPunto.style.display = 'block';
+      calibResultado.innerHTML = '<span class="calib-aviso">Todavía no hay ninguna lectura en vivo de esta estación con la que comparar. Inicia el sondeo y espera a la primera lectura.</span>';
+      calibResultado.style.display = 'block';
       return;
     }
     const refTemp = parseFloat(calibRefTempInput.value);
     if (!Number.isFinite(refTemp)){
-      calibAvisoPunto.innerHTML = '<span class="calib-aviso">Introduce primero una temperatura de referencia válida.</span>';
-      calibAvisoPunto.style.display = 'block';
+      calibResultado.innerHTML = '<span class="calib-aviso">Introduce primero una temperatura de referencia válida.</span>';
+      calibResultado.style.display = 'block';
       return;
     }
-    puntosCalibracion.push({
-      ts: Date.now(),
-      tempBruta: ultimaLectura.temp_c_bruta,
-      tempRef: refTemp,
-      solarWm2: ultimaLectura.solarradiation_wm2,
-      windKmh: ultimaLectura.wind_kmh
+
+    const bruta = ultimaLectura.temp_c_bruta;
+    const solar = ultimaLectura.solarradiation_wm2;
+    const viento = (ultimaLectura.wind_kmh === null || ultimaLectura.wind_kmh < 0) ? 0 : ultimaLectura.wind_kmh;
+    const error = redondear1(bruta - refTemp); // > 0: el sensor lee por encima de la referencia
+    const offsetCalculado = redondear1(refTemp - bruta);
+    let kCalculado = null;
+
+    let html = 'Con la lectura bruta actual (<b>' + fmt(bruta) + ' °C</b>) y tu referencia (<b>' + fmt(refTemp) + ' °C</b>):<br>';
+    html += 'Offset fijo calculado: <b>' + (offsetCalculado >= 0 ? '+' : '') + offsetCalculado + ' °C</b>';
+    html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarOffsetCalculado">Usar este offset</button><br>';
+
+    if (solar !== null && solar > 0 && error > 0){
+      const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
+      kCalculado = Math.round((error * (viento + cActual) / solar) * 1000) / 1000;
+      html += 'Sensibilidad k calculada (con viento base c = ' + cActual + '): <b>' + kCalculado + '</b>';
+      html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarKCalculado">Usar esta k</button>';
+      html += '<br><span style="color:var(--muted);font-size:12.5px">Radiación actual: ' + fmt(solar, 0) + ' W/m² · viento: ' + viento.toFixed(1) + ' km/h. Calibración de un solo punto: repítela otro día con distinta radiación/viento y compara si quieres afinar más "c".</span>';
+    } else if (solar !== null && solar > 0){
+      html += '<br><span class="calib-aviso">El sensor no está leyendo por encima de la referencia ahora mismo: no hace falta corrección dinámica con este punto.</span>';
+    } else {
+      html += '<br><span class="calib-aviso">No hay radiación solar en esta lectura (de noche, o la estación no la reporta): la k dinámica no se puede calcular ahora. Repite la calibración con el sensor a pleno sol.</span>';
+    }
+
+    calibResultado.innerHTML = html;
+    calibResultado.style.display = 'block';
+
+    const btnUsarOffset = document.getElementById('btnUsarOffsetCalculado');
+    if (btnUsarOffset) btnUsarOffset.addEventListener('click', () => {
+      corrModoInput.value = CORR_MODOS.FIJO;
+      corrOffsetInput.value = offsetCalculado;
+      aplicarCorreccionEnVivo();
     });
-    guardarPuntosCalibracion();
-    renderizarPuntosCalibracion();
-    calibAvisoPunto.innerHTML = 'Punto añadido (' + puntosCalibracion.length + ' en total).';
-    calibAvisoPunto.style.display = 'block';
-    calibRefTempInput.value = '';
-  }
-
-  function vaciarPuntosCalibracion(){
-    puntosCalibracion = [];
-    guardarPuntosCalibracion();
-    renderizarPuntosCalibracion();
-    calibAvisoPunto.style.display = 'none';
-    calibResultadoRegresion.style.display = 'none';
-  }
-
-  function medianaDe(valoresOrdenados){
-    const n = valoresOrdenados.length;
-    if (n === 0) return 0;
-    const mitad = Math.floor(n / 2);
-    return (n % 2 !== 0) ? valoresOrdenados[mitad] : (valoresOrdenados[mitad - 1] + valoresOrdenados[mitad]) / 2;
-  }
-
-  // Mínimos cuadrados con β1 y β2 restringidos a >= 0 (el término solar
-  // no debe poder "enfriar"). Con solo 2 incógnitas, el método de
-  // conjunto activo se resuelve a mano probando la solución sin
-  // restringir y, si no es válida (algún β negativo), las dos
-  // soluciones de borde (una sola variable activa, la otra a 0),
-  // quedándose con la factible de menor suma de residuos al cuadrado.
-  function ajustarBetaNoNegativo(x1, x2, y){
-    const n = x1.length;
-    let s11 = 0, s22 = 0, s12 = 0, s1y = 0, s2y = 0;
-    for (let i = 0; i < n; i++){
-      s11 += x1[i] * x1[i];
-      s22 += x2[i] * x2[i];
-      s12 += x1[i] * x2[i];
-      s1y += x1[i] * y[i];
-      s2y += x2[i] * y[i];
-    }
-    function rss(b1, b2){
-      let suma = 0;
-      for (let i = 0; i < n; i++){
-        const r = y[i] - b1 * x1[i] - b2 * x2[i];
-        suma += r * r;
-      }
-      return suma;
-    }
-    const candidatos = [];
-    const det = s11 * s22 - s12 * s12;
-    if (Math.abs(det) > 1e-12){
-      const b1 = (s1y * s22 - s2y * s12) / det;
-      const b2 = (s11 * s2y - s12 * s1y) / det;
-      if (b1 >= 0 && b2 >= 0) candidatos.push({ beta1: b1, beta2: b2 });
-    }
-    if (s11 > 1e-12){
-      const b1 = s1y / s11;
-      if (b1 >= 0) candidatos.push({ beta1: b1, beta2: 0 });
-    }
-    if (s22 > 1e-12){
-      const b2 = s2y / s22;
-      if (b2 >= 0) candidatos.push({ beta1: 0, beta2: b2 });
-    }
-    candidatos.push({ beta1: 0, beta2: 0 });
-    let mejor = candidatos[0];
-    let mejorRss = rss(mejor.beta1, mejor.beta2);
-    for (let i = 1; i < candidatos.length; i++){
-      const r = rss(candidatos[i].beta1, candidatos[i].beta2);
-      if (r < mejorRss){ mejor = candidatos[i]; mejorRss = r; }
-    }
-    return mejor;
-  }
-
-  // Separa los puntos en "nocturnos" (radiación nula o casi nula:
-  // UMBRAL_NOCTURNO_WM2) y "diurnos". El sesgo base e_base es la
-  // mediana de (bruta - referencia) en los nocturnos —así no se
-  // contamina con el calentamiento solar—; β1 y β2 se ajustan por
-  // regresión sobre los diurnos, a partir del exceso que queda tras
-  // restar ese sesgo. v0 se toma del campo correspondiente (no se
-  // reajusta aquí, solo e_base/β1/β2).
-  function ajustarRegresionCalibracion(){
-    if (puntosCalibracion.length === 0){
-      calibResultadoRegresion.innerHTML = '<span class="calib-aviso">Añade al menos un punto de calibración primero.</span>';
-      calibResultadoRegresion.style.display = 'block';
-      return;
-    }
-    const v0Campo = parseFloat(corrV0Input.value);
-    const v0 = (Number.isFinite(v0Campo) && v0Campo > 0) ? v0Campo : CORR_DEFAULTS.v0;
-
-    const nocturnos = puntosCalibracion.filter(p => p.solarWm2 === null || p.solarWm2 <= UMBRAL_NOCTURNO_WM2);
-    const diurnos = puntosCalibracion.filter(p => p.solarWm2 !== null && p.solarWm2 > UMBRAL_NOCTURNO_WM2);
-
-    let eBase, eBaseAviso = '';
-    if (nocturnos.length > 0){
-      const diffsNocturnos = nocturnos.map(p => p.tempBruta - p.tempRef).sort((a, b) => a - b);
-      eBase = medianaDe(diffsNocturnos);
-    } else {
-      const diffsTodos = puntosCalibracion.map(p => p.tempBruta - p.tempRef).sort((a, b) => a - b);
-      eBase = medianaDe(diffsTodos);
-      eBaseAviso = ' Sin puntos de noche o con radiación casi nula (≤ ' + UMBRAL_NOCTURNO_WM2 + ' W/m²): se ha usado la mediana de TODOS los puntos, que puede llevar algo de calentamiento solar mezclado en el sesgo. Añade algún punto nocturno para un sesgo más fiable.';
-    }
-    eBase = redondear1(eBase);
-
-    let beta1 = 0, beta2 = 0, betaAviso = '';
-    if (diurnos.length >= 2){
-      const x1 = [], x2 = [], y = [];
-      diurnos.forEach(p => {
-        const vMs = ((p.windKmh === null || p.windKmh < 0) ? 0 : p.windKmh) / 3.6;
-        x1.push(p.solarWm2);
-        x2.push(p.solarWm2 / (vMs + v0));
-        y.push((p.tempBruta - p.tempRef) - eBase);
-      });
-      const ajuste = ajustarBetaNoNegativo(x1, x2, y);
-      beta1 = Math.round(ajuste.beta1 * 10000) / 10000;
-      beta2 = Math.round(ajuste.beta2 * 10000) / 10000;
-    } else if (diurnos.length === 1){
-      betaAviso = ' Solo hay un punto con sol (> ' + UMBRAL_NOCTURNO_WM2 + ' W/m²): hacen falta al menos 2, a ser posible con distinto viento, para ajustar β₁ y β₂ por regresión. Se han dejado en 0 (sin corrección solar adicional sobre el sesgo).';
-    } else {
-      betaAviso = ' No hay puntos con sol todavía: añade alguno a pleno sol (y a ser posible con distinto viento) para ajustar β₁ y β₂. Se han dejado en 0.';
-    }
-
-    let html = 'Con ' + puntosCalibracion.length + ' punto' + (puntosCalibracion.length === 1 ? '' : 's') +
-      ' (' + nocturnos.length + ' sin apenas sol, ' + diurnos.length + ' con sol):<br>';
-    html += 'Sesgo base calculado: <b>' + (eBase >= 0 ? '+' : '') + eBase + ' °C</b>' + eBaseAviso + '<br>';
-    html += 'β₁ calculado: <b>' + beta1 + '</b> · β₂ calculado: <b>' + beta2 + '</b> (con v₀ = ' + v0 + ' m/s)' + betaAviso;
-    html += '<div class="calib-acciones"><button type="button" class="btn btn-primary btn-sm" id="btnAplicarRegresion">Aplicar estos valores</button></div>';
-
-    calibResultadoRegresion.innerHTML = html;
-    calibResultadoRegresion.style.display = 'block';
-
-    const btnAplicar = document.getElementById('btnAplicarRegresion');
-    if (btnAplicar) btnAplicar.addEventListener('click', () => {
-      corrModoInput.value = CORR_MODOS.REGRESION;
-      corrEBaseInput.value = eBase;
-      corrV0Input.value = v0;
-      corrBeta1Input.value = beta1;
-      corrBeta2Input.value = beta2;
+    const btnUsarK = document.getElementById('btnUsarKCalculado');
+    if (btnUsarK) btnUsarK.addEventListener('click', () => {
+      corrModoInput.value = CORR_MODOS.DINAMICO;
+      corrKInput.value = kCalculado;
       aplicarCorreccionEnVivo();
     });
   }
@@ -1577,10 +1319,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
     localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
     localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
-    localStorage.setItem(STORAGE_KEY_CORR_EBASE, corrConfig.eBase);
-    localStorage.setItem(STORAGE_KEY_CORR_V0, corrConfig.v0);
-    localStorage.setItem(STORAGE_KEY_CORR_BETA1, corrConfig.beta1);
-    localStorage.setItem(STORAGE_KEY_CORR_BETA2, corrConfig.beta2);
     configForzarExpandida = false; // "Guardar" = fin de la edición: vuelve a la vista compacta
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1599,7 +1337,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   function borrarConfig(){
-    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C, STORAGE_KEY_CORR_EBASE, STORAGE_KEY_CORR_V0, STORAGE_KEY_CORR_BETA1, STORAGE_KEY_CORR_BETA2]
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C]
       .forEach(k => localStorage.removeItem(k));
     stationIdInput.value = '';
     apiKeyInput.value = '';
@@ -1613,15 +1351,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     corrOffsetInput.value = CORR_DEFAULTS.offset;
     corrKInput.value = CORR_DEFAULTS.k;
     corrCInput.value = CORR_DEFAULTS.c;
-    corrEBaseInput.value = CORR_DEFAULTS.eBase;
-    corrV0Input.value = CORR_DEFAULTS.v0;
-    corrBeta1Input.value = CORR_DEFAULTS.beta1;
-    corrBeta2Input.value = CORR_DEFAULTS.beta2;
     actualizarCorrConfigDesdeInputs();
     actualizarVisibilidadCorrGrupos();
     calibRefTempInput.value = '';
-    calibAvisoPunto.style.display = 'none';
-    calibResultadoRegresion.style.display = 'none';
+    calibResultado.style.display = 'none';
     configForzarExpandida = false;
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -2072,24 +1805,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const viento = (windKmh === null || windKmh < 0) ? 0 : windKmh;
       const error = corrConfig.k * solarWm2 / (viento + corrConfig.c);
       return redondear1(tempC - error);
-    }
-    if (corrConfig.modo === CORR_MODOS.REGRESION){
-      // T_corr = T_bruta - e_base - ΔT_solar, con
-      // ΔT_solar = β1·G + β2·G/(v_ms+v0) solo cuando hay radiación; el
-      // sesgo base e_base se resta siempre, haya sol o no. β1 y β2 están
-      // forzados a ser ≥ 0 (ver ajustarRegresionCalibracion()), así que
-      // ΔT_solar nunca es negativo: el término solar nunca "enfría".
-      const eBase = Number.isFinite(corrConfig.eBase) ? corrConfig.eBase : 0;
-      let deltaSolar = 0;
-      if (solarWm2 !== null && solarWm2 > 0){
-        const vMs = ((windKmh === null || windKmh < 0) ? 0 : windKmh) / 3.6;
-        const v0 = (Number.isFinite(corrConfig.v0) && corrConfig.v0 > 0) ? corrConfig.v0 : CORR_DEFAULTS.v0;
-        const beta1 = (Number.isFinite(corrConfig.beta1) && corrConfig.beta1 >= 0) ? corrConfig.beta1 : 0;
-        const beta2 = (Number.isFinite(corrConfig.beta2) && corrConfig.beta2 >= 0) ? corrConfig.beta2 : 0;
-        deltaSolar = beta1 * solarWm2 + beta2 * solarWm2 / (vMs + v0);
-        if (deltaSolar < 0) deltaSolar = 0;
-      }
-      return redondear1(tempC - eBase - deltaSolar);
     }
     return tempC;
   }
@@ -2880,13 +2595,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   corrOffsetInput.addEventListener('input', aplicarCorreccionEnVivo);
   corrKInput.addEventListener('input', aplicarCorreccionEnVivo);
   corrCInput.addEventListener('input', aplicarCorreccionEnVivo);
-  corrEBaseInput.addEventListener('input', aplicarCorreccionEnVivo);
-  corrV0Input.addEventListener('input', aplicarCorreccionEnVivo);
-  corrBeta1Input.addEventListener('input', aplicarCorreccionEnVivo);
-  corrBeta2Input.addEventListener('input', aplicarCorreccionEnVivo);
-  btnAnadirPuntoCalibracion.addEventListener('click', anadirPuntoCalibracion);
-  btnAjustarRegresion.addEventListener('click', ajustarRegresionCalibracion);
-  btnVaciarPuntosCalibracion.addEventListener('click', vaciarPuntosCalibracion);
+  btnCalcularCalibracion.addEventListener('click', calcularCalibracionDesdeReferencia);
   btnBorrarHistorialLocal.addEventListener('click', borrarHistorialLocalEstacion);
   stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);
   btnIniciar.addEventListener('click', iniciarMonitor);

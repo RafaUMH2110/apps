@@ -613,7 +613,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 00:37</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 09:57</p>
 </footer>
 
 <div class="bottomnav">
@@ -956,21 +956,31 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   //   1) NINGUNA fila tiene temperatura: el bug anterior de extraerValores(),
   //      cuyo histórico llegaba con nombres de campo distintos a los del
   //      endpoint en vivo, así que todo salvo la lluvia se guardaba a null.
-  //   2) Las filas válidas solo cubren una fracción pequeña de la ventana
-  //      del día (menos del 70%): pasa cuando el monitor solo estuvo en
-  //      marcha un rato suelto ese día (p. ej. una sesión de pruebas de
-  //      unos minutos cerca de medianoche), dejando el resto sin ninguna
-  //      lectura local. Sin esto, esas pocas filas sueltas bastaban para
-  //      que el backfill diera el día por completo y nunca rellenara el
-  //      hueco, dejando huecos enormes en las gráficas de 12h/7 días.
+  //   2) Hay un hueco de más de HUECO_MAX_MS sin ninguna lectura válida,
+  //      bien al principio o al final de la ventana del día, bien entre
+  //      dos lecturas consecutivas. ANTES se medía solo la cobertura total
+  //      (de la primera a la última lectura, entre la ventana completa):
+  //      un día con datos de 00:00 a 20:00 y nada después cubre el 83% de
+  //      la ventana y se daba por completo, pero deja sin ninguna lectura
+  //      justo las horas finales del día — las que la gráfica de 12 horas
+  //      (ventana móvil que siempre termina en "ahora") más necesita. Por
+  //      eso la de 7 días podía parecer correcta (ese hueco es minúsculo
+  //      en una ventana de una semana) mientras la de 12h se veía con
+  //      medio día vacío: el bug no estaba en cuánto se cubría, sino en
+  //      QUÉ parte del día quedaba sin cubrir.
+  const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos
+
   function diaIncompleto(filas, inicioMs, finMs){
-    const validas = filas.filter(f => f.vals && f.vals.temp_c !== null);
+    const validas = filas.filter(f => f.vals && f.vals.temp_c !== null)
+      .slice().sort((a, b) => a.epochMs - b.epochMs);
     if (validas.length === 0) return filas.length > 0;
     if (inicioMs === undefined || finMs === undefined) return false;
-    const epochs = validas.map(f => f.epochMs);
-    const cobertura = Math.max(...epochs) - Math.min(...epochs);
-    const ventana = Math.max(finMs - inicioMs, 1);
-    return (cobertura / ventana) < 0.7;
+    if (validas[0].epochMs - inicioMs > HUECO_MAX_MS) return true;
+    if (finMs - validas[validas.length - 1].epochMs > HUECO_MAX_MS) return true;
+    for (let i = 1; i < validas.length; i++){
+      if (validas[i].epochMs - validas[i - 1].epochMs > HUECO_MAX_MS) return true;
+    }
+    return false;
   }
 
   /* ============================================================

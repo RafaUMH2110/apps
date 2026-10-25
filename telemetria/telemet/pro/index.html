@@ -613,7 +613,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Pro. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 09:57</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 25 de octubre de 2026, 21:59</p>
 </footer>
 
 <div class="bottomnav">
@@ -926,29 +926,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         req.onerror = () => reject(req.error);
       });
     } catch (err) { /* purga best-effort */ }
-  }
-
-  // Borra todas las filas guardadas de una estación dentro de un rango de
-  // tiempo. Se usa para purgar un día de histórico que se guardó con el
-  // bug de extraerValores() (solo lluvia, el resto a null) antes de
-  // volver a pedirlo a la API ya corregida; sin esto, backfillSiNecesario()
-  // vería que el día "ya tiene datos" y nunca lo repetiría.
-  async function borrarRango(stationId, tDesdeMs, tHastaMs){
-    try {
-      const db = await abrirDB();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        const idx = tx.objectStore(DB_STORE).index('por_estacion');
-        const req = idx.openCursor(IDBKeyRange.only(stationId));
-        req.onsuccess = () => {
-          const cur = req.result;
-          if (!cur){ resolve(); return; }
-          if (cur.value.epochMs >= tDesdeMs && cur.value.epochMs <= tHastaMs) cur.delete();
-          cur.continue();
-        };
-        req.onerror = () => reject(req.error);
-      });
-    } catch (err) { /* best-effort */ }
   }
 
   // Un día se trata como "incompleto" (y se vuelve a pedir a la API) en dos
@@ -1674,11 +1651,32 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return HISTORY_URL + '?' + params.toString();
   }
 
-  // Rellena, día a día, los últimos DIAS_SEMANA días que todavía no tengan
-  // ninguna lectura local, consultando el histórico de la API. Es un
-  // complemento de "mejor esfuerzo": si un día falla (estación sin
-  // histórico disponible, error de red, etc.) simplemente se omite y la
-  // gráfica de 7 días se completa solo con lo que haya en IndexedDB.
+  // Tolerancia para considerar que una lectura del histórico de la API
+  // "ya existe" en local y no duplicarla: no hace falta que coincida al
+  // segundo, basta con que caiga muy cerca de una lectura real ya guardada.
+  const MERGE_TOLERANCIA_MS = 90 * 1000; // 90 s
+
+  // Rellena, día a día, los últimos DIAS_SEMANA días que tengan huecos,
+  // consultando el histórico de la API, y SIEMPRE de forma aditiva: solo
+  // añade lecturas en los huecos, nunca borra una lectura real ya
+  // guardada. Es un complemento de "mejor esfuerzo": si un día falla
+  // (estación sin histórico disponible, error de red, respuesta vacía…)
+  // simplemente se omite y la gráfica se completa solo con lo que haya
+  // en IndexedDB.
+  //
+  // IMPORTANTE (bug corregido): antes de este fix, un día que se
+  // consideraba "incompleto" (p.ej. "hoy", que casi siempre lo está,
+  // porque hay un hueco entre medianoche y la hora en la que arrancó el
+  // monitor) se BORRABA entero y se rellenaba solo con lo que devolviera
+  // el endpoint de histórico de la API. Ese endpoint responde con
+  // frecuencia 200 OK pero sin observaciones (planes de API personales
+  // sin histórico habilitado, estación sin datos ahí, etc.), así que el
+  // día se quedaba vacío. Como backfillSiNecesario() se llama en CADA
+  // iniciarMonitor() —incluido detener el monitor para cambiar un
+  // parámetro y volver a "Iniciar", o cerrar y reabrir la app—, esto
+  // podía borrar en cualquier momento el histórico real recién
+  // registrado. Ahora nunca se borra nada aquí: como mucho se añaden
+  // lecturas que faltaban.
   async function backfillSiNecesario(stationId, apiKey){
     if (backfillEnCurso) return;
     backfillEnCurso = true;
@@ -1692,7 +1690,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         // todavía no ha pasado: la ventana relevante termina en "ahora".
         const finVentanaMs = Math.min(finDiaMs, Date.now());
         const existentes = await consultarRango(stationId, inicioDiaMs, finDiaMs);
-        if (existentes.length > 0 && !diaIncompleto(existentes, inicioDiaMs, finVentanaMs)) continue; // ya hay datos locales con cobertura suficiente: no se duplica
+        if (existentes.length > 0 && !diaIncompleto(existentes, inicioDiaMs, finVentanaMs)) continue; // ya hay datos locales con cobertura suficiente: no hace falta ni consultar la API
 
         try {
           const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(fecha));
@@ -1700,14 +1698,18 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           if (!resp.ok) continue; // fallo de red/API: nos quedamos con lo que hubiera (aunque esté incompleto) en vez de perderlo
           const data = await resp.json();
           const obsArr = data.observations || [];
-          // Solo se purgan las filas incompletas de antes del fix una vez
-          // confirmado que la nueva petición ha funcionado; si se borrara
-          // antes de intentar la petición, un fallo de red dejaría el día
-          // completamente vacío en vez de solo incompleto.
-          if (existentes.length > 0) await borrarRango(stationId, inicioDiaMs, finDiaMs);
+          // Fusión aditiva: cada lectura de la API se guarda solo si no
+          // hay ya una lectura real local a menos de MERGE_TOLERANCIA_MS;
+          // así se rellenan huecos sin duplicar ni, sobre todo, sin
+          // borrar nada de lo que el monitor ya hubiera registrado.
+          const epochsExistentes = existentes.map(f => f.epochMs);
           for (const obs of obsArr){
             if (!obs.epoch) continue;
-            await guardarLectura(stationId, obs.epoch * 1000, extraerValores(obs));
+            const epochMs = obs.epoch * 1000;
+            const yaExiste = epochsExistentes.some(e => Math.abs(e - epochMs) < MERGE_TOLERANCIA_MS);
+            if (yaExiste) continue;
+            await guardarLectura(stationId, epochMs, extraerValores(obs));
+            epochsExistentes.push(epochMs); // evita duplicar entre sí varias observaciones de la API muy próximas
           }
         } catch (err) { /* un día sin histórico disponible no detiene el resto; se conserva lo que hubiera */ }
       }

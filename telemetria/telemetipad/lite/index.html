@@ -35,7 +35,7 @@
     --good:#1FBE9F;
     --warn:#F2B341;
     --danger:#E4572E;
-    --c-temp:#E4572E; --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-rain:#73C7EC;
+    --c-temp:#E4572E; --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-rain:#73C7EC; --c-dew:#1FBE9F; --c-pres:#9CB7D6;
 
     --display:'Bricolage Grotesque',Georgia,serif;
     --sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
@@ -208,7 +208,7 @@
   }
 </style>
 </head>
-<body data-app-title="TeleMet iPad Lite" data-app-description="Versión Lite de TeleMet iPad: panel en vivo, con diseño de dos paneles pensado para el ancho de un iPad, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Muestra solo temperatura, humedad, viento y lluvia actuales, sin gráficas ni histórico. Actualización automática configurable entre 1 y 10 minutos, o manual mediante un botón. No guarda ningún dato salvo los ajustes de configuración en este dispositivo." data-categories="telemetria,automatizacion,docencia" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ipad,pwa,pantalla de inicio,panel,tiempo real,lite,ligera" data-client-only="true">
+<body data-app-title="TeleMet iPad Lite" data-app-description="Versión Lite de TeleMet iPad: panel en vivo, con diseño de dos paneles pensado para el ancho de un iPad, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Muestra solo temperatura, punto de rocío, humedad, presión, viento y lluvia actuales, sin gráficas ni histórico. Actualización automática configurable entre 1 y 10 minutos, o manual mediante un botón. No guarda ningún dato salvo los ajustes de configuración en este dispositivo." data-categories="telemetria,automatizacion,docencia" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ipad,pwa,pantalla de inicio,panel,tiempo real,lite,ligera" data-client-only="true">
 
 <!--
   ============================================================================
@@ -219,8 +219,9 @@
   Versión "Lite" de TeleMet iPad: mismo diseño de dos paneles y misma
   paleta editorial "forja" (Bricolage Grotesque + Instrument Sans +
   JetBrains Mono), pero reducida a lo esencial:
-    - Solo 4 tarjetas de condiciones actuales: Temperatura, Humedad,
-      Viento (con dirección) y Lluvia de hoy (con tasa actual).
+    - Solo 6 tarjetas de condiciones actuales: Temperatura, Punto de
+      rocío, Humedad, Presión, Viento (con dirección) y Lluvia de hoy
+      (con tasa actual).
     - Sin gráficas de evolución, sin histórico del día, sin IndexedDB,
       sin exportación a CSV.
     - Actualización automática con intervalo configurable de 1 a 10
@@ -339,7 +340,7 @@
     <li><b>Modo automático</b>Vuelve a consultar la estación sola, cada el número de minutos que indiques (de 1 a 10).</li>
     <li><b>Modo manual</b>No se actualiza sola: pulsa "Actualizar ahora" cuando quieras ver el dato más reciente.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 19 de octubre de 2026, 17:43</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 26 de octubre de 2026, 14:55</div>
 </section>
 
 <script>
@@ -364,7 +365,9 @@
   // Tarjetas de condiciones actuales mostradas (sin histórico ni gráficas).
   const TILES = [
     { id:'temp', titulo:'Temperatura', key:'temp_c', unidad:'°C', dec:1, color:'var(--c-temp)', icono:'<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>' },
+    { id:'dewpoint', titulo:'Punto de rocío', key:'dewpoint_c', unidad:'°C', dec:1, color:'var(--c-dew)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' },
     { id:'humidity', titulo:'Humedad', key:'humidity_pct', unidad:'%', dec:0, color:'var(--c-hum)', icono:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>' },
+    { id:'pressure', titulo:'Presión', key:'pressure_hpa', unidad:'hPa', dec:1, color:'var(--c-pres)', icono:'<path d="M3.5 15a8.5 8.5 0 1 1 17 0"/><path d="M12 15l3.3-3.3"/><circle cx="12" cy="15" r="1.3"/>' },
     { id:'wind', titulo:'Viento', key:'wind_kmh', unidad:'km/h', dec:1, dir:true, color:'var(--c-wind)', icono:'<path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"/>' },
     { id:'rain', titulo:'Lluvia (hoy)', key:'rain_total_mm', unidad:'mm', dec:1, rain:true, color:'var(--c-rain)', icono:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M16 13v8M8 13v8M12 15v8"/>' }
   ];
@@ -434,7 +437,9 @@
     const m = obs.metric || {};
     return {
       temp_c: numOrNull(m.temp),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, m.dewpt, m.dewpoint)),
       humidity_pct: numOrNull(obs.humidity),
+      pressure_hpa: numOrNull(m.pressure),
       wind_kmh: numOrNull(m.windSpeed),
       wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir)),
       rainrate_mmh: numOrNull(m.precipRate),

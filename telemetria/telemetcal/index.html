@@ -705,7 +705,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 25 de octubre de 2026, 22:17</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 1 de noviembre de 2026, 15:52</p>
 </footer>
 
 <div class="bottomnav">
@@ -1100,6 +1100,17 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   //      medio día vacío: el bug no estaba en cuánto se cubría, sino en
   //      QUÉ parte del día quedaba sin cubrir.
   const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos
+
+  // Mismo umbral (HUECO_MAX_MS), pero expresado como fracción del ancho
+  // total de cada gráfica de evolución: se usa para NO trazar una línea
+  // de unión entre dos lecturas separadas por un hueco real (ver
+  // dibujarGraficoSVG()), para no sugerir con una línea recta un cambio
+  // gradual y continuo que en realidad nunca se ha observado.
+  const UMBRAL_GAP_12H_FRAC = HUECO_MAX_MS / VENTANA_12H_MS;
+  // La ventana real de la gráfica de 7 días varía un poco según la hora del
+  // día (de 6 a 7 días completos), así que se usa una aproximación de 7
+  // días exactos: de sobra para decidir si un hueco es "real" o no.
+  const UMBRAL_GAP_7D_FRAC = HUECO_MAX_MS / (DIAS_SEMANA * 24 * 60 * 60 * 1000);
 
   function diaIncompleto(filas, inicioMs, finMs){
     const validas = filas.filter(f => f.vals && f.vals.temp_c !== null)
@@ -2249,7 +2260,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // "puntosX" son TODAS las posiciones reales de muestra a las que puede
   // "enganchar" el cursor (una por lectura en 12h, una por día en 7d) —
   // suele ser una lista más fina que xTicks.
-  function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX){
+  function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX, umbralGapFrac){
     const W = 600, H = 230;
     const M = { l: 46, r: 14, t: 14, b: 28 };
     const pw = W - M.l - M.r, ph = H - M.t - M.b;
@@ -2287,8 +2298,30 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     conPuntos.forEach(s => {
       const pts = s.puntos.slice().sort((a, b) => a.x - b.x);
       s._ptsOrdenados = pts; // reutilizado por la capa de interacción, más abajo
-      const puntosSVG = pts.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
-      svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
+
+      // Si hay un hueco real (sin ninguna lectura, local ni de la API) de
+      // más de umbralGapFrac entre dos lecturas consecutivas, NO se traza
+      // una línea de unión entre ellas: una sola recta de un extremo al
+      // otro del hueco sugeriría un cambio gradual y continuo que en
+      // realidad nunca se ha observado (ver nota junto a UMBRAL_GAP_12H_FRAC
+      // / UMBRAL_GAP_7D_FRAC). Se dibuja un trazo por cada tramo contiguo.
+      const tramos = [[]];
+      pts.forEach((p, i) => {
+        if (i > 0 && umbralGapFrac && (p.x - pts[i - 1].x) > umbralGapFrac) tramos.push([]);
+        tramos[tramos.length - 1].push(p);
+      });
+      tramos.forEach(tramo => {
+        if (tramo.length === 0) return;
+        if (tramo.length === 1){
+          // Un punto aislado entre dos huecos no se puede unir con nada:
+          // se marca con un pequeño círculo para que no desaparezca sin más.
+          svgInner += '<circle class="grafico-punto" cx="' + xPix(tramo[0].x).toFixed(1) + '" cy="' + yPix(tramo[0].y).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+        } else {
+          const puntosSVG = tramo.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
+          svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
+        }
+      });
+
       const ultimo = pts[pts.length - 1];
       const ux = xPix(ultimo.x), uy = yPix(ultimo.y);
       svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
@@ -2457,7 +2490,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
         return { etiqueta: def ? def.etiqueta : key, color: def ? def.color : 'var(--c-temp)', puntos: puntos };
       });
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, UMBRAL_GAP_12H_FRAC);
     });
   }
 
@@ -2484,7 +2517,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     gruposConSeries.forEach(grupo => {
       const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
       charts7d.appendChild(card.el);
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, UMBRAL_GAP_7D_FRAC);
     });
   }
 

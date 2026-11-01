@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 20 de octubre de 2026, 11:46</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 1 de noviembre de 2026, 16:11</div>
 </section>
 
 <script>
@@ -1398,6 +1398,12 @@
           puntoFinal.style.display = 'none';
           gLineas.appendChild(puntoFinal);
           pathsPorSerie[s.key + '__fin'] = puntoFinal;
+
+          // Grupo para marcar con un pequeño círculo las lecturas que quedan
+          // aisladas (un único punto entre dos huecos reales de datos), ya
+          // que un "M x y" sin ningún "L" no dibuja nada visible por sí solo.
+          pathsPorSerie[s.key + '__sueltos'] = document.createElementNS(SVGNS, 'g');
+          gLineas.appendChild(pathsPorSerie[s.key + '__sueltos']);
         }
 
         const puntoHover = document.createElementNS(SVGNS, 'circle');
@@ -1598,14 +1604,39 @@
       });
     } else {
       cfg.series.forEach(s => {
-        let d = '', ultimoIdxValido = -1;
+        let d = '', ultimoIdxValido = -1, prevEpoch = null, tramoPts = [];
+        const grupoSueltos = chart.pathsPorSerie[s.key + '__sueltos'];
+        limpiarGrupo(grupoSueltos);
+        function marcarSiTramoSuelto(){
+          if (tramoPts.length === 1){
+            const c = document.createElementNS(SVGNS, 'circle');
+            c.setAttribute('cx', tramoPts[0].x); c.setAttribute('cy', tramoPts[0].y);
+            c.setAttribute('r', '3'); c.setAttribute('fill', s.color);
+            grupoSueltos.appendChild(c);
+          }
+        }
         lecturasHoy.forEach((r, i) => {
           const v = r.vals[s.key];
           if (v === null || v === undefined) return;
           const x = xPos[i], y = plotY(v);
-          d += (d === '' ? 'M ' : 'L ') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+          // Si hay un hueco real (sin ninguna lectura) de más de
+          // HUECO_MAX_MS con la última lectura válida, se empieza un tramo
+          // nuevo ("M") en vez de seguir la línea ("L"): una sola recta de
+          // un extremo al otro del hueco sugeriría un cambio gradual y
+          // continuo que en realidad nunca se ha observado.
+          const huecoReal = prevEpoch !== null && (r.epochMs - prevEpoch) > HUECO_MAX_MS;
+          if (d === '' || huecoReal){
+            marcarSiTramoSuelto();
+            d += 'M ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+            tramoPts = [{ x, y }];
+          } else {
+            d += 'L ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+            tramoPts.push({ x, y });
+          }
+          prevEpoch = r.epochMs;
           ultimoIdxValido = i;
         });
+        marcarSiTramoSuelto();
         chart.pathsPorSerie[s.key].setAttribute('d', d.trim());
         const puntoFin = chart.pathsPorSerie[s.key + '__fin'];
         if (ultimoIdxValido >= 0){

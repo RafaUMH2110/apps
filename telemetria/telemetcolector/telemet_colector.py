@@ -10,10 +10,10 @@ Qué hace
    (Earth Network) de tu estación personal (endpoint "current").
 2. Guarda cada lectura en una base SQLite local (solo biblioteca estándar
    de Python: no hay que instalar nada con pip).
-3. Cuando ha transcurrido `duracion_horas` (12 por defecto) desde el inicio
-   del ciclo, BORRA los datos y empieza un ciclo nuevo
-   (`modo = reinicio`), o bien va descartando solo las lecturas más
-   antiguas de 12 h (`modo = deslizante`).
+3. Con `modo = deslizante` (por defecto) va descartando las lecturas con más
+   de `duracion_horas` (12), de modo que siempre conserva las últimas 12 h.
+   Con `modo = reinicio`, cuando ha transcurrido `duracion_horas` desde el
+   inicio del ciclo BORRA todos los datos y empieza un ciclo nuevo.
 4. Tras cada lectura exporta el histórico a un fichero JSON estático dentro
    de la carpeta que sirve Apache, junto a la app TeleMet Historial. La
    app lo lee al abrirse y rellena con él los huecos de sus gráficas de
@@ -64,16 +64,16 @@ DEFECTOS = {
     },
     "lectura": {
         "url_base": "https://api.weather.com/v2/pws/observations/current",
-        "intervalo_s": "60",       # segundos entre consultas
+        "intervalo_s": "300",      # segundos entre consultas
         "timeout_s": "15",         # tiempo límite de cada petición
         "backoff_base_s": "2",     # reintento tras un fallo: base * 2^n ...
         "backoff_max_s": "300",    # ... con este tope
     },
     "ciclo": {
         "duracion_horas": "12",
-        # reinicio   -> al cumplirse las horas se borra TODO y se empieza de cero
         # deslizante -> solo se borran las lecturas con más de `duracion_horas`
-        "modo": "reinicio",
+        # reinicio   -> al cumplirse las horas se borra TODO y se empieza de cero
+        "modo": "deslizante",
     },
     "almacen": {
         "ruta_bd": "./datos/telemet.sqlite",

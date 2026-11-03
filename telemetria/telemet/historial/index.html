@@ -644,7 +644,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 3 de noviembre de 2026, 21:20</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 3 de noviembre de 2026, 21:25</p>
 </footer>
 
 <div class="bottomnav">
@@ -760,7 +760,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const SERVIDOR_TIMEOUT_MS = 15000;
   const SERVIDOR_SYNC_CADA_MIN = 10;               // vuelve a consultarlo cada N minutos con la app abierta
   const SERVIDOR_MERGE_TOLERANCIA_MS = 30 * 1000;  // una lectura del servidor a <30 s de una local se considera la misma
-  const SERVIDOR_AVISO_PARADO_MIN = 15;            // avisa si la última lectura del servidor es más antigua que esto
+  const SERVIDOR_AVISO_PARADO_MIN = 15;            // avisa si la última lectura del servidor es más antigua que esto (o que 3 intervalos del colector, si es mayor)
 
   // Grupos de gráficos de "últimas 12 horas" (eje de tiempo continuo).
   // Cada grupo puede combinar varias variables de GRAFICABLES en una sola gráfica.
@@ -1893,7 +1893,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         return true;
       });
       if (nuevas.length > 0) await guardarLecturasLote(stationId, nuevas);
-      return { estado: 'ok', recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultimaMs };
+      return { estado: 'ok', recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultimaMs, intervaloS: Number(data.intervaloS) || 0 };
     } catch (err) {
       return { estado: 'error' };
     } finally {
@@ -1912,8 +1912,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         texto = r.anadidas > 0
           ? 'Histórico del servidor: ha aportado ' + (r.anadidas === 1 ? '1 lectura' : r.anadidas + ' lecturas') + ' que faltaban en este navegador (última lectura del servidor: ' + hora + ').'
           : 'Histórico del servidor: consultado, no faltaba ninguna lectura (última lectura del servidor: ' + hora + ').';
-        if (Date.now() - r.ultimaMs > SERVIDOR_AVISO_PARADO_MIN * 60 * 1000){
-          texto += ' Atención: hace más de ' + SERVIDOR_AVISO_PARADO_MIN + ' minutos que el servidor no registra nada; el recolector podría estar parado.';
+        const umbralMin = Math.max(SERVIDOR_AVISO_PARADO_MIN, Math.ceil(3 * (r.intervaloS || 0) / 60));
+        if (Date.now() - r.ultimaMs > umbralMin * 60 * 1000){
+          texto += ' Atención: hace más de ' + umbralMin + ' minutos que el servidor no registra nada; el recolector podría estar parado.';
         }
       }
     } else if (r.estado === 'otra-estacion'){

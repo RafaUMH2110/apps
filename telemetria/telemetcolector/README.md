@@ -2,9 +2,9 @@
 
 Programa en **Python** (solo biblioteca estándar, sin `pip install`) que se ejecuta de forma continua en el servidor Linux:
 
-1. Lee cada minuto (configurable) la estación meteorológica vía Weather Underground / Earth Network.
+1. Lee la estación cada 5 minutos (configurable) la estación meteorológica vía Weather Underground / Earth Network.
 2. Guarda las lecturas en una base SQLite.
-3. Pasadas **12 horas** borra los datos y empieza de nuevo.
+3. Conserva solo las últimas **12 horas** (modo deslizante, por defecto); también puede borrar todo y empezar de nuevo cada 12 h (`modo = reinicio`).
 4. Tras cada lectura exporta el histórico a un JSON estático junto a la app **TeleMet Historial**, que lo lee al abrirse y rellena con él los huecos de sus gráficas de evolución de 12 h (aunque el navegador haya estado cerrado).
 
 ```
@@ -96,11 +96,11 @@ Opcional (Apache con `mod_headers`): evitar que se cachee el JSON.
 | Sección | Parámetro | Por defecto | Qué hace |
 |---|---|---|---|
 | `estacion` | `station_id`, `api_key` | — | Tu estación y clave. También por variables de entorno `TELEMET_STATION_ID` / `TELEMET_API_KEY`. |
-| `lectura` | `intervalo_s` | 60 | Segundos entre lecturas (mínimo 5). |
+| `lectura` | `intervalo_s` | 300 | Segundos entre lecturas (mínimo 5). |
 | `lectura` | `timeout_s` | 15 | Tiempo máximo de cada petición. |
 | `lectura` | `backoff_base_s`, `backoff_max_s` | 2, 300 | Reintentos tras un fallo: 2, 4, 8… s hasta el tope. |
 | `ciclo` | `duracion_horas` | 12 | Duración del ciclo. |
-| `ciclo` | `modo` | `reinicio` | `reinicio`: al cumplirse el ciclo se borra todo y se empieza de cero. `deslizante`: solo se descartan las lecturas con más de `duracion_horas`. |
+| `ciclo` | `modo` | `deslizante` | `deslizante`: solo se descartan las lecturas con más de `duracion_horas`, así que siempre hay las últimas 12 h completas. `reinicio`: al cumplirse el ciclo se borra todo y se empieza de cero. |
 | `almacen` | `ruta_bd` | `./datos/telemet.sqlite` | Base de datos SQLite. |
 | `salida` | `ruta_json` | `/var/www/htdocs/rafa/telemethistorial/datos/historial.json` | JSON que lee la app. |
 | `salida` | `decimales` | 2 | Decimales del JSON exportado. |
@@ -108,9 +108,9 @@ Opcional (Apache con `mod_headers`): evitar que se cachee el JSON.
 
 ## Cosas a tener en cuenta
 
-- **Modo `reinicio` (el pedido):** al cumplirse las 12 h el histórico del servidor queda vacío y vuelve a llenarse desde cero, así que justo después del reinicio un navegador sin datos propios verá la gráfica casi vacía. Con `modo = deslizante` el servidor conserva siempre las últimas 12 h completas; es un cambio de una línea.
-- **El ciclo sobrevive a reinicios:** el instante de inicio se guarda en la base de datos, de modo que reiniciar el servicio o el servidor no reinicia el ciclo de 12 h.
-- **Límite de llamadas de la API:** con `intervalo_s = 60` el colector hace 1.440 llamadas al día. Si los visitantes de la app usan la misma clave, suman las suyas. Comprueba el límite de tu clave y, si hace falta, sube el intervalo (con 120 s son 720 al día).
+- **Modo `deslizante` (por defecto):** el servidor conserva siempre las últimas 12 h completas. Con `modo = reinicio`, al cumplirse las 12 h el histórico queda vacío y vuelve a llenarse desde cero, así que justo después un navegador sin datos propios vería la gráfica casi vacía.
+- **El ciclo sobrevive a reinicios:** en modo `reinicio`, el instante de inicio se guarda en la base de datos, de modo que reiniciar el servicio o el servidor no reinicia el ciclo de 12 h.
+- **Límite de llamadas de la API:** con `intervalo_s = 300` el colector hace 288 llamadas al día (con 60 serían 1.440). Si los visitantes de la app usan la misma clave, suman las suyas. Comprueba el límite de tu clave antes de bajar el intervalo.
 - **Observaciones repetidas:** si la estación no ha publicado nada nuevo, la API devuelve la misma observación y el colector no la guarda dos veces.
 - **Cambio de estación:** si cambias `station_id`, el colector detecta que la base es de otra estación y la borra.
 - **Errores de clave (401/403) o estación (404):** se registran en el log y el servicio sigue reintentando cada `backoff_max_s` segundos, por si fuera un fallo pasajero.

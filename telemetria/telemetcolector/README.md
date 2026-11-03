@@ -20,6 +20,7 @@ estación ──► API Weather Underground ──► telemet_colector.py ──
 | `telemet_colector.py` | El programa. |
 | `config.example.ini` | Plantilla de configuración con todos los parámetros comentados. |
 | `telemet-colector.service` | Unidad systemd para que arranque con el servidor y se reinicie si falla. |
+| `MANUAL.md` | Manual completo: instalación, configuración, funcionamiento interno, formato de datos y resolución de problemas. |
 
 ## Instalación en el servidor
 
@@ -28,7 +29,7 @@ Requisitos: Python 3.8 o superior y salida a Internet hacia `api.weather.com`.
 ```bash
 # 1. Usuario de servicio y carpeta del programa
 sudo useradd --system --home /opt/telemet-colector --shell /usr/sbin/nologin telemet
-sudo mkdir -p /opt/telemet-colector
+sudo mkdir -p /opt/telemet-colector/datos      # debe existir antes de arrancar el servicio (ver ReadWritePaths en el .service)
 sudo cp telemet_colector.py config.example.ini /opt/telemet-colector/
 cd /opt/telemet-colector
 sudo cp config.example.ini config.ini

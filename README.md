@@ -71,6 +71,12 @@ URL en GitHub Pages queda limpia:
   ningún secreto:
   todo ocurre dentro de este mismo repositorio.
 
+## Componentes de servidor
+
+| Carpeta | Descripción |
+|---|---|
+| [`telemetria/telemetcolector/`](telemetria/telemetcolector/) | **TeleMet Colector**: programa Python que lee de forma continua la estación meteorológica, guarda un histórico de 12 h en el servidor Linux y lo publica como JSON para que TeleMet Historial complete sus gráficas de evolución. Ver su README. |
+
 ## Despliegue en un servidor propio (Apache)
 
 Existe un paquete de scripts para instalar el portal `appindex/moda` y

@@ -575,7 +575,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <details class="acc-evol" id="accEvol12h">
     <summary><svg class="i"><use href="#i-activity"></use></svg>Evolución de las últimas 12 horas<svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
-      <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha.</p>
+      <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha y, si esta app está alojada junto al recolector del servidor, también con las lecturas que el servidor registró mientras la app estaba cerrada.</p>
+      <p class="evol-nota" id="servidorEstadoLinea" style="display:none"></p>
       <div id="charts12h"><p class="evol-vacio">Todavía no hay datos suficientes. Inicia el monitor y deja que pasen unos minutos.</p></div>
     </div>
   </details>
@@ -643,7 +644,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 1 de noviembre de 2026, 16:17</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 3 de noviembre de 2026, 21:20</p>
 </footer>
 
 <div class="bottomnav">
@@ -749,6 +750,18 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const DIAS_SEMANA = 7;
   const RETENCION_LOCAL_DIAS = 9; // algo más de 7 días, margen para el backfill
 
+  // Histórico del servidor (programa TeleMet Colector, en el mismo servidor
+  // Linux que aloja esta app): fichero JSON con las lecturas de las últimas
+  // 12 h, que se funden con las del navegador para que las gráficas de
+  // evolución no pierdan información aunque la app haya estado cerrada.
+  // La ruta es relativa a esta página; si el fichero no existe (p. ej. en
+  // GitHub Pages) simplemente se ignora, sin ningún error visible.
+  const SERVIDOR_HISTORIAL_URL = 'datos/historial.json';
+  const SERVIDOR_TIMEOUT_MS = 15000;
+  const SERVIDOR_SYNC_CADA_MIN = 10;               // vuelve a consultarlo cada N minutos con la app abierta
+  const SERVIDOR_MERGE_TOLERANCIA_MS = 30 * 1000;  // una lectura del servidor a <30 s de una local se considera la misma
+  const SERVIDOR_AVISO_PARADO_MIN = 15;            // avisa si la última lectura del servidor es más antigua que esto
+
   // Grupos de gráficos de "últimas 12 horas" (eje de tiempo continuo).
   // Cada grupo puede combinar varias variables de GRAFICABLES en una sola gráfica.
   const CHART_GROUPS_12H = [
@@ -831,6 +844,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const charts12h = document.getElementById('charts12h');
   const charts7d = document.getElementById('charts7d');
   const backfillEstadoLinea = document.getElementById('backfillEstadoLinea');
+  const servidorEstadoLinea = document.getElementById('servidorEstadoLinea');
 
   const diaConcretoInput = document.getElementById('diaConcretoInput');
   const btnConsultarDia = document.getElementById('btnConsultarDia');
@@ -1812,6 +1826,116 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     backfillEstadoLinea.style.display = 'block';
   }
 
+  /* ============================================================
+     HISTÓRICO DEL SERVIDOR (TeleMet Colector)
+     Lee datos/historial.json, que el programa Python del servidor
+     actualiza tras cada lectura de la estación, y añade al histórico
+     local (IndexedDB) las lecturas que le faltan. Es SIEMPRE aditivo
+     —nunca borra ni modifica nada local— y de mejor esfuerzo: si el
+     fichero no existe o falla, la app sigue funcionando solo con lo
+     que registra el navegador.
+     ============================================================ */
+  let servidorSyncEnCurso = false;
+
+  async function guardarLecturasLote(stationId, filas){
+    const db = await abrirDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      filas.forEach(f => store.add({ stationId: stationId, epochMs: f.epochMs, vals: f.vals }));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  // Devuelve un resumen { estado, anadidas, ... }; estado: 'no-disponible',
+  // 'otra-estacion', 'formato', 'error' u 'ok'.
+  async function sincronizarHistorialServidor(stationId){
+    if (servidorSyncEnCurso || !stationId) return { estado: 'omitido' };
+    servidorSyncEnCurso = true;
+    try {
+      let data;
+      try {
+        const resp = await fetchConTimeout(SERVIDOR_HISTORIAL_URL + '?t=' + Date.now(), SERVIDOR_TIMEOUT_MS);
+        if (!resp.ok) return { estado: 'no-disponible' };
+        data = await resp.json();
+      } catch (err) { return { estado: 'no-disponible' }; }
+
+      if (!data || data.formato !== 1 || !Array.isArray(data.lecturas)) return { estado: 'formato' };
+      if (String(data.stationId || '').toLowerCase() !== stationId.toLowerCase()){
+        return { estado: 'otra-estacion', estacionServidor: data.stationId };
+      }
+
+      const filas = [];
+      for (const l of data.lecturas){
+        if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v });
+      }
+      const ultimaMs = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
+      if (filas.length === 0) return { estado: 'ok', recibidas: 0, anadidas: 0, ultimaMs: null };
+
+      const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
+      const existentes = await consultarRango(stationId, minMs - SERVIDOR_MERGE_TOLERANCIA_MS, ultimaMs + SERVIDOR_MERGE_TOLERANCIA_MS);
+      if (ultimoErrorHistorialLocal) return { estado: 'error' }; // no se pudo ni leer lo local: mejor no arriesgar duplicados
+      const epochsLocales = existentes.map(f => f.epochMs).sort((a, b) => a - b);
+
+      // Solo se compara con lo que YA había en local (no con lo que se va
+      // añadiendo): las lecturas del servidor van muy juntas entre sí y no
+      // deben descartarse unas a otras.
+      const nuevas = filas.filter(f => {
+        let lo = 0, hi = epochsLocales.length - 1;
+        while (lo <= hi){
+          const mid = (lo + hi) >> 1;
+          const e = epochsLocales[mid];
+          if (Math.abs(e - f.epochMs) < SERVIDOR_MERGE_TOLERANCIA_MS) return false;
+          if (e < f.epochMs) lo = mid + 1; else hi = mid - 1;
+        }
+        return true;
+      });
+      if (nuevas.length > 0) await guardarLecturasLote(stationId, nuevas);
+      return { estado: 'ok', recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultimaMs };
+    } catch (err) {
+      return { estado: 'error' };
+    } finally {
+      servidorSyncEnCurso = false;
+    }
+  }
+
+  function actualizarServidorEstadoLinea(r){
+    if (!servidorEstadoLinea) return;
+    let texto = null;
+    if (r.estado === 'ok'){
+      if (r.recibidas === 0){
+        texto = 'Histórico del servidor: el recolector aún no tiene lecturas guardadas.';
+      } else {
+        const hora = fmtHora(r.ultimaMs);
+        texto = r.anadidas > 0
+          ? 'Histórico del servidor: ha aportado ' + (r.anadidas === 1 ? '1 lectura' : r.anadidas + ' lecturas') + ' que faltaban en este navegador (última lectura del servidor: ' + hora + ').'
+          : 'Histórico del servidor: consultado, no faltaba ninguna lectura (última lectura del servidor: ' + hora + ').';
+        if (Date.now() - r.ultimaMs > SERVIDOR_AVISO_PARADO_MIN * 60 * 1000){
+          texto += ' Atención: hace más de ' + SERVIDOR_AVISO_PARADO_MIN + ' minutos que el servidor no registra nada; el recolector podría estar parado.';
+        }
+      }
+    } else if (r.estado === 'otra-estacion'){
+      texto = 'El histórico del servidor es de otra estación (' + escHTML(r.estacionServidor || '?') + '), distinta de la indicada aquí; no se ha usado.';
+    } else if (r.estado === 'formato' || r.estado === 'error'){
+      texto = 'No se ha podido usar el histórico del servidor (formato no válido o error al guardarlo).';
+    }
+    // 'no-disponible' / 'omitido': la app funciona sin servidor (p. ej. GitHub Pages), no se muestra nada.
+    if (texto === null){ servidorEstadoLinea.style.display = 'none'; return; }
+    servidorEstadoLinea.innerHTML = texto;
+    servidorEstadoLinea.style.display = 'block';
+  }
+
+  async function sincronizarServidorYRepintar(){
+    const stationId = estacionParaEvolucion();
+    if (!stationId) return;
+    const r = await sincronizarHistorialServidor(stationId);
+    if (r.estado === 'omitido') return;
+    actualizarServidorEstadoLinea(r);
+    if (r.estado === 'ok' && r.anadidas > 0) redibujarEvolucionSiAbierta();
+  }
+
   function iniciarMonitor(){
     const stationId = stationIdInput.value.trim();
     if (!stationId) return;
@@ -1844,7 +1968,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
     const limiteMs = Date.now() - RETENCION_LOCAL_DIAS * 24 * 60 * 60 * 1000;
     purgarAntiguos(stationId, limiteMs);
-    backfillSiNecesario(stationId, activo.apiKey);
+    // Primero el histórico del servidor (sin coste de API) y después el de la
+    // API de Weather Underground, que solo consultará los días que sigan con huecos.
+    sincronizarServidorYRepintar().then(() => backfillSiNecesario(stationId, activo.apiKey));
 
     cicloConsulta();
   }
@@ -2577,6 +2703,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (stationIdInicial) pintarEvolucion7dDesdeCache(stationIdInicial);
   }
   redibujarEvolucionSiAbierta();
+
+  // Al abrir la app (sin esperar a pulsar "Iniciar") se trae el histórico del
+  // servidor, y se repite cada SERVIDOR_SYNC_CADA_MIN minutos mientras la
+  // pestaña esté visible: cubre los ratos en que el navegador pausa la app
+  // (pestaña en segundo plano, iPad bloqueado...).
+  sincronizarServidorYRepintar();
+  setInterval(() => { if (!document.hidden) sincronizarServidorYRepintar(); }, SERVIDOR_SYNC_CADA_MIN * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizarServidorYRepintar(); });
 })();
 </script>
 </body>

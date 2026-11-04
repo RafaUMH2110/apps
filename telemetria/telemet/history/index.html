@@ -654,7 +654,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 02:48</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 09:40</p>
 </footer>
 
 <div class="bottomnav">
@@ -2321,12 +2321,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     }));
   }
 
-  function paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints){
+  function paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints, gapThresholdFrac){
     charts7d.innerHTML = '';
     groupsWithSeries.forEach(group => {
       const card = buildChartCard(group.title, group.unit);
       charts7d.appendChild(card.el);
-      drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, GAP_THRESHOLD_7D_FRAC);
+      drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, gapThresholdFrac || GAP_THRESHOLD_7D_FRAC);
     });
   }
 
@@ -2337,9 +2337,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // redraws as soon as it finishes). If the history is too large for
   // localStorage, saving it is simply ignored: only the instant redraw
   // is lost, never the real history.
-  function saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks){
+  function saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks, gapThresholdFrac){
     try {
-      localStorage.setItem(STORAGE_KEY_EVOLUTION_7D, JSON.stringify({ stationId, groups: groupsWithSeries, xTicks }));
+      localStorage.setItem(STORAGE_KEY_EVOLUTION_7D, JSON.stringify({ stationId, groups: groupsWithSeries, xTicks, gapThreshold: gapThresholdFrac }));
     } catch (err) { /* storage full or unavailable: ignored */ }
   }
 
@@ -2351,7 +2351,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       if (!dataRows || dataRows.stationId !== stationId || !dataRows.groups || !dataRows.xTicks) return false;
       // The cache does not store a "snap" position per reading (only the
       // axis tick values): the fine-grained cursor arrives with the real redraw.
-      paintCharts7dFromGroups(dataRows.groups, dataRows.xTicks, dataRows.xTicks);
+      paintCharts7dFromGroups(dataRows.groups, dataRows.xTicks, dataRows.xTicks, dataRows.gapThreshold);
       return true;
     } catch (err) { return false; }
   }
@@ -2390,8 +2390,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     });
 
     const groupsWithSeries = buildEvolution7dGroups(rows, fromMs, rangeMs);
-    paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints);
-    saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks);
+    // The gap threshold is computed over the REAL window (up to now), not
+    // over a nominal 7 days: 90 min always means 90 min.
+    const gapThresholdFrac = MAX_GAP_MS / rangeMs;
+    paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints, gapThresholdFrac);
+    saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks, gapThresholdFrac);
   }
 
   function redrawEvolutionIfOpen(){
@@ -2523,7 +2526,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       groupsWithSeries.forEach(group => {
         const card = buildChartCard(group.title, group.unit);
         chartsSpecificDay.appendChild(card.el);
-        drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, GAP_THRESHOLD_DAY_FRAC);
+        drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, MAX_GAP_MS / rangeMs); // real window: if the day is today, it only extends to now
       });
     } finally {
       btnQueryDay.disabled = false;

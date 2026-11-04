@@ -644,7 +644,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 3 de noviembre de 2026, 21:25</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 4 de noviembre de 2026, 09:40</p>
 </footer>
 
 <div class="bottomnav">
@@ -2311,12 +2311,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     }));
   }
 
-  function pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX){
+  function pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX, umbralGapFrac){
     charts7d.innerHTML = '';
     gruposConSeries.forEach(grupo => {
       const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
       charts7d.appendChild(card.el);
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, UMBRAL_GAP_7D_FRAC);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, umbralGapFrac || UMBRAL_GAP_7D_FRAC);
     });
   }
 
@@ -2328,9 +2328,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // histórico es demasiado grande para localStorage, guardarlo
   // simplemente se ignora: solo se pierde el repintado instantáneo,
   // nunca el histórico real.
-  function guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks){
+  function guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks, umbralGapFrac){
     try {
-      localStorage.setItem(STORAGE_KEY_EVOL7D, JSON.stringify({ stationId, grupos: gruposConSeries, xTicks }));
+      localStorage.setItem(STORAGE_KEY_EVOL7D, JSON.stringify({ stationId, grupos: gruposConSeries, xTicks, umbral: umbralGapFrac }));
     } catch (err) { /* almacenamiento lleno o no disponible: se ignora */ }
   }
 
@@ -2342,7 +2342,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       if (!datos || datos.stationId !== stationId || !datos.grupos || !datos.xTicks) return false;
       // La caché no guarda una posición de "engancho" por lectura (solo
       // las marcas del eje): el cursor fino llega con el repintado real.
-      pintarGraficos7dDesdeGrupos(datos.grupos, datos.xTicks, datos.xTicks);
+      pintarGraficos7dDesdeGrupos(datos.grupos, datos.xTicks, datos.xTicks, datos.umbral);
       return true;
     } catch (err) { return false; }
   }
@@ -2381,8 +2381,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     });
 
     const gruposConSeries = construirGruposEvolucion7d(filas, desdeMs, rangoMs);
-    pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX);
-    guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks);
+    // El umbral de hueco se calcula sobre la ventana REAL (hasta ahora), no
+    // sobre 7 días nominales: así 90 min equivalen siempre a 90 min.
+    const umbralGapFrac = HUECO_MAX_MS / rangoMs;
+    pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX, umbralGapFrac);
+    guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks, umbralGapFrac);
   }
 
   function redibujarEvolucionSiAbierta(){
@@ -2514,7 +2517,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       gruposConSeries.forEach(grupo => {
         const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
         chartsDiaConcreto.appendChild(card.el);
-        dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, UMBRAL_GAP_DIA_FRAC);
+        dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, HUECO_MAX_MS / rangoMs); // ventana real: si el día es hoy, solo llega hasta ahora
       });
     } finally {
       btnConsultarDia.disabled = false;

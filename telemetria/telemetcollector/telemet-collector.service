@@ -1,0 +1,34 @@
+# systemd service for TeleMet Collector.
+# Installation (see README.md):
+#   sudo cp telemet-collector.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now telemet-collector
+#
+# Adjust User, Group and the paths to your installation.
+# The folders in ReadWritePaths must EXIST before the service starts
+# (otherwise systemd fails with status 226/NAMESPACE).
+
+[Unit]
+Description=TeleMet Collector (12 h weather-station history)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=telemet
+Group=telemet
+WorkingDirectory=/opt/telemet-collector
+ExecStart=/usr/bin/python3 /opt/telemet-collector/telemet_collector.py -c /opt/telemet-collector/config.ini
+Restart=always
+RestartSec=10
+
+# Basic hardening: the service can only write to its data folder
+# and to the folder where it publishes the JSON.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/telemet-collector/data /var/www/htdocs/rafa/telemethistory/data
+
+[Install]
+WantedBy=multi-user.target

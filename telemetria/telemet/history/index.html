@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F2237">
+<title>TeleMet History · Live monitor + single-day lookup</title>
+<meta name="description" content="Live monitor of your personal weather station on Weather Underground / Earth Network (same engine as TeleMet Pro), with continuous polling, automatic backoff and a panel to look up any specific day in the past, not just the last 7. Completes its 12-hour charts with the history kept by the TeleMet Collector program on the server.">
+<meta name="author" content="Rafael Puerto">
+<!-- Icon for "Add to Home Screen": it must be a real file, not a
+     data: URI, because iOS Safari does not always honour those when creating the app icon. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232E6FD9'/%3E%3Cstop offset='1' stop-color='%230B3C78'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cline x1='15' y1='22' x2='15' y2='9' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M15 9L21.5 12.2L15 15.4Z' fill='white'/%3E%3Ccircle cx='23.5' cy='23.5' r='3.4' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Brand — the same in light and dark */
+  --ember:#E4572E; --ember-dark:#C9441F;
+  --forged:#0E7C6B;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forged); --c-dir:#4A7FC9;
+  --r:14px;
+  --display:'Bricolage Grotesque',Georgia,serif;
+  --font-body:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme: light dark;
+
+  /* Surface — light mode */
+  --ink:#0F2237; --muted:#5D7691;
+  --page-bg:#F3F6FA; --card-bg:#FFFFFF;
+  --line:#D8E0E9; --line-2:#E8EEF4;
+  --steel:#2E4B6B; --steel-soft:#7C93AC;
+  --panel-dark:#0F2237; --on-dark:#EAF1F7; --on-dark-muted:#8FA7BE; --panel-line:#3E5C7D;
+  --ember-soft:#FDEBE4; --forged-soft:#E0F3EE; --warning-ink:#8A3617;
+  --tip-bg:#FFF8E6; --tip-bd:#F3DDA0; --tip-ink:#6B4E00; --tip-ico:#C98200;
+  --shadow:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
+  --shadow-high:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EAF1F7; --muted:#92ACC4;
+    --page-bg:#0B1420; --card-bg:#121C2B;
+    --line:#223247; --line-2:#1A2638;
+    --steel:#9CB7D6; --steel-soft:#51708F;
+    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
+    --ember-soft:#3A2015; --forged-soft:#123028; --warning-ink:#F2B59A;
+    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
+    --forged:#1FBE9F;
+    --shadow:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
+    --shadow-high:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:84px}
+a{color:var(--steel)}
+:focus-visible{outline:3px solid var(--ember);outline-offset:2px;border-radius:6px}
+svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1px 5px;border-radius:5px}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:40;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 6px 24px -14px rgba(0,0,0,.6)}
+.tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
+.logo em{font-style:normal;color:var(--ember)}
+.logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--ember),var(--forged));display:grid;place-items:center;color:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--font-body);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tb-btn:hover{border-color:var(--ember);color:var(--on-dark)}
+@media(max-width:560px){.tb-btn .lbl{display:none}}
+
+/* Status light (monitor traffic light) */
+.light{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.light .bulb{width:12px;height:12px;border-radius:50%;background:#B8C5D3;box-shadow:0 0 0 4px rgba(184,197,211,.3);flex:none;transition:all .2s}
+.light[data-s="ok"] .bulb{background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.25);animation:pulse 1.3s ease-in-out infinite}
+.light[data-s="warn"] .bulb{background:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.25)}
+.light[data-s="err"] .bulb{background:var(--ember);box-shadow:0 0 0 4px rgba(228,87,46,.25)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.topbar .light{color:var(--on-dark-muted)}
+.topbar .light .ltxt{display:none}
+@media(min-width:720px){.topbar .light .ltxt{display:inline}}
+
+main{max-width:1100px;margin:0 auto;padding:26px 16px 10px}
+
+/* Hero */
+.hero{background:var(--panel-dark);color:var(--on-dark);border-radius:22px;padding:38px 36px;position:relative;overflow:hidden;margin-bottom:26px;box-shadow:var(--shadow-high)}
+.hero::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(228,87,46,.5),transparent 65%)}
+.hero::after{content:"";position:absolute;left:25%;bottom:-140px;width:380px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(14,140,122,.35),transparent 65%)}
+.hero>*{position:relative;z-index:1}
+@media(max-width:600px){.hero{padding:26px 20px;border-radius:18px}}
+.eyebrow{font:600 11.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-dark-muted);margin:0 0 12px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;letter-spacing:-.03em;margin:0 0 14px}
+.hero h1 em{font-style:normal;color:var(--ember)}
+.hero p.lede{max-width:62ch;font-size:16.5px;color:var(--on-dark-muted);margin:0 0 20px}
+.hero .actions .btn-ghost{background:transparent;color:#fff;border-color:var(--panel-line)}
+.hero .actions .btn-ghost:hover{border-color:#fff}
+.draft{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.8px}
+.draft:empty{display:none}
+
+/* Section headings */
+.sh{display:flex;gap:16px;align-items:flex-start;margin:34px 0 18px}
+.sh:first-of-type{margin-top:4px}
+.sh-ico{width:52px;height:52px;border-radius:15px;background:var(--c,var(--ember));color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 10px 20px -12px var(--c,var(--ember))}
+.sh-ico svg{width:26px;height:26px}
+.sh-step{font:600 11.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel-soft);margin:3px 0}
+.sh h2{font-family:var(--display);font-weight:800;font-size:clamp(21px,3vw,27px);letter-spacing:-.02em;line-height:1.1;margin:0 0 4px}
+.sh-lede{margin:0;color:var(--muted);font-size:14.5px;max-width:72ch}
+@media(max-width:560px){.sh-ico{width:42px;height:42px;border-radius:12px}.sh-ico svg{width:21px;height:21px}}
+
+.card{background:var(--card-bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.config-summary-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.card h3{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 4px}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+label{display:block;font-size:13.5px;font-weight:700;margin:0 0 6px;color:var(--steel)}
+.field{margin-bottom:16px}
+.help{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--font-body);font-size:14.5px;color:var(--ink);background:var(--card-bg);transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--steel-soft);box-shadow:0 0 0 4px rgba(124,147,172,.18)}
+input:disabled{background:var(--line-2);color:var(--muted);cursor:not-allowed}
+input::placeholder{color:var(--steel-soft)}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1;font-family:var(--mono);font-size:13.5px}
+.eye{width:44px;flex:none;border:1.5px solid var(--line);background:var(--card-bg);border-radius:10px;color:var(--steel);display:grid;place-items:center;cursor:pointer}
+.eye:hover{border-color:var(--steel-soft)}
+
+button{font-family:var(--font-body);cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-weight:700;font-size:14.5px;border:1.5px solid transparent;padding:10px 17px;transition:transform .08s,background .15s,border-color .15s;line-height:1.2}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ember);color:#fff;box-shadow:0 8px 18px -10px var(--ember)}
+.btn-primary:hover:not(:disabled){background:var(--ember-dark)}
+.btn-big{font-size:16px;padding:13px 22px;border-radius:13px}
+.btn-dark{background:var(--panel-dark);color:var(--on-dark)}
+.btn-dark:hover:not(:disabled){opacity:.88}
+.btn-ghost{background:var(--card-bg);border-color:var(--line);color:var(--steel)}
+.btn-ghost:hover:not(:disabled){border-color:var(--steel-soft)}
+.btn-ok{background:var(--forged);color:#fff}
+.btn-ok:hover:not(:disabled){filter:brightness(.92)}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.tools-chart{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 6px}
+.tools-label{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.segmented{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;padding:2px;background:var(--card-bg)}
+.segmented button{background:transparent;border:0;border-radius:8px;padding:6px 12px;font:600 13px var(--font-body);color:var(--muted);cursor:pointer}
+.segmented button[aria-pressed="true"]{background:var(--ember);color:#fff}
+
+.tip{display:flex;gap:11px;background:var(--tip-bg);border:1px solid var(--tip-bd);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--tip-ink);margin-bottom:16px}
+.tip svg{width:20px;height:20px;color:var(--tip-ico);flex:none;margin-top:1px}
+.warning{display:flex;gap:11px;background:var(--ember-soft);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--warning-ink);margin:14px 0 0}
+.warning svg{width:20px;height:20px;flex:none;margin-top:1px}
+.okbox{background:var(--forged-soft);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forged);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
+
+/* Advanced settings accordion */
+.acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--steel)}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.acc .inner{padding-top:14px}
+
+/* Evolution accordion (12 h / 7 day charts), same pattern as .acc
+   but as its own block with a card background (not nested inside one). */
+.acc-evol{border:1px solid var(--line);border-radius:var(--r);background:var(--card-bg);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px;scroll-margin-bottom:84px}
+.acc-evol>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);font-family:var(--display)}
+.acc-evol>summary::-webkit-details-marker{display:none}
+.acc-evol>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc-evol[open]>summary .chev{transform:rotate(180deg)}
+.acc-evol .inner{padding-top:16px}
+.evol-note{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.evol-empty{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+
+.chart-card{margin-bottom:16px}
+.chart-card:last-child{margin-bottom:0}
+.chart-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 16px;margin:0 0 6px}
+.chart-head h4{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0;letter-spacing:-.01em}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+.legend-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.legend-line{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chart-plot{position:relative}
+.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px;cursor:crosshair}
+.chart-svg .chart-line{fill:none;stroke-width:1.25;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .chart-grid{stroke:var(--line);stroke-width:1}
+.chart-svg .chart-label{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
+.chart-svg .chart-axis-label{font-size:10px;font-weight:600;fill:var(--ink)}
+.chart-svg .chart-point{stroke:var(--card-bg);stroke-width:1.25}
+.chart-svg .chart-crosshair{stroke:var(--steel-soft);stroke-width:1;pointer-events:none;opacity:0}
+.chart-svg .chart-point-hover{stroke:var(--card-bg);stroke-width:1.5;pointer-events:none;opacity:0}
+
+/* Tooltip when hovering over an evolution chart */
+.chart-tooltip{position:absolute;top:0;left:0;pointer-events:none;opacity:0;z-index:2;
+  background:var(--card-bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-high);
+  padding:7px 10px;font-size:12px;white-space:nowrap;transition:opacity .08s linear}
+.tt-head{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.tt-row{display:flex;align-items:center;gap:7px}
+.tt-row+.tt-row{margin-top:3px}
+.tt-row .legend-line{flex:none}
+.tt-val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tt-name{color:var(--muted);margin-left:auto;padding-left:8px}
+
+/* Statistics */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
+.stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
+.stat span{font-size:12px;color:var(--muted)}
+
+.progress{height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+.progress-fill{height:100%;width:0;background:var(--ember);transition:width .25s linear}
+.progress-label{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Metric cards */
+.data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+@media(max-width:760px){.data-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.data-grid{grid-template-columns:1fr}}
+.feat{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:14px 15px;border-top:4px solid var(--c)}
+.feat .fi{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,var(--card-bg));color:var(--c);display:grid;place-items:center;margin-bottom:9px}
+.feat .fi svg{width:18px;height:18px}
+.feat .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+.feat .value{font-family:var(--display);font-size:21px;font-weight:700;margin-top:2px;display:flex;align-items:baseline;gap:5px}
+.feat .unit{font-size:12px;color:var(--muted);margin-left:1px;font-family:var(--font-body);font-weight:400}
+.feat .trend{display:inline-flex;align-items:center}
+.feat .trend svg{width:15px;height:15px}
+.feat .trend.rising{color:#16A34A}
+.feat .trend.falling{color:var(--ember)}
+.feat .trend.steady{color:var(--steel-soft)}
+.sparkline{width:100%;height:13px;display:block;margin-top:5px}
+.sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.range-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.time-axis{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
+.tile-quality{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.tile-quality .fi{margin-bottom:0;flex-shrink:0}
+.tile-quality .value{font-size:17px;margin-top:1px}
+.tile-quality .value.ok{color:#16A34A}
+.tile-quality .value.doubt{color:var(--muted)}
+
+.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px}
+@media(max-width:760px){.days-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:480px){.days-grid{grid-template-columns:repeat(3,1fr)}}
+.day-card{background:var(--card-bg);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+.day-card.today{box-shadow:inset 0 0 0 1.5px var(--ember)}
+.day-card .sd-date{font-size:11px;font-weight:700;color:var(--steel-soft);text-transform:uppercase;letter-spacing:.03em}
+.day-card .sd-temps{font-family:var(--display);font-weight:700;margin-top:7px;display:flex;justify-content:center;gap:6px;font-size:15px}
+.day-card .sd-max{color:var(--c-temp)}
+.day-card .sd-min{color:var(--steel-soft)}
+.day-card .sd-bar{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
+.day-card .sd-fill{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--c-hum),var(--c-temp));border-radius:2px}
+.day-card .sd-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.day-summary-only{max-width:220px;margin:4px 0 16px}
+.days-empty{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
+
+.meta-line{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+/* History */
+.history-empty{color:var(--muted);font-size:13.5px;font-style:italic}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px;font-family:var(--mono)}
+table.t th{background:var(--panel-dark);color:var(--on-dark);text-align:left;padding:9px 10px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line-2)}
+table.t tr:nth-child(even) td{background:var(--page-bg)}
+table.t th:first-child,table.t td:first-child{position:sticky;left:0;z-index:1}
+table.t th:first-child{background:var(--panel-dark)}
+table.t td:first-child{background:var(--card-bg)}
+table.t tr:nth-child(even) td:first-child{background:var(--page-bg)}
+.state-stale{color:var(--ember);font-weight:700}
+.history-wrapper{max-height:260px;overflow-y:auto}
+
+/* Fixed bottom bar */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
+.bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.bn-in .light{flex:1;min-width:0}
+.bn-in .btn-ghost{background:transparent;color:var(--on-dark);border-color:var(--panel-line)}
+.bn-in .btn-ghost:hover:not(:disabled){border-color:var(--ember)}
+
+@media(max-width:480px){.bn-in .btn .lbl{display:none}}
+
+/* Glossary modal */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(15,34,55,.55);display:none;align-items:flex-start;justify-content:center;padding:8vh 16px;overflow:auto}
+.modal.on{display:flex}
+.modal-box{background:var(--card-bg);border-radius:18px;max-width:640px;width:100%;box-shadow:var(--shadow-high);overflow:hidden}
+.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--panel-dark);color:var(--on-dark)}
+.modal-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1}
+.modal-head button{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark);border-radius:9px;padding:6px 10px}
+.modal-body{padding:18px 20px 22px}
+.glos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.glos{grid-template-columns:1fr}}
+.glos div{background:var(--page-bg);border-radius:12px;padding:12px 14px}
+.glos b{display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+.glos span{font-size:13px;color:var(--muted)}
+
+footer.app-footer{max-width:1100px;margin:0 auto;padding:18px 16px 0;font-size:12.5px;color:var(--muted)}
+footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
+.signature{margin-top:6px;font-family:var(--mono);font-size:11.5px}
+</style>
+</head>
+<body data-app-title="TeleMet History" data-app-description="Live monitor of your personal weather station (Vevor YT60234 or compatible) on Weather Underground / Earth Network. Same engine and the same editorial 'forge' redesign as TeleMet Pro (continuous polling with automatic backoff, per-variable trend, glossary, collapsible advanced settings, session history and CSV export), plus a panel to look up any specific day in the past (not only the last 7 covered by the evolution charts), combining what is already saved in this browser with the Weather Underground API history for that exact date. When served from the same Linux server as the TeleMet Collector program it also fills the gaps in its 12-hour charts with the history kept on the server." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="weather station,weather underground,pws,telemetry,vevor,iot,sensors,continuous polling,real time,charts,backoff,trend,glossary,editorial design,solar radiation,uv index,historical lookup,specific day,date,server history" data-client-only="true">
+
+<!--
+  ============================================================================
+  TeleMet History — Design and configuration notes
+  ============================================================================
+
+  WHAT THIS APP IS
+  Built entirely on top of TeleMet Pro (apps/telemetria/telemet/pro): same
+  polling engine, same editorial "forge" redesign (ink/steel/ember/forged
+  palette, Bricolage Grotesque + Instrument Sans + JetBrains Mono type,
+  cards with an icon and colour per variable, persistent status light,
+  glossary, collapsible advanced settings), PLUS two features:
+
+  a) A "Look up a specific day" panel (in the "Evolution" section, next to
+     the 12 h / 7 day ones) that lets you pick any past date, not only the
+     ones covered by the evolution charts. For that date it first looks in
+     the local history (IndexedDB) and, if coverage is missing, completes it
+     with the same Weather Underground history endpoint that the 7-day
+     backfill already uses (history/all), without its time-window limit —
+     it is the same API, simply queried for an arbitrary date instead of
+     "one of the last 7 days".
+
+  b) SERVER HISTORY. If this page is hosted on the same Linux server as the
+     TeleMet Collector program (apps/telemetria/telemetcollector), the page
+     reads data/history.json — written by the collector after every reading —
+     and ADDS the readings it is missing to the local history (IndexedDB), so
+     the 12 hour charts have no gaps even if the browser was closed. See the
+     "SERVER HISTORY" block in the script. If the file does not exist
+     (for example on GitHub Pages) it is silently ignored.
+
+  Polling still lives in the browser (setTimeout): it only works while this
+  tab stays open.
+
+  1) STATION AND API KEY
+     Station ID / API Key are saved under the same localStorage keys as
+     the rest of the TelemetriaWU family (wu_station_id / wu_api_key): if you
+     already configured them in another app of the family, they show up here
+     automatically. This app's own settings (interval, backoff, timeout,
+     number of points) use their own prefix ("telemethistory_"), independent
+     of the rest — and so does the history saved in IndexedDB, which is also
+     specific to this app (it does not share the history already accumulated
+     by TeleMet Pro or others).
+
+  2) WHICH CONSTANTS TO EDIT (look in the final <script>)
+     - BASE_URL: the API endpoint.
+     - DEFAULTS: default values for interval, backoff, request timeout,
+       "stale" threshold and history length.
+     - SANITY_CHECK: physically plausible ranges for the suspicious-value
+       warning (covers the nine charted variables, including the feels-like
+       temperature computed locally).
+     - CHARTABLES: which variable is drawn, with which icon and colour
+       (var(--c-xxx) defined in :root).
+     - MAX_TABLE_ROWS: rows kept in the history before the oldest are
+       discarded.
+     - SERVER_HISTORY_URL and the other SERVER_* constants: where the
+       collector's JSON lives and how often it is re-read.
+
+  3) SPARKLINES: X AXIS AND RESET
+     Each point is saved together with its timestamp (timeSeries, shared by
+     all variables because they are all recorded at once on every reading).
+     The "Per reading / Real time" selector (xAxisMode, persisted in
+     telemethistory_x_axis_mode) decides how the sparkline width is shared:
+       - "uniform": one point, one fixed-width step (as before).
+       - "time": position proportional to the real timestamp, inside a
+         FIXED WINDOW (historyLen × pollIntervalMs) ending at Date.now() —
+         not the range between the first and the last available point,
+         because with regular polling that range almost coincides with the
+         per-index spacing and the difference from "uniform" is hardly
+         noticeable. With a fixed window, in contrast, the points bunch up on
+         the right while the history is not yet full (a freshly started or
+         freshly reset session) and a gap caused by retries shows up as an
+         empty stretch: the difference is always visible. In this mode,
+         currentTimeWindow() (shared by the x positions and the labels) also
+         feeds ".axis-start"/".axis-end" with the time (HH:MM, fmtTime()) at
+         the start and end of the window under each chart; hidden in
+         "uniform" mode or without enough data.
+     "Reset charts" empties series/timeSeries and redraws; it does not touch
+     the table history or the CSV (that is what "Clear history" does).
+  ============================================================================
+-->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Brand icon (flag + signal waves, the same as apple-touch-icon.png
+       and the favicon): simplified to a flag + base dot so that it reads
+       well at the tiny size of the header logo. -->
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M12 18V6"></path><path d="M12 6l6 3-6 3z" fill="currentColor" stroke="none"></path><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"></circle></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m10 8 6 4-6 4z"></path></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"></path></symbol>
+  <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"></path></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 15a8.5 8.5 0 1 1 17 0"></path><path d="M12 15l3.3-3.3"></path><circle cx="12" cy="15" r="1.3"></circle></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 4.22-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.9 19.9 0 0 1-2.22 3.2M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"></path></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="tb-in">
+    <button class="logo" id="goHome" type="button" aria-label="Go to top"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>History</em></span></button>
+    <div class="tb-right">
+      <div class="light" id="statusLightTop" data-s="off" role="status" aria-live="polite"><span class="bulb"></span><span class="ltxt" id="statusTextTop">Stopped</span></div>
+      <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glossary</span></button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="hero">
+    <p class="eyebrow">PERSONAL STATION · WEATHER UNDERGROUND / EARTH NETWORK</p>
+    <h1>Your station, <em>live</em> and in the past</h1>
+    <p class="lede">Continuous polling of your personal weather station (Vevor YT60234 or compatible), with automatic backoff, a configurable timeout and a clear warning as soon as something does not add up — plus a panel to look up any specific day in the past, not just the last 7.</p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-big" id="btnGoConfig"><svg class="i"><use href="#i-sliders"></use></svg>Set up my station</button>
+      <button type="button" class="btn btn-ghost btn-big" id="btnHelp2"><svg class="i"><use href="#i-help"></use></svg>What does each term mean?</button>
+    </div>
+    <div class="draft" id="draftStation"></div>
+  </div>
+
+  <div class="tip" style="margin-bottom:22px">
+    <svg class="i"><use href="#i-alert"></use></svg>
+    <span><strong>Note:</strong> polling only works while this tab stays open; it is not a background process, so it stops if you close the tab or reload the page.</span>
+  </div>
+
+  <!-- ============ SECTION 1 · SETTINGS ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="sectionConfig"><div class="sh-ico"><svg class="i"><use href="#i-sliders"></use></svg></div><div><p class="sh-step">01 · Before you start</p><h2>Settings</h2><p class="sh-lede">The Station ID and the API Key are saved only in this browser. The fields are locked while the monitor is running.</p></div></header>
+
+  <!-- Compact view: once there is a saved Station ID, the whole form is hidden
+       and only the station name is shown, so you do not have to look at the
+       same already-filled fields every time. -->
+  <div class="card" id="configSummary" style="display:none">
+    <div class="config-summary-row">
+      <div>
+        <h3 style="margin-bottom:2px">Station configured</h3>
+        <p class="sub" style="margin:0" id="configSummaryName">—</p>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnEditConfig"><svg class="i"><use href="#i-sliders"></use></svg>Edit</button>
+    </div>
+  </div>
+
+  <div id="configBody">
+    <div class="card">
+      <h3>Station</h3>
+      <p class="sub">The identifier of your station on wunderground.com (My Profile → My Devices).</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="stationIdInput">Station ID</label>
+          <input type="text" id="stationIdInput" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="apiKeyInput">API Key (optional)</label>
+          <div class="keyrow">
+            <input type="password" id="apiKeyInput" placeholder="Only if your account requires it" autocomplete="off" spellcheck="false">
+            <button type="button" class="eye" id="btnShowApiKey" aria-label="Show or hide the API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Polling</h3>
+      <p class="sub">How often the API is queried and how many recent points are shown in the sparklines.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="pollIntervalInput">Polling interval (s)</label>
+          <input type="number" id="pollIntervalInput" min="5" step="1" value="60">
+        </div>
+        <div class="field">
+          <label for="historyLenInput">Points in the sparklines</label>
+          <input type="number" id="historyLenInput" min="5" max="200" step="1" value="40">
+        </div>
+      </div>
+
+      <details class="acc">
+        <summary><svg class="i"><use href="#i-sliders"></use></svg>Advanced settings<svg class="i chev"><use href="#i-down"></use></svg></summary>
+        <div class="inner">
+          <div class="grid2">
+            <div class="field">
+              <label for="requestTimeoutInput">Request timeout (s)</label>
+              <input type="number" id="requestTimeoutInput" min="3" step="1" value="15">
+              <p class="help">If the API does not answer within this time, the request is cancelled and treated as a transient error.</p>
+            </div>
+            <div class="field">
+              <label for="staleThresholdInput">Stale-data threshold (s)</label>
+              <input type="number" id="staleThresholdInput" min="5" step="5" value="120">
+              <p class="help">How many seconds old a reading must be before it is marked as stale.</p>
+            </div>
+            <div class="field">
+              <label for="backoffBaseInput">Initial backoff (s)</label>
+              <input type="number" id="backoffBaseInput" min="0.5" step="0.5" value="2">
+              <p class="help">Wait after the first transient error; it doubles on every retry.</p>
+            </div>
+            <div class="field">
+              <label for="backoffMaxInput">Maximum backoff (s)</label>
+              <input type="number" id="backoffMaxInput" min="5" step="5" value="300">
+              <p class="help">Upper limit of the wait between retries, however many pile up.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-dark" id="btnSaveConfig"><svg class="i"><use href="#i-check"></use></svg>Save</button>
+        <button type="button" class="btn btn-ghost" id="btnClearConfig"><svg class="i"><use href="#i-trash"></use></svg>Delete from this browser</button>
+        <button type="button" class="btn btn-ghost" id="btnHideConfig" style="display:none"><svg class="i"><use href="#i-down"></use></svg>Hide</button>
+      </div>
+      <div class="okbox" id="configState" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Settings saved in this browser</span></div>
+      <div class="okbox" id="savedFlash" role="status" aria-live="polite" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Saved</span></div>
+    </div>
+  </div>
+
+  <!-- ============ SECTION 2 · CONTROL AND STATUS ============ -->
+  <header class="sh" style="--c:#E4572E"><div class="sh-ico"><svg class="i"><use href="#i-activity"></use></svg></div><div><p class="sh-step">02 · The engine</p><h2>Control and status</h2><p class="sh-lede">An immediate first reading and, from then on, one every “polling interval” seconds, with a timeout and automatic retry on transient failures.</p></div></header>
+
+  <div class="card">
+    <div class="actions">
+      <button type="button" class="btn btn-ok" id="btnStart" disabled><svg class="i"><use href="#i-play"></use></svg>Start monitor</button>
+      <button type="button" class="btn btn-primary" id="btnStop" disabled><svg class="i"><use href="#i-pause"></use></svg>Stop</button>
+      <button type="button" class="btn btn-ghost" id="btnManualPoll" disabled title="Queries right now, without waiting for the interval"><svg class="i"><use href="#i-refresh"></use></svg>Manual poll</button>
+      <div class="light" id="statusLight" data-s="off" role="status" aria-live="polite"><span class="bulb"></span><span class="ltxt" id="statusText">Stopped</span></div>
+    </div>
+
+    <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel" aria-live="polite">No activity.</div>
+
+    <div class="stats">
+      <div class="stat"><b id="startTimeValue">—</b><span>Start time</span></div>
+      <div class="stat"><b id="lastUpdateValue">—</b><span>Last update</span></div>
+      <div class="stat"><b id="uptimeValue">—</b><span>Uptime</span></div>
+      <div class="stat"><b id="readingsCounter">0</b><span>Readings received</span></div>
+      <div class="stat"><b id="retriesCounter">0</b><span>Current retries</span></div>
+      <div class="stat"><b id="latencyCounter">—</b><span>Last latency (ms)</span></div>
+    </div>
+
+    <div class="warning" id="errorBox" role="alert" style="display:none"><svg class="i"><use href="#i-alert"></use></svg><span id="errorText"></span></div>
+    <div class="warning" id="plausibilityWarning" role="alert" style="display:none"><svg class="i"><use href="#i-alert"></use></svg><span>One of the values in the latest reading is outside a physically plausible range; check the station or the connection before trusting it.</span></div>
+  </div>
+
+  <!-- ============ SECTION 3 · LIVE READINGS ============ -->
+  <header class="sh" style="--c:#0E7C6B"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">03 · Right now</p><h2>Live readings</h2><p class="sh-lede">Each card shows the latest value, its trend against the previous reading and a sparkline with the recent readings of this session, spaced per reading or on a real-time scale.</p></div></header>
+
+  <p class="meta-line" id="metaLine" aria-live="polite">Last reading: — · Freshness: —</p>
+
+  <div class="tools-chart">
+    <span class="tools-label">Sparklines</span>
+    <div class="segmented" role="group" aria-label="X-axis scale of the sparklines">
+      <button type="button" id="btnAxisUniform" aria-pressed="true">Per reading</button>
+      <button type="button" id="btnAxisTime" aria-pressed="false">Real time</button>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnResetCharts" disabled><svg class="i"><use href="#i-refresh"></use></svg>Reset charts</button>
+  </div>
+  <p class="help" style="margin:0 0 14px">“Per reading” spaces the points at equal intervals; “Real time” places them inside a fixed-length window ending right now (with the start and end time under each chart), so they bunch up on the right while the history is not yet full and a gap caused by retries shows up as an empty stretch.</p>
+
+  <div class="data-grid" id="dataGrid">
+    <!-- The cards are generated by JS (see CHARTABLES) to include icon, colour and sparkline -->
+  </div>
+
+  <div class="data-grid" style="margin:12px 0 28px">
+    <div class="feat tile-quality" style="--c:#2E4B6B">
+      <div class="fi"><svg class="i" id="qualityIcon"><use href="#i-help"></use></svg></div>
+      <div>
+        <div class="label">Data quality</div>
+        <div class="value doubt" id="qualityValue">—</div>
+      </div>
+    </div>
+  </div>
+
+  <details class="acc-evol" id="accEvolution12h">
+    <summary><svg class="i"><use href="#i-activity"></use></svg>Evolution over the last 12 hours<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-note">Optional charts built from the history saved in this browser (not from the session, which is lost on reload). They fill in reading by reading while the monitor is running and, if this app is hosted alongside the server collector, also with the readings the server recorded while the app was closed.</p>
+      <p class="evol-note" id="serverStatusLine" style="display:none"></p>
+      <div id="charts12h"><p class="evol-empty">There is not enough data yet. Start the monitor and let a few minutes go by.</p></div>
+    </div>
+  </details>
+
+  <details class="acc-evol" id="accEvolution7d">
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Evolution over the last 7 days<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-note">Full 7-day history, reading by reading (not a daily summary). When the monitor starts, it tries to fill the days with gaps automatically from the API history; if that history is not available, the chart is completed only with what has been recorded from this browser.</p>
+      <p class="evol-note" id="backfillStatusLine" style="display:none"></p>
+      <div id="charts7d"><p class="evol-empty">There is not enough data yet.</p></div>
+    </div>
+  </details>
+
+  <details class="acc-evol" id="accSpecificDay">
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Look up a specific day<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-note">Unlike the charts above (limited to the last 7 days), here you can pick any past date. It looks first at what is already saved in this browser and, if coverage is missing for that day, completes it with the Weather Underground API history for that exact date (the same endpoint used by the 7-day charts, without their time-window limit).</p>
+      <div class="grid2" style="align-items:end">
+        <div class="field">
+          <label for="specificDayInput">Date</label>
+          <input type="date" id="specificDayInput">
+        </div>
+        <div class="field">
+          <button type="button" class="btn btn-dark" id="btnQueryDay" style="width:100%"><svg class="i"><use href="#i-activity"></use></svg>Look up</button>
+        </div>
+      </div>
+      <p class="evol-note" id="specificDayStatusLine" style="display:none"></p>
+      <div id="specificDaySummary"></div>
+      <div id="chartsSpecificDay"><p class="evol-empty">Pick a date and press “Look up”.</p></div>
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnDownloadDayCSV" disabled><svg class="i"><use href="#i-download"></use></svg>Download that day (CSV)</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- ============ SECTION 4 · SUMMARY OF THE LAST 7 DAYS ============ -->
+  <header class="sh" style="--c:#6B4FD8"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">04 · What was recorded</p><h2>Summary of the last 7 days</h2><p class="sh-lede">Maximum and minimum temperature and accumulated rain per day, from the history saved in this browser (completed with the API history when needed).</p></div></header>
+
+  <div class="days-grid" id="daysGrid">
+    <p class="days-empty">There is no history of previous days yet.</p>
+  </div>
+
+  <!-- ============ SECTION 5 · SESSION HISTORY ============ -->
+  <header class="sh" style="--c:#6B4FD8;margin-top:28px"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">05 · The detail</p><h2>History of this session</h2><p class="sh-lede">It restarts when the page is reloaded; it is not stored anywhere. At most the last <span id="maxRowsText">500</span> readings are kept.</p></div></header>
+
+  <details class="acc-evol" id="accHistory" open>
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Table of this session’s history<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <div id="historyEmpty" class="history-empty">No reading has been received yet.</div>
+      <div class="tbl-wrap history-wrapper" id="historyWrapper" style="display:none">
+        <table class="t">
+          <thead><tr><th>Time</th><th>Temp.</th><th>Feels like</th><th>Dew pt.</th><th>Hum.</th><th>Pressure</th><th>Wind</th><th>Gust</th><th>Direction</th><th>Rain</th><th>Rain total</th><th>Radiation</th><th>UV</th><th>Quality</th><th>Freshness</th><th>Status</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnDownloadCSV" disabled><svg class="i"><use href="#i-download"></use></svg>Download history (CSV)</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnClearHistory" disabled><svg class="i"><use href="#i-trash"></use></svg>Clear history</button>
+      </div>
+    </div>
+  </details>
+
+</main>
+
+<footer class="app-footer">
+  <hr>
+  <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 02:48</p>
+</footer>
+
+<div class="bottomnav">
+  <div class="bn-in">
+    <div class="light" id="statusLightBar" data-s="off" role="status" aria-live="polite"><span class="bulb"></span><span class="ltxt" id="statusTextBar">Monitor stopped</span></div>
+    <button type="button" class="btn btn-ok btn-sm" id="btnStartBar" disabled><svg class="i"><use href="#i-play"></use></svg><span class="lbl">Start</span></button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnStopBar" disabled><svg class="i"><use href="#i-pause"></use></svg><span class="lbl">Stop</span></button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnManualPollBar" disabled title="Manual poll"><svg class="i"><use href="#i-refresh"></use></svg><span class="lbl">Poll</span></button>
+  </div>
+</div>
+
+<div class="modal" id="modalGlossary">
+  <div class="modal-box">
+    <div class="modal-head"><svg class="i"><use href="#i-help"></use></svg><h2>Glossary</h2><button type="button" id="modalClose" aria-label="Close"><svg class="i"><use href="#i-x"></use></svg></button></div>
+    <div class="modal-body">
+      <div class="glos">
+        <div><b>Station ID</b><span>The identifier of your station on wunderground.com (My Profile → My Devices).</span></div>
+        <div><b>API Key</b><span>Optional key that some Weather Underground accounts require to read data. It is sent as a URL parameter, never as a header.</span></div>
+        <div><b>Freshness</b><span>Seconds elapsed between the moment the station recorded the reading and the current moment. If it exceeds the configured threshold, the reading is marked as obsolete ("stale").</span></div>
+        <div><b>Trend (▲ ▼ —)</b><span>Compares the latest value of each variable with the previous one: it rises, falls or stays steady.</span></div>
+        <div><b>Feels-like temperature</b><span>In hot weather (≥ 27 °C) it uses the heat index (temperature + humidity); in cold weather (≤ 10 °C with some wind) it uses the wind chill; otherwise it equals the air temperature. It is computed in the browser, with no extra API calls.</span></div>
+        <div><b>Dew point</b><span>Temperature at which air, as it cools, would become saturated with moisture and start to condense. The closer it is to the air temperature, the more humid (muggy) the air feels.</span></div>
+        <div><b>Accumulated rain</b><span>Total rain (mm) that the station itself has accumulated, normally since local midnight; it resets by itself every day in the hardware, not in this app.</span></div>
+        <div><b>Wind direction</b><span>Where the wind comes from, in degrees (0-360°, with 0°/360° = North) and as a compass point (N, NW, SE...). Because it is a circular quantity, the trend arrow can be unintuitive right when crossing 0°/360°.</span></div>
+        <div><b>Backoff</b><span>Growing wait between retries after a transient error (network, timeout, 5xx): it doubles each time, up to a configurable maximum.</span></div>
+        <div><b>Plausibility check</b><span>Each reading is compared with a physically possible range per variable; if something falls outside the range, a warning is shown before you trust the data.</span></div>
+        <div><b>X axis of the sparklines</b><span>“Per reading” spaces the points uniformly; “Real time” places them inside a fixed window (number of points × polling interval) ending right now, with the start and end time of that window under the chart, bunched to the right if the history is not full and with visible gaps if there were retries.</span></div>
+        <div><b>12-hour / 7-day evolution</b><span>Optional panels (tap to expand) with longer charts than the session sparklines: they are built from a history saved in this browser (IndexedDB), which persists across reloads and sessions, unlike the table history. Both show the full history, reading by reading (not a summary). The 7-day one also tries to fill itself from the API history when the monitor starts, for the days with gaps; under that chart a warning shows whether the API history contributed anything or not (many accounts do not have that endpoint available). The 12-hour one also adds the readings recorded by the TeleMet Collector on the server, when available. Hover (or touch) any of them to see the exact value of each reading.</span></div>
+        <div><b>Look up a specific day</b><span>Unlike the previous charts, it is not limited to the last 7 days: you pick any past date and, if what is saved in this browser does not cover the whole day, it is completed with the Weather Underground API history for that exact date. If that query returns nothing either (many accounts do not have that endpoint available), a notice is shown and only what exists locally is displayed.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+
+  // Same localStorage keys as the rest of the TelemetriaWU family.
+  const STORAGE_KEY_STATION = 'wu_station_id';
+  const STORAGE_KEY_APIKEY  = 'wu_api_key';
+  // Keys specific to TeleMet History, independent of TeleMet Pro and the rest.
+  const STORAGE_KEY_POLL      = 'telemethistory_poll_interval_s';
+  const STORAGE_KEY_TIMEOUT   = 'telemethistory_request_timeout_s';
+  const STORAGE_KEY_BACKOFF_B = 'telemethistory_backoff_base_s';
+  const STORAGE_KEY_BACKOFF_M = 'telemethistory_backoff_max_s';
+  const STORAGE_KEY_STALE     = 'telemethistory_stale_threshold_s';
+  const STORAGE_KEY_HISTLEN   = 'telemethistory_history_len';
+  const STORAGE_KEY_X_AXIS     = 'telemethistory_x_axis_mode';
+  const STORAGE_KEY_EVOLUTION_7D    = 'telemethistory_evolution_7d_cache';
+
+  const DEFAULTS = {
+    pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
+    staleThresholdS: 120, historyLen: 40
+  };
+
+  const MAX_TABLE_ROWS = 500;
+
+  const SANITY_CHECK = {
+    temp_c:        { min: -60,  max: 60   },
+    heat_index_c:  { min: -60,  max: 70   },
+    dewpoint_c:    { min: -60,  max: 60   },
+    humidity_pct:  { min: 0,    max: 100  },
+    pressure_hpa:  { min: 850,  max: 1085 },
+    wind_kmh:      { min: 0,    max: 250  },
+    gust_kmh:      { min: 0,    max: 300  },
+    wind_dir_deg:  { min: 0,    max: 360  },
+    rainrate_mmh:  { min: 0,    max: 500  },
+    rain_total_mm: { min: 0,    max: 1000 },
+    solarradiation_wm2: { min: 0, max: 1500 },
+    uv_index:      { min: 0,    max: 20   }
+  };
+
+  // Variable, icon and colour (must exist as var(--c-xxx) in :root).
+  const CHARTABLES = [
+    { key: 'temp_c',       label: 'Temperature',    unit: '°C',   icon: 'thermometer', color: 'var(--c-temp)' },
+    { key: 'heat_index_c', label: 'Feels like', unit: '°C', icon: 'thermometer', color: 'var(--c-heat)' },
+    { key: 'dewpoint_c',   label: 'Dew point', unit: '°C',   icon: 'droplet',     color: 'var(--c-dew)'  },
+    { key: 'humidity_pct', label: 'Humidity',        unit: '%',    icon: 'droplet',     color: 'var(--c-hum)'  },
+    { key: 'pressure_hpa', label: 'Pressure',        unit: 'hPa',  icon: 'gauge',       color: 'var(--c-pres)' },
+    { key: 'wind_kmh',     label: 'Wind',         unit: 'km/h', icon: 'wind',        color: 'var(--c-wind)' },
+    { key: 'gust_kmh',     label: 'Gust',          unit: 'km/h', icon: 'wind',        color: 'var(--c-gust)' },
+    { key: 'wind_dir_deg', label: 'Wind direction', unit: '°', icon: 'wind',    color: 'var(--c-dir)'  },
+    { key: 'rainrate_mmh', label: 'Rain',         unit: 'mm/h', icon: 'cloud-rain',  color: 'var(--c-rain)' },
+    { key: 'rain_total_mm', label: 'Accumulated rain', unit: 'mm', icon: 'cloud-rain', color: 'var(--c-rain)' },
+    { key: 'solarradiation_wm2', label: 'Solar radiation', unit: 'W/m²', icon: 'sun',  color: 'var(--c-solar)' },
+    { key: 'uv_index',     label: 'UV index',      unit: '',     icon: 'sun',         color: 'var(--c-uv)'   }
+  ];
+
+  const TREND_THRESHOLD = 0.05;
+
+  // Local history (IndexedDB) for the 12 h / 7 day evolution charts.
+  const HISTORY_URL = 'https://api.weather.com/v2/pws/history/all';
+  const DB_NAME = 'telemethistory_db';
+  const DB_VERSION = 1;
+  const DB_STORE = 'readings';
+  const WINDOW_12H_MS = 12 * 60 * 60 * 1000;
+  const WEEK_DAYS = 7;
+  const LOCAL_RETENTION_DAYS = 9; // a bit over 7 days, margin for the backfill
+
+  // Server history (TeleMet Collector program, running on the same Linux server
+  // that hosts this app): a JSON file with the readings of the last 12 h, which
+  // are merged with the browser's own so that the evolution charts lose no
+  // information even if the app was closed.
+  // The path is relative to this page; if the file does not exist (e.g. on
+  // GitHub Pages) it is simply ignored, with no visible error.
+  const SERVER_HISTORY_URL = 'data/history.json';
+  const SERVER_TIMEOUT_MS = 15000;
+  const SERVER_SYNC_EVERY_MIN = 10;               // re-read it every N minutes while the app is open
+  const SERVER_MERGE_TOLERANCE_MS = 30 * 1000;  // a server reading within <30 s of a local one counts as the same one
+  const SERVER_STALE_WARNING_MIN = 15;            // warn if the latest server reading is older than this (or than 3 collector intervals, if larger)
+
+  // "Last 12 hours" chart groups (continuous time axis).
+  // Each group can combine several CHARTABLES variables in a single chart.
+  const CHART_GROUPS_12H = [
+    { title: 'Temperature, feels-like and dew point', unit: '°C', seriesKeys: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { title: 'Humidity', unit: '%', seriesKeys: ['humidity_pct'] },
+    { title: 'Pressure', unit: 'hPa', seriesKeys: ['pressure_hpa'] },
+    { title: 'Wind and gust', unit: 'km/h', seriesKeys: ['wind_kmh', 'gust_kmh'] },
+    { title: 'Rain rate', unit: 'mm/h', seriesKeys: ['rainrate_mmh'] },
+    { title: 'Accumulated rain', unit: 'mm', seriesKeys: ['rain_total_mm'] },
+    { title: 'Solar radiation', unit: 'W/m²', seriesKeys: ['solarradiation_wm2'] },
+    { title: 'UV index', unit: '', seriesKeys: ['uv_index'] }
+  ];
+
+  // "Last 7 days" chart groups: full history (one real reading per point,
+  // just like the 12 hour chart), not a daily summary.
+  const CHART_GROUPS_7D = [
+    { title: 'Temperature, feels-like and dew point', unit: '°C', seriesKeys: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { title: 'Humidity', unit: '%', seriesKeys: ['humidity_pct'] },
+    { title: 'Pressure', unit: 'hPa', seriesKeys: ['pressure_hpa'] },
+    { title: 'Wind and gust', unit: 'km/h', seriesKeys: ['wind_kmh', 'gust_kmh'] },
+    { title: 'Accumulated rain', unit: 'mm', seriesKeys: ['rain_total_mm'] }
+  ];
+
+  /* ============================================================
+     DOM ELEMENTS
+     ============================================================ */
+  const stationIdInput    = document.getElementById('stationIdInput');
+  const apiKeyInput        = document.getElementById('apiKeyInput');
+  const btnShowApiKey       = document.getElementById('btnShowApiKey');
+  const pollIntervalInput  = document.getElementById('pollIntervalInput');
+  const requestTimeoutInput = document.getElementById('requestTimeoutInput');
+  const historyLenInput    = document.getElementById('historyLenInput');
+  const backoffBaseInput   = document.getElementById('backoffBaseInput');
+  const backoffMaxInput    = document.getElementById('backoffMaxInput');
+  const staleThresholdInput = document.getElementById('staleThresholdInput');
+  const btnSaveConfig   = document.getElementById('btnSaveConfig');
+  const btnClearConfig    = document.getElementById('btnClearConfig');
+  const configState       = document.getElementById('configState');
+  const savedFlash      = document.getElementById('savedFlash');
+  const draftStation      = document.getElementById('draftStation');
+  const configSummary       = document.getElementById('configSummary');
+  const configBody        = document.getElementById('configBody');
+  const configSummaryName = document.getElementById('configSummaryName');
+  const btnEditConfig     = document.getElementById('btnEditConfig');
+  const btnHideConfig    = document.getElementById('btnHideConfig');
+
+  const btnStart  = document.getElementById('btnStart');
+  const btnStop  = document.getElementById('btnStop');
+  const btnStartBar = document.getElementById('btnStartBar');
+  const btnStopBar = document.getElementById('btnStopBar');
+  const btnManualPoll    = document.getElementById('btnManualPoll');
+  const btnManualPollBar = document.getElementById('btnManualPollBar');
+  const lights = [
+    { el: document.getElementById('statusLight'),    txt: document.getElementById('statusText') },
+    { el: document.getElementById('statusLightTop'), txt: document.getElementById('statusTextTop') },
+    { el: document.getElementById('statusLightBar'), txt: document.getElementById('statusTextBar') }
+  ];
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const startTimeValue = document.getElementById('startTimeValue');
+  const lastUpdateValue = document.getElementById('lastUpdateValue');
+  const uptimeValue = document.getElementById('uptimeValue');
+  const readingsCounter = document.getElementById('readingsCounter');
+  const retriesCounter = document.getElementById('retriesCounter');
+  const latencyCounter = document.getElementById('latencyCounter');
+  const errorBox = document.getElementById('errorBox');
+  const errorText = document.getElementById('errorText');
+  const plausibilityWarning = document.getElementById('plausibilityWarning');
+  const metaLine = document.getElementById('metaLine');
+  const dataGrid = document.getElementById('dataGrid');
+  const qualityValue = document.getElementById('qualityValue');
+  const qualityIcon = document.getElementById('qualityIcon');
+  const daysGrid = document.getElementById('daysGrid');
+  const btnAxisUniform = document.getElementById('btnAxisUniform');
+  const btnAxisTime = document.getElementById('btnAxisTime');
+  const btnResetCharts = document.getElementById('btnResetCharts');
+
+  const accEvolution12h = document.getElementById('accEvolution12h');
+  const accEvolution7d = document.getElementById('accEvolution7d');
+  const charts12h = document.getElementById('charts12h');
+  const charts7d = document.getElementById('charts7d');
+  const backfillStatusLine = document.getElementById('backfillStatusLine');
+  const serverStatusLine = document.getElementById('serverStatusLine');
+
+  const specificDayInput = document.getElementById('specificDayInput');
+  const btnQueryDay = document.getElementById('btnQueryDay');
+  const specificDayStatusLine = document.getElementById('specificDayStatusLine');
+  const specificDaySummary = document.getElementById('specificDaySummary');
+  const chartsSpecificDay = document.getElementById('chartsSpecificDay');
+  const btnDownloadDayCSV = document.getElementById('btnDownloadDayCSV');
+
+  const historyEmpty = document.getElementById('historyEmpty');
+  const historyWrapper = document.getElementById('historyWrapper');
+  const historyBody = document.getElementById('historyBody');
+  const btnDownloadCSV = document.getElementById('btnDownloadCSV');
+  const btnClearHistory = document.getElementById('btnClearHistory');
+
+  const btnGoConfig = document.getElementById('btnGoConfig');
+  const btnHelp = document.getElementById('btnHelp');
+  const btnHelp2 = document.getElementById('btnHelp2');
+  const modalGlossary = document.getElementById('modalGlossary');
+  const modalClose = document.getElementById('modalClose');
+  const goHome = document.getElementById('goHome');
+
+  document.getElementById('maxRowsText').textContent = MAX_TABLE_ROWS;
+
+  const CONFIG_INPUTS = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
+
+  /* ============================================================
+     IN-MEMORY STATE
+     ============================================================ */
+  let running = false;
+  let retryCount = 0;
+  let readingsReceived = 0;
+  let timeoutId = null;
+  let countdownIntervalId = null;
+  let active = null;
+  let requestInFlight = false; // prevents two pollCycle() at once (e.g. a manual poll while a request is already in flight)
+  let xAxisMode = 'uniform'; // 'uniform' (per reading) | 'time' (by real timestamp)
+  let startTimeMs = null; // real timestamp of the last "Start", for the "Uptime" card
+  let configForceExpanded = false; // true after pressing "Edit" on the already-saved settings summary
+  const series = {};
+  const timeSeries = []; // timestamp (ms) of each point, shared by all series: they are all recorded together on every reading
+  const lastValue = {};
+  const historyRows = [];
+
+  CHARTABLES.forEach(m => { series[m.key] = []; lastValue[m.key] = null; });
+  let dbPromise = null;
+  let backfillInProgress = false;
+  // Last real error when reading the local history (IndexedDB), if any.
+  // It lets the evolution charts tell "there is no data yet" (query went
+  // fine, no rows) apart from "the history could not be queried" (private
+  // mode, quota, browser blocking...), which otherwise look exactly the
+  // same: an empty array.
+  let lastLocalHistoryError = null;
+
+  /* ============================================================
+     LOCAL PERSISTENCE (IndexedDB) — history for the 12 h / 7 day
+     evolution charts. Independent of the "history of this
+     session" (section 5), which lives only in memory and is lost
+     on reload: this one saves every reading in the browser and
+     persists across sessions, purged after LOCAL_RETENTION_DAYS.
+     ============================================================ */
+  function openDB(){
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB){ dbPromise = Promise.reject(new Error('IndexedDB is not available in this browser')); return dbPromise; }
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(DB_STORE)){
+          const store = db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('by_station', 'stationId', { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  async function saveReading(stationId, epochMs, vals){
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).add({ stationId: stationId, epochMs: epochMs, vals: vals });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      // The local history is an add-on; if it fails (private mode, quota, etc.)
+      // the rest of the app keeps working normally, just without evolution charts.
+    }
+  }
+
+  async function queryRange(stationId, tDesdeMs, tHastaMs){
+    try {
+      const db = await openDB();
+      const outcome = await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const idx = tx.objectStore(DB_STORE).index('by_station');
+        const out = [];
+        const req = idx.openCursor(IDBKeyRange.only(stationId));
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur){ resolve(out); return; }
+          const r = cur.value;
+          if (r.epochMs >= tDesdeMs && r.epochMs <= tHastaMs) out.push(r);
+          cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+      lastLocalHistoryError = null;
+      return outcome;
+    } catch (err) {
+      lastLocalHistoryError = err;
+      return [];
+    }
+  }
+
+  async function purgeOld(stationId, tLimiteMs){
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const idx = tx.objectStore(DB_STORE).index('by_station');
+        const req = idx.openCursor(IDBKeyRange.only(stationId));
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur){ resolve(); return; }
+          if (cur.value.epochMs < tLimiteMs) cur.delete();
+          cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) { /* purga best-effort */ }
+  }
+
+  // A day is treated as "incomplete" (and requested again from the API) in two
+  // cases, instead of assuming that having some row means it is complete:
+  //   1) NO row has a temperature: the earlier bug in extractValues(), whose
+  //      history arrived with field names different from those of the live
+  //      endpoint, so everything except rain was saved as null.
+  //   2) There is a gap longer than MAX_GAP_MS with no valid reading, either
+  //      at the start or at the end of the day's window, or between two
+  //      consecutive readings. BEFORE, only the total coverage was measured
+  //      (from the first to the last reading, over the whole window): a day
+  //      with data from 00:00 to 20:00 and nothing afterwards covers 83% of
+  //      the window and was taken as complete, yet it leaves no reading at
+  //      all for the last hours of the day — precisely the ones the 12 hour
+  //      chart (a moving window that always ends at "now") needs most. That is
+  //      why the 7 day one could look right (that gap is tiny in a one-week
+  //      window) while the 12 h one showed half a day empty: the bug was not
+  //      in how much was covered, but in WHICH part of the day was left
+  //      uncovered.
+  const MAX_GAP_MS = 90 * 60 * 1000; // 90 minutos
+
+  // Same threshold (MAX_GAP_MS), but expressed as a fraction of the total
+  // width of each evolution chart: it is used to NOT draw a joining line
+  // between two readings separated by a real gap, so that a straight line
+  // does not suggest a gradual, continuous change that was never actually
+  // observed.
+  const GAP_THRESHOLD_12H_FRAC = MAX_GAP_MS / WINDOW_12H_MS;
+  // The real window of the 7 day chart varies a little with the time of
+  // day (from 6 to 7 full days), so an approximation of exactly 7 days is
+  // used: more than enough to decide whether a gap is "real" or not.
+  const GAP_THRESHOLD_7D_FRAC = MAX_GAP_MS / (WEEK_DAYS * 24 * 60 * 60 * 1000);
+  // Same threshold, for the "Look up a specific day" chart (a window
+  // of exactly 24 hours).
+  const GAP_THRESHOLD_DAY_FRAC = MAX_GAP_MS / (24 * 60 * 60 * 1000);
+
+  function isDayIncomplete(rows, startMs, endMs){
+    const valid = rows.filter(f => f.vals && f.vals.temp_c !== null)
+      .slice().sort((a, b) => a.epochMs - b.epochMs);
+    if (valid.length === 0) return rows.length > 0;
+    if (startMs === undefined || endMs === undefined) return false;
+    if (valid[0].epochMs - startMs > MAX_GAP_MS) return true;
+    if (endMs - valid[valid.length - 1].epochMs > MAX_GAP_MS) return true;
+    for (let i = 1; i < valid.length; i++){
+      if (valid[i].epochMs - valid[i - 1].epochMs > MAX_GAP_MS) return true;
+    }
+    return false;
+  }
+
+  /* ============================================================
+     BUILDING THE METRIC CARDS (once, on load)
+     ============================================================ */
+  function buildCards(){
+    dataGrid.innerHTML = '';
+    CHARTABLES.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'feat';
+      div.id = 'tile-' + m.key;
+      div.style.setProperty('--c', m.color);
+      div.innerHTML =
+        '<div class="fi"><svg class="i"><use href="#i-' + m.icon + '"></use></svg></div>' +
+        '<div class="label">' + m.label + '</div>' +
+        '<div class="value"><span class="value-num">—</span><span class="unit">' + m.unit + '</span><span class="trend steady" aria-hidden="true"></span></div>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""/></svg>' +
+        '<div class="time-axis" style="display:none"><span class="axis-start">—</span><span class="axis-end">—</span></div>' +
+        '<div class="range-minmax">min — · max —</div>';
+      dataGrid.appendChild(div);
+    });
+  }
+
+  /* ============================================================
+     UI UTILITIES
+     ============================================================ */
+  function openModal(){ modalGlossary.classList.add('on'); }
+  function closeModal(){ modalGlossary.classList.remove('on'); }
+
+  /* ============================================================
+     SETTINGS (localStorage)
+     ============================================================ */
+  function readNumber(input, defaultValue){
+    const v = parseFloat(input.value);
+    return Number.isFinite(v) && v > 0 ? v : defaultValue;
+  }
+
+  function loadConfig(){
+    stationIdInput.value = localStorage.getItem(STORAGE_KEY_STATION) || '';
+    apiKeyInput.value = localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+    pollIntervalInput.value = localStorage.getItem(STORAGE_KEY_POLL) || DEFAULTS.pollIntervalS;
+    requestTimeoutInput.value = localStorage.getItem(STORAGE_KEY_TIMEOUT) || DEFAULTS.requestTimeoutS;
+    backoffBaseInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_B) || DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = localStorage.getItem(STORAGE_KEY_BACKOFF_M) || DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = localStorage.getItem(STORAGE_KEY_STALE) || DEFAULTS.staleThresholdS;
+    historyLenInput.value = localStorage.getItem(STORAGE_KEY_HISTLEN) || DEFAULTS.historyLen;
+    setXAxisMode(localStorage.getItem(STORAGE_KEY_X_AXIS) || 'uniform');
+    updateConfigState();
+    updateStartButtonState();
+  }
+
+  function saveConfig(){
+    const stationId = stationIdInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+    if (stationId) localStorage.setItem(STORAGE_KEY_STATION, stationId);
+    else localStorage.removeItem(STORAGE_KEY_STATION);
+    if (apiKey) localStorage.setItem(STORAGE_KEY_APIKEY, apiKey);
+    else localStorage.removeItem(STORAGE_KEY_APIKEY);
+    localStorage.setItem(STORAGE_KEY_POLL, readNumber(pollIntervalInput, DEFAULTS.pollIntervalS));
+    localStorage.setItem(STORAGE_KEY_TIMEOUT, readNumber(requestTimeoutInput, DEFAULTS.requestTimeoutS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_B, readNumber(backoffBaseInput, DEFAULTS.backoffBaseS));
+    localStorage.setItem(STORAGE_KEY_BACKOFF_M, readNumber(backoffMaxInput, DEFAULTS.backoffMaxS));
+    localStorage.setItem(STORAGE_KEY_STALE, readNumber(staleThresholdInput, DEFAULTS.staleThresholdS));
+    localStorage.setItem(STORAGE_KEY_HISTLEN, readNumber(historyLenInput, DEFAULTS.historyLen));
+    configForceExpanded = false; // "Save" = end of editing: back to the compact view
+    updateConfigState();
+    updateStartButtonState();
+    showSavedFlash();
+  }
+
+  // Visible confirmation that the "Save" button did something, even if the
+  // settings were already saved before (in that case the fixed
+  // "already saved" warning does not change state and, without this, the
+  // click would go unnoticed). It is always shown for a moment and hides itself.
+  let savedFlashTimeout = null;
+  function showSavedFlash(){
+    savedFlash.style.display = 'inline-flex';
+    clearTimeout(savedFlashTimeout);
+    savedFlashTimeout = setTimeout(() => { savedFlash.style.display = 'none'; }, 2500);
+  }
+
+  function clearConfig(){
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN]
+      .forEach(k => localStorage.removeItem(k));
+    stationIdInput.value = '';
+    apiKeyInput.value = '';
+    pollIntervalInput.value = DEFAULTS.pollIntervalS;
+    requestTimeoutInput.value = DEFAULTS.requestTimeoutS;
+    backoffBaseInput.value = DEFAULTS.backoffBaseS;
+    backoffMaxInput.value = DEFAULTS.backoffMaxS;
+    staleThresholdInput.value = DEFAULTS.staleThresholdS;
+    historyLenInput.value = DEFAULTS.historyLen;
+    configForceExpanded = false;
+    updateConfigState();
+    updateStartButtonState();
+  }
+
+  function updateConfigState(){
+    const saved = !!localStorage.getItem(STORAGE_KEY_STATION);
+    configState.style.display = saved ? 'inline-flex' : 'none';
+    draftStation.innerHTML = saved
+      ? '<svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Settings already saved for station <b>' + localStorage.getItem(STORAGE_KEY_STATION) + '</b>.</span>'
+      : '';
+    updateConfigVisibility(saved);
+  }
+
+  // Once there is a saved Station ID, the whole form
+  // (Station/Polling/Advanced settings) is hidden and only the station
+  // name is shown, so you do not always have to look at the same already
+  // filled-in fields. "Edit" forces it to show again; "Save" or "Hide"
+  // go back to the compact view.
+  function updateConfigVisibility(saved){
+    const expand = !saved || configForceExpanded;
+    configBody.style.display = expand ? '' : 'none';
+    configSummary.style.display = (saved && !expand) ? 'block' : 'none';
+    btnHideConfig.style.display = (saved && expand) ? '' : 'none';
+    if (saved) configSummaryName.textContent = localStorage.getItem(STORAGE_KEY_STATION);
+  }
+
+  function updateStartButtonState(){
+    if (running) return;
+    const emptyFlag = stationIdInput.value.trim().length === 0;
+    btnStart.disabled = emptyFlag;
+    btnStartBar.disabled = emptyFlag;
+  }
+
+  /* ============================================================
+     URL BUILDING
+     ============================================================ */
+  function buildURL(stationId, apiKey){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm' });
+    // The apiKey always goes as a URL parameter, never as an HTTP header:
+    // a custom header would force a CORS preflight that this API does not pass.
+    if (apiKey) params.set('apiKey', apiKey);
+    return BASE_URL + '?' + params.toString();
+  }
+
+  function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
+  function firstDefined(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
+
+  // The same 16 compass points used by TeleMet iPad/Mobile Pro to translate
+  // wind-direction degrees into a readable compass point.
+  const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function degreesToCompass(deg){
+    if (deg === null || deg === undefined || !Number.isFinite(deg)) return null;
+    const idx = Math.round(((deg % 360) / 22.5)) % 16;
+    return COMPASS[(idx + 16) % 16];
+  }
+  function fmt(value){ return (value === null || value === undefined) ? '—' : String(value); }
+
+  // The Weather Underground API officially documents only the value 1 of
+  // qcStatus ("passes quality control"); the other values (-1, 0 or
+  // others) are not specified as a concrete "failure", so they are shown
+  // as "unverified" instead of risking saying the data is bad when the
+  // station may simply not have evaluated it.
+  function qualityText(code){
+    if (code === 1 || code === '1') return { text: 'Verified', cssClass: 'ok', icon: 'check' };
+    if (code === null || code === undefined || code === 'N/A') return { text: 'No data', cssClass: 'doubt', icon: 'help' };
+    return { text: 'Unverified', cssClass: 'doubt', icon: 'help' };
+  }
+
+  // Feels-like temperature: heat index (NWS/Rothfusz) with high temperatures
+  // and high humidity, wind chill (Environment Canada) with low
+  // temperatures and noticeable wind; otherwise, the air temperature
+  // itself. 100% local calculation, no additional API calls.
+  function heatIndexC(tC, rh){
+    const tF = tC * 9 / 5 + 32;
+    if (tF < 80 || rh === null || !Number.isFinite(rh)) return tC;
+    let hi = -42.379 + 2.04901523 * tF + 10.14333127 * rh - 0.22475541 * tF * rh
+      - 0.00683783 * tF * tF - 0.05481717 * rh * rh + 0.00122874 * tF * tF * rh
+      + 0.00085282 * tF * rh * rh - 0.00000199 * tF * tF * rh * rh;
+    if (rh < 13 && tF >= 80 && tF <= 112) hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(tF - 95)) / 17);
+    else if (rh > 85 && tF >= 80 && tF <= 87) hi += ((rh - 85) / 10) * ((87 - tF) / 5);
+    return Math.max((hi - 32) * 5 / 9, tC); // never below the real temperature
+  }
+
+  function windChillC(tC, windKmh){
+    if (windKmh === null || !Number.isFinite(windKmh) || windKmh <= 4.8) return tC;
+    const v = Math.pow(windKmh, 0.16);
+    const sf = 13.12 + 0.6215 * tC - 11.37 * v + 0.3965 * tC * v;
+    return Math.min(sf, tC); // never above the real temperature
+  }
+
+  function feelsLikeC(tC, rh, windKmh){
+    if (tC === null || !Number.isFinite(tC)) return null;
+    if (tC >= 26.7) return heatIndexC(tC, rh);      // ≈ 80 °F, heat-index threshold
+    if (tC <= 10) return windChillC(tC, windKmh);
+    return tC;
+  }
+
+  function isPlausible(t){
+    for (const field of Object.keys(SANITY_CHECK)){
+      const value = t[field];
+      if (value === null || value === undefined) continue;
+      const valueRange = SANITY_CHECK[field];
+      if (value < valueRange.min || value > valueRange.max) return false;
+    }
+    return true;
+  }
+
+  /* ============================================================
+     REQUEST WITH TIMEOUT (AbortController)
+     ============================================================ */
+  async function fetchWithTimeout(url, timeoutMs){
+    const controller = new AbortController();
+    const idTimeout = setTimeout(() => controller.abort(), timeoutMs);
+    try { return await fetch(url, { signal: controller.signal }); }
+    finally { clearTimeout(idTimeout); }
+  }
+
+  /* ============================================================
+     SPARKLINES
+     ============================================================ */
+  // Fixed-duration window (configured number of points × polling
+  // interval), ending at the current instant — NOT the range between the
+  // first and the last available point: with regular polling that range
+  // almost coincides with the per-index spacing and the difference from
+  // "Per reading" is not noticeable. With a fixed window, in contrast, the
+  // points bunch up to the right while the history has not filled up
+  // (a freshly started or freshly reset session) and a gap caused by
+  // retries shows up as an empty stretch, always visible. Centralised here
+  // so that the x positions and the time labels always use the same "now".
+  function currentTimeWindow(){
+    const historyLenActivo = (active && active.historyLen) || DEFAULTS.historyLen;
+    const activePollMs = (active && active.pollIntervalMs) || DEFAULTS.pollIntervalS * 1000;
+    const windowMs = historyLenActivo * activePollMs;
+    const currentTs = Date.now();
+    return { tMin: currentTs - windowMs, tMax: currentTs, windowMs: windowMs };
+  }
+
+  function fmtTime(ms){
+    return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  // Formats a duration (ms) for the "Uptime" card (start → last
+  // reading), with just the right unit for its magnitude.
+  function formatDuration(ms){
+    const totalS = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(totalS / 3600);
+    const m = Math.floor((totalS % 3600) / 60);
+    const s = totalS % 60;
+    if (h > 0) return h + ' h ' + m + ' min';
+    if (m > 0) return m + ' min ' + s + ' s';
+    return s + ' s';
+  }
+
+  function updateSparkline(key){
+    const rawValues = series[key];
+    // Pairs each value with its timestamp and drops the gaps (null) of both
+    // at once, so that the "real time" axis does not get misaligned.
+    const pairs = [];
+    for (let i = 0; i < rawValues.length; i++){
+      const v = rawValues[i];
+      if (v !== null && v !== undefined && !Number.isNaN(v)) pairs.push({ v: v, t: timeSeries[i] });
+    }
+    const svg = document.querySelector('#tile-' + key + ' .sparkline');
+    const polyline = svg.querySelector('polyline');
+    const rangeEl = document.querySelector('#tile-' + key + ' .range-minmax');
+    const timeAxisEl = document.querySelector('#tile-' + key + ' .time-axis');
+
+    if (pairs.length < 2){
+      polyline.setAttribute('points', '');
+      rangeEl.textContent = 'min — · max —';
+      timeAxisEl.style.display = 'none';
+      return;
+    }
+    const values = pairs.map(p => p.v);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const valueRange = (max - min) || 1;
+    const w = 100, h = 30, pad = 3;
+
+    let xs;
+    if (xAxisMode === 'time'){
+      const timeWindow = currentTimeWindow();
+      xs = pairs.map(p => {
+        const frac = Math.max(0, Math.min(1, (p.t - timeWindow.tMin) / timeWindow.windowMs));
+        return pad + frac * (w - pad * 2);
+      });
+      timeAxisEl.querySelector('.axis-start').textContent = fmtTime(timeWindow.tMin);
+      timeAxisEl.querySelector('.axis-end').textContent = fmtTime(timeWindow.tMax);
+      timeAxisEl.style.display = 'flex';
+    } else {
+      xs = pairs.map((p, i) => pad + (i / (pairs.length - 1)) * (w - pad * 2));
+      timeAxisEl.style.display = 'none';
+    }
+
+    const points = pairs.map((p, i) => {
+      const y = h - pad - ((p.v - min) / valueRange) * (h - pad * 2);
+      return xs[i].toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    polyline.setAttribute('points', points);
+    rangeEl.textContent = 'min ' + min.toFixed(1) + ' · max ' + max.toFixed(1);
+  }
+
+  function redrawSparklines(){
+    CHARTABLES.forEach(m => updateSparkline(m.key));
+  }
+
+  function setXAxisMode(mode){
+    xAxisMode = (mode === 'time') ? 'time' : 'uniform';
+    localStorage.setItem(STORAGE_KEY_X_AXIS, xAxisMode);
+    btnAxisUniform.setAttribute('aria-pressed', String(xAxisMode === 'uniform'));
+    btnAxisTime.setAttribute('aria-pressed', String(xAxisMode === 'time'));
+    redrawSparklines();
+  }
+
+  function resetCharts(){
+    CHARTABLES.forEach(m => { series[m.key].length = 0; });
+    timeSeries.length = 0;
+    redrawSparklines();
+    btnResetCharts.disabled = true;
+  }
+
+  function recordInSeries(t){
+    const historyLen = (active && active.historyLen) || DEFAULTS.historyLen;
+    timeSeries.push(Date.now());
+    if (timeSeries.length > historyLen) timeSeries.shift();
+    CHARTABLES.forEach(m => {
+      series[m.key].push(numOrNull(t[m.key]));
+      if (series[m.key].length > historyLen) series[m.key].shift();
+      updateSparkline(m.key);
+    });
+    btnResetCharts.disabled = false;
+  }
+
+  /* ============================================================
+     TREND (▲ / ▼ / —) COMPARED WITH THE PREVIOUS READING
+     ============================================================ */
+  function trendIcon(cssClass){
+    if (cssClass === 'rising') return '<svg class="i"><use href="#i-up"></use></svg>';
+    if (cssClass === 'falling') return '<svg class="i"><use href="#i-down"></use></svg>';
+    return '—';
+  }
+
+  function updateTrend(key, newValue){
+    const el = document.querySelector('#tile-' + key + ' .trend');
+    const previous = lastValue[key];
+    let cssClass = 'steady';
+    if (newValue !== null && newValue !== undefined && Number.isFinite(newValue) &&
+        previous !== null && previous !== undefined){
+      const diff = newValue - previous;
+      if (diff > TREND_THRESHOLD) cssClass = 'rising';
+      else if (diff < -TREND_THRESHOLD) cssClass = 'falling';
+    }
+    el.className = 'trend ' + cssClass;
+    el.innerHTML = trendIcon(cssClass);
+    el.setAttribute('aria-label', cssClass === 'rising' ? 'rising' : cssClass === 'falling' ? 'falling' : 'steady');
+    if (newValue !== null && newValue !== undefined && Number.isFinite(newValue)) lastValue[key] = newValue;
+  }
+
+  /* ============================================================
+     PAINTING THE CURRENT VALUES
+     ============================================================ */
+  function paintCurrentValues(t){
+    CHARTABLES.forEach(m => {
+      const el = document.querySelector('#tile-' + m.key + ' .value-num');
+      el.textContent = fmt(t[m.key]);
+      updateTrend(m.key, t[m.key]);
+      if (m.key === 'wind_dir_deg'){
+        // Besides the number, show the compass point (NW, SE...) next to the
+        // degree symbol: a bare "243°" says little without the cardinal direction.
+        const unitEl = document.querySelector('#tile-wind_dir_deg .unit');
+        const compass = degreesToCompass(t.wind_dir_deg);
+        unitEl.textContent = compass ? ('° ' + compass) : '°';
+      }
+    });
+    const quality = qualityText(t.quality_code);
+    qualityValue.textContent = quality.text;
+    qualityValue.className = 'value ' + quality.cssClass;
+    qualityIcon.querySelector('use').setAttribute('href', '#i-' + quality.icon);
+    const nowMs = Date.now();
+    metaLine.textContent = 'Last reading: ' + new Date(nowMs).toLocaleTimeString('en-GB') +
+      ' · Freshness: ' + t.staleness_s.toFixed(1) + ' s';
+    latencyCounter.textContent = t.latency_ms.toFixed(0);
+    lastUpdateValue.textContent = new Date(nowMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    if (startTimeMs !== null) uptimeValue.textContent = formatDuration(nowMs - startTimeMs);
+  }
+
+  /* ============================================================
+     SESSION HISTORY (table + CSV)
+     ============================================================ */
+  function addToHistory(t, staleThresholdS){
+    historyEmpty.style.display = 'none';
+    historyWrapper.style.display = 'block';
+    btnDownloadCSV.disabled = false;
+    btnClearHistory.disabled = false;
+
+    const record = Object.assign({ time: new Date().toISOString() }, t);
+    historyRows.push(record);
+    if (historyRows.length > MAX_TABLE_ROWS) historyRows.shift();
+
+    const stateText = t.staleness_s <= staleThresholdS ? 'Online' : 'Stale';
+    const stateClass = stateText === 'Stale' ? ' class="state-stale"' : '';
+    const row = document.createElement('tr');
+    row.innerHTML =
+      '<td>' + new Date().toLocaleTimeString('en-GB') + '</td>' +
+      '<td>' + fmt(t.temp_c) + '</td>' +
+      '<td>' + fmt(t.heat_index_c !== null ? t.heat_index_c.toFixed(1) : null) + '</td>' +
+      '<td>' + fmt(t.dewpoint_c) + '</td>' +
+      '<td>' + fmt(t.humidity_pct) + '</td>' +
+      '<td>' + fmt(t.pressure_hpa) + '</td>' +
+      '<td>' + fmt(t.wind_kmh) + '</td>' +
+      '<td>' + fmt(t.gust_kmh) + '</td>' +
+      '<td>' + fmt(t.wind_dir_deg !== null ? Math.round(t.wind_dir_deg) + '° ' + (degreesToCompass(t.wind_dir_deg) || '') : null) + '</td>' +
+      '<td>' + fmt(t.rainrate_mmh) + '</td>' +
+      '<td>' + fmt(t.rain_total_mm) + '</td>' +
+      '<td>' + fmt(t.solarradiation_wm2) + '</td>' +
+      '<td>' + fmt(t.uv_index) + '</td>' +
+      '<td>' + fmt(t.quality_code) + '</td>' +
+      '<td>' + t.staleness_s.toFixed(1) + 's</td>' +
+      '<td' + stateClass + '>' + stateText + '</td>';
+    historyBody.appendChild(row);
+    if (historyBody.children.length > MAX_TABLE_ROWS) historyBody.removeChild(historyBody.firstChild);
+    historyWrapper.scrollTop = historyWrapper.scrollHeight;
+  }
+
+  function clearHistory(){
+    historyRows.length = 0;
+    historyBody.innerHTML = '';
+    historyEmpty.style.display = 'block';
+    historyWrapper.style.display = 'none';
+    btnDownloadCSV.disabled = true;
+    btnClearHistory.disabled = true;
+  }
+
+  function downloadCSV(){
+    if (historyRows.length === 0) return;
+    const columns = ['time', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
+    const lines = [columns.join(',')];
+    historyRows.forEach(r => {
+      lines.push(columns.map(c => {
+        const v = r[c];
+        return (v === null || v === undefined) ? '' : String(v).replace(/,/g, '.');
+      }).join(','));
+    });
+    // UTF-8 BOM at the start so that Excel does not garble accented characters.
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const station = (active && active.stationId) || 'station';
+    const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = 'telemethistory-' + station + '-' + date + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     PROGRESS BAR / COUNTDOWN
+     ============================================================ */
+  function startCountdown(delayMs, label){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    const start = Date.now();
+    const endTs = start + delayMs;
+    progressFill.style.width = '0%';
+    function tick(){
+      const currentTs = Date.now();
+      const elapsed = currentTs - start;
+      const pct = Math.min(100, (elapsed / delayMs) * 100);
+      progressFill.style.width = pct.toFixed(1) + '%';
+      const remaining = Math.max(0, (endTs - currentTs) / 1000);
+      progressLabel.textContent = label + ' in ' + remaining.toFixed(0) + ' s';
+      if (currentTs >= endTs) clearInterval(countdownIntervalId);
+    }
+    tick();
+    countdownIntervalId = setInterval(tick, 250);
+  }
+
+  function stopCountdown(finalText){
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    progressFill.style.width = '0%';
+    progressLabel.textContent = finalText;
+  }
+
+  /* ============================================================
+     STATUS LIGHT AND BUTTONS (synchronised: card + bottom bar)
+     ============================================================ */
+  function setLight(state, text){
+    lights.forEach(l => { l.el.dataset.s = state; l.txt.textContent = text; });
+  }
+
+  function setStartStopButtons(startDisabled, stopDisabled){
+    btnStart.disabled = startDisabled;
+    btnStartBar.disabled = startDisabled;
+    btnStop.disabled = stopDisabled;
+    btnStopBar.disabled = stopDisabled;
+    // Manual polling only makes sense while the monitor is running: it
+    // follows the same condition as "Stop".
+    btnManualPoll.disabled = stopDisabled;
+    btnManualPollBar.disabled = stopDisabled;
+  }
+
+  function showError(messageText){
+    errorText.textContent = messageText;
+    errorBox.style.display = 'flex';
+  }
+
+  function hideError(){
+    errorBox.style.display = 'none';
+    errorText.textContent = '';
+  }
+
+  /* ============================================================
+     EXTRACTING THE VALUES OF AN OBSERVATION (shared by the live
+     engine and by the historical backfill, so that the API field
+     mapping and its names/fallbacks are not duplicated).
+     ============================================================ */
+  function extractValues(obs){
+    const metric = obs.metric || {};
+    // The history endpoint (history/all) does NOT use the same field names
+    // as the live reading one (current): instead of a point value
+    // (temp, windSpeed, windGust, dewpt, humidity, pressure...) it gives
+    // the max/min/average of the period (tempAvg, windspeedAvg,
+    // windgustAvg, dewptAvg, humidityAvg, pressureMax/Min...). Without this
+    // fallback, the backfill stored those readings with almost everything
+    // null (only precipRate/precipTotal survived, as they have the same name
+    // in both endpoints) and the charts/tiles looked empty for everything
+    // except rain. The live value is used if it exists and, if not, the
+    // history average (or the mean of max and min when there is no
+    // average, as with pressure).
+    const tempC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
+    const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
+    const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
+    const histPressure = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
+      ? (metric.pressureMax + metric.pressureMin) / 2
+      : firstDefined(metric.pressureMax, metric.pressureMin);
+    return {
+      temp_c: tempC,
+      heat_index_c: feelsLikeC(tempC, humPct, windKmh),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewptAvg, metric.dewpoint)),
+      humidity_pct: humPct,
+      pressure_hpa: numOrNull(firstDefined(metric.pressure, histPressure)),
+      wind_kmh: windKmh,
+      gust_kmh: numOrNull(firstDefined(metric.windGust, metric.windgustAvg)),
+      // "winddir" (degrees, 0-360) sits loose at the root of obs, just like
+      // solarRadiation/qcStatus: it does not depend on units, so it is not
+      // inside metric/imperial.
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir, obs.winddirAvg)),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      rain_total_mm: numOrNull(metric.precipTotal),
+      // Official API names (PWS current/history): "solarRadiation" in
+      // camelCase and "qcStatus" for quality control, both loose at the
+      // root of obs (not inside metric/imperial). A fallback is kept to
+      // lowercase variants / the old name, and to the "...High" variant of
+      // the history, in case your station comes through a gateway that
+      // reports them that way.
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh)),
+      uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
+      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
+    };
+  }
+
+  /* ============================================================
+     MONITOR ENGINE
+     ============================================================ */
+  async function pollCycle(){
+    if (!running || !active) return;
+    // Prevents two requests in flight at once: it can happen if "Manual poll"
+    // is pressed just when an ordinary query or a retry is already in
+    // progress.
+    if (requestInFlight) return;
+    requestInFlight = true;
+    try {
+      const url = buildURL(active.stationId, active.apiKey);
+      const start = performance.now();
+      let response;
+      try {
+        response = await fetchWithTimeout(url, active.requestTimeoutMs);
+      } catch (err) {
+        const reason = (err && err.name === 'AbortError')
+          ? 'time limit of ' + (active.requestTimeoutMs / 1000).toFixed(0) + ' s exceeded'
+          : 'network failure (content blocker or lost connection?)';
+        scheduleRetry(reason);
+        return;
+      }
+      if (!running) return; // the user may have pressed "Stop" while the request was in flight
+      const latencyMs = performance.now() - start;
+
+      if (response.status === 401){ haltMonitor('fatal', '401: invalid or unauthorised API Key.'); return; }
+      if (response.status === 404){ haltMonitor('fatal', '404: Station ID not found or endpoint obsolete.'); return; }
+      if (!response.ok){ scheduleRetry('HTTP ' + response.status); return; }
+
+      let data;
+      try { data = await response.json(); }
+      catch (err) { scheduleRetry('response is not valid JSON'); return; }
+      if (!running) return; // the user may have pressed "Stop" while the response was being parsed
+
+      const obs = (data.observations || [])[0];
+      if (!obs){
+        setLight('ok', 'Running (no new data rows)');
+        scheduleNextRegularCycle();
+        return;
+      }
+
+      retryCount = 0;
+      retriesCounter.textContent = '0';
+      hideError();
+
+      const nowMs = Date.now();
+      const obsMs = obs.epoch ? obs.epoch * 1000 : nowMs;
+      const stalenessS = (nowMs - obsMs) / 1000;
+
+      const t = Object.assign(extractValues(obs), {
+        staleness_s: stalenessS,
+        latency_ms: latencyMs
+      });
+
+      readingsReceived += 1;
+      readingsCounter.textContent = readingsReceived;
+
+      paintCurrentValues(t);
+      recordInSeries(t);
+      addToHistory(t, active.staleThresholdS);
+      saveReading(active.stationId, obsMs, t);
+      redrawEvolutionIfOpen();
+
+      if (!isPlausible(t)) plausibilityWarning.style.display = 'flex';
+      else plausibilityWarning.style.display = 'none';
+
+      if (stalenessS <= active.staleThresholdS) setLight('ok', 'Running');
+      else setLight('warn', 'Running (stale data)');
+
+      scheduleNextRegularCycle();
+    } finally {
+      requestInFlight = false;
+    }
+  }
+
+  // Forces an immediate query without waiting for the scheduled interval,
+  // cancelling the pending countdown/retry (if any) so that the regular
+  // cycle is rescheduled from scratch starting at the current time.
+  async function manualPoll(){
+    if (!running || !active || requestInFlight) return;
+    if (timeoutId){ clearTimeout(timeoutId); timeoutId = null; }
+    if (countdownIntervalId){ clearInterval(countdownIntervalId); countdownIntervalId = null; }
+    btnManualPoll.disabled = true;
+    btnManualPollBar.disabled = true;
+    progressFill.style.width = '0%';
+    progressLabel.textContent = 'Manual poll in progress…';
+    await pollCycle();
+    btnManualPoll.disabled = !running;
+    btnManualPollBar.disabled = !running;
+  }
+
+  function scheduleNextRegularCycle(){
+    if (!running) return;
+    startCountdown(active.pollIntervalMs, 'Next poll');
+    timeoutId = setTimeout(pollCycle, active.pollIntervalMs);
+  }
+
+  function scheduleRetry(reason){
+    if (!running) return;
+    retryCount += 1;
+    retriesCounter.textContent = retryCount;
+    const delayMs = Math.min(active.backoffBaseMs * Math.pow(2, retryCount - 1), active.backoffMaxMs);
+    showError('Transient error (' + reason + '). Retry ' + retryCount + ' in ' + (delayMs / 1000).toFixed(1) + ' s.');
+    setLight('warn', 'Retrying (attempt ' + retryCount + ')');
+    startCountdown(delayMs, 'Retry ' + retryCount);
+    timeoutId = setTimeout(pollCycle, delayMs);
+  }
+
+  function haltMonitor(kind, reason){
+    running = false;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = null;
+    stopCountdown(kind === 'fatal' ? 'Monitor stopped due to a fatal error.' : 'Monitor stopped.');
+
+    if (kind === 'fatal'){
+      showError(reason);
+      setLight('err', 'Stopped: fatal error');
+    } else {
+      setLight('off', 'Stopped');
+    }
+
+    setStartStopButtons(stationIdInput.value.trim().length === 0, true);
+    CONFIG_INPUTS.forEach(i => { i.disabled = false; });
+  }
+
+  /* ============================================================
+     HISTORICAL BACKFILL (best effort) FOR THE 7 DAY CHARTS
+     ============================================================ */
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function formatYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+
+  function buildHistoryURL(stationId, apiKey, dateYmd){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm', date: dateYmd });
+    if (apiKey) params.set('apiKey', apiKey);
+    return HISTORY_URL + '?' + params.toString();
+  }
+
+  // Tolerance for deciding that a reading from the API history "already
+  // exists" locally and not duplicating it: it need not match to the
+  // second, it is enough that it falls very close to a real reading
+  // that is already stored.
+  const MERGE_TOLERANCE_MS = 90 * 1000; // 90 s
+
+  // Fills in, day by day, the last WEEK_DAYS days that have gaps,
+  // by querying the API history, and ALWAYS additively: it only adds
+  // readings in the gaps and never deletes a real reading that is
+  // already stored. It is a "best effort" add-on: if a day fails
+  // (station without history available, network error, empty
+  // response…) it is simply skipped and the chart is completed only with
+  // what is in IndexedDB.
+  //
+  // IMPORTANT (fixed bug): before this fix, a day considered "incomplete"
+  // (e.g. "today", which almost always is, because there is a gap between
+  // midnight and the time the monitor started) was DELETED entirely and
+  // refilled only with whatever the API history endpoint returned. That
+  // endpoint often answers 200 OK but with no observations (personal API
+  // plans without history enabled, a station with no data rows there,
+  // etc.), so the day was left empty. Since backfillIfNeeded() is called
+  // on EVERY startMonitor() — including stopping the monitor to change a
+  // parameter and pressing "Start" again, or closing and reopening the
+  // app — this could wipe the freshly recorded real history at any time.
+  // Now nothing is ever deleted here: at most, missing readings are added.
+  // Summary of the last pass of backfillIfNeeded(), so that the UI can
+  // show whether the Weather Underground API history is really
+  // contributing anything or not (see updateBackfillStatusLine()).
+  let backfillLastSummary = null;
+
+  async function backfillIfNeeded(stationId, apiKey){
+    if (backfillInProgress) return;
+    backfillInProgress = true;
+    const summary = { daysAttempted: 0, daysWithReadings: 0, readingsAdded: 0, daysWithError: 0 };
+    try {
+      for (let i = 0; i < WEEK_DAYS; i++){
+        if (!running) break; // the user may have pressed "Stop" in the meantime
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const dayStartMs = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0).getTime();
+        const dayEndMs = dayStartMs + 24 * 60 * 60 * 1000 - 1;
+        // For "today" (i=0) coverage up to midnight is not required, as it has
+        // not happened yet: the relevant window ends at "now".
+        const windowEndMs = Math.min(dayEndMs, Date.now());
+        const existing = await queryRange(stationId, dayStartMs, dayEndMs);
+        if (existing.length > 0 && !isDayIncomplete(existing, dayStartMs, windowEndMs)) continue; // local data rows already give enough coverage: no need to query the API at all
+        summary.daysAttempted++;
+
+        try {
+          const url = buildHistoryURL(stationId, apiKey, formatYYYYMMDD(date));
+          const resp = await fetchWithTimeout(url, 15000);
+          if (!resp.ok){ summary.daysWithError++; continue; } // network/API failure: keep whatever there was (even if incomplete) rather than lose it
+          const data = await resp.json();
+          const obsArr = data.observations || [];
+          // Additive merge: each API reading is stored only if there is no
+          // real local reading within MERGE_TOLERANCE_MS; this way gaps are
+          // filled without duplicating and, above all, without deleting
+          // anything the monitor had already recorded.
+          const existingEpochs = existing.map(f => f.epochMs);
+          let addedThisDay = 0;
+          for (const obs of obsArr){
+            if (!obs.epoch) continue;
+            const epochMs = obs.epoch * 1000;
+            const alreadyExists = existingEpochs.some(e => Math.abs(e - epochMs) < MERGE_TOLERANCE_MS);
+            if (alreadyExists) continue;
+            await saveReading(stationId, epochMs, extractValues(obs));
+            existingEpochs.push(epochMs); // avoids duplicating several very close API observations among themselves
+            addedThisDay++;
+          }
+          summary.readingsAdded += addedThisDay;
+          if (addedThisDay > 0) summary.daysWithReadings++;
+        } catch (err) { summary.daysWithError++; /* a day without history available does not stop the rest; whatever there was is kept */ }
+      }
+    } finally {
+      backfillInProgress = false;
+      backfillLastSummary = summary;
+      updateBackfillStatusLine();
+      redrawEvolutionIfOpen();
+    }
+  }
+
+  // Shows, under the 7 day chart, whether the Weather Underground API
+  // history is really contributing anything or not: many personal
+  // accounts/plans do not have that endpoint enabled and return 200 OK
+  // with no observations at all, which used to cause the bug fixed in
+  // backfillIfNeeded() (see the note next to that function) and which,
+  // without this warning, was invisible to whoever uses the app.
+  function updateBackfillStatusLine(){
+    if (!backfillStatusLine) return;
+    const r = backfillLastSummary;
+    if (!r || r.daysAttempted === 0){
+      backfillStatusLine.style.display = 'none';
+      return;
+    }
+    const days = r.daysAttempted === 1 ? '1 day with gaps' : (r.daysAttempted + ' days with gaps');
+    let text;
+    if (r.readingsAdded > 0){
+      const readings = r.readingsAdded === 1 ? '1 reading' : (r.readingsAdded + ' readings');
+      text = 'Weather Underground API history: contributed ' + readings + ' to fill in ' + days + '.';
+    } else if (r.daysWithError === r.daysAttempted){
+      text = 'Weather Underground API history: could not be queried (network or API failure) for ' + days + '. The charts are completed only with what was recorded in this browser.';
+    } else {
+      text = 'Weather Underground API history: queried for ' + days + ', but it returned no new readings (usual if your account\'s API plan does not include history). The charts are completed only with what was recorded in this browser.';
+    }
+    backfillStatusLine.textContent = text;
+    backfillStatusLine.style.display = 'block';
+  }
+
+  /* ============================================================
+     SERVER HISTORY (TeleMet Collector)
+     Reads data/history.json, which the Python program on the server
+     updates after every station reading, and adds the readings it
+     lacks to the local history (IndexedDB). It is ALWAYS additive
+     —it never deletes or modifies anything local— and best-effort: if
+     the file does not exist or fails, the app keeps working only with
+     what the browser records.
+     ============================================================ */
+  let serverSyncInProgress = false;
+
+  async function saveReadingsBatch(stationId, rows){
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      rows.forEach(f => store.add({ stationId: stationId, epochMs: f.epochMs, vals: f.vals }));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  // Returns a summary { state, added, ... }; state: 'unavailable',
+  // 'other-station', 'format', 'error' or 'ok'.
+  async function syncServerHistory(stationId){
+    if (serverSyncInProgress || !stationId) return { state: 'skipped' };
+    serverSyncInProgress = true;
+    try {
+      let data;
+      try {
+        const resp = await fetchWithTimeout(SERVER_HISTORY_URL + '?t=' + Date.now(), SERVER_TIMEOUT_MS);
+        if (!resp.ok) return { state: 'unavailable' };
+        data = await resp.json();
+      } catch (err) { return { state: 'unavailable' }; }
+
+      if (!data || data.format !== 1 || !Array.isArray(data.readings)) return { state: 'format' };
+      if (String(data.stationId || '').toLowerCase() !== stationId.toLowerCase()){
+        return { state: 'other-station', serverStation: data.stationId };
+      }
+
+      const rows = [];
+      for (const l of data.readings){
+        if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') rows.push({ epochMs: l.t, vals: l.v });
+      }
+      const lastMs = rows.length ? Math.max.apply(null, rows.map(f => f.epochMs)) : null;
+      if (rows.length === 0) return { state: 'ok', received: 0, added: 0, lastMs: null };
+
+      const minMs = Math.min.apply(null, rows.map(f => f.epochMs));
+      const existing = await queryRange(stationId, minMs - SERVER_MERGE_TOLERANCE_MS, lastMs + SERVER_MERGE_TOLERANCE_MS);
+      if (lastLocalHistoryError) return { state: 'error' }; // even the local data could not be read: better not to risk duplicates
+      const localEpochs = existing.map(f => f.epochMs).sort((a, b) => a - b);
+
+      // Compare only with what was ALREADY local (not with what is being
+      // added): the server readings are very close to each other and must
+      // not discard one another.
+      const newOnes = rows.filter(f => {
+        let lo = 0, hi = localEpochs.length - 1;
+        while (lo <= hi){
+          const mid = (lo + hi) >> 1;
+          const e = localEpochs[mid];
+          if (Math.abs(e - f.epochMs) < SERVER_MERGE_TOLERANCE_MS) return false;
+          if (e < f.epochMs) lo = mid + 1; else hi = mid - 1;
+        }
+        return true;
+      });
+      if (newOnes.length > 0) await saveReadingsBatch(stationId, newOnes);
+      return { state: 'ok', received: rows.length, added: newOnes.length, lastMs: lastMs, intervalS: Number(data.intervalS) || 0 };
+    } catch (err) {
+      return { state: 'error' };
+    } finally {
+      serverSyncInProgress = false;
+    }
+  }
+
+  function updateServerStatusLine(r){
+    if (!serverStatusLine) return;
+    let text = null;
+    if (r.state === 'ok'){
+      if (r.received === 0){
+        text = 'Server history: the collector has no stored readings yet.';
+      } else {
+        const time = fmtTime(r.lastMs);
+        text = r.added > 0
+          ? 'Server history: contributed ' + (r.added === 1 ? '1 reading' : r.added + ' readings') + ' that were missing in this browser (latest server reading: ' + time + ').'
+          : 'Server history: queried, no reading was missing (latest server reading: ' + time + ').';
+        const thresholdMin = Math.max(SERVER_STALE_WARNING_MIN, Math.ceil(3 * (r.intervalS || 0) / 60));
+        if (Date.now() - r.lastMs > thresholdMin * 60 * 1000){
+          text += ' Warning: the server has recorded nothing for more than ' + thresholdMin + ' minutes; the collector may be stopped.';
+        }
+      }
+    } else if (r.state === 'other-station'){
+      text = 'The server history belongs to another station (' + escHTML(r.serverStation || '?') + '), different from the one entered here; it was not used.';
+    } else if (r.state === 'format' || r.state === 'error'){
+      text = 'The server history could not be used (invalid format or error while saving it).';
+    }
+    // 'unavailable' / 'skipped': the app works without a server (e.g. GitHub Pages), nothing is shown.
+    if (text === null){ serverStatusLine.style.display = 'none'; return; }
+    serverStatusLine.innerHTML = text;
+    serverStatusLine.style.display = 'block';
+  }
+
+  async function syncServerAndRepaint(){
+    const stationId = stationForEvolution();
+    if (!stationId) return;
+    const r = await syncServerHistory(stationId);
+    if (r.state === 'skipped') return;
+    updateServerStatusLine(r);
+    if (r.state === 'ok' && r.added > 0) redrawEvolutionIfOpen();
+  }
+
+  function startMonitor(){
+    const stationId = stationIdInput.value.trim();
+    if (!stationId) return;
+
+    active = {
+      stationId: stationId,
+      apiKey: apiKeyInput.value.trim(),
+      pollIntervalMs: readNumber(pollIntervalInput, DEFAULTS.pollIntervalS) * 1000,
+      requestTimeoutMs: readNumber(requestTimeoutInput, DEFAULTS.requestTimeoutS) * 1000,
+      backoffBaseMs: readNumber(backoffBaseInput, DEFAULTS.backoffBaseS) * 1000,
+      backoffMaxMs: readNumber(backoffMaxInput, DEFAULTS.backoffMaxS) * 1000,
+      staleThresholdS: readNumber(staleThresholdInput, DEFAULTS.staleThresholdS),
+      historyLen: Math.round(readNumber(historyLenInput, DEFAULTS.historyLen))
+    };
+
+    running = true;
+    retryCount = 0;
+    retriesCounter.textContent = '0';
+    startTimeMs = Date.now();
+    startTimeValue.textContent = new Date(startTimeMs).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    lastUpdateValue.textContent = '—';
+    uptimeValue.textContent = '0 s';
+    hideError();
+    plausibilityWarning.style.display = 'none';
+
+    setStartStopButtons(true, false);
+    CONFIG_INPUTS.forEach(i => { i.disabled = true; });
+    setLight('ok', 'Running');
+    progressLabel.textContent = 'Making the first query…';
+
+    const limitMs = Date.now() - LOCAL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    purgeOld(stationId, limitMs);
+    // First the server history (no API cost) and then the Weather Underground
+    // API one, which will only query the days that still have gaps.
+    syncServerAndRepaint().then(() => backfillIfNeeded(stationId, active.apiKey));
+
+    pollCycle();
+  }
+
+  function stopMonitor(){ haltMonitor('manual', null); }
+
+  /* ============================================================
+     EVOLUTION CHARTS (12 h / 7 days) — optional, drawn only when the
+     corresponding panel is open, from the local history in
+     IndexedDB (not from the session history).
+     ============================================================ */
+  function escHTML(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function buildChartCard(title, unit){
+    const el = document.createElement('div');
+    el.className = 'chart-card';
+    el.innerHTML =
+      '<div class="chart-head"><h4>' + escHTML(title) + (unit ? ' (' + escHTML(unit) + ')' : '') + '</h4><div class="chart-legend"></div></div>' +
+      '<div class="chart-plot">' +
+        '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>' +
+        '<div class="chart-tooltip" role="status" aria-live="polite"></div>' +
+      '</div>';
+    return {
+      el: el,
+      legend: el.querySelector('.chart-legend'),
+      svg: el.querySelector('.chart-svg'),
+      tooltip: el.querySelector('.chart-tooltip')
+    };
+  }
+
+  // Rounds to a "nice number" (1, 2, 5, 10, 20, 50...) so that the Y axis
+  // values are easy to read instead of loose decimals.
+  function niceNumber(x, roundIt){
+    if (x === 0) return 0;
+    const exp = Math.floor(Math.log10(Math.abs(x)));
+    const f = Math.abs(x) / Math.pow(10, exp);
+    let nf;
+    if (roundIt){
+      if (f < 1.5) nf = 1;
+      else if (f < 3) nf = 2;
+      else if (f < 7) nf = 5;
+      else nf = 10;
+    } else {
+      if (f <= 1) nf = 1;
+      else if (f <= 2) nf = 2;
+      else if (f <= 5) nf = 5;
+      else nf = 10;
+    }
+    return (x < 0 ? -1 : 1) * nf * Math.pow(10, exp);
+  }
+
+  // Computes a value range and a series of "nice" tick values for the Y axis,
+  // instead of interpolating linearly between the exact minimum and maximum of
+  // the data rows (which gives numbers like 23.7 / 15.2 / 6.8, hard to read).
+  function niceAxisScale(min, max, approxTickCount){
+    if (min === max){ min -= 1; max += 1; }
+    let stepSize = niceNumber((max - min) / Math.max(1, approxTickCount - 1), true);
+    // For large-magnitude values (pressure ~1000 hPa, humidity/wind in the
+    // tens...) a step smaller than 1 adds a decimal to a number that already
+    // has several digits ("1013.2"), too wide for the axis margin and
+    // getting cut off. At that magnitude the decimal detail adds nothing
+    // that the exact value (available in the tooltip) does not already say.
+    const magnitude = Math.max(Math.abs(min), Math.abs(max));
+    if (magnitude >= 50) stepSize = Math.max(stepSize, 1);
+    const niceMin = Math.floor(min / stepSize) * stepSize;
+    const niceMax = Math.ceil(max / stepSize) * stepSize;
+    const tickValues = [];
+    for (let v = niceMin; v <= niceMax + stepSize * 0.5; v += stepSize) tickValues.push(Math.round(v / stepSize) * stepSize);
+    return { min: niceMin, max: niceMax, stepSize: stepSize, tickValues: tickValues };
+  }
+
+  // Formats an axis value with just enough decimals for its step size
+  // (none if the step is an integer, 1 or 2 if it is finer), with no
+  // thousands separator (avoids confusing "1,013" with one thousand).
+  function formatAxisNumber(v, stepSize){
+    const decimals = stepSize >= 1 ? 0 : (stepSize >= 0.1 ? 1 : 2);
+    return v.toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false });
+  }
+
+  // Draws (or redraws) a simple line chart inside an <svg> already inserted
+  // in the DOM, with an interaction layer (reference line + tooltip on
+  // hover, also via keyboard focus). "series" is
+  // [{ label, color, points:[{x,y}] }] with x already normalised to 0..1;
+  // "xTicks" are the visible tick values of the X axis ([{ frac, label }]);
+  // "xPoints" are ALL the real sample positions the cursor can "snap" to
+  // (one per reading in 12h, one per reading in 7d) — usually a finer list
+  // than xTicks.
+  function drawSVGChart(svg, legendEl, tooltipEl, series, xTicks, xPoints, gapThresholdFrac){
+    const W = 600, H = 230;
+    const M = { l: 46, r: 14, t: 14, b: 28 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+
+    legendEl.innerHTML = '';
+    const withPoints = series.filter(s => s.points.length > 0);
+    if (withPoints.length === 0){
+      svg.innerHTML = '<text class="chart-label" x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle">No data in this period</text>';
+      return;
+    }
+
+    let dataYMin = Infinity, dataYMax = -Infinity;
+    withPoints.forEach(s => s.points.forEach(p => { if (p.y < dataYMin) dataYMin = p.y; if (p.y > dataYMax) dataYMax = p.y; }));
+    const scale = niceAxisScale(dataYMin, dataYMax, 4);
+    const yMin = scale.min, yMax = scale.max;
+    const valueRange = (yMax - yMin) || 1;
+
+    const xPix = f => M.l + f * pw;
+    const yPix = v => M.t + (1 - (v - yMin) / valueRange) * ph;
+
+    let svgInner = '';
+    scale.tickValues.forEach(val => {
+      const y = yPix(val);
+      svgInner += '<line class="chart-grid" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
+      svgInner += '<text class="chart-label chart-axis-label" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + formatAxisNumber(val, scale.stepSize) + '</text>';
+    });
+    const lastTick = (xTicks || []).length - 1;
+    (xTicks || []).forEach((tk, i) => {
+      // The tick values at the ends are anchored inward (start/end) instead
+      // of centred, so that they do not get cut off at the edge.
+      const anchor = i === 0 ? 'start' : (i === lastTick ? 'end' : 'middle');
+      svgInner += '<text class="chart-label" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + escHTML(tk.label) + '</text>';
+    });
+
+    withPoints.forEach(s => {
+      const pts = s.points.slice().sort((a, b) => a.x - b.x);
+      s._sortedPoints = pts; // reused by the interaction layer, below
+
+      // If there is a real gap (no reading at all, neither local nor from the
+      // API) of more than gapThresholdFrac between two consecutive readings,
+      // NO joining line is drawn between them: a single straight line from
+      // one end of the gap to the other would suggest a gradual, continuous
+      // change that was never actually observed (see the note next to
+      // GAP_THRESHOLD_12H_FRAC / GAP_THRESHOLD_7D_FRAC). One stroke is drawn
+      // for each contiguous segment.
+      const segments = [[]];
+      pts.forEach((p, i) => {
+        if (i > 0 && gapThresholdFrac && (p.x - pts[i - 1].x) > gapThresholdFrac) segments.push([]);
+        segments[segments.length - 1].push(p);
+      });
+      segments.forEach(segment => {
+        if (segment.length === 0) return;
+        if (segment.length === 1){
+          // An isolated point between two gaps cannot be joined to anything:
+          // it is marked with a small circle so that it does not just vanish.
+          svgInner += '<circle class="chart-point" cx="' + xPix(segment[0].x).toFixed(1) + '" cy="' + yPix(segment[0].y).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+        } else {
+          const svgPoints = segment.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
+          svgInner += '<polyline class="chart-line" points="' + svgPoints + '" style="stroke:' + s.color + '"></polyline>';
+        }
+      });
+
+      const last = pts[pts.length - 1];
+      const ux = xPix(last.x), uy = yPix(last.y);
+      svgInner += '<circle class="chart-point" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
+    });
+    svg.innerHTML = svgInner;
+
+    // Interaction layer: reference line + highlighted point per series +
+    // tooltip, snapped to the sample point closest to the cursor (never
+    // to an exact pixel). The value shown always matches a real one;
+    // nothing the tooltip shows is missing from the axis or the
+    // legend.
+    if (tooltipEl && xPoints && xPoints.length > 0){
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const crosshair = document.createElementNS(SVGNS, 'line');
+      crosshair.setAttribute('class', 'chart-crosshair');
+      crosshair.setAttribute('y1', M.t); crosshair.setAttribute('y2', H - M.b);
+      svg.appendChild(crosshair);
+      const hoverPoints = withPoints.map(s => {
+        const c = document.createElementNS(SVGNS, 'circle');
+        c.setAttribute('class', 'chart-point-hover');
+        c.setAttribute('r', '4');
+        c.setAttribute('style', 'fill:' + s.color);
+        svg.appendChild(c);
+        return c;
+      });
+
+      const meanStep = xPoints.length > 1 ? 1 / (xPoints.length - 1) : 1;
+      const toleranceX = Math.max(meanStep * 0.75, 0.01);
+
+      function onMove(e){
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const svgX = (e.clientX - rect.left) * (W / rect.width);
+        const frac = Math.max(0, Math.min(1, (svgX - M.l) / pw));
+
+        let nearest = xPoints[0], dist = Infinity;
+        xPoints.forEach(p => { const d = Math.abs(p.frac - frac); if (d < dist){ dist = d; nearest = p; } });
+
+        const xCross = xPix(nearest.frac).toFixed(1);
+        crosshair.setAttribute('x1', xCross); crosshair.setAttribute('x2', xCross);
+        crosshair.style.opacity = '1';
+
+        tooltipEl.textContent = '';
+        const head = document.createElement('div');
+        head.className = 'tt-head';
+        head.textContent = nearest.label;
+        tooltipEl.appendChild(head);
+
+        withPoints.forEach((s, i) => {
+          let nearestPoint = null, dMin = Infinity;
+          s._sortedPoints.forEach(p => { const d = Math.abs(p.x - nearest.frac); if (d < dMin){ dMin = d; nearestPoint = p; } });
+          const dot = hoverPoints[i];
+          if (nearestPoint && dMin <= toleranceX){
+            dot.setAttribute('cx', xPix(nearestPoint.x).toFixed(1));
+            dot.setAttribute('cy', yPix(nearestPoint.y).toFixed(1));
+            dot.style.opacity = '1';
+            const row = document.createElement('div');
+            row.className = 'tt-row';
+            const key = document.createElement('span');
+            key.className = 'legend-line';
+            key.style.background = s.color;
+            const val = document.createElement('span');
+            val.className = 'tt-val';
+            val.textContent = formatAxisNumber(nearestPoint.y, scale.stepSize);
+            row.appendChild(key);
+            row.appendChild(val);
+            if (withPoints.length > 1){
+              const nameEl = document.createElement('span');
+              nameEl.className = 'tt-name';
+              nameEl.textContent = s.label;
+              row.appendChild(nameEl);
+            }
+            tooltipEl.appendChild(row);
+          } else {
+            dot.style.opacity = '0';
+          }
+        });
+        tooltipEl.style.opacity = '1';
+
+        const wrapRect = svg.parentElement.getBoundingClientRect();
+        let left = (e.clientX - wrapRect.left) + 14;
+        let top = (e.clientY - wrapRect.top) - 10;
+        const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+        if (left + tw > wrapRect.width - 4) left = (e.clientX - wrapRect.left) - tw - 14;
+        left = Math.max(4, left);
+        top = Math.max(4, Math.min(top, wrapRect.height - th - 4));
+        tooltipEl.style.left = left.toFixed(0) + 'px';
+        tooltipEl.style.top = top.toFixed(0) + 'px';
+      }
+      function onLeave(){
+        crosshair.style.opacity = '0';
+        hoverPoints.forEach(d => { d.style.opacity = '0'; });
+        tooltipEl.style.opacity = '0';
+      }
+      svg.onpointermove = onMove;
+      svg.onpointerleave = onLeave;
+      svg.onpointercancel = onLeave;
+    }
+
+    if (series.length > 1){
+      series.forEach(s => {
+        const item = document.createElement('span');
+        item.className = 'legend-item';
+        item.innerHTML = '<span class="legend-line" style="background:' + s.color + '"></span>' + escHTML(s.label);
+        legendEl.appendChild(item);
+      });
+    }
+  }
+
+  function buildTimeTicks(fromMs, toMs, n){
+    const ticks = [];
+    for (let i = 0; i <= n; i++){
+      const frac = i / n;
+      const d = new Date(fromMs + frac * (toMs - fromMs));
+      ticks.push({ frac: frac, label: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) });
+    }
+    return ticks;
+  }
+
+  function stationForEvolution(){
+    return active ? active.stationId : stationIdInput.value.trim();
+  }
+
+  // Message for the panel when there are no points to draw: distinguishes
+  // "the query went fine, there is simply no data yet" (emptyMessage)
+  // from "even the local history could not be queried" (the empty array
+  // returned by queryRange is identical in both cases, so without this
+  // the second case gets mistaken for the first and it looks as if
+  // "there is no data" when the browser is actually blocking IndexedDB).
+  function emptyHistoryMessage(emptyMessage){
+    if (lastLocalHistoryError){
+      const detail = lastLocalHistoryError.message || lastLocalHistoryError.name || 'unknown reason';
+      return '<p class="evol-empty">The history saved in this browser could not be read (' + escHTML(detail) + '). It may be blocked by private/incognito mode, the cookie and site-data settings, or an extension; in that case the chart will stay empty even if the monitor has been running for a while.</p>';
+    }
+    return '<p class="evol-empty">' + emptyMessage + '</p>';
+  }
+
+  async function drawEvolution12h(){
+    const stationId = stationForEvolution();
+    if (!stationId){ charts12h.innerHTML = '<p class="evol-empty">Enter a Station ID to see this chart.</p>'; return; }
+
+    const toMs = Date.now();
+    const fromMs = toMs - WINDOW_12H_MS;
+    const rows = await queryRange(stationId, fromMs, toMs);
+    if (rows.length === 0){
+      charts12h.innerHTML = emptyHistoryMessage('There is no data from the last 12 hours in this browser yet. Leave it running for a while and reopen this panel.');
+      return;
+    }
+    rows.sort((a, b) => a.epochMs - b.epochMs);
+    const xTicks = buildTimeTicks(fromMs, toMs, 4);
+    // One "snap" position for the cursor per real reading
+    // (finer than the 4-5 visible tick values of the X axis).
+    const xPoints = rows.map(f => {
+      const d = new Date(f.epochMs);
+      return { frac: (f.epochMs - fromMs) / WINDOW_12H_MS, label: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+    });
+
+    charts12h.innerHTML = '';
+    CHART_GROUPS_12H.forEach(group => {
+      const card = buildChartCard(group.title, group.unit);
+      charts12h.appendChild(card.el);
+      const series = group.seriesKeys.map(key => {
+        const def = CHARTABLES.find(m => m.key === key);
+        const points = rows
+          .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
+          .map(f => ({ x: (f.epochMs - fromMs) / WINDOW_12H_MS, y: f.vals[key] }));
+        return { label: def ? def.label : key, color: def ? def.color : 'var(--c-temp)', points: points };
+      });
+      drawSVGChart(card.svg, card.legend, card.tooltip, series, xTicks, xPoints, GAP_THRESHOLD_12H_FRAC);
+    });
+  }
+
+  // Builds, from the raw readings of the 7 day range, the series ready to
+  // draw: one per variable, with ALL their points (no daily summary).
+  // It is reused both for the actual drawing and for what is cached in
+  // localStorage.
+  function buildEvolution7dGroups(rows, fromMs, rangeMs){
+    return CHART_GROUPS_7D.map(group => ({
+      title: group.title,
+      unit: group.unit,
+      series: group.seriesKeys.map(key => {
+        const def = CHARTABLES.find(m => m.key === key);
+        const points = rows
+          .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
+          .map(f => ({ x: (f.epochMs - fromMs) / rangeMs, y: f.vals[key] }));
+        return { label: def ? def.label : key, color: def ? def.color : 'var(--c-temp)', points: points };
+      })
+    }));
+  }
+
+  function paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints){
+    charts7d.innerHTML = '';
+    groupsWithSeries.forEach(group => {
+      const card = buildChartCard(group.title, group.unit);
+      charts7d.appendChild(card.el);
+      drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, GAP_THRESHOLD_7D_FRAC);
+    });
+  }
+
+  // Like the "Last days" tiles of TeleMet Mobile/iPad Pro: besides the raw
+  // readings in IndexedDB, the last thing drawn is saved in localStorage
+  // so the charts can be redrawn instantly on start-up, without waiting
+  // for the real IndexedDB query (which remains the source of truth and
+  // redraws as soon as it finishes). If the history is too large for
+  // localStorage, saving it is simply ignored: only the instant redraw
+  // is lost, never the real history.
+  function saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks){
+    try {
+      localStorage.setItem(STORAGE_KEY_EVOLUTION_7D, JSON.stringify({ stationId, groups: groupsWithSeries, xTicks }));
+    } catch (err) { /* storage full or unavailable: ignored */ }
+  }
+
+  function paintEvolution7dFromCache(stationId){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_EVOLUTION_7D);
+      if (!raw) return false;
+      const dataRows = JSON.parse(raw);
+      if (!dataRows || dataRows.stationId !== stationId || !dataRows.groups || !dataRows.xTicks) return false;
+      // The cache does not store a "snap" position per reading (only the
+      // axis tick values): the fine-grained cursor arrives with the real redraw.
+      paintCharts7dFromGroups(dataRows.groups, dataRows.xTicks, dataRows.xTicks);
+      return true;
+    } catch (err) { return false; }
+  }
+
+  async function drawEvolution7d(){
+    const stationId = stationForEvolution();
+    if (!stationId){ charts7d.innerHTML = '<p class="evol-empty">Enter a Station ID to see this chart.</p>'; return; }
+
+    const today = new Date();
+    const dayStartLabel = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (WEEK_DAYS - 1), 0, 0, 0, 0);
+    const fromMs = dayStartLabel.getTime();
+    const toMs = Date.now();
+    const rows = await queryRange(stationId, fromMs, toMs);
+    if (rows.length === 0){
+      charts7d.innerHTML = emptyHistoryMessage('There is no data from the last 7 days in this browser yet. Start the monitor so that it fills up over time (and, if possible, with the API history).');
+      return;
+    }
+    rows.sort((a, b) => a.epochMs - b.epochMs);
+    const rangeMs = Math.max(toMs - fromMs, 1);
+
+    // One tick per day on the X axis...
+    const xTicks = [];
+    for (let i = 0; i < WEEK_DAYS; i++){
+      const d = new Date(dayStartLabel.getFullYear(), dayStartLabel.getMonth(), dayStartLabel.getDate() + i, 0, 0, 0, 0);
+      xTicks.push({ frac: (d.getTime() - fromMs) / rangeMs, label: pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) });
+    }
+    // ...and one cursor "snap" position for each real reading of the full
+    // history (as in the 12 hour chart), with date and time, so that the
+    // tooltip always shows the closest exact data point.
+    const xPoints = rows.map(f => {
+      const d = new Date(f.epochMs);
+      return {
+        frac: (f.epochMs - fromMs) / rangeMs,
+        label: pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+      };
+    });
+
+    const groupsWithSeries = buildEvolution7dGroups(rows, fromMs, rangeMs);
+    paintCharts7dFromGroups(groupsWithSeries, xTicks, xPoints);
+    saveEvolution7dToStorage(stationId, groupsWithSeries, xTicks);
+  }
+
+  function redrawEvolutionIfOpen(){
+    if (accEvolution12h.open) drawEvolution12h();
+    if (accEvolution7d.open) drawEvolution7d();
+    paintDaysSummary();
+  }
+
+  /* ============================================================
+     LOOK UP A SPECIFIC DAY (not limited to the last 7): first the local
+     history (IndexedDB) is checked and, only if coverage is missing
+     for that day, it is completed with the Weather Underground API
+     history for that exact date — the same endpoint that
+     backfillIfNeeded() uses for the last 7 days, but without that window.
+     ============================================================ */
+  let specificDayLastRows = null; // for the CSV download button
+
+  // <input type="date">.value comes as "YYYY-MM-DD"; it is built by hand
+  // so that it is LOCAL midnight (like the rest of the app), not UTC
+  // as new Date("YYYY-MM-DD") would give.
+  function specificDayToLocalDate(inputValue){
+    const parts = inputValue.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+  }
+
+  async function querySpecificDay(){
+    const stationId = stationForEvolution();
+    if (!stationId){
+      specificDayStatusLine.textContent = 'Enter a Station ID (section 1) to be able to query.';
+      specificDayStatusLine.style.display = 'block';
+      return;
+    }
+    const dateValue = specificDayInput.value;
+    if (!dateValue){
+      specificDayStatusLine.textContent = 'Pick a date first.';
+      specificDayStatusLine.style.display = 'block';
+      return;
+    }
+    const dayStartDate = specificDayToLocalDate(dateValue);
+    const dayStartMs = dayStartDate.getTime();
+    const nowMs = Date.now();
+    if (dayStartMs > nowMs){
+      specificDayStatusLine.textContent = 'That date has not arrived yet.';
+      specificDayStatusLine.style.display = 'block';
+      return;
+    }
+    // For "today" coverage up to midnight is not required, as it has not
+    // happened yet: the relevant window ends at "now" (same criterion as
+    // backfillIfNeeded()).
+    const dayEndMs = Math.min(dayStartMs + 24 * 60 * 60 * 1000 - 1, nowMs);
+
+    btnQueryDay.disabled = true;
+    specificDayStatusLine.textContent = 'Querying…';
+    specificDayStatusLine.style.display = 'block';
+    specificDaySummary.innerHTML = '';
+    chartsSpecificDay.innerHTML = '';
+    btnDownloadDayCSV.disabled = true;
+
+    try {
+      let rows = await queryRange(stationId, dayStartMs, dayEndMs);
+      let addedFromApi = 0, apiFailed = false, apiNoData = false;
+
+      // It is only worth calling the history API if coverage is really missing
+      // (same criterion as backfillIfNeeded): if there are already local data
+      // rows with enough coverage, the request is saved.
+      if (rows.length === 0 || isDayIncomplete(rows, dayStartMs, dayEndMs)){
+        try {
+          const apiKey = (active ? active.apiKey : apiKeyInput.value.trim());
+          const url = buildHistoryURL(stationId, apiKey, formatYYYYMMDD(dayStartDate));
+          const resp = await fetchWithTimeout(url, 15000);
+          if (resp.ok){
+            const data = await resp.json();
+            const obsArr = data.observations || [];
+            const existingEpochs = rows.map(f => f.epochMs);
+            for (const obs of obsArr){
+              if (!obs.epoch) continue;
+              const epochMs = obs.epoch * 1000;
+              if (epochMs < dayStartMs || epochMs > dayEndMs) continue; // the API sometimes returns something just outside the exact day
+              const alreadyExists = existingEpochs.some(e => Math.abs(e - epochMs) < MERGE_TOLERANCE_MS);
+              if (alreadyExists) continue;
+              const vals = extractValues(obs);
+              await saveReading(stationId, epochMs, vals);
+              existingEpochs.push(epochMs);
+              rows.push({ stationId: stationId, epochMs: epochMs, vals: vals });
+              addedFromApi++;
+            }
+            if (addedFromApi === 0) apiNoData = true;
+          } else apiFailed = true;
+        } catch (err) { apiFailed = true; }
+      }
+
+      rows.sort((a, b) => a.epochMs - b.epochMs);
+      specificDayLastRows = rows;
+      btnDownloadDayCSV.disabled = rows.length === 0;
+
+      const dateText = dayStartDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      if (rows.length === 0){
+        specificDayStatusLine.textContent = 'No readings for ' + dateText + ', neither in this browser nor in the API history (if your plan includes it).';
+        chartsSpecificDay.innerHTML = '<p class="evol-empty">There is no data for that day.</p>';
+        return;
+      }
+
+      let apiPiece;
+      if (addedFromApi > 0) apiPiece = 'completed with ' + (addedFromApi === 1 ? '1 reading' : addedFromApi + ' readings') + ' from the API history.';
+      else if (apiFailed) apiPiece = 'the API history could not be queried to fill the gaps (network or API failure); only what was recorded in this browser is shown.';
+      else if (apiNoData) apiPiece = 'the API history returned no new readings (usual if your account\'s plan does not include it); only what was recorded in this browser is shown.';
+      else apiPiece = 'full coverage already stored in this browser, no need to query the API.';
+      specificDayStatusLine.textContent = dateText + ' (' + rows.length + (rows.length === 1 ? ' reading' : ' readings') + '): ' + apiPiece;
+
+      // Same quick summary as the "Summary of the last 7 days" tiles.
+      const r = summarizeDayReadings(rows);
+      const maxText = r.tempMax !== null ? r.tempMax.toFixed(1) + ' °C' : '—';
+      const minText = r.tempMin !== null ? r.tempMin.toFixed(1) + ' °C' : '—';
+      const rainTxt = r.rainTotal !== null ? r.rainTotal.toFixed(1) + ' mm' : '—';
+      specificDaySummary.innerHTML = '<div class="day-summary-only"><div class="day-card">' +
+        '<div class="sd-date">Max / min temperature</div>' +
+        '<div class="sd-temps"><span class="sd-max">' + maxText + '</span><span class="sd-min">' + minText + '</span></div>' +
+        '<div class="sd-extra">Accumulated rain: ' + rainTxt + '</div>' +
+        '</div></div>';
+
+      const rangeMs = Math.max(dayEndMs - dayStartMs, 1);
+      const xTicks = buildTimeTicks(dayStartMs, dayStartMs + 24 * 60 * 60 * 1000, 6);
+      const xPoints = rows.map(f => {
+        const d = new Date(f.epochMs);
+        return { frac: (f.epochMs - dayStartMs) / rangeMs, label: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+      });
+      const groupsWithSeries = buildEvolution7dGroups(rows, dayStartMs, rangeMs);
+      chartsSpecificDay.innerHTML = '';
+      groupsWithSeries.forEach(group => {
+        const card = buildChartCard(group.title, group.unit);
+        chartsSpecificDay.appendChild(card.el);
+        drawSVGChart(card.svg, card.legend, card.tooltip, group.series, xTicks, xPoints, GAP_THRESHOLD_DAY_FRAC);
+      });
+    } finally {
+      btnQueryDay.disabled = false;
+    }
+  }
+
+  function downloadDayCSV(){
+    if (!specificDayLastRows || specificDayLastRows.length === 0) return;
+    const columns = ['time', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index'];
+    const lines = [columns.join(',')];
+    specificDayLastRows.forEach(f => {
+      const row = { time: new Date(f.epochMs).toLocaleString('en-GB') };
+      Object.assign(row, f.vals);
+      lines.push(columns.map(c => {
+        const v = row[c];
+        return (v === null || v === undefined) ? '' : String(v).replace(/,/g, '.');
+      }).join(','));
+    });
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'telemethistory-' + stationIdSafeForFileName() + '-' + specificDayInput.value + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function stationIdSafeForFileName(){
+    const s = stationForEvolution();
+    return s ? s.replace(/[^A-Za-z0-9_-]/g, '') : 'station';
+  }
+
+  /* ============================================================
+     SUMMARY OF THE LAST 7 DAYS (tiles with max/min temperature and
+     accumulated rain), from the same local history (IndexedDB)
+     already used by the 7 day evolution charts.
+     ============================================================ */
+  const DAYS_SUMMARY = 7;
+
+  function summarizeDayReadings(rows){
+    let tempMax = null, tempMin = null, rainTotal = null;
+    rows.forEach(r => {
+      const t = r.vals.temp_c;
+      if (t !== null && t !== undefined){
+        if (tempMax === null || t > tempMax) tempMax = t;
+        if (tempMin === null || t < tempMin) tempMin = t;
+      }
+      const rt = r.vals.rain_total_mm;
+      if (rt !== null && rt !== undefined && (rainTotal === null || rt > rainTotal)) rainTotal = rt;
+    });
+    return { tempMax, tempMin, rainTotal, n: rows.length };
+  }
+
+  let paintDaysSummaryInProgress = false;
+  async function paintDaysSummary(){
+    const stationId = stationForEvolution();
+    if (!stationId){
+      daysGrid.innerHTML = '<p class="days-empty">Set up your station to see the summary of the last few days.</p>';
+      return;
+    }
+    // Avoids overlapping several passes if it is called several times in a row
+    // (new reading + backfill finishing almost at the same time).
+    if (paintDaysSummaryInProgress) return;
+    paintDaysSummaryInProgress = true;
+    try {
+      const today = new Date();
+      const days = [];
+      for (let i = DAYS_SUMMARY - 1; i >= 0; i--){
+        const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const dayStartMs = date.getTime();
+        const dayEndMs = dayStartMs + 24 * 3600 * 1000 - 1;
+        const rows = await queryRange(stationId, dayStartMs, dayEndMs);
+        days.push({ date, isToday: i === 0, r: summarizeDayReadings(rows) });
+      }
+
+      let globalMin = Infinity, globalMax = -Infinity;
+      days.forEach(({ r }) => {
+        if (r.tempMax !== null && r.tempMax > globalMax) globalMax = r.tempMax;
+        if (r.tempMin !== null && r.tempMin < globalMin) globalMin = r.tempMin;
+      });
+      const hasRange = Number.isFinite(globalMin) && Number.isFinite(globalMax) && globalMax > globalMin;
+
+      daysGrid.innerHTML = days.map(({ date, isToday, r }) => {
+        const dateLabel = isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+        if (r.n === 0){
+          return '<div class="day-card' + (isToday ? ' today' : '') + '"><div class="sd-date">' + dateLabel + '</div><div class="sd-extra">No data</div></div>';
+        }
+        let barHtml = '';
+        if (hasRange && r.tempMax !== null && r.tempMin !== null){
+          const left = ((r.tempMin - globalMin) / (globalMax - globalMin)) * 100;
+          const width = Math.max(4, ((r.tempMax - r.tempMin) / (globalMax - globalMin)) * 100);
+          barHtml = '<div class="sd-bar"><div class="sd-fill" style="left:' + left.toFixed(1) + '%;width:' + width.toFixed(1) + '%;"></div></div>';
+        }
+        const maxText = r.tempMax !== null ? r.tempMax.toFixed(1) + '°' : '—';
+        const minText = r.tempMin !== null ? r.tempMin.toFixed(1) + '°' : '—';
+        const rainTxt = r.rainTotal !== null ? r.rainTotal.toFixed(1) + ' mm' : '';
+        return '<div class="day-card' + (isToday ? ' today' : '') + '">' +
+          '<div class="sd-date">' + dateLabel + '</div>' +
+          '<div class="sd-temps"><span class="sd-max">' + maxText + '</span><span class="sd-min">' + minText + '</span></div>' +
+          barHtml +
+          (rainTxt ? '<div class="sd-extra">' + rainTxt + '</div>' : '') +
+          '</div>';
+      }).join('');
+    } finally {
+      paintDaysSummaryInProgress = false;
+    }
+  }
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+  btnSaveConfig.addEventListener('click', saveConfig);
+  btnClearConfig.addEventListener('click', clearConfig);
+  stationIdInput.addEventListener('input', updateStartButtonState);
+  btnStart.addEventListener('click', startMonitor);
+  btnStop.addEventListener('click', stopMonitor);
+  btnStartBar.addEventListener('click', startMonitor);
+  btnStopBar.addEventListener('click', stopMonitor);
+  btnManualPoll.addEventListener('click', manualPoll);
+  btnManualPollBar.addEventListener('click', manualPoll);
+  btnDownloadCSV.addEventListener('click', downloadCSV);
+  btnClearHistory.addEventListener('click', clearHistory);
+  btnAxisUniform.addEventListener('click', () => setXAxisMode('uniform'));
+  btnAxisTime.addEventListener('click', () => setXAxisMode('time'));
+  btnResetCharts.addEventListener('click', resetCharts);
+  // After rendering the charts (their height changes when going from the
+  // placeholder to the real charts), the card is scrolled into view with
+  // enough bottom margin (scroll-margin-bottom in .acc-evol) so that the
+  // hours axis is not covered by the fixed bottom bar (.bottomnav).
+  accEvolution12h.addEventListener('toggle', () => {
+    if (!accEvolution12h.open) return;
+    drawEvolution12h().then(() => accEvolution12h.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  });
+  accEvolution7d.addEventListener('toggle', () => {
+    if (!accEvolution7d.open) return;
+    drawEvolution7d().then(() => accEvolution7d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  });
+  btnQueryDay.addEventListener('click', querySpecificDay);
+  btnDownloadDayCSV.addEventListener('click', downloadDayCSV);
+
+  btnShowApiKey.addEventListener('click', () => {
+    const show = apiKeyInput.type === 'password';
+    apiKeyInput.type = show ? 'text' : 'password';
+    btnShowApiKey.setAttribute('aria-pressed', String(show));
+    btnShowApiKey.innerHTML = '<svg class="i"><use href="#i-' + (show ? 'eye-off' : 'eye') + '"></use></svg>';
+  });
+
+  btnGoConfig.addEventListener('click', () => {
+    configForceExpanded = true;
+    updateConfigState();
+    document.getElementById('sectionConfig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  btnEditConfig.addEventListener('click', () => {
+    configForceExpanded = true;
+    updateConfigState();
+  });
+  btnHideConfig.addEventListener('click', () => {
+    configForceExpanded = false;
+    updateConfigState();
+  });
+  goHome.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  btnHelp.addEventListener('click', openModal);
+  btnHelp2.addEventListener('click', openModal);
+  modalClose.addEventListener('click', closeModal);
+  modalGlossary.addEventListener('click', (e) => { if (e.target === modalGlossary) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  buildCards();
+  loadConfig();
+
+  // The date picker of "Look up a specific day" does not allow picking
+  // a future day (for which, by definition, there can be no readings).
+  {
+    const today = new Date();
+    specificDayInput.max = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+    specificDayInput.value = specificDayInput.max;
+  }
+
+  // The "Evolution over the last 7 days" panel is open by default:
+  // it is drawn immediately with whatever is in the cache (if anything),
+  // and as soon as the real IndexedDB query finishes it is redrawn
+  // with the definitive data.
+  {
+    const initialStationId = stationForEvolution();
+    if (initialStationId) paintEvolution7dFromCache(initialStationId);
+  }
+  redrawEvolutionIfOpen();
+
+  // When the app opens (without waiting for "Start" to be pressed) the
+  // server history is fetched, and repeated every SERVER_SYNC_EVERY_MIN
+  // minutes while the tab is visible: it covers the times when the browser
+  // pauses the app (background tab, locked iPad...).
+  syncServerAndRepaint();
+  setInterval(() => { if (!document.hidden) syncServerAndRepaint(); }, SERVER_SYNC_EVERY_MIN * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncServerAndRepaint(); });
+})();
+</script>
+</body>
+</html>

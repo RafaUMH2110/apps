@@ -76,6 +76,7 @@ URL en GitHub Pages queda limpia:
 | Carpeta | Descripción |
 |---|---|
 | [`telemetria/telemetcolector/`](telemetria/telemetcolector/) | **TeleMet Colector**: programa Python que lee de forma continua la estación meteorológica, guarda un histórico de 12 h en el servidor Linux y lo publica como JSON para que TeleMet Historial complete sus gráficas de evolución. Ver su README. |
+| [`telemetria/telemetcollector/`](telemetria/telemetcollector/) | **TeleMet Collector** (English version of TeleMet Colector): Python program that continuously reads the weather station, keeps a 12 h history on the Linux server and publishes it as JSON so that TeleMet History can complete its evolution charts. English app: [`telemetria/telemet/history/`](telemetria/telemet/history/). See its README. |
 
 ## Despliegue en un servidor propio (Apache)
 

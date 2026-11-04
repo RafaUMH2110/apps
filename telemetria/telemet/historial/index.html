@@ -644,7 +644,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 4 de noviembre de 2026, 09:40</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 4 de noviembre de 2026, 09:58</p>
 </footer>
 
 <div class="bottomnav">
@@ -998,7 +998,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   //      en una ventana de una semana) mientras la de 12h se veía con
   //      medio día vacío: el bug no estaba en cuánto se cubría, sino en
   //      QUÉ parte del día quedaba sin cubrir.
-  const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos
+  const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos (máximo)
+  const HUECO_MIN_MS = 15 * 60 * 1000; // 15 minutos (mínimo del umbral adaptativo de las gráficas)
 
   // Mismo umbral (HUECO_MAX_MS), pero expresado como fracción del ancho
   // total de cada gráfica de evolución: se usa para NO trazar una línea
@@ -2104,9 +2105,25 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // otro del hueco sugeriría un cambio gradual y continuo que en
       // realidad nunca se ha observado (ver nota junto a UMBRAL_GAP_12H_FRAC
       // / UMBRAL_GAP_7D_FRAC). Se dibuja un trazo por cada tramo contiguo.
+      //
+      // El umbral es ADAPTATIVO por serie: umbralGapFrac es el máximo
+      // (HUECO_MAX_MS) y el umbral real es 3 veces la separación habitual
+      // (mediana) entre lecturas de esa serie, con un mínimo de
+      // HUECO_MIN_MS. Así, donde hay lecturas cada pocos minutos, un
+      // tramo con lecturas mucho más espaciadas (p. ej. cada 40 min) no se
+      // une con rectas largas: se ve como puntos sueltos.
+      let umbralSerie = umbralGapFrac;
+      if (umbralGapFrac && pts.length > 2){
+        const sep = [];
+        for (let i = 1; i < pts.length; i++) sep.push(pts[i].x - pts[i - 1].x);
+        sep.sort((a, b) => a - b);
+        const mediana = sep[Math.floor(sep.length / 2)];
+        const minFrac = umbralGapFrac * (HUECO_MIN_MS / HUECO_MAX_MS);
+        umbralSerie = Math.min(umbralGapFrac, Math.max(minFrac, 3 * mediana));
+      }
       const tramos = [[]];
       pts.forEach((p, i) => {
-        if (i > 0 && umbralGapFrac && (p.x - pts[i - 1].x) > umbralGapFrac) tramos.push([]);
+        if (i > 0 && umbralSerie && (p.x - pts[i - 1].x) > umbralSerie) tramos.push([]);
         tramos[tramos.length - 1].push(p);
       });
       tramos.forEach(tramo => {

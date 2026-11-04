@@ -654,7 +654,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 09:40</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 09:58</p>
 </footer>
 
 <div class="bottomnav">
@@ -1009,6 +1009,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   //      in how much was covered, but in WHICH part of the day was left
   //      uncovered.
   const MAX_GAP_MS = 90 * 60 * 1000; // 90 minutos
+  const MIN_GAP_MS = 15 * 60 * 1000; // 15 minutes (floor of the adaptive chart threshold)
 
   // Same threshold (MAX_GAP_MS), but expressed as a fraction of the total
   // width of each evolution chart: it is used to NOT draw a joining line
@@ -2114,9 +2115,25 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // change that was never actually observed (see the note next to
       // GAP_THRESHOLD_12H_FRAC / GAP_THRESHOLD_7D_FRAC). One stroke is drawn
       // for each contiguous segment.
+      //
+      // The threshold is ADAPTIVE per series: gapThresholdFrac is the maximum
+      // (MAX_GAP_MS) and the real threshold is 3 times the usual spacing
+      // (median) between readings of that series, with a minimum of
+      // MIN_GAP_MS. So where readings come every few minutes, a stretch with
+      // much sparser readings (e.g. every 40 min) is not joined with long
+      // straight lines: it shows as isolated dots.
+      let seriesThreshold = gapThresholdFrac;
+      if (gapThresholdFrac && pts.length > 2){
+        const spacing = [];
+        for (let i = 1; i < pts.length; i++) spacing.push(pts[i].x - pts[i - 1].x);
+        spacing.sort((a, b) => a - b);
+        const median = spacing[Math.floor(spacing.length / 2)];
+        const minFrac = gapThresholdFrac * (MIN_GAP_MS / MAX_GAP_MS);
+        seriesThreshold = Math.min(gapThresholdFrac, Math.max(minFrac, 3 * median));
+      }
       const segments = [[]];
       pts.forEach((p, i) => {
-        if (i > 0 && gapThresholdFrac && (p.x - pts[i - 1].x) > gapThresholdFrac) segments.push([]);
+        if (i > 0 && seriesThreshold && (p.x - pts[i - 1].x) > seriesThreshold) segments.push([]);
         segments[segments.length - 1].push(p);
       });
       segments.forEach(segment => {

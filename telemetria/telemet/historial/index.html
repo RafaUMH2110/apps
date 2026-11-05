@@ -644,7 +644,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:09</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:14</p>
 </footer>
 
 <div class="bottomnav">
@@ -782,7 +782,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
-    { titulo: 'Lluvia acumulada', unidad: 'mm', claves: ['rain_total_mm'] }
+    { titulo: 'Tasa de lluvia y lluvia acumulada', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--ink))' }, cero: true },
+    { titulo: 'Radiación solar e índice UV', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
   ];
 
   /* ============================================================
@@ -2379,7 +2380,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - desdeMs) / rangoMs, y: f.vals[key] }));
-        return { etiqueta: def ? def.etiqueta : key, color: def ? def.color : 'var(--c-temp)', puntos: puntos };
+        return {
+          etiqueta: def ? def.etiqueta : key,
+          color: (grupo.colores && grupo.colores[key]) || (def ? def.color : 'var(--c-temp)'),
+          puntos: puntos,
+          unidad: def ? def.unidad : '',
+          eje: (grupo.ejeDer || []).indexOf(key) >= 0 ? 'der' : 'izq',
+          cero: !!grupo.cero,
+          trazo: (grupo.trazos && grupo.trazos[key]) || ''
+        };
       })
     }));
   }

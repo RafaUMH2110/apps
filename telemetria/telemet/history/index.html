@@ -654,7 +654,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:09</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:14</p>
 </footer>
 
 <div class="bottomnav">
@@ -792,7 +792,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { title: 'Humidity', unit: '%', seriesKeys: ['humidity_pct'] },
     { title: 'Pressure', unit: 'hPa', seriesKeys: ['pressure_hpa'] },
     { title: 'Wind and gust', unit: 'km/h', seriesKeys: ['wind_kmh', 'gust_kmh'] },
-    { title: 'Accumulated rain', unit: 'mm', seriesKeys: ['rain_total_mm'] }
+    { title: 'Rain rate and accumulated rain', unit: '', seriesKeys: ['rainrate_mmh', 'rain_total_mm'], rightAxis: ['rain_total_mm'], dashes: { rain_total_mm: '5 3' }, colors: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--ink))' }, zero: true },
+    { title: 'Solar radiation and UV index', unit: '', seriesKeys: ['solarradiation_wm2', 'uv_index'], rightAxis: ['uv_index'], zero: true }
   ];
 
   /* ============================================================
@@ -2388,7 +2389,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const points = rows
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - fromMs) / rangeMs, y: f.vals[key] }));
-        return { label: def ? def.label : key, color: def ? def.color : 'var(--c-temp)', points: points };
+        return {
+          label: def ? def.label : key,
+          color: (group.colors && group.colors[key]) || (def ? def.color : 'var(--c-temp)'),
+          points: points,
+          unit: def ? def.unit : '',
+          axis: (group.rightAxis || []).indexOf(key) >= 0 ? 'right' : 'left',
+          zero: !!group.zero,
+          dash: (group.dashes && group.dashes[key]) || ''
+        };
       })
     }));
   }

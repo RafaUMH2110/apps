@@ -175,6 +175,11 @@ button{font-family:var(--font-body);cursor:pointer}
 .acc-evol .inner{padding-top:16px}
 .evol-note{font-size:12.5px;color:var(--muted);margin:0 0 14px}
 .evol-empty{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+/* Time-window selector (12 h / 24 h) of the evolution charts */
+.evol-window{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 14px}
+.evol-window button{font:inherit;font-size:13px;font-weight:700;padding:6px 18px;border:0;background:transparent;color:var(--steel);cursor:pointer}
+.evol-window button[aria-pressed="true"]{background:var(--steel);color:#fff}
+.evol-window button:focus-visible{outline:2px solid var(--steel);outline-offset:-2px}
 
 .chart-card{margin-bottom:16px}
 .chart-card:last-child{margin-bottom:0}
@@ -583,8 +588,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   </div>
 
   <details class="acc-evol" id="accEvolution12h">
-    <summary><svg class="i"><use href="#i-activity"></use></svg>Evolution over the last 12 hours<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <summary><svg class="i"><use href="#i-activity"></use></svg><span id="evolWindowTitle">Evolution over the last 12 hours</span><svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
+      <div class="evol-window" role="group" aria-label="Chart time window"><button type="button" data-h="12" aria-pressed="true">12 h</button><button type="button" data-h="24" aria-pressed="false">24 h</button></div>
       <p class="evol-note">Optional charts built from the history saved in this browser (not from the session, which is lost on reload). They fill in reading by reading while the monitor is running and, if this app is hosted alongside the server collector, also with the readings the server recorded while the app was closed.</p>
       <p class="evol-note" id="serverStatusLine" style="display:none"></p>
       <div id="charts12h"><p class="evol-empty">There is not enough data yet. Start the monitor and let a few minutes go by.</p></div>
@@ -654,7 +660,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:14</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:28</p>
 </footer>
 
 <div class="bottomnav">
@@ -682,7 +688,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Backoff</b><span>Growing wait between retries after a transient error (network, timeout, 5xx): it doubles each time, up to a configurable maximum.</span></div>
         <div><b>Plausibility check</b><span>Each reading is compared with a physically possible range per variable; if something falls outside the range, a warning is shown before you trust the data.</span></div>
         <div><b>X axis of the sparklines</b><span>“Per reading” spaces the points uniformly; “Real time” places them inside a fixed window (number of points × polling interval) ending right now, with the start and end time of that window under the chart, bunched to the right if the history is not full and with visible gaps if there were retries.</span></div>
-        <div><b>12-hour / 7-day evolution</b><span>Optional panels (tap to expand) with longer charts than the session sparklines: they are built from a history saved in this browser (IndexedDB), which persists across reloads and sessions, unlike the table history. Both show the full history, reading by reading (not a summary). The 7-day one also tries to fill itself from the API history when the monitor starts, for the days with gaps; under that chart a warning shows whether the API history contributed anything or not (many accounts do not have that endpoint available). The 12-hour one also adds the readings recorded by the TeleMet Collector on the server, when available. Hover (or touch) any of them to see the exact value of each reading.</span></div>
+        <div><b>12 / 24-hour and 7-day evolution</b><span>Optional panels (tap to expand) with longer charts than the session sparklines: they are built from a history saved in this browser (IndexedDB), which persists across reloads and sessions, unlike the table history. Both show the full history, reading by reading (not a summary). The 7-day one also tries to fill itself from the API history when the monitor starts, for the days with gaps; under that chart a warning shows whether the API history contributed anything or not (many accounts do not have that endpoint available). The 12-hour one also adds the readings recorded by the TeleMet Collector on the server, when available. Hover (or touch) any of them to see the exact value of each reading. On the hourly one, the 12 h / 24 h selector in its header changes the window shown (the choice is remembered in this browser).</span></div>
         <div><b>Look up a specific day</b><span>Unlike the previous charts, it is not limited to the last 7 days: you pick any past date and, if what is saved in this browser does not cover the whole day, it is completed with the Weather Underground API history for that exact date. If that query returns nothing either (many accounts do not have that endpoint available), a notice is shown and only what exists locally is displayed.</span></div>
       </div>
     </div>
@@ -757,6 +763,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const DB_VERSION = 1;
   const DB_STORE = 'readings';
   const WINDOW_12H_MS = 12 * 60 * 60 * 1000;
+  // Window of the "short" evolution charts: 12 h or 24 h (remembered).
+  const EVOL_WINDOWS_H = [12, 24];
+  const STORAGE_KEY_EVOL_WINDOW = 'telemethistory_evol_window_h';
+  let evolWindowH = (function(){
+    try { const v = parseInt(localStorage.getItem(STORAGE_KEY_EVOL_WINDOW), 10); return EVOL_WINDOWS_H.indexOf(v) >= 0 ? v : 12; }
+    catch (e) { return 12; }
+  })();
   const WEEK_DAYS = 7;
   const LOCAL_RETENTION_DAYS = 9; // a bit over 7 days, margin for the backfill
 
@@ -2338,19 +2351,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!stationId){ charts12h.innerHTML = '<p class="evol-empty">Enter a Station ID to see this chart.</p>'; return; }
 
     const toMs = Date.now();
-    const fromMs = toMs - WINDOW_12H_MS;
+    const windowMs = evolWindowH * 60 * 60 * 1000;
+    const fromMs = toMs - windowMs;
     const rows = await queryRange(stationId, fromMs, toMs);
     if (rows.length === 0){
-      charts12h.innerHTML = emptyHistoryMessage('There is no data from the last 12 hours in this browser yet. Leave it running for a while and reopen this panel.');
+      charts12h.innerHTML = emptyHistoryMessage('There is no data from the last ' + evolWindowH + ' hours in this browser yet. Leave it running for a while and reopen this panel.');
       return;
     }
     rows.sort((a, b) => a.epochMs - b.epochMs);
-    const xTicks = buildTimeTicks(fromMs, toMs, 4);
+    const xTicks = buildTimeTicks(fromMs, toMs, evolWindowH === 24 ? 6 : 4);
     // One "snap" position for the cursor per real reading
     // (finer than the 4-5 visible tick values of the X axis).
     const xPoints = rows.map(f => {
       const d = new Date(f.epochMs);
-      return { frac: (f.epochMs - fromMs) / WINDOW_12H_MS, label: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+      return { frac: (f.epochMs - fromMs) / windowMs, label: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
     });
 
     charts12h.innerHTML = '';
@@ -2361,7 +2375,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const def = CHARTABLES.find(m => m.key === key);
         const points = rows
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
-          .map(f => ({ x: (f.epochMs - fromMs) / WINDOW_12H_MS, y: f.vals[key] }));
+          .map(f => ({ x: (f.epochMs - fromMs) / windowMs, y: f.vals[key] }));
         return {
           label: def ? def.label : key,
           color: (group.colors && group.colors[key]) || (def ? def.color : 'var(--c-temp)'),
@@ -2372,7 +2386,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           dash: (group.dashes && group.dashes[key]) || ''
         };
       });
-      drawSVGChart(card.svg, card.legend, card.tooltip, series, xTicks, xPoints, GAP_THRESHOLD_12H_FRAC);
+      drawSVGChart(card.svg, card.legend, card.tooltip, series, xTicks, xPoints, MAX_GAP_MS / windowMs);
     });
   }
 
@@ -2743,6 +2757,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!accEvolution12h.open) return;
     drawEvolution12h().then(() => accEvolution12h.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
   });
+  // 12 h / 24 h selector of the short evolution charts.
+  const evolWindowBtns = document.querySelectorAll('.evol-window button');
+  const evolWindowTitle = document.getElementById('evolWindowTitle');
+  function applyEvolWindow(){
+    evolWindowBtns.forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === evolWindowH)));
+    evolWindowTitle.textContent = 'Evolution over the last ' + evolWindowH + ' hours';
+  }
+  evolWindowBtns.forEach(b => b.addEventListener('click', () => {
+    evolWindowH = parseInt(b.dataset.h, 10);
+    try { localStorage.setItem(STORAGE_KEY_EVOL_WINDOW, String(evolWindowH)); } catch (e) {}
+    applyEvolWindow();
+    drawEvolution12h();
+  }));
+  applyEvolWindow();
   accEvolution7d.addEventListener('toggle', () => {
     if (!accEvolution7d.open) return;
     drawEvolution7d().then(() => accEvolution7d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));

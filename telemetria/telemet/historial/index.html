@@ -175,6 +175,11 @@ button{font-family:var(--texto);cursor:pointer}
 .acc-evol .inner{padding-top:16px}
 .evol-nota{font-size:12.5px;color:var(--muted);margin:0 0 14px}
 .evol-vacio{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+/* Selector de ventana (12 h / 24 h) de las gráficas de evolución */
+.evol-ventana{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 14px}
+.evol-ventana button{font:inherit;font-size:13px;font-weight:700;padding:6px 18px;border:0;background:transparent;color:var(--steel);cursor:pointer}
+.evol-ventana button[aria-pressed="true"]{background:var(--steel);color:#fff}
+.evol-ventana button:focus-visible{outline:2px solid var(--steel);outline-offset:-2px}
 
 .chart-card{margin-bottom:16px}
 .chart-card:last-child{margin-bottom:0}
@@ -573,8 +578,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   </div>
 
   <details class="acc-evol" id="accEvol12h">
-    <summary><svg class="i"><use href="#i-activity"></use></svg>Evolución de las últimas 12 horas<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <summary><svg class="i"><use href="#i-activity"></use></svg><span id="evolVentanaTitulo">Evolución de las últimas 12 horas</span><svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
+      <div class="evol-ventana" role="group" aria-label="Ventana de tiempo de las gráficas"><button type="button" data-h="12" aria-pressed="true">12 h</button><button type="button" data-h="24" aria-pressed="false">24 h</button></div>
       <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha y, si esta app está alojada junto al recolector del servidor, también con las lecturas que el servidor registró mientras la app estaba cerrada.</p>
       <p class="evol-nota" id="servidorEstadoLinea" style="display:none"></p>
       <div id="charts12h"><p class="evol-vacio">Todavía no hay datos suficientes. Inicia el monitor y deja que pasen unos minutos.</p></div>
@@ -644,7 +650,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:14</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:28</p>
 </footer>
 
 <div class="bottomnav">
@@ -672,7 +678,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
-        <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días con huecos; bajo esa gráfica aparece un aviso indicando si ese histórico de la API ha aportado algo o no (muchas cuentas no tienen ese endpoint disponible). Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
+        <div><b>Evolución de 12 / 24 horas y 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días con huecos; bajo esa gráfica aparece un aviso indicando si ese histórico de la API ha aportado algo o no (muchas cuentas no tienen ese endpoint disponible). Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
         <div><b>Consultar un día en concreto</b><span>A diferencia de las gráficas anteriores, no está limitado a los últimos 7 días: eliges cualquier fecha pasada y, si lo que hay guardado en este navegador no cubre el día entero, se completa con el histórico de la API de Weather Underground para esa fecha exacta. Si tampoco esa consulta devuelve nada (muchas cuentas no tienen ese endpoint disponible), se avisa y se muestra solo lo que haya en local.</span></div>
       </div>
     </div>
@@ -747,6 +753,13 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const DB_VERSION = 1;
   const DB_STORE = 'lecturas';
   const VENTANA_12H_MS = 12 * 60 * 60 * 1000;
+  // Ventana de las gráficas de evolución "cortas": 12 h o 24 h (se recuerda).
+  const VENTANAS_EVOL_H = [12, 24];
+  const STORAGE_KEY_VENTANA_EVOL = 'telemethistorial_ventana_evol_h';
+  let ventanaEvolH = (function(){
+    try { const v = parseInt(localStorage.getItem(STORAGE_KEY_VENTANA_EVOL), 10); return VENTANAS_EVOL_H.indexOf(v) >= 0 ? v : 12; }
+    catch (e) { return 12; }
+  })();
   const DIAS_SEMANA = 7;
   const RETENCION_LOCAL_DIAS = 9; // algo más de 7 días, margen para el backfill
 
@@ -2329,19 +2342,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!stationId){ charts12h.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
 
     const hastaMs = Date.now();
-    const desdeMs = hastaMs - VENTANA_12H_MS;
+    const ventanaMs = ventanaEvolH * 60 * 60 * 1000;
+    const desdeMs = hastaMs - ventanaMs;
     const filas = await consultarRango(stationId, desdeMs, hastaMs);
     if (filas.length === 0){
-      charts12h.innerHTML = mensajeHistorialVacio('Todavía no hay datos de las últimas 12 horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.');
+      charts12h.innerHTML = mensajeHistorialVacio('Todavía no hay datos de las últimas ' + ventanaEvolH + ' horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.');
       return;
     }
     filas.sort((a, b) => a.epochMs - b.epochMs);
-    const xTicks = construirTicksTiempo(desdeMs, hastaMs, 4);
+    const xTicks = construirTicksTiempo(desdeMs, hastaMs, ventanaEvolH === 24 ? 6 : 4);
     // Una posición de "engancho" para el cursor por cada lectura real
     // (más fina que las 4-5 marcas visibles del eje X).
     const puntosX = filas.map(f => {
       const d = new Date(f.epochMs);
-      return { frac: (f.epochMs - desdeMs) / VENTANA_12H_MS, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+      return { frac: (f.epochMs - desdeMs) / ventanaMs, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
     });
 
     charts12h.innerHTML = '';
@@ -2352,7 +2366,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const def = GRAFICABLES.find(m => m.key === key);
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
-          .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
+          .map(f => ({ x: (f.epochMs - desdeMs) / ventanaMs, y: f.vals[key] }));
         return {
           etiqueta: def ? def.etiqueta : key,
           color: (grupo.colores && grupo.colores[key]) || (def ? def.color : 'var(--c-temp)'),
@@ -2363,7 +2377,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           trazo: (grupo.trazos && grupo.trazos[key]) || ''
         };
       });
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, UMBRAL_GAP_12H_FRAC);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, HUECO_MAX_MS / ventanaMs);
     });
   }
 
@@ -2735,6 +2749,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!accEvol12h.open) return;
     dibujarEvolucion12h().then(() => accEvol12h.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
   });
+  // Selector 12 h / 24 h de las gráficas de evolución cortas.
+  const evolVentanaBtns = document.querySelectorAll('.evol-ventana button');
+  const evolVentanaTitulo = document.getElementById('evolVentanaTitulo');
+  function aplicarVentanaEvol(){
+    evolVentanaBtns.forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === ventanaEvolH)));
+    evolVentanaTitulo.textContent = 'Evolución de las últimas ' + ventanaEvolH + ' horas';
+  }
+  evolVentanaBtns.forEach(b => b.addEventListener('click', () => {
+    ventanaEvolH = parseInt(b.dataset.h, 10);
+    try { localStorage.setItem(STORAGE_KEY_VENTANA_EVOL, String(ventanaEvolH)); } catch (e) {}
+    aplicarVentanaEvol();
+    dibujarEvolucion12h();
+  }));
+  aplicarVentanaEvol();
   accEvol7d.addEventListener('toggle', () => {
     if (!accEvol7d.open) return;
     dibujarEvolucion7d().then(() => accEvol7d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));

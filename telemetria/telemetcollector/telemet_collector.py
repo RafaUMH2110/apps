@@ -22,9 +22,16 @@ What it does
    reads it when it opens and uses it to fill the gaps in its 12 and 24 hour
    evolution charts.
 
+SEVERAL STATIONS: besides the [station] section (a single station) there can
+be one [station:STATION_ID] section per station, each with its own `api_key`.
+Every station is read in its own thread (independent interval, retries and
+failures) and has its own database and its own JSON: history_<ID>.json
+(see config.example.ini and MANUAL.md).
+
 All the important parameters are in `config.ini` (see
-`config.example.ini`) and the two secrets can be given through
-environment variables: TELEMET_STATION_ID and TELEMET_API_KEY.
+`config.example.ini`) and the secrets can be given through
+environment variables: TELEMET_STATION_ID and TELEMET_API_KEY (one station), TELEMET_API_KEY_<ID>
+(key of a [station:ID] section without api_key) or TELEMET_STATIONS=ID1:KEY1,ID2:KEY2.
 
 Usage
 -----
@@ -38,11 +45,13 @@ Usage
 
 import argparse
 import configparser
+import copy
 import json
 import logging
 import logging.handlers
 import math
 import os
+import re
 import signal
 import sqlite3
 import sys
@@ -53,7 +62,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.0"
+VERSION = "1.1"
 JSON_FORMAT = 1  # version of the exported JSON format (the app checks it)
 
 log = logging.getLogger("telemet_collector")
@@ -96,6 +105,25 @@ DEFAULTS = {
 # ----------------------------------------------------------------------
 # CONFIGURATION
 # ----------------------------------------------------------------------
+def _safe(text):
+    """Part of a file name derived from a Station ID."""
+    return re.sub(r"[^A-Za-z0-9._-]", "_", text)
+
+
+def _env_suffix(station_id):
+    return re.sub(r"[^A-Za-z0-9]", "_", station_id).upper()
+
+
+class _StationLog(logging.LoggerAdapter):
+    """Prefixes every message with [ID] when there are several stations (empty prefix with one)."""
+    def __init__(self, logger, prefix):
+        super().__init__(logger, {})
+        self.prefix = prefix
+
+    def process(self, msg, kwargs):
+        return self.prefix + msg, kwargs
+
+
 class Config:
     def __init__(self, ini_path, hours=None):
         cp = configparser.ConfigParser(interpolation=None)
@@ -106,9 +134,37 @@ class Config:
             cp.read(ini_path, encoding="utf-8")
         self.base_dir = os.path.dirname(os.path.abspath(ini_path)) if ini_path else os.getcwd()
 
-        # The secrets may come from the environment (they take priority over the .ini).
-        self.station_id = (os.environ.get("TELEMET_STATION_ID") or cp.get("station", "station_id")).strip()
-        self.api_key = (os.environ.get("TELEMET_API_KEY") or cp.get("station", "api_key")).strip()
+        # Stations. The secrets may come from the environment (they take priority over the .ini
+        # in [station]; in [station:ID] the environment is only used when api_key is missing).
+        raw = []
+        sid = (os.environ.get("TELEMET_STATION_ID") or cp.get("station", "station_id")).strip()
+        key = (os.environ.get("TELEMET_API_KEY") or cp.get("station", "api_key")).strip()
+        if sid or key:
+            raw.append({"id": sid, "key": key, "sec": "station"})
+        for sec in cp.sections():
+            if sec.lower().startswith("station:"):
+                sid = sec.split(":", 1)[1].strip()
+                key = cp.get(sec, "api_key", fallback="").strip() or \
+                    os.environ.get("TELEMET_API_KEY_" + _env_suffix(sid), "").strip()
+                raw.append({"id": sid, "key": key, "sec": sec})
+        for pair in (os.environ.get("TELEMET_STATIONS") or "").replace(";", ",").split(","):
+            pair = pair.strip()
+            if not pair:
+                continue
+            if ":" not in pair:
+                raise SystemExit("TELEMET_STATIONS: each item must be ID:KEY (problem with «%s»)" % pair.split(":")[0])
+            sid, key = pair.split(":", 1)
+            raw.append({"id": sid.strip(), "key": key.strip(), "sec": None})
+        seen = set()
+        for r in raw:
+            if r["id"]:
+                if r["id"].lower() in seen:
+                    raise SystemExit("Station %s is repeated in the configuration." % r["id"])
+                seen.add(r["id"].lower())
+        # Compatibility: with a single station these attributes are that station's.
+        self.station_id = raw[0]["id"] if raw else ""
+        self.api_key = raw[0]["key"] if raw else ""
+        self.log_prefix = ""
 
         self.base_url = cp.get("reading", "base_url").strip()
         self.interval_s = max(5.0, cp.getfloat("reading", "interval_s"))
@@ -128,14 +184,63 @@ class Config:
         if self.mode not in ("reset", "sliding"):
             raise SystemExit("[cycle] mode must be 'reset' or 'sliding'")
 
-        self.db_path = self._path(cp.get("storage", "db_path"))
-        self.json_path = self._path(cp.get("output", "json_path"))
+        db_template = cp.get("storage", "db_path")
+        json_template = cp.get("output", "json_path")
+        self.db_path = self._path(db_template)
+        self.json_path = self._path(json_template)
         self.decimals = max(0, cp.getint("output", "decimals"))
+
+        # One configuration per station. With several stations the ID is added to the
+        # DB and JSON names (telemet_<ID>.sqlite, history_<ID>.json), unless the template
+        # already contains {station_id} or the station's section sets its own path.
+        several = len(raw) > 1
+        self.stations = []
+        for r in raw:
+            sec = r["sec"]
+            def option(name, default):
+                return cp.get(sec, name, fallback=default).strip() if sec and cp.has_section(sec) else default
+            sid_f = _safe(r["id"].upper())
+            self.stations.append({
+                "id": r["id"], "key": r["key"],
+                "interval_s": max(5.0, float(option("interval_s", str(self.interval_s)))),
+                "db_path": self._station_path(option("db_path", db_template), sid_f, several),
+                "json_path": self._station_path(option("json_path", json_template), sid_f, several)})
 
         self.log_level = cp.get("log", "level").strip().upper()
         self.log_file = cp.get("log", "file").strip()
         if self.log_file:
             self.log_file = self._path(self.log_file)
+
+    def _station_path(self, template, file_id, several):
+        if "{station_id}" in template:
+            return self._path(template.replace("{station_id}", file_id))
+        path = self._path(template)
+        if not several:
+            return path
+        base, ext = os.path.splitext(path)
+        return "%s_%s%s" % (base, file_id, ext)
+
+    def require_credentials(self):
+        if not self.stations:
+            raise SystemExit("station_id and/or api_key missing (in config.ini or in TELEMET_STATION_ID / TELEMET_API_KEY).")
+        for e in self.stations:
+            if not e["id"] or not e["key"]:
+                raise SystemExit("Station «%s» lacks its station_id or api_key (in config.ini, in [station:ID] or in "
+                                 "TELEMET_API_KEY_%s)." % (e["id"] or "?", _env_suffix(e["id"])))
+
+    def station_configs(self):
+        """One Config (copy) per station; with none configured, the base one (useful for --status)."""
+        if not self.stations:
+            return [self]
+        several = len(self.stations) > 1
+        res = []
+        for e in self.stations:
+            c = copy.copy(self)
+            c.station_id, c.api_key = e["id"], e["key"]
+            c.interval_s, c.db_path, c.json_path = e["interval_s"], e["db_path"], e["json_path"]
+            c.log_prefix = "[%s] " % e["id"] if several else ""
+            res.append(c)
+        return res
 
     def _path(self, path):
         path = os.path.expanduser(path.strip())
@@ -230,7 +335,7 @@ class Store:
         folder = os.path.dirname(path)
         if folder:
             os.makedirs(folder, exist_ok=True)
-        self.db = sqlite3.connect(path, timeout=30)
+        self.db = sqlite3.connect(path, timeout=30, check_same_thread=False)  # each DB is used by one thread only
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("CREATE TABLE IF NOT EXISTS readings ("
                         "epoch_ms INTEGER PRIMARY KEY, vals TEXT NOT NULL)")
@@ -367,6 +472,7 @@ def fetch(cfg):
 class Collector:
     def __init__(self, cfg):
         self.cfg = cfg
+        self.log = _StationLog(log, cfg.log_prefix)
         self.store = Store(cfg.db_path)
         self.stop = threading.Event()
         self.consecutive_failures = 0
@@ -377,7 +483,7 @@ class Collector:
         now = int(time.time() * 1000)
         db_station = self.store.meta("station_id")
         if db_station is not None and db_station != self.cfg.station_id:
-            log.warning("The DB belonged to station %s and station %s is now in use: old data is deleted.",
+            self.log.warning("The DB belonged to station %s and station %s is now in use: old data is deleted.",
                         db_station, self.cfg.station_id)
             self.store.delete_all()
             self.store.set_meta("cycle_start_ms", now)
@@ -397,13 +503,13 @@ class Collector:
                 self.store.delete_all()
                 self.cycle_start_ms = now
                 self.store.set_meta("cycle_start_ms", now)
-                log.info("%.4g h cycle completed: %d readings deleted and a new cycle begins.",
+                self.log.info("%.4g h cycle completed: %d readings deleted and a new cycle begins.",
                          self.cfg.duration_h, n)
                 return True
         else:
             deleted = self.store.delete_older_than(now - self.cfg.duration_ms)
             if deleted:
-                log.debug("Discarded %d readings older than %.4g h.", deleted, self.cfg.duration_h)
+                self.log.debug("Discarded %d readings older than %.4g h.", deleted, self.cfg.duration_h)
                 return True
         return False
 
@@ -415,26 +521,26 @@ class Collector:
             res = fetch(self.cfg)
         except FatalError as e:
             self.consecutive_failures += 1
-            log.error("%s. Will retry every %.0f s; fix config.ini if it is not a passing failure.",
+            self.log.error("%s. Will retry every %.0f s; fix config.ini if it is not a passing failure.",
                       e, self.cfg.backoff_max_s)
             self._export_if(changed)
             return self.cfg.backoff_max_s
         except TransientError as e:
             self.consecutive_failures += 1
             wait = min(self.cfg.backoff_base_s * (2 ** (self.consecutive_failures - 1)), self.cfg.backoff_max_s)
-            log.warning("Reading failed (%s); retry #%d in %.0f s.", e, self.consecutive_failures, wait)
+            self.log.warning("Reading failed (%s); retry #%d in %.0f s.", e, self.consecutive_failures, wait)
             self._export_if(changed)
             return wait
 
         self.consecutive_failures = 0
         if res is None:
-            log.info("The API returned no new observations.")
+            self.log.info("The API returned no new observations.")
             self._export_if(changed)
             return self.cfg.interval_s
         epoch_ms, vals = res
         is_new = self.store.add(epoch_ms, vals)
         t = vals.get("temp_c")
-        log.info("%s  T=%s °C  RH=%s %%  wind=%s km/h  %s",
+        self.log.info("%s  T=%s °C  RH=%s %%  wind=%s km/h  %s",
                  time.strftime("%H:%M:%S", time.localtime(epoch_ms / 1000)),
                  t, vals.get("humidity_pct"), vals.get("wind_kmh"),
                  "stored" if is_new else "(repeated observation, not stored)")
@@ -447,13 +553,13 @@ class Collector:
         try:
             export_json(self.cfg, self.store, self.cycle_start_ms)
         except OSError as e:
-            log.error("Could not write %s: %s (does the folder exist and does the service user have permissions?)",
+            self.log.error("Could not write %s: %s (does the folder exist and does the service user have permissions?)",
                       self.cfg.json_path, e)
 
     def run(self):
-        log.info("TeleMet Collector %s · station %s · every %.0f s · cycle %.4g h (%s)",
+        self.log.info("TeleMet Collector %s · station %s · every %.0f s · cycle %.4g h (%s)",
                  VERSION, self.cfg.station_id, self.cfg.interval_s, self.cfg.duration_h, self.cfg.mode)
-        log.info("DB: %s · JSON: %s", self.cfg.db_path, self.cfg.json_path)
+        self.log.info("DB: %s · JSON: %s", self.cfg.db_path, self.cfg.json_path)
         # Initial JSON: this way the app finds the file even if the first reading is slow.
         self._export_if(True)
         while not self.stop.is_set():
@@ -461,14 +567,14 @@ class Collector:
             try:
                 wait = self.one_round()
             except Exception:  # an unexpected failure must not bring the service down
-                log.exception("Unexpected error in the reading round")
+                self.log.exception("Unexpected error in the reading round")
                 self.consecutive_failures += 1
                 wait = min(self.cfg.backoff_base_s * (2 ** min(self.consecutive_failures, 10)), self.cfg.backoff_max_s)
             # Fixed-rate interval: the time the request took is subtracted.
             remaining = max(1.0, wait - (time.monotonic() - started))
             self.stop.wait(remaining)
         self.store.close()
-        log.info("Stopped.")
+        self.log.info("Stopped.")
 
 
 # ----------------------------------------------------------------------
@@ -506,48 +612,75 @@ def main(argv=None):
     cfg = Config(ini_path, args.hours)
     setup_logging(cfg)
 
+    cfgs = cfg.station_configs()
+
     if args.status:
-        s = Store(cfg.db_path)
-        n, mn, mx = s.summary()
         f = lambda ms: time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ms / 1000)) if ms else "—"
-        print("DB:            %s" % cfg.db_path)
-        print("Station:       %s" % s.meta("station_id", "—"))
-        print("Readings:      %d  (from %s to %s)" % (n, f(mn), f(mx)))
-        start = s.meta("cycle_start_ms")
-        print("Cycle since:   %s" % (f(int(start)) if start else "—"))
-        s.close()
+        for n_c, c in enumerate(cfgs):
+            if n_c:
+                print()
+            s = Store(c.db_path)
+            n, mn, mx = s.summary()
+            print("DB:            %s" % c.db_path)
+            print("Station:       %s" % s.meta("station_id", "—"))
+            print("Readings:      %d  (from %s to %s)" % (n, f(mn), f(mx)))
+            start = s.meta("cycle_start_ms")
+            print("Cycle since:   %s" % (f(int(start)) if start else "—"))
+            s.close()
         return 0
 
-    if not cfg.station_id or not cfg.api_key:
-        raise SystemExit("station_id and/or api_key missing (in config.ini or in TELEMET_STATION_ID / TELEMET_API_KEY).")
+    cfg.require_credentials()
 
     if args.test:
-        try:
-            res = fetch(cfg)
-        except (FatalError, TransientError) as e:
-            print("ERROR: %s" % e)
-            return 1
-        if res is None:
-            print("The API returned no observations.")
-            return 1
-        epoch_ms, vals = res
-        print("Observation from %s" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch_ms / 1000)))
-        print(json.dumps(vals, indent=2, ensure_ascii=False))
-        return 0
+        code = 0
+        for c in cfgs:
+            try:
+                res = fetch(c)
+            except (FatalError, TransientError) as e:
+                print("ERROR (%s): %s" % (c.station_id, e))
+                code = 1
+                continue
+            if res is None:
+                print("The API returned no observations (%s)." % c.station_id)
+                code = 1
+                continue
+            epoch_ms, vals = res
+            print("Station %s · observation from %s" % (c.station_id, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch_ms / 1000))))
+            print(json.dumps(vals, indent=2, ensure_ascii=False))
+        return code
 
-    col = Collector(cfg)
+    cols = [Collector(c) for c in cfgs]
+    if len(cols) > 1:
+        log.info("TeleMet Collector %s · %d stations: %s", VERSION, len(cols), ", ".join(c.station_id for c in cfgs))
+
     if args.once:
-        col.one_round()
-        col._export_if(True)
-        col.store.close()
+        for col in cols:
+            col.one_round()
+            col._export_if(True)
+            col.store.close()
         return 0
 
     def _stop(signum, _frame):
         log.info("Signal %d received: stopping…", signum)
-        col.stop.set()
+        for col in cols:
+            col.stop.set()
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
-    col.run()
+
+    # One thread per station: each with its own pace, retries and failures.
+    # Start-ups are staggered by a few seconds so the requests are not all sent at once.
+    def _launch(col, delay):
+        if delay and col.stop.wait(delay):
+            col.store.close()
+            return
+        col.run()
+    threads = [threading.Thread(target=_launch, args=(col, 2.0 * i), name="station-" + col.cfg.station_id)
+               for i, col in enumerate(cols)]
+    for t in threads:
+        t.start()
+    while any(t.is_alive() for t in threads):
+        for t in threads:
+            t.join(0.5)
     return 0
 
 

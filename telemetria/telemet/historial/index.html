@@ -650,7 +650,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:33</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 0:05</p>
 </footer>
 
 <div class="bottomnav">
@@ -769,7 +769,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // evolución no pierdan información aunque la app haya estado cerrada.
   // La ruta es relativa a esta página; si el fichero no existe (p. ej. en
   // GitHub Pages) simplemente se ignora, sin ningún error visible.
+  // Con varias estaciones el colector escribe un fichero por estación
+  // (historial_<ID>.json, ID en mayúsculas); la app prueba primero el de su
+  // estación y, si no existe, el fichero único historial.json.
   const SERVIDOR_HISTORIAL_URL = 'datos/historial.json';
+  const urlsHistorialServidor = (stationId) =>
+    ['datos/historial_' + String(stationId).toUpperCase().replace(/[^A-Za-z0-9._-]/g, '_') + '.json', SERVIDOR_HISTORIAL_URL];
   const SERVIDOR_TIMEOUT_MS = 15000;
   const SERVIDOR_SYNC_CADA_MIN = 10;               // vuelve a consultarlo cada N minutos con la app abierta
   const SERVIDOR_MERGE_TOLERANCIA_MS = 30 * 1000;  // una lectura del servidor a <30 s de una local se considera la misma
@@ -1843,7 +1848,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   /* ============================================================
      HISTÓRICO DEL SERVIDOR (TeleMet Colector)
-     Lee datos/historial.json, que el programa Python del servidor
+     Lee datos/historial_<ID>.json (o datos/historial.json), que el programa Python del servidor
      actualiza tras cada lectura de la estación, y añade al histórico
      local (IndexedDB) las lecturas que le faltan. Es SIEMPRE aditivo
      —nunca borra ni modifica nada local— y de mejor esfuerzo: si el
@@ -1870,12 +1875,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (servidorSyncEnCurso || !stationId) return { estado: 'omitido' };
     servidorSyncEnCurso = true;
     try {
-      let data;
-      try {
-        const resp = await fetchConTimeout(SERVIDOR_HISTORIAL_URL + '?t=' + Date.now(), SERVIDOR_TIMEOUT_MS);
-        if (!resp.ok) return { estado: 'no-disponible' };
-        data = await resp.json();
-      } catch (err) { return { estado: 'no-disponible' }; }
+      let data = null;
+      for (const url of urlsHistorialServidor(stationId)){
+        try {
+          const resp = await fetchConTimeout(url + '?t=' + Date.now(), SERVIDOR_TIMEOUT_MS);
+          if (!resp.ok) continue;
+          data = await resp.json();
+          break;
+        } catch (err) { /* prueba el siguiente */ }
+      }
+      if (data === null) return { estado: 'no-disponible' };
 
       if (!data || data.formato !== 1 || !Array.isArray(data.lecturas)) return { estado: 'formato' };
       if (String(data.stationId || '').toLowerCase() !== stationId.toLowerCase()){

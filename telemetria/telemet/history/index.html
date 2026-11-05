@@ -329,7 +329,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   b) SERVER HISTORY. If this page is hosted on the same Linux server as the
      TeleMet Collector program (apps/telemetria/telemetcollector), the page
-     reads data/history.json — written by the collector after every reading —
+     reads data/history_<ID>.json (or data/history.json) — written by the collector after every reading —
      and ADDS the readings it is missing to the local history (IndexedDB), so
      the 12 hour charts have no gaps even if the browser was closed. See the
      "SERVER HISTORY" block in the script. If the file does not exist
@@ -660,7 +660,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:33</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 6 November 2026, 00:05</p>
 </footer>
 
 <div class="bottomnav">
@@ -779,7 +779,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // information even if the app was closed.
   // The path is relative to this page; if the file does not exist (e.g. on
   // GitHub Pages) it is simply ignored, with no visible error.
+  // With several stations the collector writes one file per station
+  // (history_<ID>.json, ID in upper case); the app tries its own station's
+  // file first and, if it does not exist, the single history.json file.
   const SERVER_HISTORY_URL = 'data/history.json';
+  const serverHistoryUrls = (stationId) =>
+    ['data/history_' + String(stationId).toUpperCase().replace(/[^A-Za-z0-9._-]/g, '_') + '.json', SERVER_HISTORY_URL];
   const SERVER_TIMEOUT_MS = 15000;
   const SERVER_SYNC_EVERY_MIN = 10;               // re-read it every N minutes while the app is open
   const SERVER_MERGE_TOLERANCE_MS = 30 * 1000;  // a server reading within <30 s of a local one counts as the same one
@@ -1852,7 +1857,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   /* ============================================================
      SERVER HISTORY (TeleMet Collector)
-     Reads data/history.json, which the Python program on the server
+     Reads data/history_<ID>.json (or data/history.json), which the Python program on the server
      updates after every station reading, and adds the readings it
      lacks to the local history (IndexedDB). It is ALWAYS additive
      —it never deletes or modifies anything local— and best-effort: if
@@ -1879,12 +1884,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (serverSyncInProgress || !stationId) return { state: 'skipped' };
     serverSyncInProgress = true;
     try {
-      let data;
-      try {
-        const resp = await fetchWithTimeout(SERVER_HISTORY_URL + '?t=' + Date.now(), SERVER_TIMEOUT_MS);
-        if (!resp.ok) return { state: 'unavailable' };
-        data = await resp.json();
-      } catch (err) { return { state: 'unavailable' }; }
+      let data = null;
+      for (const url of serverHistoryUrls(stationId)){
+        try {
+          const resp = await fetchWithTimeout(url + '?t=' + Date.now(), SERVER_TIMEOUT_MS);
+          if (!resp.ok) continue;
+          data = await resp.json();
+          break;
+        } catch (err) { /* try the next one */ }
+      }
+      if (data === null) return { state: 'unavailable' };
 
       if (!data || data.format !== 1 || !Array.isArray(data.readings)) return { state: 'format' };
       if (String(data.stationId || '').toLowerCase() !== stationId.toLowerCase()){

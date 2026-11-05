@@ -9,7 +9,7 @@
 # (otherwise systemd fails with status 226/NAMESPACE).
 
 [Unit]
-Description=TeleMet Collector (12 h weather-station history)
+Description=TeleMet Collector (weather-station history)
 After=network-online.target
 Wants=network-online.target
 

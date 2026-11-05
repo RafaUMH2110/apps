@@ -4,8 +4,8 @@ A **Python** program (standard library only, no `pip install`) that runs continu
 
 1. Reads your weather station every 5 minutes (configurable) through Weather Underground / Earth Network.
 2. Stores the readings in a SQLite database.
-3. Keeps only the last **12 hours** (sliding mode, the default); it can also wipe everything and start again every 12 h (`mode = reset`).
-4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h evolution charts (even if the browser has been closed).
+3. Keeps only the last **24 hours** (sliding mode, the default; adjustable with `duration_hours`, `--hours` or `TELEMET_HOURS`); it can also wipe everything and start again once those hours are up (`mode = reset`).
+4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h and 24 h evolution charts (even if the browser has been closed).
 
 ```
 station ──► Weather Underground API ──► telemet_collector.py ──► SQLite (data/telemet.sqlite)
@@ -50,6 +50,7 @@ cd /opt/telemet-collector
 sudo -u telemet python3 telemet_collector.py --test      # one reading: prints it and exits (stores nothing)
 sudo -u telemet python3 telemet_collector.py --once      # one reading: stores it and writes the JSON
 sudo -u telemet python3 telemet_collector.py --status    # summary of what is stored
+sudo -u telemet python3 telemet_collector.py --hours 48     # keep 48 h instead of the default 24 h
 ```
 
 ### Run it as a service
@@ -75,7 +76,7 @@ another folder, change `json_path` in `config.ini` (or `SERVER_HISTORY_URL` in t
 How it behaves in the app:
 
 - When it opens (and when “Start” is pressed, and every 10 minutes while the tab is visible) it downloads the JSON and **adds** to the browser's local database the readings it is missing. It never deletes or modifies what the browser already had.
-- The 12 h charts (and the 7 day ones, which use the same database) are complete even if the app was closed.
+- The 12 h and 24 h charts (and the 7 day ones, which use the same database) are complete even if the app was closed.
 - It is only used if the `stationId` in the JSON matches the Station ID entered in the app.
 - If the file does not exist (for example, the GitHub Pages copy) the app works as always, with no errors.
 - If the latest server reading is more than 15 minutes old, the app warns that the collector may be stopped.
@@ -100,8 +101,8 @@ Optional (Apache with `mod_headers`): prevent the JSON from being cached.
 | `reading` | `interval_s` | 300 | Seconds between readings (minimum 5). |
 | `reading` | `timeout_s` | 15 | Maximum time of each request. |
 | `reading` | `backoff_base_s`, `backoff_max_s` | 2, 300 | Retries after a failure: 2, 4, 8… s up to the cap. |
-| `cycle` | `duration_hours` | 12 | Cycle duration. |
-| `cycle` | `mode` | `sliding` | `sliding`: only readings older than `duration_hours` are discarded, so the last 12 h are always complete. `reset`: when the cycle is up, everything is deleted and it starts from scratch. |
+| `cycle` | `duration_hours` | 24 | Hours of history that are kept (24 h serve the 12 h and the 24 h charts). Also via `--hours H` or the `TELEMET_HOURS` variable, which take precedence over the `.ini`. |
+| `cycle` | `mode` | `sliding` | `sliding`: only readings older than `duration_hours` are discarded, so the last `duration_hours` are always complete. `reset`: when the cycle is up, everything is deleted and it starts from scratch. |
 | `storage` | `db_path` | `./data/telemet.sqlite` | SQLite database. |
 | `output` | `json_path` | `/var/www/htdocs/rafa/telemethistory/data/history.json` | JSON read by the app. |
 | `output` | `decimals` | 2 | Decimals of the exported JSON. |
@@ -109,8 +110,8 @@ Optional (Apache with `mod_headers`): prevent the JSON from being cached.
 
 ## Things to keep in mind
 
-- **`sliding` mode (default):** the server always keeps the last 12 h in full. With `mode = reset`, when the 12 h are up the history is left empty and fills again from scratch, so right afterwards a browser with no data of its own would see an almost empty chart.
-- **The cycle survives restarts:** in `reset` mode, the start instant is stored in the database, so restarting the service or the server does not restart the 12 h cycle.
+- **`sliding` mode (default):** the server always keeps the last `duration_hours` in full. With `mode = reset`, when those hours are up the history is left empty and fills again from scratch, so right afterwards a browser with no data of its own would see an almost empty chart.
+- **The cycle survives restarts:** in `reset` mode, the start instant is stored in the database, so restarting the service or the server does not restart the cycle.
 - **API call limit:** with `interval_s = 300` the collector makes 288 calls a day (with 60 it would be 1,440). If visitors of the app use the same key, they add their own. Check your key's limit before lowering the interval.
 - **Repeated observations:** if the station has published nothing new, the API returns the same observation and the collector does not store it twice.
 - **Changing station:** if you change `station_id`, the collector detects that the database belongs to another station and deletes it.

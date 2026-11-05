@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 TeleMet Colector — lectura continua de la estación meteorológica y
-histórico de 12 h en el servidor Linux.
+histórico de 24 h (configurable) en el servidor Linux.
 
 Qué hace
 --------
@@ -11,13 +11,16 @@ Qué hace
 2. Guarda cada lectura en una base SQLite local (solo biblioteca estándar
    de Python: no hay que instalar nada con pip).
 3. Con `modo = deslizante` (por defecto) va descartando las lecturas con más
-   de `duracion_horas` (12), de modo que siempre conserva las últimas 12 h.
+   de `duracion_horas` (24 por defecto), de modo que siempre conserva las
+   últimas 24 h (sirven para las gráficas de 12 h y de 24 h de la app). Las
+   horas pueden cambiarse en config.ini, con la opción --horas o con la
+   variable de entorno TELEMET_HORAS.
    Con `modo = reinicio`, cuando ha transcurrido `duracion_horas` desde el
    inicio del ciclo BORRA todos los datos y empieza un ciclo nuevo.
 4. Tras cada lectura exporta el histórico a un fichero JSON estático dentro
    de la carpeta que sirve Apache, junto a la app TeleMet Historial. La
    app lo lee al abrirse y rellena con él los huecos de sus gráficas de
-   evolución de 12 horas.
+   evolución de 12 y 24 horas.
 
 Todos los parámetros importantes están en `config.ini` (ver
 `config.example.ini`) y los dos secretos pueden darse por variables de
@@ -27,6 +30,7 @@ Uso
 ---
     python3 telemet_colector.py                 # servicio continuo
     python3 telemet_colector.py -c /ruta/config.ini
+    python3 telemet_colector.py --horas 48              # guarda 48 h en lugar de las 24 h por defecto
     python3 telemet_colector.py --una-vez       # una lectura, la guarda, exporta y sale
     python3 telemet_colector.py --probar        # una lectura, la muestra y sale (no guarda nada)
     python3 telemet_colector.py --estado        # resumen de lo guardado en la BD
@@ -70,7 +74,7 @@ DEFECTOS = {
         "backoff_max_s": "300",    # ... con este tope
     },
     "ciclo": {
-        "duracion_horas": "12",
+        "duracion_horas": "24",   # horas de histórico (24 = gráficas de 12 h y de 24 h)
         # deslizante -> solo se borran las lecturas con más de `duracion_horas`
         # reinicio   -> al cumplirse las horas se borra TODO y se empieza de cero
         "modo": "deslizante",
@@ -93,7 +97,7 @@ DEFECTOS = {
 # CONFIGURACIÓN
 # ----------------------------------------------------------------------
 class Config:
-    def __init__(self, ruta_ini):
+    def __init__(self, ruta_ini, horas=None):
         cp = configparser.ConfigParser(interpolation=None)
         cp.read_dict(DEFECTOS)
         if ruta_ini:
@@ -112,9 +116,14 @@ class Config:
         self.backoff_base_s = max(0.5, cp.getfloat("lectura", "backoff_base_s"))
         self.backoff_max_s = max(self.backoff_base_s, cp.getfloat("lectura", "backoff_max_s"))
 
-        self.duracion_h = cp.getfloat("ciclo", "duracion_horas")
+        # Horas de histórico: --horas (línea de órdenes) > TELEMET_HORAS (entorno) > config.ini.
+        valor_horas = horas if horas is not None else (os.environ.get("TELEMET_HORAS") or "").strip() or None
+        try:
+            self.duracion_h = float(valor_horas) if valor_horas is not None else cp.getfloat("ciclo", "duracion_horas")
+        except ValueError:
+            raise SystemExit("Las horas de histórico (--horas / TELEMET_HORAS / [ciclo] duracion_horas) deben ser un número.")
         if self.duracion_h <= 0:
-            raise SystemExit("[ciclo] duracion_horas debe ser > 0")
+            raise SystemExit("Las horas de histórico (duracion_horas) deben ser > 0")
         self.modo = cp.get("ciclo", "modo").strip().lower()
         if self.modo not in ("reinicio", "deslizante"):
             raise SystemExit("[ciclo] modo debe ser 'reinicio' o 'deslizante'")
@@ -363,7 +372,7 @@ class Colector:
         self.fallos_seguidos = 0
         self.ciclo_inicio_ms = self._cargar_ciclo()
 
-    # -- ciclo de 12 h -------------------------------------------------
+    # -- ciclo de `duracion_horas` (24 h por defecto) ------------------
     def _cargar_ciclo(self):
         ahora = int(time.time() * 1000)
         estacion_bd = self.almacen.meta("station_id")
@@ -380,7 +389,7 @@ class Colector:
         return int(inicio)
 
     def aplicar_ciclo(self):
-        """Aplica la regla de las 12 h. Devuelve True si ha cambiado el contenido de la BD."""
+        """Aplica la regla de `duracion_horas`. Devuelve True si ha cambiado el contenido de la BD."""
         ahora = int(time.time() * 1000)
         if self.cfg.modo == "reinicio":
             if ahora - self.ciclo_inicio_ms >= self.cfg.duracion_ms:
@@ -479,9 +488,11 @@ def configurar_log(cfg):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="TeleMet Colector: histórico de 12 h de la estación en el servidor.")
+    ap = argparse.ArgumentParser(description="TeleMet Colector: histórico de la estación (24 h por defecto) en el servidor.")
     ap.add_argument("-c", "--config", default=None,
                     help="ruta de config.ini (por defecto, config.ini junto al script si existe)")
+    ap.add_argument("--horas", type=float, default=None, metavar="H",
+                    help="horas de histórico a guardar (sustituye a duracion_horas de config.ini y a TELEMET_HORAS; por defecto 24)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--una-vez", action="store_true", help="hace una lectura, la guarda, exporta el JSON y sale")
     g.add_argument("--probar", action="store_true", help="hace una lectura y la muestra, sin guardar nada")
@@ -492,7 +503,7 @@ def main(argv=None):
     if ruta_ini is None:
         candidato = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
         ruta_ini = candidato if os.path.isfile(candidato) else None
-    cfg = Config(ruta_ini)
+    cfg = Config(ruta_ini, args.horas)
     configurar_log(cfg)
 
     if args.estado:

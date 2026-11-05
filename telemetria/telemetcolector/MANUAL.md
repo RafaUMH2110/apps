@@ -1,6 +1,6 @@
 # TeleMet Colector — Manual completo
 
-Manual de instalación, uso, configuración y funcionamiento interno de **TeleMet Colector**, el programa en Python que mantiene en el servidor Linux un histórico de las últimas 12 horas de la estación meteorológica y lo pone a disposición de la app **TeleMet Historial**.
+Manual de instalación, uso, configuración y funcionamiento interno de **TeleMet Colector**, el programa en Python que mantiene en el servidor Linux un histórico de las últimas 24 horas (configurable) de la estación meteorológica y lo pone a disposición de la app **TeleMet Historial**.
 
 - **Código:** `RafaUMH2110/apps` → `telemetria/telemetcolector/`
 - **App asociada:** `telemetria/telemet/historial/index.html` (TeleMet Historial)
@@ -34,15 +34,15 @@ Manual de instalación, uso, configuración y funcionamiento interno de **TeleMe
 
 ## 1. Para qué sirve
 
-TeleMet Historial dibuja gráficas de evolución de las últimas 12 horas (y de 7 días) a partir de las lecturas que **el propio navegador** ha ido guardando mientras la app estaba abierta. Si la app se cierra, el navegador se suspende (pestaña en segundo plano, iPad bloqueado…) o se abre desde un dispositivo nuevo, esas gráficas tienen huecos.
+TeleMet Historial dibuja gráficas de evolución de las últimas 12 o 24 horas (y de 7 días) a partir de las lecturas que **el propio navegador** ha ido guardando mientras la app estaba abierta. Si la app se cierra, el navegador se suspende (pestaña en segundo plano, iPad bloqueado…) o se abre desde un dispositivo nuevo, esas gráficas tienen huecos.
 
 TeleMet Colector resuelve eso con un proceso que **no se detiene nunca** en el servidor:
 
 1. Consulta la estación cada cierto tiempo (por defecto, **cada 5 minutos**).
 2. Guarda cada lectura en una base de datos SQLite.
-3. Conserva solo las **últimas 12 horas** (modo `deslizante`, por defecto) o, si se prefiere, **borra todo cada 12 horas** y empieza de nuevo (modo `reinicio`).
+3. Conserva solo las **últimas 24 horas** (modo `deslizante`, por defecto; el número de horas es configurable con `duracion_horas`, `--horas` o `TELEMET_HORAS`) o, si se prefiere, **borra todo al cumplirse esas horas** y empieza de nuevo (modo `reinicio`).
 4. Tras cada lectura publica el histórico en un fichero `historial.json` que sirve Apache.
-5. La app, al abrirse, lee ese JSON y **añade a su base local las lecturas que le faltan**, de forma que las gráficas de 12 horas no pierden información.
+5. La app, al abrirse, lee ese JSON y **añade a su base local las lecturas que le faltan**, de forma que las gráficas de 12 y de 24 horas no pierden información.
 
 Todo es configurable desde un único fichero `config.ini`.
 
@@ -61,7 +61,7 @@ Todo es configurable desde un único fichero `config.ini`.
                               │  telemet_colector.py (systemd) │
                               │   · lectura cada intervalo_s   │
                               │   · reintentos con backoff     │
-                              │   · regla de las 12 h          │
+                              │   · regla de duracion_horas    │
                               └───────┬─────────────────┬──────┘
                                       │                 │
                        INSERT OR IGNORE                 │ escritura atómica
@@ -76,7 +76,7 @@ Todo es configurable desde un único fichero `config.ini`.
                                               │ Navegador: TeleMet Historial   │
                                               │  · IndexedDB (histórico local) │
                                               │  · fusión aditiva con el JSON  │
-                                              │  · gráficas de 12 h / 7 días   │
+                                              │  · gráficas 12 h / 24 h / 7 d  │
                                               └────────────────────────────────┘
 ```
 
@@ -265,7 +265,7 @@ sudo systemctl enable --now telemet-colector
 
 ```ini
 [Unit]
-Description=TeleMet Colector (histórico de 12 h de la estación meteorológica)
+Description=TeleMet Colector (histórico de la estación meteorológica)
 # Arranca cuando ya hay red
 After=network-online.target
 Wants=network-online.target
@@ -318,7 +318,7 @@ Si prefieres no usar systemd, puedes programar una lectura puntual con `--una-ve
 */5 * * * * telemet /usr/bin/python3 /opt/telemet-colector/telemet_colector.py -c /opt/telemet-colector/config.ini --una-vez >> /var/log/telemet-colector.log 2>&1
 ```
 
-Funciona igual (la regla de las 12 h se aplica en cada ejecución), pero pierdes los reintentos con backoff y el ritmo fijo del bucle. Se recomienda systemd.
+Funciona igual (la regla de `duracion_horas` se aplica en cada ejecución), pero pierdes los reintentos con backoff y el ritmo fijo del bucle. Se recomienda systemd.
 
 ### 7.5. Variante: secretos fuera del `config.ini`
 
@@ -392,7 +392,7 @@ Activar la compresión del JSON (`mod_deflate`, tipo `application/json`) reduce 
 
 ### 8.5. Verificar que la app lo usa
 
-Abre la app, introduce (o deja guardado) el Station ID y despliega el panel **«Evolución de las últimas 12 horas»**. Debajo de la nota verás una de estas líneas (ver [sección 13.4](#134-mensajes-que-muestra-la-app)).
+Abre la app, introduce (o deja guardado) el Station ID y despliega el panel **«Evolución de las últimas 12 horas»** (o 24, según el selector 12 h / 24 h del panel). Debajo de la nota verás una de estas líneas (ver [sección 13.4](#134-mensajes-que-muestra-la-app)).
 
 ---
 
@@ -407,7 +407,7 @@ Formato estándar INI. Las rutas relativas se resuelven **respecto a la carpeta 
 | `station_id` | *(vacío)* | Identificador de la estación (p. ej. `IELCHE12`). Obligatorio. Si cambia respecto al que usó la base de datos, **se borran los datos antiguos** (ver 11.7). |
 | `api_key` | *(vacío)* | Clave de la API de Weather Underground / Earth Network. Obligatoria. |
 
-Ambos pueden venir de las variables de entorno `TELEMET_STATION_ID` y `TELEMET_API_KEY`, que prevalecen sobre el `.ini`.
+Ambos pueden venir de las variables de entorno `TELEMET_STATION_ID` y `TELEMET_API_KEY`, que prevalecen sobre el `.ini`. De forma análoga, `TELEMET_HORAS` sustituye a `duracion_horas`.
 
 ### 9.2. `[lectura]`
 
@@ -421,12 +421,14 @@ Ambos pueden venir de las variables de entorno `TELEMET_STATION_ID` y `TELEMET_A
 
 **Elegir `intervalo_s`.** Cada lectura es una llamada a la API:
 
-| `intervalo_s` | Llamadas/día | Lecturas en 12 h | Tamaño aprox. del JSON |
+| `intervalo_s` | Llamadas/día | Lecturas en 24 h | Tamaño aprox. del JSON |
 |---|---|---|---|
-| 60 | 1.440 | 720 | ~230 KB |
-| 120 | 720 | 360 | ~115 KB |
-| **300 (defecto)** | **288** | **144** | **~45 KB** |
-| 600 | 144 | 72 | ~23 KB |
+| 60 | 1.440 | 1.440 | ~460 KB |
+| 120 | 720 | 720 | ~230 KB |
+| **300 (defecto)** | **288** | **288** | **~90 KB** |
+| 600 | 144 | 144 | ~45 KB |
+
+El tamaño es proporcional a las horas guardadas (con 12 h sería la mitad; con 48 h, el doble).
 
 Los visitantes de la app que usen la misma API Key consumen llamadas adicionales (la app sondea por su cuenta cada 60 s por defecto mientras está en marcha). Comprueba el límite diario de tu clave antes de bajar mucho el intervalo.
 
@@ -434,10 +436,10 @@ Los visitantes de la app que usen la misma API Key consumen llamadas adicionales
 
 | Parámetro | Defecto | Descripción |
 |---|---|---|
-| `duracion_horas` | `12` | Horas de histórico. Admite decimales (p. ej. `0.5`). Debe ser > 0. |
+| `duracion_horas` | `24` | Horas de histórico que se conservan. Admite decimales (p. ej. `0.5`). Debe ser > 0. 24 h bastan para las gráficas de 12 h y de 24 h de la app. Se puede sustituir sin tocar el `.ini` con la opción `--horas H` o la variable de entorno `TELEMET_HORAS` (prioridad: `--horas` > `TELEMET_HORAS` > `.ini`). |
 | `modo` | `deslizante` | Qué ocurre al cumplirse `duracion_horas`. Ver abajo. |
 
-**`modo = deslizante` (por defecto).** En cada vuelta se borran las lecturas con más de `duracion_horas`. El servidor siempre dispone de las últimas 12 h completas. Es el modo recomendado: nunca hay un momento con el histórico vacío.
+**`modo = deslizante` (por defecto).** En cada vuelta se borran las lecturas con más de `duracion_horas`. El servidor siempre dispone de las últimas `duracion_horas` horas completas. Es el modo recomendado: nunca hay un momento con el histórico vacío.
 
 **`modo = reinicio`.** Se cuenta desde el instante de inicio del ciclo; cuando `ahora − inicio ≥ duracion_horas` se **borra todo** y se abre un ciclo nuevo. Justo después el histórico del servidor está vacío y se va llenando; un navegador sin datos propios vería entonces la gráfica casi vacía hasta que pase tiempo. El instante de inicio se guarda en la base de datos, de modo que reiniciar el servicio o el servidor **no** reinicia el ciclo.
 
@@ -474,13 +476,14 @@ El `config.ini` se lee solo al arrancar: tras editarlo, `sudo systemctl restart 
 ## 10. Referencia de línea de órdenes
 
 ```
-python3 telemet_colector.py [-c RUTA_CONFIG] [--una-vez | --probar | --estado]
+python3 telemet_colector.py [-c RUTA_CONFIG] [--horas H] [--una-vez | --probar | --estado]
 ```
 
 | Opción | Efecto | Escribe en BD / JSON |
 |---|---|---|
 | *(ninguna)* | Servicio continuo: bucle infinito hasta `SIGINT`/`SIGTERM`. | Sí |
 | `-c`, `--config RUTA` | Fichero de configuración. Si se omite, usa `config.ini` junto al script **si existe**; si no, solo valores por defecto y entorno. | — |
+| `--horas H` | Horas de histórico a conservar (admite decimales). Sustituye a `duracion_horas` del `.ini` y a `TELEMET_HORAS`. | — |
 | `--una-vez` | Una lectura; la guarda, exporta el JSON y sale. | Sí |
 | `--probar` | Una lectura; la imprime y sale. Código de salida 1 si falla. | **No** |
 | `--estado` | Resumen de la BD: ruta, estación, nº de lecturas con primer/último instante, inicio del ciclo. No necesita credenciales. | No |
@@ -507,7 +510,7 @@ arranque
   └─ cargar config, abrir SQLite, recuperar inicio de ciclo
   └─ exportar JSON inicial (para que la app encuentre el fichero ya)
   └─ repetir hasta SIGINT/SIGTERM:
-        1. aplicar la regla de las 12 h
+        1. aplicar la regla de duracion_horas
         2. consultar la API
         3. guardar la lectura (si es nueva)
         4. exportar el JSON (si algo cambió)
@@ -551,12 +554,12 @@ Se ha comprobado contra la implementación JavaScript de la app con 880 combinac
 | Excepción inesperada en el código | Se registra con traceback y el bucle continúa tras un backoff; el servicio no muere. |
 | No se puede escribir el JSON | Error en el log (con la ruta y la pista de permisos) y se sigue leyendo y guardando. |
 
-### 11.5. La regla de las 12 horas
+### 11.5. La regla de `duracion_horas`
 
 Se ejecuta **al principio de cada vuelta**, antes de pedir la lectura.
 
 - **Deslizante:** `DELETE … WHERE epoch_ms < ahora − duracion`. Si borró algo, el JSON se reexporta.
-- **Reinicio:** si `ahora − ciclo_inicio ≥ duracion`, `DELETE` de todas las lecturas + `VACUUM`, nuevo `ciclo_inicio` = ahora (guardado en la tabla `meta`) y reexportación. Mensaje en el log: «Ciclo de 12 h cumplido: borradas N lecturas y comienza un ciclo nuevo.»
+- **Reinicio:** si `ahora − ciclo_inicio ≥ duracion`, `DELETE` de todas las lecturas + `VACUUM`, nuevo `ciclo_inicio` = ahora (guardado en la tabla `meta`) y reexportación. Mensaje en el log: «Ciclo de 24 h cumplido: borradas N lecturas y comienza un ciclo nuevo.»
 
 ### 11.6. Cuándo se escribe el JSON
 
@@ -654,7 +657,7 @@ sudo -u telemet sqlite3 /opt/telemet-colector/datos/telemet.sqlite \
 | `stationId` | Estación a la que pertenecen los datos. La app solo los usa si coincide (sin distinguir mayúsculas) con el Station ID escrito en ella. |
 | `generadoMs` | Instante de la exportación (ms UTC). |
 | `modo` | `deslizante` o `reinicio`. |
-| `duracionMs` | Duración del ciclo en milisegundos (12 h = 43 200 000). |
+| `duracionMs` | Duración del ciclo en milisegundos (24 h = 86 400 000). |
 | `cicloInicioMs` | Inicio del ciclo guardado en la BD. En modo deslizante es solo informativo. |
 | `cicloFinMs` | Fin previsto del ciclo (solo en modo `reinicio`; `null` en deslizante). |
 | `intervaloS` | Intervalo de lectura configurado; la app lo usa para ajustar el aviso de «colector parado». |
@@ -727,7 +730,7 @@ Garantías:
 
 ### 13.4. Mensajes que muestra la app
 
-En el panel «Evolución de las últimas 12 horas»:
+En el panel «Evolución de las últimas 12 horas» (o 24):
 
 | Situación | Mensaje |
 |---|---|
@@ -742,7 +745,7 @@ En el panel «Evolución de las últimas 12 horas»:
 ### 13.5. Qué NO hace
 
 - No usa el servidor en lugar del navegador: el navegador sigue registrando sus propias lecturas cada `pollInterval` (60 s por defecto).
-- No ofrece más de 12 h: el JSON solo contiene la ventana del servidor.
+- No ofrece más horas de las guardadas: el JSON solo contiene la ventana del servidor (`duracion_horas`, 24 h por defecto). Con una ventana de 24 h en la app, la primera mitad depende de lo que el navegador haya guardado si `duracion_horas` es menor de 24.
 - No soporta varias estaciones en el mismo JSON (ver FAQ).
 
 ---
@@ -752,7 +755,7 @@ En el panel «Evolución de las últimas 12 horas»:
 ### 14.1. Interpretar el log
 
 ```
-2026-11-03 21:19:12 INFO TeleMet Colector 1.0 · estación ITEST1 · cada 300 s · ciclo 12 h (deslizante)
+2026-11-03 21:19:12 INFO TeleMet Colector 1.0 · estación ITEST1 · cada 300 s · ciclo 24 h (deslizante)
 2026-11-03 21:19:12 INFO BD: /opt/telemet-colector/datos/telemet.sqlite · JSON: /var/www/.../historial.json
 2026-11-03 21:19:12 INFO 21:19:12  T=18.4 °C  HR=62 %  viento=7.2 km/h  guardada
 2026-11-03 21:24:12 INFO 21:24:12  T=18.3 °C  HR=62 %  viento=6.8 km/h  guardada
@@ -772,7 +775,7 @@ ls -l --time-style=full-iso /var/www/htdocs/rafa/telemethistorial/datos/historia
 
 ### 14.3. Copias de seguridad
 
-No son necesarias: son datos de 12 h reconstruibles y efímeros. Solo conviene guardar `config.ini` (por la clave) en un sitio seguro.
+No son necesarias: son datos de unas horas, reconstruibles y efímeros. Solo conviene guardar `config.ini` (por la clave) en un sitio seguro.
 
 ### 14.4. Actualizar el programa
 
@@ -826,7 +829,7 @@ Edita `config.ini` y reinicia el servicio. Al pasar de `reinicio` a `deslizante`
 | La app dice «otra estación (X)» | El Station ID de la app y el del colector no coinciden. | Escribe en la app el mismo Station ID que en `config.ini`. |
 | La app avisa «el recolector podría estar parado» | Última lectura del servidor muy antigua. | `systemctl status`, `journalctl`; comprueba la estación y la red. |
 | Gráficas con tramos rotos en la línea | Hueco > 90 min sin lecturas (la app corta la línea a partir de ahí). | Mira el log del colector en ese intervalo. |
-| El histórico del servidor se vacía de golpe cada 12 h | Estás en `modo = reinicio`. | Cambia a `modo = deslizante` y reinicia el servicio. |
+| El histórico del servidor se vacía de golpe al cumplirse `duracion_horas` | Estás en `modo = reinicio`. | Cambia a `modo = deslizante` y reinicia el servicio. |
 | `PermissionError` al abrir la BD | La carpeta `datos/` no pertenece a `telemet`. | `sudo chown -R telemet:telemet /opt/telemet-colector`. |
 | Fechas del log desfasadas | Zona horaria del servidor distinta de la esperada. | `timedatectl`; los datos (epoch UTC) son correctos igualmente. |
 
@@ -837,10 +840,10 @@ Para depurar en detalle: pon `nivel = DEBUG`, reinicia y mira `journalctl -u tel
 ## 17. Preguntas frecuentes
 
 **¿Qué pasa si el servidor se reinicia o se corta la luz?**
-El servicio arranca con el sistema (`enable`) y reabre la base SQLite. En modo deslizante, al volver continúa donde lo dejó (las lecturas de las últimas 12 h se conservan; habrá un hueco por el tiempo caído). En modo reinicio, el ciclo continúa con su inicio original.
+El servicio arranca con el sistema (`enable`) y reabre la base SQLite. En modo deslizante, al volver continúa donde lo dejó (las lecturas de las últimas `duracion_horas` se conservan; habrá un hueco por el tiempo caído). En modo reinicio, el ciclo continúa con su inicio original.
 
-**¿Puedo guardar más de 12 horas?**
-Sí: cambia `duracion_horas` (p. ej. `24` o `48`). La gráfica de 12 h de la app seguirá mostrando 12 h, pero el servidor entregará más datos, que quedan en la base local del navegador y alimentan las gráficas de 7 días. Aumentará el tamaño del JSON proporcionalmente.
+**¿Puedo guardar más (o menos) de 24 horas?**
+Sí: cambia `duracion_horas` en el `.ini` (p. ej. `48`), o usa `--horas 48` / `TELEMET_HORAS=48` sin tocar el fichero. Las gráficas de 12 h y de 24 h de la app solo necesitan 24 h; con más horas, el servidor entrega datos extra que quedan en la base local del navegador y alimentan las gráficas de 7 días. El tamaño del JSON crece proporcionalmente. Con menos de 24 h, la gráfica de 24 h dependerá en su parte antigua de lo que haya guardado el navegador.
 
 **¿Puedo usar un intervalo menor de 5 s?**
 No: el mínimo es 5 s, y la API no actualiza tan rápido; además consumiría la cuota diaria.
@@ -885,7 +888,7 @@ La app seguirá funcionando sin el JSON.
 
 ## 19. Apéndice: ejemplos
 
-### 19.1. `config.ini` por defecto (5 min, deslizante, 12 h)
+### 19.1. `config.ini` por defecto (5 min, deslizante, 24 h)
 
 ```ini
 [estacion]
@@ -900,7 +903,7 @@ backoff_base_s = 2
 backoff_max_s  = 300
 
 [ciclo]
-duracion_horas = 12
+duracion_horas = 24
 modo = deslizante
 
 [almacen]
@@ -922,7 +925,7 @@ fichero =
 intervalo_s = 60
 ```
 
-(1.440 llamadas al día; ~230 KB de JSON).
+(1.440 llamadas al día; ~460 KB de JSON).
 
 ### 19.3. Borrado completo cada 12 h (comportamiento «reinicio»)
 
@@ -932,13 +935,15 @@ duracion_horas = 12
 modo = reinicio
 ```
 
-### 19.4. Guardar 24 h
+### 19.4. Guardar 48 h
 
 ```ini
 [ciclo]
-duracion_horas = 24
+duracion_horas = 48
 modo = deslizante
 ```
+
+O sin tocar el fichero: `python3 telemet_colector.py --horas 48` (o `TELEMET_HORAS=48`).
 
 ### 19.5. Instalación completa en un bloque (para copiar y pegar)
 

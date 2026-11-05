@@ -4,8 +4,8 @@ Programa en **Python** (solo biblioteca estándar, sin `pip install`) que se eje
 
 1. Lee la estación cada 5 minutos (configurable) la estación meteorológica vía Weather Underground / Earth Network.
 2. Guarda las lecturas en una base SQLite.
-3. Conserva solo las últimas **12 horas** (modo deslizante, por defecto); también puede borrar todo y empezar de nuevo cada 12 h (`modo = reinicio`).
-4. Tras cada lectura exporta el histórico a un JSON estático junto a la app **TeleMet Historial**, que lo lee al abrirse y rellena con él los huecos de sus gráficas de evolución de 12 h (aunque el navegador haya estado cerrado).
+3. Conserva solo las últimas **24 horas** (modo deslizante, por defecto; ajustable con `duracion_horas`, `--horas` o `TELEMET_HORAS`); también puede borrar todo y empezar de nuevo al cumplirse esas horas (`modo = reinicio`).
+4. Tras cada lectura exporta el histórico a un JSON estático junto a la app **TeleMet Historial**, que lo lee al abrirse y rellena con él los huecos de sus gráficas de evolución de 12 h y de 24 h (aunque el navegador haya estado cerrado).
 
 ```
 estación ──► API Weather Underground ──► telemet_colector.py ──► SQLite (datos/telemet.sqlite)
@@ -50,6 +50,7 @@ cd /opt/telemet-colector
 sudo -u telemet python3 telemet_colector.py --probar     # una lectura, la muestra y sale (no guarda nada)
 sudo -u telemet python3 telemet_colector.py --una-vez    # una lectura, la guarda y escribe el JSON
 sudo -u telemet python3 telemet_colector.py --estado     # resumen de lo guardado
+sudo -u telemet python3 telemet_colector.py --horas 48    # guarda 48 h en vez de las 24 h por defecto
 ```
 
 ### Dejarlo como servicio
@@ -75,7 +76,7 @@ otra carpeta, cambia `ruta_json` en `config.ini` (o `SERVIDOR_HISTORIAL_URL` en 
 Funcionamiento en la app:
 
 - Al abrirla (y al pulsar «Iniciar», y cada 10 minutos con la pestaña visible) descarga el JSON y **añade** a la base local del navegador las lecturas que le faltan. Nunca borra ni modifica lo que el navegador ya tenía.
-- Las gráficas de 12 h (y las de 7 días, que usan la misma base) quedan completas aunque la app haya estado cerrada.
+- Las gráficas de 12 h y de 24 h (y las de 7 días, que usan la misma base) quedan completas aunque la app haya estado cerrada.
 - Solo se usa si el `stationId` del JSON coincide con el Station ID escrito en la app.
 - Si el fichero no existe (por ejemplo, la copia de GitHub Pages) la app funciona como siempre, sin errores.
 - Si la última lectura del servidor tiene más de 15 minutos, la app avisa de que el colector podría estar parado.
@@ -100,8 +101,8 @@ Opcional (Apache con `mod_headers`): evitar que se cachee el JSON.
 | `lectura` | `intervalo_s` | 300 | Segundos entre lecturas (mínimo 5). |
 | `lectura` | `timeout_s` | 15 | Tiempo máximo de cada petición. |
 | `lectura` | `backoff_base_s`, `backoff_max_s` | 2, 300 | Reintentos tras un fallo: 2, 4, 8… s hasta el tope. |
-| `ciclo` | `duracion_horas` | 12 | Duración del ciclo. |
-| `ciclo` | `modo` | `deslizante` | `deslizante`: solo se descartan las lecturas con más de `duracion_horas`, así que siempre hay las últimas 12 h completas. `reinicio`: al cumplirse el ciclo se borra todo y se empieza de cero. |
+| `ciclo` | `duracion_horas` | 24 | Horas de histórico que se conservan (24 h sirven para las gráficas de 12 h y de 24 h). También con `--horas H` o la variable `TELEMET_HORAS`, que tienen prioridad sobre el `.ini`. |
+| `ciclo` | `modo` | `deslizante` | `deslizante`: solo se descartan las lecturas con más de `duracion_horas`, así que siempre hay las últimas `duracion_horas` completas. `reinicio`: al cumplirse el ciclo se borra todo y se empieza de cero. |
 | `almacen` | `ruta_bd` | `./datos/telemet.sqlite` | Base de datos SQLite. |
 | `salida` | `ruta_json` | `/var/www/htdocs/rafa/telemethistorial/datos/historial.json` | JSON que lee la app. |
 | `salida` | `decimales` | 2 | Decimales del JSON exportado. |
@@ -109,8 +110,8 @@ Opcional (Apache con `mod_headers`): evitar que se cachee el JSON.
 
 ## Cosas a tener en cuenta
 
-- **Modo `deslizante` (por defecto):** el servidor conserva siempre las últimas 12 h completas. Con `modo = reinicio`, al cumplirse las 12 h el histórico queda vacío y vuelve a llenarse desde cero, así que justo después un navegador sin datos propios vería la gráfica casi vacía.
-- **El ciclo sobrevive a reinicios:** en modo `reinicio`, el instante de inicio se guarda en la base de datos, de modo que reiniciar el servicio o el servidor no reinicia el ciclo de 12 h.
+- **Modo `deslizante` (por defecto):** el servidor conserva siempre las últimas `duracion_horas` completas. Con `modo = reinicio`, al cumplirse esas horas el histórico queda vacío y vuelve a llenarse desde cero, así que justo después un navegador sin datos propios vería la gráfica casi vacía.
+- **El ciclo sobrevive a reinicios:** en modo `reinicio`, el instante de inicio se guarda en la base de datos, de modo que reiniciar el servicio o el servidor no reinicia el ciclo.
 - **Límite de llamadas de la API:** con `intervalo_s = 300` el colector hace 288 llamadas al día (con 60 serían 1.440). Si los visitantes de la app usan la misma clave, suman las suyas. Comprueba el límite de tu clave antes de bajar el intervalo.
 - **Observaciones repetidas:** si la estación no ha publicado nada nuevo, la API devuelve la misma observación y el colector no la guarda dos veces.
 - **Cambio de estación:** si cambias `station_id`, el colector detecta que la base es de otra estación y la borra.

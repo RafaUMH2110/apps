@@ -660,7 +660,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:28</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:33</p>
 </footer>
 
 <div class="bottomnav">
@@ -774,7 +774,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const LOCAL_RETENTION_DAYS = 9; // a bit over 7 days, margin for the backfill
 
   // Server history (TeleMet Collector program, running on the same Linux server
-  // that hosts this app): a JSON file with the readings of the last 12 h, which
+  // that hosts this app): a JSON file with the readings of the last 24 h (configurable in the collector; enough for the 12 h and 24 h charts), which
   // are merged with the browser's own so that the evolution charts lose no
   // information even if the app was closed.
   // The path is relative to this page; if the file does not exist (e.g. on

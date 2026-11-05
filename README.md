@@ -44,7 +44,7 @@ persona que la usa.
 
 **Gráficas combinadas de doble eje (5 nov 2026).** En todas las apps de `telemetria/` que muestran estas variables (TeleMet Pro, Historial, Cal, Cal Vivo y la versión inglesa History; TeleMet Mobile/iPad y sus variantes Pro y Cal; TelemetriaWU Móvil e iPad), la radiación solar y el índice UV comparten gráfica (UV en el eje derecho), igual que la tasa de lluvia y la lluvia acumulada (acumulada en trazo discontinuo y eje derecho). Ambos ejes comparten rejilla, la leyenda indica unidades y eje de cada serie y el tooltip muestra los dos valores con su unidad. En las apps de la familia TeleMet Pro/Historial/Cal/Cal Vivo/History las mismas dos gráficas combinadas aparecen también en las de 7 días (y en la consulta de un día concreto de Historial). Las gráficas de 7 días de las apps móviles/iPad y las apps sin estas variables (TeleMet, versiones Lite, TelemetriaWU/Monitor/Histórico/MQTT/Gráficos) no cambian.
 
-**Ventana de 12 h / 24 h (5 nov 2026).** TeleMet Historial y su versión inglesa TeleMet History incorporan, en el panel de evolución de horas, un selector 12 h / 24 h que cambia la ventana de todas las gráficas (eje X, umbral de huecos y mensajes se adaptan) y se recuerda en el navegador. Las 24 h se construyen con el histórico local (retención de 9 días); el JSON del colector del servidor solo cubre 12 h.
+**Ventana de 12 h / 24 h (5 nov 2026).** TeleMet Historial y su versión inglesa TeleMet History incorporan, en el panel de evolución de horas, un selector 12 h / 24 h que cambia la ventana de todas las gráficas (eje X, umbral de huecos y mensajes se adaptan) y se recuerda en el navegador. Las 24 h se construyen con el histórico local (retención de 9 días) y con el JSON del colector, que ahora guarda 24 h por defecto (configurable con `duracion_horas`, `--horas` o `TELEMET_HORAS`).
 
 ## Estructura del repositorio
 
@@ -79,8 +79,8 @@ URL en GitHub Pages queda limpia:
 
 | Carpeta | Descripción |
 |---|---|
-| [`telemetria/telemetcolector/`](telemetria/telemetcolector/) | **TeleMet Colector**: programa Python que lee de forma continua la estación meteorológica, guarda un histórico de 12 h en el servidor Linux y lo publica como JSON para que TeleMet Historial complete sus gráficas de evolución. Ver su README. |
-| [`telemetria/telemetcollector/`](telemetria/telemetcollector/) | **TeleMet Collector** (English version of TeleMet Colector): Python program that continuously reads the weather station, keeps a 12 h history on the Linux server and publishes it as JSON so that TeleMet History can complete its evolution charts. English app: [`telemetria/telemet/history/`](telemetria/telemet/history/). See its README. |
+| [`telemetria/telemetcolector/`](telemetria/telemetcolector/) | **TeleMet Colector**: programa Python que lee de forma continua la estación meteorológica, guarda un histórico de 24 h (configurable) en el servidor Linux y lo publica como JSON para que TeleMet Historial complete sus gráficas de evolución de 12 h y 24 h. Ver su README. |
+| [`telemetria/telemetcollector/`](telemetria/telemetcollector/) | **TeleMet Collector** (English version of TeleMet Colector): Python program that continuously reads the weather station, keeps a 24 h (configurable) history on the Linux server and publishes it as JSON so that TeleMet History can complete its evolution charts. English app: [`telemetria/telemet/history/`](telemetria/telemet/history/). See its README. |
 
 ## Despliegue en un servidor propio (Apache)
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TeleMet Collector — continuous weather-station polling and a 12 h history
-kept on the Linux server.
+TeleMet Collector — continuous weather-station polling and a 24 h (configurable)
+history kept on the Linux server.
 
 What it does
 ------------
@@ -11,12 +11,15 @@ What it does
 2. It stores every reading in a local SQLite database (Python standard
    library only: nothing to install with pip).
 3. With `mode = sliding` (the default) it keeps discarding readings older
-   than `duration_hours` (12), so it always holds the last 12 h.
+   than `duration_hours` (24 by default), so it always holds the last 24 h
+   (enough for the app's 12 h and 24 h charts). The hours can be changed in
+   config.ini, with the --hours option or with the TELEMET_HOURS environment
+   variable.
    With `mode = reset`, once `duration_hours` have elapsed since the start
    of the cycle it DELETES all the data and starts a new cycle.
 4. After every reading it exports the history to a static JSON file inside
    the folder served by Apache, next to the TeleMet History app. The app
-   reads it when it opens and uses it to fill the gaps in its 12 hour
+   reads it when it opens and uses it to fill the gaps in its 12 and 24 hour
    evolution charts.
 
 All the important parameters are in `config.ini` (see
@@ -27,6 +30,7 @@ Usage
 -----
     python3 telemet_collector.py                 # continuous service
     python3 telemet_collector.py -c /path/config.ini
+    python3 telemet_collector.py --hours 48       # keep 48 h instead of the default 24 h
     python3 telemet_collector.py --once          # one reading: store it, export and exit
     python3 telemet_collector.py --test          # one reading: print it and exit (stores nothing)
     python3 telemet_collector.py --status        # summary of what is stored in the DB
@@ -70,7 +74,7 @@ DEFAULTS = {
         "backoff_max_s": "300",    # ... capped at this value
     },
     "cycle": {
-        "duration_hours": "12",
+        "duration_hours": "24",   # hours of history (24 = enough for the 12 h and 24 h charts)
         # sliding -> only readings older than `duration_hours` are deleted
         # reset   -> when the hours are up, ALL data is deleted and it starts from scratch
         "mode": "sliding",
@@ -93,7 +97,7 @@ DEFAULTS = {
 # CONFIGURATION
 # ----------------------------------------------------------------------
 class Config:
-    def __init__(self, ini_path):
+    def __init__(self, ini_path, hours=None):
         cp = configparser.ConfigParser(interpolation=None)
         cp.read_dict(DEFAULTS)
         if ini_path:
@@ -112,9 +116,14 @@ class Config:
         self.backoff_base_s = max(0.5, cp.getfloat("reading", "backoff_base_s"))
         self.backoff_max_s = max(self.backoff_base_s, cp.getfloat("reading", "backoff_max_s"))
 
-        self.duration_h = cp.getfloat("cycle", "duration_hours")
+        # Hours of history: --hours (command line) > TELEMET_HOURS (environment) > config.ini.
+        hours_value = hours if hours is not None else (os.environ.get("TELEMET_HOURS") or "").strip() or None
+        try:
+            self.duration_h = float(hours_value) if hours_value is not None else cp.getfloat("cycle", "duration_hours")
+        except ValueError:
+            raise SystemExit("The hours of history (--hours / TELEMET_HOURS / [cycle] duration_hours) must be a number.")
         if self.duration_h <= 0:
-            raise SystemExit("[cycle] duration_hours must be > 0")
+            raise SystemExit("The hours of history (duration_hours) must be > 0")
         self.mode = cp.get("cycle", "mode").strip().lower()
         if self.mode not in ("reset", "sliding"):
             raise SystemExit("[cycle] mode must be 'reset' or 'sliding'")
@@ -363,7 +372,7 @@ class Collector:
         self.consecutive_failures = 0
         self.cycle_start_ms = self._load_cycle()
 
-    # -- the 12 h cycle ------------------------------------------------
+    # -- the `duration_hours` cycle (24 h by default) ------------------
     def _load_cycle(self):
         now = int(time.time() * 1000)
         db_station = self.store.meta("station_id")
@@ -380,7 +389,7 @@ class Collector:
         return int(start)
 
     def apply_cycle(self):
-        """Apply the 12 h rule. Return True if the DB content has changed."""
+        """Apply the `duration_hours` rule. Return True if the DB content has changed."""
         now = int(time.time() * 1000)
         if self.cfg.mode == "reset":
             if now - self.cycle_start_ms >= self.cfg.duration_ms:
@@ -479,9 +488,11 @@ def setup_logging(cfg):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="TeleMet Collector: 12 h weather-station history on the server.")
+    ap = argparse.ArgumentParser(description="TeleMet Collector: weather-station history (24 h by default) on the server.")
     ap.add_argument("-c", "--config", default=None,
                     help="path of config.ini (by default, config.ini next to the script if it exists)")
+    ap.add_argument("--hours", type=float, default=None, metavar="H",
+                    help="hours of history to keep (overrides duration_hours in config.ini and TELEMET_HOURS; default 24)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--once", action="store_true", help="make one reading, store it, export the JSON and exit")
     g.add_argument("--test", action="store_true", help="make one reading and print it, storing nothing")
@@ -492,7 +503,7 @@ def main(argv=None):
     if ini_path is None:
         candidate = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
         ini_path = candidate if os.path.isfile(candidate) else None
-    cfg = Config(ini_path)
+    cfg = Config(ini_path, args.hours)
     setup_logging(cfg)
 
     if args.status:

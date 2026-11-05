@@ -1,6 +1,6 @@
 # TeleMet Collector — Complete Manual
 
-Manual for the installation, use, configuration and internals of **TeleMet Collector**, the Python program that keeps a history of the last 12 hours of your weather station on the Linux server and makes it available to the **TeleMet History** app.
+Manual for the installation, use, configuration and internals of **TeleMet Collector**, the Python program that keeps a history of the last 24 hours (configurable) of your weather station on the Linux server and makes it available to the **TeleMet History** app.
 
 - **Code:** `RafaUMH2110/apps` → `telemetria/telemetcollector/`
 - **Companion app:** `telemetria/telemet/history/index.html` (TeleMet History)
@@ -34,15 +34,15 @@ Manual for the installation, use, configuration and internals of **TeleMet Colle
 
 ## 1. What it is for
 
-TeleMet History draws evolution charts of the last 12 hours (and of 7 days) from the readings that **the browser itself** has been saving while the app was open. If the app is closed, the browser is suspended (background tab, locked iPad…) or the app is opened from a new device, those charts have gaps.
+TeleMet History draws evolution charts of the last 12 or 24 hours (and of 7 days) from the readings that **the browser itself** has been saving while the app was open. If the app is closed, the browser is suspended (background tab, locked iPad…) or the app is opened from a new device, those charts have gaps.
 
 TeleMet Collector solves that with a process that **never stops** on the server:
 
 1. It queries the station at a regular interval (by default, **every 5 minutes**).
 2. It stores every reading in a SQLite database.
-3. It keeps only the **last 12 hours** (`sliding` mode, the default) or, if you prefer, it **deletes everything every 12 hours** and starts again (`reset` mode).
+3. It keeps only the **last 24 hours** (`sliding` mode, the default; the number of hours is configurable with `duration_hours`, `--hours` or `TELEMET_HOURS`) or, if you prefer, it **deletes everything once those hours are up** and starts again (`reset` mode).
 4. After every reading it publishes the history in a `history.json` file served by Apache.
-5. When the app opens, it reads that JSON and **adds to its local database the readings it is missing**, so that the 12 hour charts lose no information.
+5. When the app opens, it reads that JSON and **adds to its local database the readings it is missing**, so that the 12 and 24 hour charts lose no information.
 
 Everything is configurable from a single `config.ini` file.
 
@@ -61,7 +61,7 @@ Everything is configurable from a single `config.ini` file.
                               │  telemet_collector.py (systemd)│
                               │   · reading every interval_s   │
                               │   · retries with backoff       │
-                              │   · the 12 h rule              │
+                              │   · the duration_hours rule    │
                               └───────┬─────────────────┬──────┘
                                       │                 │
                        INSERT OR IGNORE                 │ atomic write
@@ -76,7 +76,7 @@ Everything is configurable from a single `config.ini` file.
                                               │ Browser: TeleMet History       │
                                               │  · IndexedDB (local history)   │
                                               │  · additive merge with the JSON│
-                                              │  · 12 h / 7 day charts         │
+                                              │  · 12 h / 24 h / 7 d charts    │
                                               └────────────────────────────────┘
 ```
 
@@ -265,7 +265,7 @@ sudo systemctl enable --now telemet-collector
 
 ```ini
 [Unit]
-Description=TeleMet Collector (12 h weather-station history)
+Description=TeleMet Collector (weather-station history)
 # Start once the network is up
 After=network-online.target
 Wants=network-online.target
@@ -318,7 +318,7 @@ If you prefer not to use systemd, you can schedule a one-off reading with `--onc
 */5 * * * * telemet /usr/bin/python3 /opt/telemet-collector/telemet_collector.py -c /opt/telemet-collector/config.ini --once >> /var/log/telemet-collector.log 2>&1
 ```
 
-It works the same (the 12 h rule is applied on every run), but you lose the retries with backoff and the fixed rate of the loop. systemd is recommended.
+It works the same (the `duration_hours` rule is applied on every run), but you lose the retries with backoff and the fixed rate of the loop. systemd is recommended.
 
 ### 7.5. Variant: secrets outside `config.ini`
 
@@ -392,7 +392,7 @@ Enabling compression of the JSON (`mod_deflate`, type `application/json`) reduce
 
 ### 8.5. Check that the app uses it
 
-Open the app, enter (or leave saved) the Station ID and expand the **“Evolution over the last 12 hours”** panel. Under the note you will see one of these lines (see [section 13.4](#134-messages-shown-by-the-app)).
+Open the app, enter (or leave saved) the Station ID and expand the **“Evolution over the last 12 hours”** panel (or 24, depending on the panel's 12 h / 24 h selector). Under the note you will see one of these lines (see [section 13.4](#134-messages-shown-by-the-app)).
 
 ---
 
@@ -407,7 +407,7 @@ Standard INI format. Relative paths are resolved **relative to the folder of `co
 | `station_id` | *(empty)* | Station identifier (e.g. `IELCHE12`). Required. If it differs from the one the database was using, **the old data is deleted** (see 11.7). |
 | `api_key` | *(empty)* | Weather Underground / Earth Network API key. Required. |
 
-Both can come from the environment variables `TELEMET_STATION_ID` and `TELEMET_API_KEY`, which prevail over the `.ini`.
+Both can come from the environment variables `TELEMET_STATION_ID` and `TELEMET_API_KEY`, which prevail over the `.ini`. Likewise, `TELEMET_HOURS` overrides `duration_hours`.
 
 ### 9.2. `[reading]`
 
@@ -421,12 +421,14 @@ Both can come from the environment variables `TELEMET_STATION_ID` and `TELEMET_A
 
 **Choosing `interval_s`.** Every reading is one API call:
 
-| `interval_s` | Calls/day | Readings in 12 h | Approx. JSON size |
+| `interval_s` | Calls/day | Readings in 24 h | Approx. JSON size |
 |---|---|---|---|
-| 60 | 1,440 | 720 | ~230 KB |
-| 120 | 720 | 360 | ~115 KB |
-| **300 (default)** | **288** | **144** | **~45 KB** |
-| 600 | 144 | 72 | ~23 KB |
+| 60 | 1,440 | 1,440 | ~460 KB |
+| 120 | 720 | 720 | ~230 KB |
+| **300 (default)** | **288** | **288** | **~90 KB** |
+| 600 | 144 | 144 | ~45 KB |
+
+The size is proportional to the hours kept (half with 12 h, double with 48 h).
 
 Visitors of the app who use the same API Key consume additional calls (the app polls on its own every 60 s by default while it is running). Check your key's daily limit before lowering the interval much.
 
@@ -434,10 +436,10 @@ Visitors of the app who use the same API Key consume additional calls (the app p
 
 | Parameter | Default | Description |
 |---|---|---|
-| `duration_hours` | `12` | Hours of history. Decimals are allowed (e.g. `0.5`). Must be > 0. |
+| `duration_hours` | `24` | Hours of history that are kept. Decimals allowed (e.g. `0.5`). Must be > 0. 24 h are enough for the app's 12 h and 24 h charts. It can be overridden without touching the `.ini` with the `--hours H` option or the `TELEMET_HOURS` environment variable (precedence: `--hours` > `TELEMET_HOURS` > `.ini`). |
 | `mode` | `sliding` | What happens when `duration_hours` is reached. See below. |
 
-**`mode = sliding` (default).** On every round, readings older than `duration_hours` are deleted. The server always has the last 12 h in full. It is the recommended mode: there is never a moment with an empty history.
+**`mode = sliding` (default).** On every round, readings older than `duration_hours` are deleted. The server always has the last `duration_hours` in full. It is the recommended mode: there is never a moment with an empty history.
 
 **`mode = reset`.** Time is counted from the start of the cycle; when `now − start ≥ duration_hours`, **everything is deleted** and a new cycle opens. Right afterwards the server history is empty and fills up gradually; a browser with no data of its own would then see an almost empty chart until some time passes. The start instant is stored in the database, so restarting the service or the server does **not** restart the cycle.
 
@@ -474,13 +476,14 @@ The program exits with a clear message if: `-c` points to a non-existent file; `
 ## 10. Command-line reference
 
 ```
-python3 telemet_collector.py [-c CONFIG_PATH] [--once | --test | --status]
+python3 telemet_collector.py [-c CONFIG_PATH] [--hours H] [--once | --test | --status]
 ```
 
 | Option | Effect | Writes to DB / JSON |
 |---|---|---|
 | *(none)* | Continuous service: infinite loop until `SIGINT`/`SIGTERM`. | Yes |
 | `-c`, `--config PATH` | Configuration file. If omitted, it uses `config.ini` next to the script **if it exists**; otherwise, only defaults and environment. | — |
+| `--hours H` | Hours of history to keep (decimals allowed). Overrides `duration_hours` of the `.ini` and `TELEMET_HOURS`. | — |
 | `--once` | One reading; stores it, exports the JSON and exits. | Yes |
 | `--test` | One reading; prints it and exits. Exit code 1 if it fails. | **No** |
 | `--status` | DB summary: path, station, number of readings with first/last instant, cycle start. Needs no credentials. | No |
@@ -507,7 +510,7 @@ start-up
   └─ load config, open SQLite, recover the cycle start
   └─ export an initial JSON (so the app finds the file right away)
   └─ repeat until SIGINT/SIGTERM:
-        1. apply the 12 h rule
+        1. apply the duration_hours rule
         2. query the API
         3. store the reading (if it is new)
         4. export the JSON (if anything changed)
@@ -551,12 +554,12 @@ It was checked against the app's JavaScript implementation with 880 combinations
 | Unexpected exception in the code | Logged with a traceback and the loop continues after a backoff; the service does not die. |
 | The JSON cannot be written | Error in the log (with the path and a hint about permissions) and reading/storing carries on. |
 
-### 11.5. The 12 hour rule
+### 11.5. The `duration_hours` rule
 
 It runs **at the beginning of every round**, before requesting the reading.
 
 - **Sliding:** `DELETE … WHERE epoch_ms < now − duration`. If it deleted anything, the JSON is re-exported.
-- **Reset:** if `now − cycle_start ≥ duration`, `DELETE` of all readings + `VACUUM`, new `cycle_start` = now (stored in the `meta` table) and re-export. Log message: “12 h cycle completed: N readings deleted and a new cycle begins.”
+- **Reset:** if `now − cycle_start ≥ duration`, `DELETE` of all readings + `VACUUM`, new `cycle_start` = now (stored in the `meta` table) and re-export. Log message: “24 h cycle completed: N readings deleted and a new cycle begins.”
 
 ### 11.6. When the JSON is written
 
@@ -654,7 +657,7 @@ sudo -u telemet sqlite3 /opt/telemet-collector/data/telemet.sqlite \
 | `stationId` | Station the data belongs to. The app only uses it if it matches (case-insensitively) the Station ID entered in it. |
 | `generatedMs` | Instant of the export (ms UTC). |
 | `mode` | `sliding` or `reset`. |
-| `durationMs` | Cycle duration in milliseconds (12 h = 43,200,000). |
+| `durationMs` | Cycle duration in milliseconds (24 h = 86,400,000). |
 | `cycleStartMs` | Start of the cycle stored in the DB. In sliding mode it is informative only. |
 | `cycleEndMs` | Planned end of the cycle (only in `reset` mode; `null` in sliding). |
 | `intervalS` | Configured reading interval; the app uses it to adjust the “collector stopped” warning. |
@@ -727,7 +730,7 @@ Guarantees:
 
 ### 13.4. Messages shown by the app
 
-In the “Evolution over the last 12 hours” panel:
+In the “Evolution over the last 12 hours” panel (or 24):
 
 | Situation | Message |
 |---|---|
@@ -742,7 +745,7 @@ In the “Evolution over the last 12 hours” panel:
 ### 13.5. What it does NOT do
 
 - It does not use the server instead of the browser: the browser keeps recording its own readings every `pollInterval` (60 s by default).
-- It does not offer more than 12 h: the JSON only holds the server's window.
+- It does not offer more hours than the ones stored: the JSON only holds the server's window (`duration_hours`, 24 h by default). With a 24 h window in the app, the older half depends on what the browser has saved if `duration_hours` is below 24.
 - It does not support several stations in the same JSON (see the FAQ).
 
 ---
@@ -752,7 +755,7 @@ In the “Evolution over the last 12 hours” panel:
 ### 14.1. Reading the log
 
 ```
-2026-11-03 21:19:12 INFO TeleMet Collector 1.0 · station ITEST1 · every 300 s · cycle 12 h (sliding)
+2026-11-03 21:19:12 INFO TeleMet Collector 1.0 · station ITEST1 · every 300 s · cycle 24 h (sliding)
 2026-11-03 21:19:12 INFO DB: /opt/telemet-collector/data/telemet.sqlite · JSON: /var/www/.../history.json
 2026-11-03 21:19:12 INFO 21:19:12  T=18.4 °C  RH=62 %  wind=7.2 km/h  stored
 2026-11-03 21:24:12 INFO 21:24:12  T=18.3 °C  RH=62 %  wind=6.8 km/h  stored
@@ -772,7 +775,7 @@ ls -l --time-style=full-iso /var/www/htdocs/rafa/telemethistory/data/history.jso
 
 ### 14.3. Backups
 
-They are not necessary: this is 12 h of reproducible, ephemeral data. Only `config.ini` (because of the key) is worth keeping somewhere safe.
+They are not necessary: this is a few hours of reproducible, ephemeral data. Only `config.ini` (because of the key) is worth keeping somewhere safe.
 
 ### 14.4. Updating the program
 
@@ -826,7 +829,7 @@ Edit `config.ini` and restart the service. Going from `reset` to `sliding` loses
 | The app says “another station (X)” | The Station ID in the app and the collector's do not match. | Enter in the app the same Station ID as in `config.ini`. |
 | The app warns “the collector may be stopped” | The latest server reading is very old. | `systemctl status`, `journalctl`; check the station and the network. |
 | Charts with broken stretches in the line | A gap > 90 min without readings (the app cuts the line from there). | Look at the collector's log for that interval. |
-| The server history empties suddenly every 12 h | You are in `mode = reset`. | Change to `mode = sliding` and restart the service. |
+| The server history empties suddenly when `duration_hours` is up | You are in `mode = reset`. | Change to `mode = sliding` and restart the service. |
 | `PermissionError` when opening the DB | The `data/` folder does not belong to `telemet`. | `sudo chown -R telemet:telemet /opt/telemet-collector`. |
 | Log dates are shifted | The server's time zone differs from the expected one. | `timedatectl`; the data (epoch UTC) is correct anyway. |
 
@@ -837,10 +840,10 @@ For detailed debugging: set `level = DEBUG`, restart and watch `journalctl -u te
 ## 17. Frequently asked questions
 
 **What happens if the server restarts or there is a power cut?**
-The service starts with the system (`enable`) and reopens the SQLite database. In sliding mode, on return it continues where it left off (the readings of the last 12 h are kept; there will be a gap for the downtime). In reset mode, the cycle continues with its original start.
+The service starts with the system (`enable`) and reopens the SQLite database. In sliding mode, on return it continues where it left off (the readings of the last `duration_hours` are kept; there will be a gap for the downtime). In reset mode, the cycle continues with its original start.
 
-**Can I keep more than 12 hours?**
-Yes: change `duration_hours` (e.g. `24` or `48`). The app's 12 h chart will still show 12 h, but the server will deliver more data, which stays in the browser's local database and feeds the 7 day charts. The JSON size will grow proportionally.
+**Can I keep more (or fewer) than 24 hours?**
+Yes: change `duration_hours` in the `.ini` (e.g. `48`), or use `--hours 48` / `TELEMET_HOURS=48` without touching the file. The app's 12 h and 24 h charts only need 24 h; with more hours, the server delivers extra data that stays in the browser's local database and feeds the 7 day charts. The JSON size grows proportionally. With fewer than 24 h, the 24 h chart will depend, in its older part, on what the browser has saved.
 
 **Can I use an interval below 5 s?**
 No: the minimum is 5 s, and the API does not update that fast; it would also eat up the daily quota.
@@ -885,7 +888,7 @@ The app will keep working without the JSON.
 
 ## 19. Appendix: examples
 
-### 19.1. Default `config.ini` (5 min, sliding, 12 h)
+### 19.1. Default `config.ini` (5 min, sliding, 24 h)
 
 ```ini
 [station]
@@ -900,7 +903,7 @@ backoff_base_s = 2
 backoff_max_s  = 300
 
 [cycle]
-duration_hours = 12
+duration_hours = 24
 mode = sliding
 
 [storage]
@@ -922,7 +925,7 @@ file  =
 interval_s = 60
 ```
 
-(1,440 calls per day; ~230 KB of JSON).
+(1,440 calls per day; ~460 KB of JSON).
 
 ### 19.3. Full wipe every 12 h (“reset” behaviour)
 
@@ -932,13 +935,15 @@ duration_hours = 12
 mode = reset
 ```
 
-### 19.4. Keep 24 h
+### 19.4. Keep 48 h
 
 ```ini
 [cycle]
-duration_hours = 24
+duration_hours = 48
 mode = sliding
 ```
+
+Or without touching the file: `python3 telemet_collector.py --hours 48` (or `TELEMET_HOURS=48`).
 
 ### 19.5. Complete installation in one block (to copy and paste)
 

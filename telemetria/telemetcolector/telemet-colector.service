@@ -7,7 +7,7 @@
 # Ajusta User, Group y las rutas a tu instalación.
 
 [Unit]
-Description=TeleMet Colector (histórico de 12 h de la estación meteorológica)
+Description=TeleMet Colector (histórico de la estación meteorológica)
 After=network-online.target
 Wants=network-online.target
 

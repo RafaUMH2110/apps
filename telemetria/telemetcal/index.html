@@ -705,7 +705,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 1 de noviembre de 2026, 15:52</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:09</p>
 </footer>
 
 <div class="bottomnav">
@@ -831,10 +831,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
-    { titulo: 'Tasa de lluvia', unidad: 'mm/h', claves: ['rainrate_mmh'] },
-    { titulo: 'Lluvia acumulada', unidad: 'mm', claves: ['rain_total_mm'] },
-    { titulo: 'Radiación solar', unidad: 'W/m²', claves: ['solarradiation_wm2'] },
-    { titulo: 'Índice UV', unidad: '', claves: ['uv_index'] }
+    // Gráficas con DOS ejes Y: la serie de "ejeDer" usa la escala de la
+    // derecha (cada una con su unidad); "cero" fuerza el 0 en la base.
+    { titulo: 'Tasa de lluvia y lluvia acumulada', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--ink))' }, cero: true },
+    { titulo: 'Radiación solar e índice UV', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
   ];
 
   // Grupos de gráficos de "últimos 7 días": histórico completo (una lectura
@@ -2252,17 +2252,39 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
+  // Escala "alineada" para un eje derecho que debe compartir las líneas de
+  // rejilla del izquierdo: mismo nº de intervalos (nInt), base en 0 y un paso
+  // "bonito" tal que paso*nInt cubra el máximo de los datos.
+  function escalaAlineadaEje(max, nInt){
+    const base = [1, 2, 2.5, 3, 4, 5, 6, 8];
+    let e = Math.floor(Math.log10(Math.max(max, 1e-9) / nInt)) - 1;
+    for (let k = 0; k < 60; k++, e += (k % base.length === 0 ? 1 : 0)){
+      const paso = base[(k) % base.length] * Math.pow(10, e);
+      if (paso * nInt >= max - 1e-9){
+        const marcas = [];
+        for (let i = 0; i <= nInt; i++) marcas.push(Math.round(i * paso * 1e6) / 1e6);
+        return { min: 0, max: marcas[nInt], paso: paso, marcas: marcas };
+      }
+    }
+    return escalaBonitaEje(0, max, nInt + 1);
+  }
+
   // Dibuja (o redibuja) una gráfica de líneas simple dentro de un <svg> ya
   // insertado en el DOM, con una capa de interacción (línea de referencia +
   // tooltip al pasar el cursor, también con el teclado vía foco). "series"
   // es [{ etiqueta, color, puntos:[{x,y}] }] con x ya normalizada a 0..1;
+  // Cada serie admite además { eje:'der' (escala propia a la derecha), unidad,
+  // cero (incluye el 0 en la escala), trazo (stroke-dasharray) };
   // "xTicks" son las marcas visibles del eje X ([{ frac, etiqueta }]);
   // "puntosX" son TODAS las posiciones reales de muestra a las que puede
   // "enganchar" el cursor (una por lectura en 12h, una por día en 7d) —
   // suele ser una lista más fina que xTicks.
   function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX, umbralGapFrac){
     const W = 600, H = 230;
-    const M = { l: 46, r: 14, t: 14, b: 28 };
+    // Eje derecho solo si hay series con eje:'der' Y series en el izquierdo.
+    const hayDer = series.some(s => s.eje === 'der' && s.puntos.length > 0) && series.some(s => s.eje !== 'der' && s.puntos.length > 0);
+    const esDer = s => hayDer && s.eje === 'der';
+    const M = { l: 46, r: hayDer ? 46 : 14, t: 14, b: 28 };
     const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
     leyendaEl.innerHTML = '';
@@ -2272,21 +2294,45 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       return;
     }
 
-    let yMinDatos = Infinity, yMaxDatos = -Infinity;
-    conPuntos.forEach(s => s.puntos.forEach(p => { if (p.y < yMinDatos) yMinDatos = p.y; if (p.y > yMaxDatos) yMaxDatos = p.y; }));
-    const escala = escalaBonitaEje(yMinDatos, yMaxDatos, 4);
-    const yMin = escala.min, yMax = escala.max;
-    const rango = (yMax - yMin) || 1;
+    // Rango de datos de cada eje (el izquierdo agrupa todo si no hay doble eje).
+    const rangoEje = der => {
+      let mn = Infinity, mx = -Infinity, cero = false;
+      conPuntos.forEach(s => {
+        if (esDer(s) !== der) return;
+        if (s.cero) cero = true;
+        s.puntos.forEach(p => { if (p.y < mn) mn = p.y; if (p.y > mx) mx = p.y; });
+      });
+      if (cero){ if (mn > 0) mn = 0; if (mx <= 0) mx = 1; }
+      return { mn: mn, mx: mx, cero: cero };
+    };
+    const rI = rangoEje(false);
+    const escala = escalaBonitaEje(rI.mn, rI.mx, 4);
+    let escalaD = null;
+    if (hayDer){
+      const rD = rangoEje(true);
+      escalaD = (rI.cero && rD.cero && escala.min === 0)
+        ? escalaAlineadaEje(rD.mx, escala.marcas.length - 1)
+        : escalaBonitaEje(rD.mn, rD.mx, 4);
+    }
+    const escDe = s => esDer(s) ? escalaD : escala;
 
     const xPix = f => M.l + f * pw;
-    const yPix = v => M.t + (1 - (v - yMin) / rango) * ph;
+    const yPix = (v, s) => { const e = (s && esDer(s)) ? escalaD : escala; return M.t + (1 - (v - e.min) / ((e.max - e.min) || 1)) * ph; };
 
     let svgInner = '';
     escala.marcas.forEach(val => {
       const y = yPix(val);
       svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
-      svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + formatearNumeroEje(val, escala.paso) + '</text>';
+      const colI = hayDer ? ' style="fill:' + conPuntos.filter(s => !esDer(s))[0].color + '"' : '';
+      svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end"' + colI + '>' + formatearNumeroEje(val, escala.paso) + '</text>';
     });
+    if (hayDer){
+      const serD = conPuntos.filter(esDer)[0];
+      escalaD.marcas.forEach(val => {
+        const y = yPix(val, serD);
+        svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (W - M.r + 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="start" style="fill:' + serD.color + '">' + formatearNumeroEje(val, escalaD.paso) + '</text>';
+      });
+    }
     const ultimoTick = (xTicks || []).length - 1;
     (xTicks || []).forEach((tk, i) => {
       // Las marcas de los extremos se anclan hacia dentro (start/end) en
@@ -2315,15 +2361,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         if (tramo.length === 1){
           // Un punto aislado entre dos huecos no se puede unir con nada:
           // se marca con un pequeño círculo para que no desaparezca sin más.
-          svgInner += '<circle class="grafico-punto" cx="' + xPix(tramo[0].x).toFixed(1) + '" cy="' + yPix(tramo[0].y).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+          svgInner += '<circle class="grafico-punto" cx="' + xPix(tramo[0].x).toFixed(1) + '" cy="' + yPix(tramo[0].y, s).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
         } else {
-          const puntosSVG = tramo.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
-          svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + '"></polyline>';
+          const puntosSVG = tramo.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y, s).toFixed(1)).join(' ');
+          svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + (s.trazo ? ';stroke-dasharray:' + s.trazo : '') + '"></polyline>';
         }
       });
 
       const ultimo = pts[pts.length - 1];
-      const ux = xPix(ultimo.x), uy = yPix(ultimo.y);
+      const ux = xPix(ultimo.x), uy = yPix(ultimo.y, s);
       svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
     });
     svg.innerHTML = svgInner;
@@ -2376,7 +2422,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           const dot = puntosHover[i];
           if (pCercano && dMin <= toleranciaX){
             dot.setAttribute('cx', xPix(pCercano.x).toFixed(1));
-            dot.setAttribute('cy', yPix(pCercano.y).toFixed(1));
+            dot.setAttribute('cy', yPix(pCercano.y, s).toFixed(1));
             dot.style.opacity = '1';
             const fila = document.createElement('div');
             fila.className = 'tt-fila';
@@ -2385,7 +2431,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatearNumeroEje(pCercano.y, escala.paso);
+            val.textContent = formatearNumeroEje(pCercano.y, escDe(s).paso) + (hayDer && s.unidad ? ' ' + s.unidad : '');
             fila.appendChild(key);
             fila.appendChild(val);
             if (conPuntos.length > 1){
@@ -2425,7 +2471,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       series.forEach(s => {
         const item = document.createElement('span');
         item.className = 'leyenda-item';
-        item.innerHTML = '<span class="leyenda-linea" style="background:' + s.color + '"></span>' + escHTML(s.etiqueta);
+        const fondo = s.trazo ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
+        const detalle = hayDer ? ' (' + [s.unidad, esDer(s) ? 'eje der.' : 'eje izq.'].filter(Boolean).join(', ') + ')' : '';
+        item.innerHTML = '<span class="leyenda-linea" style="background:' + fondo + '"></span>' + escHTML(s.etiqueta + detalle);
         leyendaEl.appendChild(item);
       });
     }
@@ -2488,7 +2536,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
-        return { etiqueta: def ? def.etiqueta : key, color: def ? def.color : 'var(--c-temp)', puntos: puntos };
+        return {
+          etiqueta: def ? def.etiqueta : key,
+          color: (grupo.colores && grupo.colores[key]) || (def ? def.color : 'var(--c-temp)'),
+          puntos: puntos,
+          unidad: def ? def.unidad : '',
+          eje: (grupo.ejeDer || []).indexOf(key) >= 0 ? 'der' : 'izq',
+          cero: !!grupo.cero,
+          trazo: (grupo.trazos && grupo.trazos[key]) || ''
+        };
       });
       dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, UMBRAL_GAP_12H_FRAC);
     });

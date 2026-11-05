@@ -596,7 +596,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 1 de noviembre de 2026, 16:11</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:09</div>
 </section>
 
 <script>
@@ -673,7 +673,7 @@
     { id:'solar', titulo:'Radiación solar / UV', key:'solar_wm2', unidad:'W/m²', dec:0, solar:true, color:'var(--warn)', icono:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>' }
   ];
 
-  // Gráficos de evolución del día (un único eje Y por gráfico siempre).
+  // Gráficos de evolución del día (un eje Y por gráfico; los combinados llevan además uno a la derecha).
   const CHARTS = [
     { id:'temp', titulo:'Temperatura y punto de rocío', unidad:'°C', series:[
         { key:'temp_c', nombre:'Temperatura', color:'var(--c-temp)' },
@@ -692,11 +692,15 @@
     { id:'direccion', titulo:'Dirección del viento', unidad:'°', tipo:'direccion', series:[
         { key:'wind_dir_deg', nombre:'Dirección', color:'var(--c-dir)' }
       ] },
-    { id:'lluvia_tasa', titulo:'Tasa de lluvia', unidad:'mm/h', series:[
-        { key:'rainrate_mmh', nombre:'Tasa de lluvia', color:'var(--c-rain)' }
+    // Gráficos con DOS ejes Y: las series con eje:'der' usan la escala de la derecha;
+    // cero:true fuerza el 0 en la base; trazo = stroke-dasharray.
+    { id:'solar_uv', titulo:'Radiación solar e índice UV', unidad:'', cero:true, series:[
+        { key:'solar_wm2', nombre:'Radiación solar', unidad:'W/m²', color:'var(--warn)' },
+        { key:'uv_index', nombre:'Índice UV', unidad:'', eje:'der', color:'#D45FA8' }
       ] },
-    { id:'lluvia_acum', titulo:'Lluvia acumulada hoy', unidad:'mm', series:[
-        { key:'rain_total_mm', nombre:'Acumulada', color:'var(--c-rain)' }
+    { id:'lluvia', titulo:'Tasa de lluvia y lluvia acumulada hoy', unidad:'', cero:true, series:[
+        { key:'rainrate_mmh', nombre:'Tasa de lluvia', unidad:'mm/h', color:'var(--c-rain)' },
+        { key:'rain_total_mm', nombre:'Acumulada', unidad:'mm', eje:'der', trazo:'6 4', color:'var(--c-rain)' }
       ] }
   ];
 
@@ -1494,7 +1498,8 @@
       const header = document.createElement('div');
       header.className = 'chart-card-header';
       const tituloEl = document.createElement('span');
-      tituloEl.textContent = cfg.titulo + ' (' + cfg.unidad + ')';
+      const dual = cfg.series.some(s => s.eje === 'der');
+      tituloEl.textContent = cfg.titulo + (cfg.unidad ? ' (' + cfg.unidad + ')' : '');
       header.appendChild(tituloEl);
       if (cfg.series.length > 1){
         const leyenda = document.createElement('div');
@@ -1504,10 +1509,10 @@
           item.className = 'leyenda-item';
           const linea = document.createElement('span');
           linea.className = 'leyenda-linea';
-          linea.style.background = s.color;
+          linea.style.background = s.trazo ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
           item.appendChild(linea);
           const nombre = document.createElement('span');
-          nombre.textContent = s.nombre;
+          nombre.textContent = s.nombre + (dual ? ' (' + [s.unidad, s.eje === 'der' ? 'der.' : 'izq.'].filter(Boolean).join(', ') + ')' : '');
           item.appendChild(nombre);
           leyenda.appendChild(item);
         });
@@ -1545,6 +1550,7 @@
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke', s.color);
           path.setAttribute('stroke-width', '2');
+          if (s.trazo) path.setAttribute('stroke-dasharray', s.trazo);
           path.setAttribute('stroke-linejoin', 'round');
           path.setAttribute('stroke-linecap', 'round');
           gLineas.appendChild(path);
@@ -1646,6 +1652,22 @@
     return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
+  // Escala "alineada" para el eje derecho: mismo nº de intervalos que el
+  // izquierdo (para compartir rejilla), base en 0 y un paso "bonito".
+  function ticksAlineados(max, nInt){
+    const base = [1, 2, 2.5, 3, 4, 5, 6, 8];
+    let e = Math.floor(Math.log10(Math.max(max, 1e-9) / nInt)) - 1;
+    for (let k = 0; k < 60; k++, e += (k % base.length === 0 ? 1 : 0)){
+      const paso = base[k % base.length] * Math.pow(10, e);
+      if (paso * nInt >= max - 1e-9){
+        const t = [];
+        for (let i = 0; i <= nInt; i++) t.push(Math.round(i * paso * 1e6) / 1e6);
+        return t;
+      }
+    }
+    return nicerTicks(0, max, nInt);
+  }
+
   function redibujarGrafico(chart){
     const cfg = chart.cfg;
     const n = lecturasHoy.length;
@@ -1656,7 +1678,8 @@
     chart.tooltip.style.display = 'none';
     Object.values(chart.puntosHoverPorSerie).forEach(p => { p.style.display = 'none'; });
 
-    const margin = CHART_MARGIN;
+    const dual = cfg.series.some(s => s.eje === 'der');
+    const margin = dual ? Object.assign({}, CHART_MARGIN, { right: 40 }) : CHART_MARGIN;
     const plotW = CHART_W - margin.left - margin.right;
     const plotH = CHART_H - margin.top - margin.bottom;
     const inicioDia = inicioDiaLocalMs(new Date());
@@ -1701,7 +1724,7 @@
       return;
     }
 
-    let yMin, yMax, rangoY, plotY;
+    let yMin, yMax, rangoY, plotY, yMinD = 0, rangoYD = 1;
     if (cfg.tipo === 'direccion'){
       yMin = 0; yMax = 360; rangoY = 360;
       plotY = (v) => margin.top + plotH - ((v - yMin) / rangoY) * plotH;
@@ -1721,7 +1744,7 @@
       });
     } else {
       let globalMin = Infinity, globalMax = -Infinity;
-      cfg.series.forEach(s => {
+      cfg.series.filter(s => s.eje !== 'der').forEach(s => {
         lecturasHoy.forEach(r => {
           const v = r.vals[s.key];
           if (v !== null && v !== undefined){ if (v < globalMin) globalMin = v; if (v > globalMax) globalMax = v; }
@@ -1736,9 +1759,12 @@
         chart.estado = null;
         return;
       }
+      if (cfg.cero){ if (globalMin > 0) globalMin = 0; if (globalMax <= 0) globalMax = 1; }
       const ticks = nicerTicks(globalMin, globalMax, 4);
       yMin = ticks[0]; yMax = ticks[ticks.length - 1]; rangoY = (yMax - yMin) || 1;
-      plotY = (v) => margin.top + plotH - ((v - yMin) / rangoY) * plotH;
+      plotY = (v, s) => (dual && s && s.eje === 'der')
+        ? margin.top + plotH - ((v - yMinD) / rangoYD) * plotH
+        : margin.top + plotH - ((v - yMin) / rangoY) * plotH;
       const pasoTicks = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
       ticks.forEach(tv => {
         if (tv < yMin - 1e-9 || tv > yMax + 1e-9) return;
@@ -1755,6 +1781,35 @@
         texto.textContent = formatearNumeroEje(tv, pasoTicks);
         chart.gEjes.appendChild(texto);
       });
+      if (dual){
+        const serI = cfg.series.filter(s => s.eje !== 'der')[0];
+        const serD = cfg.series.filter(s => s.eje === 'der')[0];
+        // Etiquetas del eje izquierdo y derecho con el color de su serie.
+        Array.from(chart.gEjes.querySelectorAll('text')).forEach(t => {
+          if (t.getAttribute('x') === String(margin.left - 5)) t.style.fill = serI.color;
+        });
+        let dMin = Infinity, dMax = -Infinity;
+        cfg.series.filter(s => s.eje === 'der').forEach(sD => lecturasHoy.forEach(r => {
+          const v = r.vals[sD.key];
+          if (v !== null && v !== undefined){ if (v < dMin) dMin = v; if (v > dMax) dMax = v; }
+        }));
+        if (Number.isFinite(dMin)){
+          if (cfg.cero){ if (dMin > 0) dMin = 0; if (dMax <= 0) dMax = 1; }
+          const ticksD = (cfg.cero && yMin === 0) ? ticksAlineados(dMax, ticks.length - 1) : nicerTicks(dMin, dMax, 4);
+          yMinD = ticksD[0]; rangoYD = (ticksD[ticksD.length - 1] - yMinD) || 1;
+          const pasoD = ticksD.length > 1 ? ticksD[1] - ticksD[0] : 1;
+          ticksD.forEach(tv => {
+            const y = plotY(tv, serD);
+            const texto = document.createElementNS(SVGNS, 'text');
+            texto.setAttribute('class', 'eje-texto');
+            texto.setAttribute('x', CHART_W - margin.right + 5); texto.setAttribute('y', y + 3);
+            texto.setAttribute('text-anchor', 'start');
+            texto.style.fill = serD.color;
+            texto.textContent = (typeof formatearNumeroEje === 'function') ? formatearNumeroEje(tv, pasoD) : String(Math.round(tv * 100) / 100);
+            chart.gEjes.appendChild(texto);
+          });
+        }
+      }
     }
 
     const xPos = lecturasHoy.map(r => plotX(r.epochMs));
@@ -1787,7 +1842,7 @@
         lecturasHoy.forEach((r, i) => {
           const v = r.vals[s.key];
           if (v === null || v === undefined) return;
-          const x = xPos[i], y = plotY(v);
+          const x = xPos[i], y = plotY(v, s);
           // Si hay un hueco real (sin ninguna lectura) de más de
           // HUECO_MAX_MS con la última lectura válida, se empieza un tramo
           // nuevo ("M") en vez de seguir la línea ("L"): una sola recta de
@@ -1810,7 +1865,7 @@
         const puntoFin = chart.pathsPorSerie[s.key + '__fin'];
         if (ultimoIdxValido >= 0){
           puntoFin.setAttribute('cx', xPos[ultimoIdxValido]);
-          puntoFin.setAttribute('cy', plotY(lecturasHoy[ultimoIdxValido].vals[s.key]));
+          puntoFin.setAttribute('cy', plotY(lecturasHoy[ultimoIdxValido].vals[s.key], s));
           puntoFin.style.display = 'block';
         } else puntoFin.style.display = 'none';
       });
@@ -1840,7 +1895,7 @@
       const v = registro.vals[s.key];
       const puntoHover = chart.puntosHoverPorSerie[s.key];
       if (v !== null && v !== undefined){
-        puntoHover.setAttribute('cx', x); puntoHover.setAttribute('cy', estado.plotY(v));
+        puntoHover.setAttribute('cx', x); puntoHover.setAttribute('cy', estado.plotY(v, s));
         puntoHover.style.display = 'block';
       } else puntoHover.style.display = 'none';
       let valorTxt = '—';
@@ -1849,7 +1904,7 @@
           ? (Math.round(v)) + '° ' + (gradosACompass(v) || '')
           : String(Math.round(v * 100) / 100);
       }
-      filas.push({ nombre: s.nombre, color: s.color, valor: valorTxt });
+      filas.push({ nombre: s.nombre, color: s.color, valor: valorTxt, unidad: (s.unidad !== undefined ? s.unidad : chart.cfg.unidad) });
     });
 
     chart.tooltip.innerHTML = '';
@@ -1873,7 +1928,7 @@
       fila.appendChild(clave);
       const valor = document.createElement('span');
       valor.className = 'tt-valor';
-      valor.textContent = f.valor + (chart.cfg.tipo === 'direccion' ? '' : (' ' + chart.cfg.unidad));
+      valor.textContent = f.valor + ((chart.cfg.tipo === 'direccion' || !f.unidad) ? '' : (' ' + f.unidad));
       fila.appendChild(valor);
       chart.tooltip.appendChild(fila);
     });

@@ -654,7 +654,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 4 November 2026, 09:58</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 5 November 2026, 22:09</p>
 </footer>
 
 <div class="bottomnav">
@@ -779,10 +779,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { title: 'Humidity', unit: '%', seriesKeys: ['humidity_pct'] },
     { title: 'Pressure', unit: 'hPa', seriesKeys: ['pressure_hpa'] },
     { title: 'Wind and gust', unit: 'km/h', seriesKeys: ['wind_kmh', 'gust_kmh'] },
-    { title: 'Rain rate', unit: 'mm/h', seriesKeys: ['rainrate_mmh'] },
-    { title: 'Accumulated rain', unit: 'mm', seriesKeys: ['rain_total_mm'] },
-    { title: 'Solar radiation', unit: 'W/m²', seriesKeys: ['solarradiation_wm2'] },
-    { title: 'UV index', unit: '', seriesKeys: ['uv_index'] }
+    // Two-Y-axis charts: series listed in "rightAxis" use the right-hand scale
+    // (each with its own unit); "zero" forces 0 at the baseline.
+    { title: 'Rain rate and accumulated rain', unit: '', seriesKeys: ['rainrate_mmh', 'rain_total_mm'], rightAxis: ['rain_total_mm'], dashes: { rain_total_mm: '5 3' }, colors: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--ink))' }, zero: true },
+    { title: 'Solar radiation and UV index', unit: '', seriesKeys: ['solarradiation_wm2', 'uv_index'], rightAxis: ['uv_index'], zero: true }
   ];
 
   // "Last 7 days" chart groups: full history (one real reading per point,
@@ -2061,17 +2061,38 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return v.toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false });
   }
 
+  // "Aligned" scale for a right axis that must share the left axis grid
+  // lines: same number of intervals (nInt), base at 0 and a "nice" step such
+  // that step*nInt covers the data maximum.
+  function alignedAxisScale(max, nInt){
+    const base = [1, 2, 2.5, 3, 4, 5, 6, 8];
+    let e = Math.floor(Math.log10(Math.max(max, 1e-9) / nInt)) - 1;
+    for (let k = 0; k < 60; k++, e += (k % base.length === 0 ? 1 : 0)){
+      const stepSize = base[k % base.length] * Math.pow(10, e);
+      if (stepSize * nInt >= max - 1e-9){
+        const tickValues = [];
+        for (let i = 0; i <= nInt; i++) tickValues.push(Math.round(i * stepSize * 1e6) / 1e6);
+        return { min: 0, max: tickValues[nInt], stepSize: stepSize, tickValues: tickValues };
+      }
+    }
+    return niceAxisScale(0, max, nInt + 1);
+  }
+
   // Draws (or redraws) a simple line chart inside an <svg> already inserted
   // in the DOM, with an interaction layer (reference line + tooltip on
   // hover, also via keyboard focus). "series" is
-  // [{ label, color, points:[{x,y}] }] with x already normalised to 0..1;
+  // [{ label, color, points:[{x,y}] }] with x already normalised to 0..1
+  // (optionally also axis:'right' for its own scale, unit, zero, dash);
   // "xTicks" are the visible tick values of the X axis ([{ frac, label }]);
   // "xPoints" are ALL the real sample positions the cursor can "snap" to
   // (one per reading in 12h, one per reading in 7d) — usually a finer list
   // than xTicks.
   function drawSVGChart(svg, legendEl, tooltipEl, series, xTicks, xPoints, gapThresholdFrac){
     const W = 600, H = 230;
-    const M = { l: 46, r: 14, t: 14, b: 28 };
+    // Right axis only if there are 'right' series AND series on the left one.
+    const hasRight = series.some(s => s.axis === 'right' && s.points.length > 0) && series.some(s => s.axis !== 'right' && s.points.length > 0);
+    const isRight = s => hasRight && s.axis === 'right';
+    const M = { l: 46, r: hasRight ? 46 : 14, t: 14, b: 28 };
     const pw = W - M.l - M.r, ph = H - M.t - M.b;
 
     legendEl.innerHTML = '';
@@ -2081,21 +2102,45 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       return;
     }
 
-    let dataYMin = Infinity, dataYMax = -Infinity;
-    withPoints.forEach(s => s.points.forEach(p => { if (p.y < dataYMin) dataYMin = p.y; if (p.y > dataYMax) dataYMax = p.y; }));
-    const scale = niceAxisScale(dataYMin, dataYMax, 4);
-    const yMin = scale.min, yMax = scale.max;
-    const valueRange = (yMax - yMin) || 1;
+    // Data range of each axis (the left one holds everything if there is no right axis).
+    const axisRange = right => {
+      let mn = Infinity, mx = -Infinity, zero = false;
+      withPoints.forEach(s => {
+        if (isRight(s) !== right) return;
+        if (s.zero) zero = true;
+        s.points.forEach(p => { if (p.y < mn) mn = p.y; if (p.y > mx) mx = p.y; });
+      });
+      if (zero){ if (mn > 0) mn = 0; if (mx <= 0) mx = 1; }
+      return { mn: mn, mx: mx, zero: zero };
+    };
+    const rL = axisRange(false);
+    const scale = niceAxisScale(rL.mn, rL.mx, 4);
+    let scaleR = null;
+    if (hasRight){
+      const rR = axisRange(true);
+      scaleR = (rL.zero && rR.zero && scale.min === 0)
+        ? alignedAxisScale(rR.mx, scale.tickValues.length - 1)
+        : niceAxisScale(rR.mn, rR.mx, 4);
+    }
+    const scaleOf = s => isRight(s) ? scaleR : scale;
 
     const xPix = f => M.l + f * pw;
-    const yPix = v => M.t + (1 - (v - yMin) / valueRange) * ph;
+    const yPix = (v, s) => { const sc = (s && isRight(s)) ? scaleR : scale; return M.t + (1 - (v - sc.min) / ((sc.max - sc.min) || 1)) * ph; };
 
     let svgInner = '';
     scale.tickValues.forEach(val => {
       const y = yPix(val);
       svgInner += '<line class="chart-grid" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
-      svgInner += '<text class="chart-label chart-axis-label" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + formatAxisNumber(val, scale.stepSize) + '</text>';
+      const fillL = hasRight ? ' style="fill:' + withPoints.filter(s => !isRight(s))[0].color + '"' : '';
+      svgInner += '<text class="chart-label chart-axis-label" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end"' + fillL + '>' + formatAxisNumber(val, scale.stepSize) + '</text>';
     });
+    if (hasRight){
+      const serR = withPoints.filter(isRight)[0];
+      scaleR.tickValues.forEach(val => {
+        const y = yPix(val, serR);
+        svgInner += '<text class="chart-label chart-axis-label" x="' + (W - M.r + 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="start" style="fill:' + serR.color + '">' + formatAxisNumber(val, scaleR.stepSize) + '</text>';
+      });
+    }
     const lastTick = (xTicks || []).length - 1;
     (xTicks || []).forEach((tk, i) => {
       // The tick values at the ends are anchored inward (start/end) instead
@@ -2141,15 +2186,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         if (segment.length === 1){
           // An isolated point between two gaps cannot be joined to anything:
           // it is marked with a small circle so that it does not just vanish.
-          svgInner += '<circle class="chart-point" cx="' + xPix(segment[0].x).toFixed(1) + '" cy="' + yPix(segment[0].y).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+          svgInner += '<circle class="chart-point" cx="' + xPix(segment[0].x).toFixed(1) + '" cy="' + yPix(segment[0].y, s).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
         } else {
-          const svgPoints = segment.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y).toFixed(1)).join(' ');
-          svgInner += '<polyline class="chart-line" points="' + svgPoints + '" style="stroke:' + s.color + '"></polyline>';
+          const svgPoints = segment.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y, s).toFixed(1)).join(' ');
+          svgInner += '<polyline class="chart-line" points="' + svgPoints + '" style="stroke:' + s.color + (s.dash ? ';stroke-dasharray:' + s.dash : '') + '"></polyline>';
         }
       });
 
       const last = pts[pts.length - 1];
-      const ux = xPix(last.x), uy = yPix(last.y);
+      const ux = xPix(last.x), uy = yPix(last.y, s);
       svgInner += '<circle class="chart-point" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
     });
     svg.innerHTML = svgInner;
@@ -2202,7 +2247,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           const dot = hoverPoints[i];
           if (nearestPoint && dMin <= toleranceX){
             dot.setAttribute('cx', xPix(nearestPoint.x).toFixed(1));
-            dot.setAttribute('cy', yPix(nearestPoint.y).toFixed(1));
+            dot.setAttribute('cy', yPix(nearestPoint.y, s).toFixed(1));
             dot.style.opacity = '1';
             const row = document.createElement('div');
             row.className = 'tt-row';
@@ -2211,7 +2256,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatAxisNumber(nearestPoint.y, scale.stepSize);
+            val.textContent = formatAxisNumber(nearestPoint.y, scaleOf(s).stepSize) + (hasRight && s.unit ? ' ' + s.unit : '');
             row.appendChild(key);
             row.appendChild(val);
             if (withPoints.length > 1){
@@ -2251,7 +2296,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       series.forEach(s => {
         const item = document.createElement('span');
         item.className = 'legend-item';
-        item.innerHTML = '<span class="legend-line" style="background:' + s.color + '"></span>' + escHTML(s.label);
+        const bg = s.dash ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
+        const extra = hasRight ? ' (' + [s.unit, isRight(s) ? 'right axis' : 'left axis'].filter(Boolean).join(', ') + ')' : '';
+        item.innerHTML = '<span class="legend-line" style="background:' + bg + '"></span>' + escHTML(s.label + extra);
         legendEl.appendChild(item);
       });
     }
@@ -2314,7 +2361,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const points = rows
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - fromMs) / WINDOW_12H_MS, y: f.vals[key] }));
-        return { label: def ? def.label : key, color: def ? def.color : 'var(--c-temp)', points: points };
+        return {
+          label: def ? def.label : key,
+          color: (group.colors && group.colors[key]) || (def ? def.color : 'var(--c-temp)'),
+          points: points,
+          unit: def ? def.unit : '',
+          axis: (group.rightAxis || []).indexOf(key) >= 0 ? 'right' : 'left',
+          zero: !!group.zero,
+          dash: (group.dashes && group.dashes[key]) || ''
+        };
       });
       drawSVGChart(card.svg, card.legend, card.tooltip, series, xTicks, xPoints, GAP_THRESHOLD_12H_FRAC);
     });

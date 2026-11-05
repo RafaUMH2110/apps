@@ -553,7 +553,7 @@
 
 <footer>
   GenOutFitFace &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 15/10/2026 03:55
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 05/11/2026 18:29
 </footer>
 
 <script>
@@ -654,7 +654,7 @@ const APP_CONFIG = {
 // --- Modelos por proveedor (texto/visión) ------------------------------------
 const MODELOS_POR_PROVEEDOR = {
   anthropic: {
-    modelos: ["claude-sonnet-4-5", "claude-sonnet-5", "claude-opus-5-5", "claude-haiku-4-5-20251001", "claude-fable-5-1"],
+    modelos: ["claude-sonnet-4-5", "claude-sonnet-5", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-haiku-4-5-20251001", "claude-fable-5-1"],
     porDefecto: "claude-sonnet-4-5" // valor definido en el BLOQUE 0 del encargo
   },
   openai: {
@@ -672,6 +672,7 @@ const MODELOS_POR_PROVEEDOR = {
 const LIMITE_TOKENS_DEFECTO = 8000;
 const LIMITES_TOKENS_MODELO = {
   "claude-sonnet-4-5": 64000, "claude-sonnet-5": 64000, "claude-opus-5-5": 64000,
+  "claude-sonnet-5-5": 128000, "claude-haiku-5-5": 128000,
   "claude-haiku-4-5-20251001": 64000, "claude-fable-5-1": 64000,
   "gpt-6-astra": 32768, "gpt-6.1-sol": 32768, "gpt-6-luna": 16384,
   "gpt-4o": 16384, "gpt-4o-mini": 16384, "gpt-4.1": 32768, "gpt-4.1-mini": 32768,
@@ -685,6 +686,7 @@ function limiteTokensModelo(modelo){ return LIMITES_TOKENS_MODELO[modelo] || LIM
 const PRECIOS_POR_MTOK = {
   "claude-sonnet-4-5": {in: 3.00, out: 15.00}, "claude-sonnet-5": {in: 2.00, out: 10.00},
   "claude-opus-5-5": {in: 4.00, out: 20.00}, "claude-haiku-4-5-20251001": {in: 1.00, out: 5.00},
+  "claude-sonnet-5-5": {in: 2.00, out: 10.00}, "claude-haiku-5-5": {in: 0.10, out: 0.50},
   "claude-fable-5-1": {in: 10.00, out: 50.00},
   "gpt-6-astra": {in: 10.00, out: 50.00}, "gpt-6.1-sol": {in: 2.00, out: 10.00}, "gpt-6-luna": {in: 0.10, out: 0.50},
   "gpt-4o": {in: 2.50, out: 10.00}, "gpt-4o-mini": {in: 0.15, out: 0.60},

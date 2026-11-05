@@ -370,7 +370,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 15/10/2026 03:55</p>
+    <p>&#218;ltima modificaci&#243;n: 05/11/2026 18:29</p>
   </footer>
 </div>
 
@@ -409,7 +409,9 @@ const APP_CONFIG = {
    Versi\u00f3n alumnos: lista cerrada (sin opci\u00f3n "Otro\u2026"), fijada por el profesor. */
 const CLAUDE_MODELS = [
   { id: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)" },
-  { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5 (claude-haiku-4-5-20251001)" }
+  { id: "claude-sonnet-5-5",          label: "Claude Sonnet 5.5 (claude-sonnet-5-5)" },
+  { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5 (claude-haiku-4-5-20251001)" },
+  { id: "claude-haiku-5-5",           label: "Claude Haiku 5.5 (claude-haiku-5-5)" }
 ];
 
 /* Modelos de OpenAI configurados. Para a\u00f1adir otro, agrega una entrada.
@@ -439,6 +441,7 @@ const GEMINI_MODELS = [
 const MODEL_TOKEN_LIMITS = {
   "claude-sonnet-4-5-20250929": 64000, "claude-haiku-4-5-20251001": 64000,
   "claude-sonnet-5": 128000, "claude-opus-5-5": 128000, "claude-fable-5-1": 128000,
+  "claude-sonnet-5-5": 128000, "claude-haiku-5-5": 128000,
   "gpt-6-astra": 128000, "gpt-6.1-sol": 128000, "gpt-6-luna": 128000, "gpt-4.1": 32768,
   "gpt-4.1-mini": 32768, "gpt-4o": 16384, "gpt-4o-mini": 16384,
   "gemini-3.8-flash": 65536, "gemini-3.5-flash-lite": 65536, "gemini-3.1-pro-preview": 65536
@@ -514,7 +517,9 @@ const PRICING = {
   // antes de usarlas con fines de facturacion real.
   anthropic: {
     "claude-sonnet-4-5-20250929": { inputPerMTok: 3.00, outputPerMTok: 15.00 },
-    "claude-haiku-4-5-20251001": { inputPerMTok: 1.00, outputPerMTok: 5.00 }
+    "claude-sonnet-5-5": { inputPerMTok: 2.00, outputPerMTok: 10.00 },
+    "claude-haiku-4-5-20251001": { inputPerMTok: 1.00, outputPerMTok: 5.00 },
+    "claude-haiku-5-5": { inputPerMTok: 0.10, outputPerMTok: 0.50 }
   },
   // Precios orientativos de OpenAI en USD por millón de tokens. Verifica las
   // tarifas vigentes antes de usarlas con fines de facturación real.

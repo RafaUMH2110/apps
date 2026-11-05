@@ -365,7 +365,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 15/10/2026 03:55</p>
+    <p>&#218;ltima modificaci&#243;n: 05/11/2026 18:29</p>
   </footer>
 </div>
 
@@ -406,6 +406,8 @@ const CLAUDE_MODELS = [
   { id: "claude-sonnet-4-5",          label: "Claude Sonnet 4.5 (claude-sonnet-4-5)" },
   { id: "claude-sonnet-5",            label: "Claude Sonnet 5 (claude-sonnet-5)" },
   { id: "claude-opus-5-5",            label: "Claude Opus 5.5 (claude-opus-5-5)" },
+  { id: "claude-sonnet-5-5",          label: "Claude Sonnet 5.5 (claude-sonnet-5-5)" },
+  { id: "claude-haiku-5-5",           label: "Claude Haiku 5.5 (claude-haiku-5-5)" },
   { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5 (claude-haiku-4-5-20251001)" },
   { id: "claude-fable-5-1",           label: "Claude Fable 5.1 (claude-fable-5-1)" }
 ];
@@ -443,6 +445,7 @@ const GEMINI_MODELS = [
 const LIMITE_TOKENS_DEFECTO = 8000;
 const MODEL_TOKEN_LIMITS = {
   "claude-sonnet-4-5": 64000, "claude-sonnet-5": 64000, "claude-opus-5-5": 64000,
+  "claude-sonnet-5-5": 128000, "claude-haiku-5-5": 128000,
   "claude-haiku-4-5-20251001": 64000, "claude-fable-5-1": 64000,
   "gpt-6-astra": 32768, "gpt-6.1-sol": 32768, "gpt-6-luna": 16384,
   "gpt-4o": 16384, "gpt-4o-mini": 16384, "gpt-4.1": 32768, "gpt-4.1-mini": 32768,

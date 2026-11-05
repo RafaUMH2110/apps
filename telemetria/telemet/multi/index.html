@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F2237">
+<title>TeleMet Multi · Varias estaciones meteorológicas a la vez</title>
+<meta name="description" content="Monitoriza varias estaciones meteorológicas personales de Weather Underground / Earth Network a la vez, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto y sincronización con TeleMet Colector.">
+<meta name="author" content="Rafael Puerto">
+<!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
+     data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232E6FD9'/%3E%3Cstop offset='1' stop-color='%230B3C78'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cline x1='15' y1='22' x2='15' y2='9' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M15 9L21.5 12.2L15 15.4Z' fill='white'/%3E%3Ccircle cx='23.5' cy='23.5' r='3.4' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Marca — constante en claro y oscuro */
+  --brasa:#E4572E; --brasa-osc:#C9441F;
+  --forjado:#0E7C6B;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9;
+  --r:14px;
+  --display:'Bricolage Grotesque',Georgia,serif;
+  --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme: light dark;
+
+  /* Superficie — modo claro */
+  --ink:#0F2237; --muted:#5D7691;
+  --page-bg:#F3F6FA; --card-bg:#FFFFFF;
+  --line:#D8E0E9; --line-2:#E8EEF4;
+  --steel:#2E4B6B; --steel-soft:#7C93AC;
+  --panel-dark:#0F2237; --on-dark:#EAF1F7; --on-dark-muted:#8FA7BE; --panel-line:#3E5C7D;
+  --brasa-suave:#FDEBE4; --forjado-suave:#E0F3EE; --aviso-ink:#8A3617;
+  --tip-bg:#FFF8E6; --tip-bd:#F3DDA0; --tip-ink:#6B4E00; --tip-ico:#C98200;
+  --sombra:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
+  --sombra-alta:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EAF1F7; --muted:#92ACC4;
+    --page-bg:#0B1420; --card-bg:#121C2B;
+    --line:#223247; --line-2:#1A2638;
+    --steel:#9CB7D6; --steel-soft:#51708F;
+    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
+    --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
+    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
+    --forjado:#1FBE9F;
+    --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
+    --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--ink);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:84px}
+a{color:var(--steel)}
+:focus-visible{outline:3px solid var(--brasa);outline-offset:2px;border-radius:6px}
+svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1px 5px;border-radius:5px}
+
+/* Barra superior */
+.topbar{position:sticky;top:0;z-index:40;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 6px 24px -14px rgba(0,0,0,.6)}
+.tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
+.logo em{font-style:normal;color:var(--brasa)}
+.logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brasa),var(--forjado));display:grid;place-items:center;color:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tb-btn:hover{border-color:var(--brasa);color:var(--on-dark)}
+@media(max-width:560px){.tb-btn .lbl{display:none}}
+
+/* Luz de estado (semáforo del monitor) */
+.light{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.light .bulbo{width:12px;height:12px;border-radius:50%;background:#B8C5D3;box-shadow:0 0 0 4px rgba(184,197,211,.3);flex:none;transition:all .2s}
+.light[data-s="ok"] .bulbo{background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.25);animation:pulso 1.3s ease-in-out infinite}
+.light[data-s="warn"] .bulbo{background:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.25)}
+.light[data-s="err"] .bulbo{background:var(--brasa);box-shadow:0 0 0 4px rgba(228,87,46,.25)}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.35}}
+.topbar .light{color:var(--on-dark-muted)}
+.topbar .light .ltxt{display:none}
+@media(min-width:720px){.topbar .light .ltxt{display:inline}}
+
+main{max-width:1100px;margin:0 auto;padding:26px 16px 10px}
+
+/* Hero */
+.hero{background:var(--panel-dark);color:var(--on-dark);border-radius:22px;padding:38px 36px;position:relative;overflow:hidden;margin-bottom:26px;box-shadow:var(--sombra-alta)}
+.hero::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(228,87,46,.5),transparent 65%)}
+.hero::after{content:"";position:absolute;left:25%;bottom:-140px;width:380px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(14,140,122,.35),transparent 65%)}
+.hero>*{position:relative;z-index:1}
+@media(max-width:600px){.hero{padding:26px 20px;border-radius:18px}}
+.eyebrow{font:600 11.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-dark-muted);margin:0 0 12px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;letter-spacing:-.03em;margin:0 0 14px}
+.hero h1 em{font-style:normal;color:var(--brasa)}
+.hero p.lede{max-width:62ch;font-size:16.5px;color:var(--on-dark-muted);margin:0 0 20px}
+.hero .actions .btn-ghost{background:transparent;color:#fff;border-color:var(--panel-line)}
+.hero .actions .btn-ghost:hover{border-color:#fff}
+.draft{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.8px}
+.draft:empty{display:none}
+
+/* Encabezados de sección */
+.sh{display:flex;gap:16px;align-items:flex-start;margin:34px 0 18px}
+.sh:first-of-type{margin-top:4px}
+.sh-ico{width:52px;height:52px;border-radius:15px;background:var(--c,var(--brasa));color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 10px 20px -12px var(--c,var(--brasa))}
+.sh-ico svg{width:26px;height:26px}
+.sh-step{font:600 11.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel-soft);margin:3px 0}
+.sh h2{font-family:var(--display);font-weight:800;font-size:clamp(21px,3vw,27px);letter-spacing:-.02em;line-height:1.1;margin:0 0 4px}
+.sh-lede{margin:0;color:var(--muted);font-size:14.5px;max-width:72ch}
+@media(max-width:560px){.sh-ico{width:42px;height:42px;border-radius:12px}.sh-ico svg{width:21px;height:21px}}
+
+.card{background:var(--card-bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sombra);padding:20px;margin-bottom:16px}
+.config-resumen-fila{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.card h3{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 4px}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+label{display:block;font-size:13.5px;font-weight:700;margin:0 0 6px;color:var(--steel)}
+.field{margin-bottom:16px}
+.help{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--texto);font-size:14.5px;color:var(--ink);background:var(--card-bg);transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--steel-soft);box-shadow:0 0 0 4px rgba(124,147,172,.18)}
+input:disabled{background:var(--line-2);color:var(--muted);cursor:not-allowed}
+input::placeholder{color:var(--steel-soft)}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1;font-family:var(--mono);font-size:13.5px}
+.eye{width:44px;flex:none;border:1.5px solid var(--line);background:var(--card-bg);border-radius:10px;color:var(--steel);display:grid;place-items:center;cursor:pointer}
+.eye:hover{border-color:var(--steel-soft)}
+
+button{font-family:var(--texto);cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-weight:700;font-size:14.5px;border:1.5px solid transparent;padding:10px 17px;transition:transform .08s,background .15s,border-color .15s;line-height:1.2}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--brasa);color:#fff;box-shadow:0 8px 18px -10px var(--brasa)}
+.btn-primary:hover:not(:disabled){background:var(--brasa-osc)}
+.btn-big{font-size:16px;padding:13px 22px;border-radius:13px}
+.btn-dark{background:var(--panel-dark);color:var(--on-dark)}
+.btn-dark:hover:not(:disabled){opacity:.88}
+.btn-ghost{background:var(--card-bg);border-color:var(--line);color:var(--steel)}
+.btn-ghost:hover:not(:disabled){border-color:var(--steel-soft)}
+.btn-ok{background:var(--forjado);color:#fff}
+.btn-ok:hover:not(:disabled){filter:brightness(.92)}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.herramientas-graf{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 6px}
+.herramientas-etq{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.segmentado{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;padding:2px;background:var(--card-bg)}
+.segmentado button{background:transparent;border:0;border-radius:8px;padding:6px 12px;font:600 13px var(--texto);color:var(--muted);cursor:pointer}
+.segmentado button[aria-pressed="true"]{background:var(--brasa);color:#fff}
+
+.tip{display:flex;gap:11px;background:var(--tip-bg);border:1px solid var(--tip-bd);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--tip-ink);margin-bottom:16px}
+.tip svg{width:20px;height:20px;color:var(--tip-ico);flex:none;margin-top:1px}
+.aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
+.aviso svg{width:20px;height:20px;flex:none;margin-top:1px}
+.okbox{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forjado);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
+
+/* Acordeón de ajustes avanzados */
+.acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--steel)}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.acc .inner{padding-top:14px}
+
+/* Acordeón de evolución (gráficas de 12 h / 7 días), mismo patrón que .acc
+   pero como su propio bloque con fondo de tarjeta (no anidado en una). */
+.acc-evol{border:1px solid var(--line);border-radius:var(--r);background:var(--card-bg);box-shadow:var(--sombra);padding:16px 18px;margin-bottom:14px;scroll-margin-bottom:84px}
+.acc-evol>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);font-family:var(--display)}
+.acc-evol>summary::-webkit-details-marker{display:none}
+.acc-evol>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc-evol[open]>summary .chev{transform:rotate(180deg)}
+.acc-evol .inner{padding-top:16px}
+.evol-nota{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.evol-vacio{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+/* Selector de ventana (12 h / 24 h) de las gráficas de evolución */
+.evol-ventana{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 14px}
+.evol-ventana button{font:inherit;font-size:13px;font-weight:700;padding:6px 18px;border:0;background:transparent;color:var(--steel);cursor:pointer}
+.evol-ventana button[aria-pressed="true"]{background:var(--steel);color:#fff}
+.evol-ventana button:focus-visible{outline:2px solid var(--steel);outline-offset:-2px}
+
+.chart-card{margin-bottom:16px}
+.chart-card:last-child{margin-bottom:0}
+.chart-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 16px;margin:0 0 6px}
+.chart-head h4{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0;letter-spacing:-.01em}
+.chart-leyenda{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+.leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chart-plot{position:relative}
+.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px;cursor:crosshair}
+.chart-svg .grafico-linea{fill:none;stroke-width:1.25;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
+.chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
+.chart-svg .grafico-etiqueta-eje{font-size:10px;font-weight:600;fill:var(--ink)}
+.chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.25}
+.chart-svg .grafico-crosshair{stroke:var(--steel-soft);stroke-width:1;pointer-events:none;opacity:0}
+.chart-svg .grafico-punto-hover{stroke:var(--card-bg);stroke-width:1.5;pointer-events:none;opacity:0}
+
+/* Tooltip al pasar el cursor sobre una gráfica de evolución */
+.chart-tooltip{position:absolute;top:0;left:0;pointer-events:none;opacity:0;z-index:2;
+  background:var(--card-bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sombra-alta);
+  padding:7px 10px;font-size:12px;white-space:nowrap;transition:opacity .08s linear}
+.tt-cab{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.tt-fila{display:flex;align-items:center;gap:7px}
+.tt-fila+.tt-fila{margin-top:3px}
+.tt-fila .leyenda-linea{flex:none}
+.tt-val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tt-nombre{color:var(--muted);margin-left:auto;padding-left:8px}
+
+/* Estadísticas */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
+.stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
+.stat span{font-size:12px;color:var(--muted)}
+
+.progreso{height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+.progreso-fill{height:100%;width:0;background:var(--brasa);transition:width .25s linear}
+.progreso-etiqueta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Tarjetas de métricas */
+.datos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+@media(max-width:760px){.datos-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.datos-grid{grid-template-columns:1fr}}
+.feat{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:14px 15px;border-top:4px solid var(--c)}
+.feat .fi{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,var(--card-bg));color:var(--c);display:grid;place-items:center;margin-bottom:9px}
+.feat .fi svg{width:18px;height:18px}
+.feat .etiqueta{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+.feat .valor{font-family:var(--display);font-size:21px;font-weight:700;margin-top:2px;display:flex;align-items:baseline;gap:5px}
+.feat .unidad{font-size:12px;color:var(--muted);margin-left:1px;font-family:var(--texto);font-weight:400}
+.feat .tendencia{display:inline-flex;align-items:center}
+.feat .tendencia svg{width:15px;height:15px}
+.feat .tendencia.subida{color:#16A34A}
+.feat .tendencia.bajada{color:var(--brasa)}
+.feat .tendencia.estable{color:var(--steel-soft)}
+.sparkline{width:100%;height:13px;display:block;margin-top:5px}
+.sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
+.tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.tile-calidad .fi{margin-bottom:0;flex-shrink:0}
+.tile-calidad .valor{font-size:17px;margin-top:1px}
+.tile-calidad .valor.ok{color:#16A34A}
+.tile-calidad .valor.duda{color:var(--muted)}
+
+.dias-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px}
+@media(max-width:760px){.dias-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:480px){.dias-grid{grid-template-columns:repeat(3,1fr)}}
+.dia-card{background:var(--card-bg);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+.dia-card.hoy{box-shadow:inset 0 0 0 1.5px var(--brasa)}
+.dia-card .dc-fecha{font-size:11px;font-weight:700;color:var(--steel-soft);text-transform:uppercase;letter-spacing:.03em}
+.dia-card .dc-temps{font-family:var(--display);font-weight:700;margin-top:7px;display:flex;justify-content:center;gap:6px;font-size:15px}
+.dia-card .dc-max{color:var(--c-temp)}
+.dia-card .dc-min{color:var(--steel-soft)}
+.dia-card .dc-barra{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
+.dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--c-hum),var(--c-temp));border-radius:2px}
+.dia-card .dc-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.resumen-dia-solo{max-width:220px;margin:4px 0 16px}
+.dias-vacio{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
+
+.meta-linea{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+/* Histórico */
+.historial-vacio{color:var(--muted);font-size:13.5px;font-style:italic}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px;font-family:var(--mono)}
+table.t th{background:var(--panel-dark);color:var(--on-dark);text-align:left;padding:9px 10px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line-2)}
+table.t tr:nth-child(even) td{background:var(--page-bg)}
+table.t th:first-child,table.t td:first-child{position:sticky;left:0;z-index:1}
+table.t th:first-child{background:var(--panel-dark)}
+table.t td:first-child{background:var(--card-bg)}
+table.t tr:nth-child(even) td:first-child{background:var(--page-bg)}
+.estado-stale{color:var(--brasa);font-weight:700}
+.historial-envoltorio{max-height:260px;overflow-y:auto}
+
+/* Barra inferior fija */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
+.bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.bn-in .light{flex:1;min-width:0}
+.bn-in .btn-ghost{background:transparent;color:var(--on-dark);border-color:var(--panel-line)}
+.bn-in .btn-ghost:hover:not(:disabled){border-color:var(--brasa)}
+
+@media(max-width:480px){.bn-in .btn .lbl{display:none}}
+
+/* Modal glosario */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(15,34,55,.55);display:none;align-items:flex-start;justify-content:center;padding:8vh 16px;overflow:auto}
+.modal.on{display:flex}
+.modal-box{background:var(--card-bg);border-radius:18px;max-width:640px;width:100%;box-shadow:var(--sombra-alta);overflow:hidden}
+.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--panel-dark);color:var(--on-dark)}
+.modal-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1}
+.modal-head button{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark);border-radius:9px;padding:6px 10px}
+.modal-body{padding:18px 20px 22px}
+.glos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.glos{grid-template-columns:1fr}}
+.glos div{background:var(--page-bg);border-radius:12px;padding:12px 14px}
+.glos b{display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+.glos span{font-size:13px;color:var(--muted)}
+
+footer.app-footer{max-width:1100px;margin:0 auto;padding:18px 16px 0;font-size:12.5px;color:var(--muted)}
+footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
+.firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
+
+/* ===== TeleMet Multi: estilos propios (sobre la base de TeleMet Historial) ===== */
+.nav-secc{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px}
+.nav-secc a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;font-weight:700;color:var(--steel);background:var(--card-bg);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+.nav-secc a:hover{border-color:var(--steel-soft)}
+.est-edit{display:grid;grid-template-columns:auto 1fr 1fr 1.4fr auto;gap:12px;align-items:end;padding:14px 0;border-top:1px solid var(--line-2)}
+.est-edit:first-child{border-top:0;padding-top:2px}
+.est-edit .field{margin:0}
+.est-edit input[type=color]{width:42px;height:42px;padding:2px;border:1.5px solid var(--line);border-radius:10px;background:var(--card-bg);cursor:pointer}
+.est-edit .est-opts{display:flex;gap:8px;align-items:center;padding-bottom:6px}
+.est-edit label.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600;margin:0;white-space:nowrap}
+@media(max-width:860px){.est-edit{grid-template-columns:auto 1fr;}.est-edit .est-opts{grid-column:1 / -1}}
+.est-vacio{color:var(--muted);font-size:14px;margin:6px 0 0}
+.est-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:6px 0 20px}
+.est-card{background:var(--card-bg);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:14px;padding:13px 15px;box-shadow:var(--sombra);cursor:pointer;text-align:left;font:inherit;color:inherit;display:block;width:100%}
+.est-card:hover{border-color:var(--steel-soft);border-top-color:var(--c)}
+.est-card[aria-pressed="true"]{box-shadow:0 0 0 2px var(--c),var(--sombra)}
+.est-card.apagada{opacity:.55}
+.ec-cab{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ec-nom{font:700 15px var(--display);letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec-id{font:11.5px var(--mono);color:var(--muted)}
+.ec-bulbo{width:11px;height:11px;border-radius:50%;background:#B8C5D3;flex:none}
+.ec-bulbo[data-s="ok"]{background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.22)}
+.ec-bulbo[data-s="warn"]{background:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.22)}
+.ec-bulbo[data-s="err"]{background:var(--brasa);box-shadow:0 0 0 3px rgba(228,87,46,.22)}
+.ec-temp{font:800 34px var(--display);letter-spacing:-.03em;line-height:1.1;margin:8px 0 2px;display:flex;align-items:baseline;gap:6px}
+.ec-temp small{font:600 14px var(--texto);color:var(--muted)}
+.ec-temp .tendencia{display:inline-flex}
+.ec-temp .tendencia svg{width:17px;height:17px}
+.ec-temp .tendencia.subida{color:#16A34A}.ec-temp .tendencia.bajada{color:var(--brasa)}.ec-temp .tendencia.estable{color:var(--steel-soft)}
+.ec-met{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:13px;margin-top:6px}
+.ec-met span{color:var(--muted)}
+.ec-met b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.ec-pie{margin-top:8px;font-size:12px;color:var(--muted);min-height:1.3em}
+.ec-pie.err{color:var(--aviso-ink)}
+.ec-spark{width:100%;height:22px;display:block;margin-top:4px}
+.ec-spark polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.cab-est{display:flex;align-items:center;gap:7px}
+.cab-est i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
+table.t td.num{text-align:right;white-space:nowrap}
+table.t td.max{color:var(--brasa);font-weight:700}
+table.t td.min{color:var(--c-hum);font-weight:700}
+table.t td .dif{display:block;font-size:11px;color:var(--muted);font-weight:500}
+table.t td.ref{background:color-mix(in srgb,var(--steel) 10%,transparent)}
+table.t th.num{text-align:right}
+.tbl-wrap.amplia table.t th:first-child,.tbl-wrap.amplia table.t td:first-child{min-width:150px}
+.ctrl-fila{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:0 0 12px}
+.ctrl-fila .etq{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;background:var(--card-bg);color:var(--muted);font:600 13px var(--texto);padding:5px 12px;cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--steel-soft));flex:none;opacity:.45}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--c,var(--steel));background:color-mix(in srgb,var(--c,var(--steel)) 10%,var(--card-bg))}
+.chip[aria-pressed="true"] i{opacity:1}
+select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card-bg);color:var(--ink);max-width:100%}
+.extremos{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 20px}
+.extremo{background:var(--card-bg);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:10px 12px}
+.extremo .e-etq{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.extremo .e-val{font:700 18px var(--display);margin-top:1px}
+.extremo .e-est{font-size:12.5px;color:var(--muted)}
+.mapa-wrap{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 20px}
+.mapa-wrap svg.mapa{width:100%;max-width:620px;height:auto;max-height:300px;display:block;margin:0 auto;background:var(--page-bg);border-radius:10px}
+.mapa text{font:600 11px var(--texto);fill:var(--ink);paint-order:stroke;stroke:var(--page-bg);stroke-width:3px}
+.mapa .mp-norte{fill:var(--muted);stroke:none;font-size:10px}
+.mapa-pie{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
+.tag{display:inline-block;font:700 11px var(--mono);padding:2px 7px;border-radius:6px;background:var(--line-2);color:var(--steel)}
+.tag.ok{background:var(--forjado-suave);color:var(--forjado)}
+.tag.err{background:var(--brasa-suave);color:var(--aviso-ink)}
+.tag.warn{background:var(--tip-bg);color:var(--tip-ink)}
+.msg-linea{font-size:13px;color:var(--muted);margin:6px 0 12px}
+.msg-linea.err{color:var(--aviso-ink)}
+.cuota{font-size:13px;margin:10px 0 0;color:var(--muted)}
+.cuota.aviso-c{color:var(--aviso-ink);font-weight:600}
+.mini-btn{font-size:12px;padding:4px 9px}
+@media(max-width:560px){.ec-temp{font-size:30px}}
+</style>
+</head>
+<body data-app-title="TeleMet Multi" data-app-description="Monitoriza a la vez varias estaciones meteorológicas personales de Weather Underground / Earth Network, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa con máximos y mínimos y diferencias respecto a una referencia, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto, mapa esquemático y sincronización con TeleMet Colector (un JSON por estación)." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="estacion meteorologica,varias estaciones,multiestacion,weather underground,pws,telemetria,iot,sensores,comparativa,graficos,historico,colector,tiempo real" data-client-only="true">
+
+<!--
+  ============================================================================
+  TeleMet Multi — Notas de diseño y configuración
+  ============================================================================
+  QUÉ ES
+  Variante de TeleMet Historial (apps/telemetria/telemet/historial) pensada
+  para ver VARIAS estaciones a la vez. Reutiliza su motor de lectura, su
+  extracción de valores, su histórico local (IndexedDB), su relleno desde la
+  API y su trazado de gráficas, y añade: lista de estaciones con su propia API
+  Key y color, sondeo independiente por estación, tarjetas y tabla comparativa
+  (con diferencias respecto a una referencia), extremos, mapa esquemático,
+  gráficas superpuestas (una línea por estación) o por estación, resumen de
+  7 días, consulta de un día concreto, sincronización con los JSON por
+  estación de TeleMet Colector y exportación/importación de la configuración.
+
+  DÓNDE ESTÁN LOS DATOS
+  - localStorage: telemetmulti_estaciones (estaciones y claves),
+    telemetmulti_ajustes (sondeo, clave común, carpeta de JSON) y
+    telemetmulti_ui (vista de las gráficas). Si no hay estaciones guardadas y
+    existe wu_station_id / wu_api_key (resto de la familia), se propone como
+    primera estación.
+  - IndexedDB telemetmulti_db / lecturas: una fila por lectura y estación
+    (índices por estación y por [estación, instante]); se conservan 9 días.
+
+  QUÉ CONSTANTES EDITAR (buscar en el script final)
+  MAX_EST, PALETA, DEF (sondeo por defecto), LIMITE_LLAMADAS_DIA (aviso de
+  cuota), RETENCION_DIAS, VENTANAS (nº de tramos de cada gráfica) y
+  SERV_SYNC_CADA_MIN / SERV_AVISO_MIN (colector).
+  ============================================================================
+-->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Icono de marca (bandera + ondas de señal, el mismo que apple-touch-icon.png
+       y el favicon): simplificado a bandera + punto de base para que se lea
+       bien al tamaño diminuto del logo de la cabecera. -->
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M12 18V6"></path><path d="M12 6l6 3-6 3z" fill="currentColor" stroke="none"></path><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"></circle></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m10 8 6 4-6 4z"></path></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"></path></symbol>
+  <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"></path></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 15a8.5 8.5 0 1 1 17 0"></path><path d="M12 15l3.3-3.3"></path><circle cx="12" cy="15" r="1.3"></circle></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 4.22-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.9 19.9 0 0 1-2.22 3.2M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"></path></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="8" rx="2"></rect><rect x="2" y="13" width="20" height="8" rx="2"></rect><path d="M6 7h.01M6 17h.01"></path></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="tb-in">
+    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Multi</em></span></button>
+    <div class="tb-right">
+      <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
+      <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="hero">
+    <p class="eyebrow">VARIAS ESTACIONES · WEATHER UNDERGROUND / EARTH NETWORK</p>
+    <h1>Tus estaciones, <em>una al lado de otra</em></h1>
+    <p class="lede">Monitoriza a la vez varias estaciones meteorológicas personales, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa con máximos y mínimos, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto y sincronización con el histórico que guarda el servidor (TeleMet Colector).</p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-big" id="btnIrConfig"><svg class="i"><use href="#i-sliders"></use></svg>Configurar mis estaciones</button>
+      <button type="button" class="btn btn-ghost btn-big" id="btnHelp2"><svg class="i"><use href="#i-help"></use></svg>¿Qué significa cada término?</button>
+    </div>
+  </div>
+
+  <div class="tip" style="margin-bottom:18px">
+    <svg class="i"><use href="#i-alert"></use></svg>
+    <span><strong>Aviso:</strong> el sondeo solo funciona mientras esta pestaña permanece abierta. Para tener el histórico completo aunque la cierres, instala TeleMet Colector en el servidor (sección «Datos y servidor»).</span>
+  </div>
+
+  <nav class="nav-secc" aria-label="Secciones">
+    <a href="#secEstaciones"><svg class="i"><use href="#i-sliders"></use></svg>Estaciones</a>
+    <a href="#secAhora"><svg class="i"><use href="#i-thermometer"></use></svg>Ahora</a>
+    <a href="#secDetalle"><svg class="i"><use href="#i-gauge"></use></svg>Detalle</a>
+    <a href="#secEvol"><svg class="i"><use href="#i-activity"></use></svg>Gráficas</a>
+    <a href="#secSemana"><svg class="i"><use href="#i-archive"></use></svg>7 días</a>
+    <a href="#secDia"><svg class="i"><use href="#i-archive"></use></svg>Día concreto</a>
+    <a href="#secDatos"><svg class="i"><use href="#i-server"></use></svg>Datos y servidor</a>
+  </nav>
+
+  <!-- ============ 01 · ESTACIONES ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="secEstaciones"><div class="sh-ico"><svg class="i"><use href="#i-sliders"></use></svg></div><div><p class="sh-step">01 · Antes de empezar</p><h2>Estaciones</h2><p class="sh-lede">Añade hasta 12 estaciones. Los datos (Station ID y API Key) se guardan solo en este navegador. Los campos se bloquean mientras el monitor está en marcha.</p></div></header>
+
+  <div class="card">
+    <h3>Mis estaciones</h3>
+    <p class="sub">Cada estación puede tener su propia API Key; si dejas la de una estación vacía se usa la «clave común» de más abajo. El nombre es opcional (si lo dejas vacío se usa el que informe la estación).</p>
+    <div id="estList"></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-dark btn-sm" id="btnAddEst"><svg class="i"><use href="#i-plus"></use></svg>Añadir estación</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnImportar"><svg class="i"><use href="#i-upload"></use></svg>Importar configuración</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnExportar"><svg class="i"><use href="#i-download"></use></svg>Exportar configuración</button>
+      <label class="chk" style="font-size:13px;display:inline-flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="chkExportarClaves"> incluir las API Key en el archivo</label>
+      <input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+    </div>
+    <p class="msg-linea" id="cfgMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h3>Sondeo</h3>
+    <p class="sub">Cada estación se consulta por separado, a su ritmo y con sus propios reintentos: si una falla, las demás siguen. Los arranques se escalonan unos segundos para no lanzar todas las peticiones a la vez.</p>
+    <div class="grid2">
+      <div class="field">
+        <label for="pollInput">Intervalo de sondeo por estación (s)</label>
+        <input type="number" id="pollInput" min="5" step="1" value="60">
+      </div>
+      <div class="field">
+        <label for="claveComunInput">Clave común (opcional)</label>
+        <div class="keyrow">
+          <input type="password" id="claveComunInput" placeholder="Para las estaciones sin clave propia" autocomplete="off" spellcheck="false">
+          <button type="button" class="eye" id="btnVerClave" aria-label="Mostrar u ocultar la clave común" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
+        </div>
+      </div>
+    </div>
+    <p class="cuota" id="cuotaLinea"></p>
+    <details class="acc" style="margin-top:14px">
+      <summary>Ajustes avanzados<svg class="i chev"><use href="#i-down"></use></svg></summary>
+      <div class="inner">
+        <div class="grid2">
+          <div class="field"><label for="timeoutInput">Tiempo límite de cada petición (s)</label><input type="number" id="timeoutInput" min="1" step="1" value="15"></div>
+          <div class="field"><label for="staleInput">Umbral de dato obsoleto (s)</label><input type="number" id="staleInput" min="10" step="1" value="120"><p class="help">Si la lectura de una estación es más antigua, su luz pasa a ámbar.</p></div>
+          <div class="field"><label for="backoffBaseInput">Backoff: espera inicial (s)</label><input type="number" id="backoffBaseInput" min="1" step="1" value="2"></div>
+          <div class="field"><label for="backoffMaxInput">Backoff: espera máxima (s)</label><input type="number" id="backoffMaxInput" min="1" step="1" value="300"></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ============ 02 · AHORA ============ -->
+  <header class="sh" style="--c:#0E7C6B" id="secAhora"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">02 · Ahora mismo</p><h2>Lecturas en tiempo real</h2><p class="sh-lede">Una tarjeta por estación con su última lectura y su tendencia. Pulsa una tarjeta para ver su detalle más abajo.</p></div></header>
+
+  <p class="meta-linea" id="metaLinea" aria-live="polite">Monitor detenido.</p>
+  <div class="est-grid" id="estGrid"></div>
+
+  <div id="extremos" class="extremos"></div>
+
+  <div class="mapa-wrap" id="mapaWrap" style="display:none">
+    <svg class="mapa" id="mapa" viewBox="0 0 320 210" role="img" aria-label="Posición relativa de las estaciones"></svg>
+    <p class="mapa-pie" id="mapaPie"></p>
+  </div>
+
+  <div class="card">
+    <h3>Comparativa</h3>
+    <p class="sub">Última lectura de cada estación. En rojo el valor más alto de cada fila y en azul el más bajo (cuando hay dos o más estaciones con dato).</p>
+    <div class="ctrl-fila">
+      <span class="etq">Diferencias respecto a</span>
+      <select id="refSel" aria-label="Estación de referencia"><option value="">— ninguna —</option></select>
+    </div>
+    <div class="tbl-wrap amplia"><div id="tablaComp"></div></div>
+  </div>
+
+  <!-- ============ 03 · DETALLE ============ -->
+  <header class="sh" style="--c:#E4572E" id="secDetalle"><div class="sh-ico"><svg class="i"><use href="#i-gauge"></use></svg></div><div><p class="sh-step">03 · Una estación</p><h2>Detalle de la estación</h2><p class="sh-lede">Todas las variables de la estación elegida, con su tendencia y el mínimo, máximo y minigráfico de las últimas 24 horas (a partir del histórico guardado).</p></div></header>
+  <div class="ctrl-fila">
+    <span class="etq">Estación</span>
+    <select id="detalleSel" aria-label="Estación para el detalle"></select>
+    <span class="msg-linea" id="detalleMeta" style="margin:0"></span>
+  </div>
+  <div class="datos-grid" id="detalleGrid" style="margin-bottom:28px"></div>
+
+  <!-- ============ 04 · EVOLUCIÓN ============ -->
+  <header class="sh" style="--c:#6B4FD8" id="secEvol"><div class="sh-ico"><svg class="i"><use href="#i-activity"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Gráficas de evolución</h2><p class="sh-lede">Se construyen con el histórico guardado en este navegador (completado con el del servidor si está disponible). Compara una misma variable entre estaciones o mira todas las variables de una sola estación.</p></div></header>
+
+  <div class="card" id="cardEvol">
+    <div class="ctrl-fila">
+      <span class="etq">Ventana</span>
+      <div class="evol-ventana" role="group" aria-label="Ventana de tiempo" id="evolVentana" style="margin:0">
+        <button type="button" data-h="12" aria-pressed="true">12 h</button><button type="button" data-h="24" aria-pressed="false">24 h</button><button type="button" data-h="168" aria-pressed="false">7 d</button>
+      </div>
+      <span class="etq" style="margin-left:6px">Vista</span>
+      <div class="segmentado" role="group" aria-label="Tipo de vista">
+        <button type="button" id="modoComparar" aria-pressed="true">Comparar estaciones</button>
+        <button type="button" id="modoEstacion" aria-pressed="false">Una estación</button>
+      </div>
+    </div>
+    <div class="ctrl-fila" id="filaChipsEst"><span class="etq">Estaciones</span><div class="chips" id="chipsEst"></div></div>
+    <div class="ctrl-fila" id="filaChipsVar"><span class="etq">Variables</span><div class="chips" id="chipsVar"></div></div>
+    <div class="ctrl-fila" id="filaEstSel" style="display:none"><span class="etq">Estación</span><select id="estSelEvol" aria-label="Estación"></select></div>
+    <p class="evol-nota" id="evolNota"></p>
+    <div id="charts"><p class="evol-vacio">Añade estaciones e inicia el monitor para ver las gráficas.</p></div>
+  </div>
+
+  <!-- ============ 05 · 7 DÍAS ============ -->
+  <header class="sh" style="--c:#C98200" id="secSemana"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">05 · La semana</p><h2>Resumen de los últimos 7 días</h2><p class="sh-lede">Un valor por día y por estación, a partir del histórico guardado. En rojo el más alto de cada día y en azul el más bajo.</p></div></header>
+  <div class="card">
+    <div class="ctrl-fila">
+      <span class="etq">Mostrar</span>
+      <div class="segmentado" role="group" aria-label="Magnitud del resumen" id="segResumen">
+        <button type="button" data-m="tmax" aria-pressed="true">T. máxima</button>
+        <button type="button" data-m="tmin" aria-pressed="false">T. mínima</button>
+        <button type="button" data-m="tmed" aria-pressed="false">T. media</button>
+        <button type="button" data-m="lluvia" aria-pressed="false">Lluvia</button>
+        <button type="button" data-m="racha" aria-pressed="false">Racha máx.</button>
+      </div>
+    </div>
+    <div class="tbl-wrap amplia"><div id="tablaSemana"><p class="evol-vacio">Todavía no hay datos.</p></div></div>
+  </div>
+
+  <!-- ============ 06 · DÍA CONCRETO ============ -->
+  <header class="sh" style="--c:#4F772D" id="secDia"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">06 · El pasado</p><h2>Consultar un día en concreto</h2><p class="sh-lede">Elige cualquier fecha: se usa lo guardado en este navegador y, si falta cobertura, se completa con el histórico de la API (una petición por estación y día). Usa las estaciones y variables elegidas en las gráficas.</p></div></header>
+  <div class="card">
+    <div class="grid2" style="align-items:end">
+      <div class="field"><label for="diaInput">Fecha</label><input type="date" id="diaInput"></div>
+      <div class="field"><button type="button" class="btn btn-dark" id="btnConsultarDia" style="width:100%"><svg class="i"><use href="#i-activity"></use></svg>Consultar</button></div>
+    </div>
+    <p class="msg-linea" id="diaEstado" style="display:none"></p>
+    <div id="diaResumen"></div>
+    <div id="chartsDia"><p class="evol-vacio">Elige una fecha y pulsa «Consultar».</p></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSVDia" disabled><svg class="i"><use href="#i-download"></use></svg>Descargar ese día (CSV)</button>
+    </div>
+  </div>
+
+  <!-- ============ 07 · DATOS Y SERVIDOR ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="secDatos"><div class="sh-ico"><svg class="i"><use href="#i-server"></use></svg></div><div><p class="sh-step">07 · Mantenimiento</p><h2>Datos y servidor</h2><p class="sh-lede">Sincronización con TeleMet Colector, lo guardado en este navegador y exportación.</p></div></header>
+
+  <div class="card">
+    <h3>Histórico del servidor (TeleMet Colector)</h3>
+    <p class="sub">Si el colector corre en el mismo servidor, esta app lee para cada estación su archivo <code>historial_&lt;ID&gt;.json</code> (o <code>history_&lt;ID&gt;.json</code>) y, si no existe, el único <code>historial.json</code> / <code>history.json</code> cuando su <code>stationId</code> coincide. Solo <strong>añade</strong> lecturas que faltan: nunca borra ni modifica lo local. Si no hay colector, simplemente se ignora.</p>
+    <div class="grid2" style="align-items:end">
+      <div class="field"><label for="servBaseInput">Carpeta de los JSON (relativa a esta página)</label><input type="text" id="servBaseInput" value="datos/" spellcheck="false" autocomplete="off"><p class="help">Por defecto <code>datos/</code>. Si el colector escribe en la carpeta de TeleMet Historial, usa <code>../telemethistorial/datos/</code>.</p></div>
+      <div class="field"><button type="button" class="btn btn-dark" id="btnSyncServidor" style="width:100%"><svg class="i"><use href="#i-refresh"></use></svg>Sincronizar ahora</button></div>
+    </div>
+    <div class="tbl-wrap"><div id="servEstado"></div></div>
+  </div>
+
+  <div class="card">
+    <h3>Histórico guardado en este navegador</h3>
+    <p class="sub">Se conservan 9 días por estación (IndexedDB). «Rellenar» pide a la API los días con huecos de los últimos 7 (<strong>una petición por estación y día incompleto</strong>, que cuenta para el límite de tu clave).</p>
+    <div class="tbl-wrap"><div id="datosTabla"></div></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnBackfill"><svg class="i"><use href="#i-refresh"></use></svg>Rellenar huecos desde la API</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSV24"><svg class="i"><use href="#i-download"></use></svg>CSV · 24 h</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSV7"><svg class="i"><use href="#i-download"></use></svg>CSV · 7 días</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSVTodo"><svg class="i"><use href="#i-download"></use></svg>CSV · todo</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnBorrarTodo"><svg class="i"><use href="#i-trash"></use></svg>Borrar todo lo guardado</button>
+    </div>
+    <p class="msg-linea" id="datosMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <details class="acc-evol" id="accRegistro">
+    <summary><svg class="i"><use href="#i-activity"></use></svg>Registro de actividad (esta sesión)<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <div class="tbl-wrap"><div id="registro"><p class="evol-vacio">Sin actividad todavía.</p></div></div>
+    </div>
+  </details>
+
+</main>
+
+<footer class="app-footer">
+  <hr>
+  <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 0:44</p>
+</footer>
+
+<div class="bottomnav">
+  <div class="bn-in">
+    <div class="light" id="luzEstadoBar" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoBar">Monitor detenido</span></div>
+    <button type="button" class="btn btn-ok btn-sm" id="btnIniciarBar" disabled><svg class="i"><use href="#i-play"></use></svg><span class="lbl">Iniciar</span></button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnDetenerBar" disabled><svg class="i"><use href="#i-pause"></use></svg><span class="lbl">Detener</span></button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnSondeoBar" disabled title="Sondear todas ahora"><svg class="i"><use href="#i-refresh"></use></svg><span class="lbl">Sondear</span></button>
+  </div>
+</div>
+
+<div class="modal" id="modalGlosario">
+  <div class="modal-box">
+    <div class="modal-head"><svg class="i"><use href="#i-help"></use></svg><h2>Glosario</h2><button type="button" id="modalCerrar" aria-label="Cerrar"><svg class="i"><use href="#i-x"></use></svg></button></div>
+    <div class="modal-body">
+      <div class="glos">
+        <div><b>Station ID / API Key</b><span>Identificador de cada estación en wunderground.com (My Profile → My Devices) y la clave de la API. Cada estación puede llevar la suya; si está vacía se usa la «clave común».</span></div>
+        <div><b>Sondeo independiente</b><span>Cada estación tiene su propio ciclo, su propio contador de reintentos y su propio estado: una clave errónea (401) o un Station ID inexistente (404) detiene solo esa estación.</span></div>
+        <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
+        <div><b>Límite de llamadas</b><span>Las claves de Weather Underground tienen un límite diario de peticiones (habitualmente 1.500 al día en las cuentas personales; compruébalo en tu cuenta). Con varias estaciones que comparten clave, las llamadas se suman: la app te avisa si el intervalo elegido lo supera.</span></div>
+        <div><b>Luz de estado</b><span>Verde: lectura reciente. Ámbar: la lectura es más antigua que el umbral de «dato obsoleto». Roja: error o estación detenida. Gris: sin sondear.</span></div>
+        <div><b>Tendencia (▲ ▼ —)</b><span>Compara la última temperatura de la estación con la anterior.</span></div>
+        <div><b>Comparativa y diferencias</b><span>Con una estación de referencia, cada celda muestra además la diferencia respecto a ella (Δ). Útil para ver gradientes entre zonas o comprobar un sensor frente a otro.</span></div>
+        <div><b>Sensación térmica</b><span>Índice de calor con ≥ 27 °C, sensación de frío por viento con ≤ 10 °C y algo de viento; en el resto, la temperatura del aire. Se calcula en el navegador.</span></div>
+        <div><b>Punto de rocío</b><span>Temperatura a la que el aire se saturaría de humedad. Cuanto más cerca de la temperatura del aire, más húmedo se percibe el ambiente.</span></div>
+        <div><b>Lluvia acumulada</b><span>Total que la propia estación lleva acumulado, normalmente desde la medianoche local; se reinicia sola cada día en el hardware.</span></div>
+        <div><b>Gráficas superpuestas</b><span>Cada línea es una estación. Para ahorrar puntos, los datos se agrupan en tramos de 3 min (12 h), 5 min (24 h) o 30 min (7 d) y se muestra su media. Los huecos largos sin datos no se unen con una recta.</span></div>
+        <div><b>Histórico del navegador</b><span>Cada lectura se guarda en IndexedDB (9 días por estación). Persiste entre sesiones en este mismo navegador y dispositivo.</span></div>
+        <div><b>TeleMet Colector</b><span>Programa Python del servidor que lee las estaciones aunque nadie tenga la app abierta y publica un JSON por estación. Esta app los lee y añade las lecturas que le faltan.</span></div>
+        <div><b>Mapa esquemático</b><span>Posición relativa de las estaciones según las coordenadas que informan (sin mapa de fondo, funciona sin conexión). El norte está arriba.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONSTANTES EDITABLES
+     ============================================================ */
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+  const HISTORY_URL = 'https://api.weather.com/v2/pws/history/all';
+
+  const LS = { ests: 'telemetmulti_estaciones', cfg: 'telemetmulti_ajustes', ui: 'telemetmulti_ui' };
+  // Claves de la familia TelemetriaWU: si ya configuraste una estación en otra app, se propone como primera.
+  const LS_WU_STATION = 'wu_station_id', LS_WU_KEY = 'wu_api_key';
+
+  const MAX_EST = 12;
+  const PALETA = ['#E4572E', '#1F6FB2', '#0E7C6B', '#6B4FD8', '#C98200', '#D94F70', '#4F772D', '#00A0B8', '#8E5A2B', '#7A7F8C', '#B5179E', '#2D6A4F'];
+
+  const DEF = { pollS: 60, timeoutS: 15, backoffBaseS: 2, backoffMaxS: 300, staleS: 120, claveComun: '', servBase: 'datos/' };
+  const LIMITE_LLAMADAS_DIA = 1500;      // límite habitual de las claves personales (orientativo)
+
+  const DB_NAME = 'telemetmulti_db', DB_VERSION = 1, DB_STORE = 'lecturas';
+  const RETENCION_DIAS = 9, DIAS_SEMANA = 7;
+  const SERV_SYNC_CADA_MIN = 10, SERV_TOL_MS = 30 * 1000, SERV_AVISO_MIN = 15;
+  const MERGE_TOL_MS = 90 * 1000;
+  const HUECO_MAX_MS = 90 * 60 * 1000, HUECO_MIN_MS = 15 * 60 * 1000;
+  const UMBRAL_TENDENCIA = 0.05;
+  const MAX_REGISTRO = 120;
+
+  const SANITY_CHECK = {
+    temp_c: { min: -60, max: 60 }, heat_index_c: { min: -60, max: 70 }, dewpoint_c: { min: -60, max: 60 },
+    humidity_pct: { min: 0, max: 100 }, pressure_hpa: { min: 850, max: 1085 }, wind_kmh: { min: 0, max: 250 },
+    gust_kmh: { min: 0, max: 300 }, wind_dir_deg: { min: 0, max: 360 }, rainrate_mmh: { min: 0, max: 500 },
+    rain_total_mm: { min: 0, max: 1000 }, solarradiation_wm2: { min: 0, max: 1500 }, uv_index: { min: 0, max: 20 }
+  };
+
+  // Variable, icono, color (var(--c-xxx)) y decimales con que se muestra.
+  const GRAFICABLES = [
+    { key: 'temp_c', etiqueta: 'Temperatura', unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)', dec: 1 },
+    { key: 'heat_index_c', etiqueta: 'Sensación térmica', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)', dec: 1 },
+    { key: 'dewpoint_c', etiqueta: 'Punto de rocío', unidad: '°C', icono: 'droplet', color: 'var(--c-dew)', dec: 1 },
+    { key: 'humidity_pct', etiqueta: 'Humedad', unidad: '%', icono: 'droplet', color: 'var(--c-hum)', dec: 0 },
+    { key: 'pressure_hpa', etiqueta: 'Presión', unidad: 'hPa', icono: 'gauge', color: 'var(--c-pres)', dec: 1 },
+    { key: 'wind_kmh', etiqueta: 'Viento', unidad: 'km/h', icono: 'wind', color: 'var(--c-wind)', dec: 1 },
+    { key: 'gust_kmh', etiqueta: 'Racha', unidad: 'km/h', icono: 'wind', color: 'var(--c-gust)', dec: 1 },
+    { key: 'wind_dir_deg', etiqueta: 'Dirección del viento', unidad: '°', icono: 'wind', color: 'var(--c-dir)', dec: 0 },
+    { key: 'rainrate_mmh', etiqueta: 'Lluvia', unidad: 'mm/h', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'rain_total_mm', etiqueta: 'Lluvia acumulada', unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun', color: 'var(--c-solar)', dec: 0 },
+    { key: 'uv_index', etiqueta: 'Índice UV', unidad: '', icono: 'sun', color: 'var(--c-uv)', dec: 1 }
+  ];
+  const DEF_VAR = k => GRAFICABLES.find(m => m.key === k);
+  const VARS_COMPARABLES = GRAFICABLES.filter(m => m.key !== 'wind_dir_deg');
+
+  // Vista «Una estación»: mismas agrupaciones que TeleMet Historial (con doble eje Y en lluvia y solar+UV).
+  const GRUPOS_ESTACION = [
+    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
+    { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
+    { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
+    { titulo: 'Tasa de lluvia y lluvia acumulada', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
+    { titulo: 'Radiación solar e índice UV', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
+  ];
+
+  // Ventanas de las gráficas: nº de tramos en que se agrupan los datos.
+  const VENTANAS = { 12: { buckets: 240, ticks: 4 }, 24: { buckets: 288, ticks: 6 }, 168: { buckets: 336, ticks: 7 } };
+
+  /* ============================================================
+     ESTADO
+     ============================================================ */
+  let ests = [];                   // [{ id, nombre, stationId, apiKey, color, activa, meta }]
+  let cfg = Object.assign({}, DEF);
+  let running = false;
+  const rts = new Map();           // id de estación -> estado en tiempo de ejecución
+  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax' };
+  const registro = [];
+  let timerSync = null, timerTick = null;
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    estList: $('estList'), cfgMsg: $('cfgMsg'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
+    mapaWrap: $('mapaWrap'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
+    detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
+    chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
+    evolNota: $('evolNota'), charts: $('charts'), tablaSemana: $('tablaSemana'),
+    diaInput: $('diaInput'), diaEstado: $('diaEstado'), diaResumen: $('diaResumen'), chartsDia: $('chartsDia'), btnCSVDia: $('btnCSVDia'),
+    servBase: $('servBaseInput'), servEstado: $('servEstado'), datosTabla: $('datosTabla'), datosMsg: $('datosMsg'), registro: $('registro'),
+    cuota: $('cuotaLinea'),
+    poll: $('pollInput'), clave: $('claveComunInput'), timeout: $('timeoutInput'), stale: $('staleInput'), bb: $('backoffBaseInput'), bm: $('backoffMaxInput'),
+    luzTop: $('luzEstadoTop'), luzTopTxt: $('luzTextoTop'), luzBar: $('luzEstadoBar'), luzBarTxt: $('luzTextoBar'),
+    btnIniciar: $('btnIniciarBar'), btnDetener: $('btnDetenerBar'), btnSondeo: $('btnSondeoBar')
+  };
+
+  /* ============================================================
+     UTILIDADES
+     ============================================================ */
+  function escHTML(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function fmtHoraMs(ms){ const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+  function fmtHM(ms){ const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function fmtFechaHM(ms){ const d = new Date(ms); return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ' ' + fmtHM(ms); }
+  function fechaYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+  function esNum(v){ return v !== null && v !== undefined && typeof v === 'number' && Number.isFinite(v); }
+  function fmtN(v, dec){ return esNum(v) ? v.toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: false }) : '—'; }
+  function fmtVar(key, v){ const m = DEF_VAR(key); return fmtN(v, m ? m.dec : 1); }
+  function fmtDif(key, d){ const m = DEF_VAR(key); const dec = m ? m.dec : 1; const s = fmtN(Math.abs(d), dec); return (d > 0 ? '+' : (d < 0 ? '−' : '±')) + s; }
+  function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
+  function firstDefined(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
+  function edadTxt(ms){
+    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (s < 90) return s + ' s';
+    if (s < 5400) return Math.round(s / 60) + ' min';
+    if (s < 172800) return Math.round(s / 3600) + ' h';
+    return Math.round(s / 86400) + ' d';
+  }
+  function guardarLS(clave, valor){ try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) { /* almacenamiento no disponible */ } }
+  function leerLS(clave, porDefecto){ try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); } catch (e) { return porDefecto; } }
+  function nuevoId(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  const kEst = e => (e.stationId || '').trim().toUpperCase();
+  const nombreEst = e => e.nombre || (e.meta && e.meta.neighborhood) || e.stationId || 'Estación';
+  const claveEf = e => (e.apiKey || '').trim() || (cfg.claveComun || '').trim();
+  const nombreArchivoSeguro = s => String(s).replace(/[^A-Za-z0-9._-]/g, '_');
+  const estsActivas = () => ests.filter(e => e.activa && kEst(e));
+  const estsVisibles = () => estsActivas().filter(e => ui.ocultas.indexOf(e.id) < 0);
+  function rt(e){
+    let r = rts.get(e.id);
+    if (!r){ r = { last: null, prev: null, obsMs: null, estado: 'off', msg: '', reint: 0, timer: null, proxMs: 0, enVuelo: false, fatal: false, lecturas: 0, spark: [], plausible: true, ultimoGuardadoMs: 0, serv: null }; rts.set(e.id, r); }
+    return r;
+  }
+
+  function log(tipo, e, msg){
+    registro.unshift({ t: Date.now(), tipo: tipo, est: e ? nombreEst(e) : '—', msg: msg });
+    if (registro.length > MAX_REGISTRO) registro.length = MAX_REGISTRO;
+    renderRegistro();
+  }
+
+  async function fetchConTimeout(url, timeoutMs){
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), timeoutMs);
+    try { return await fetch(url, { signal: ctrl.signal, cache: 'no-store' }); }
+    finally { clearTimeout(tm); }
+  }
+
+  function descargar(nombre, texto, mime){
+    const blob = new Blob(['﻿' + texto], { type: mime || 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     SENSACIÓN TÉRMICA Y EXTRACCIÓN DE VALORES (misma lógica que TeleMet Historial)
+     ============================================================ */
+  function indiceCalorC(tC, rh){
+    const tF = tC * 9 / 5 + 32;
+    if (tF < 80 || rh === null || !Number.isFinite(rh)) return tC;
+    let hi = -42.379 + 2.04901523 * tF + 10.14333127 * rh - 0.22475541 * tF * rh
+      - 0.00683783 * tF * tF - 0.05481717 * rh * rh + 0.00122874 * tF * tF * rh
+      + 0.00085282 * tF * rh * rh - 0.00000199 * tF * tF * rh * rh;
+    if (rh < 13 && tF >= 80 && tF <= 112) hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(tF - 95)) / 17);
+    else if (rh > 85 && tF >= 80 && tF <= 87) hi += ((rh - 85) / 10) * ((87 - tF) / 5);
+    return Math.max((hi - 32) * 5 / 9, tC);
+  }
+  function sensacionFrioC(tC, vientoKmh){
+    if (vientoKmh === null || !Number.isFinite(vientoKmh) || vientoKmh <= 4.8) return tC;
+    const v = Math.pow(vientoKmh, 0.16);
+    return Math.min(13.12 + 0.6215 * tC - 11.37 * v + 0.3965 * tC * v, tC);
+  }
+  function sensacionTermicaC(tC, rh, vientoKmh){
+    if (tC === null || !Number.isFinite(tC)) return null;
+    if (tC >= 26.7) return indiceCalorC(tC, rh);
+    if (tC <= 10) return sensacionFrioC(tC, vientoKmh);
+    return tC;
+  }
+  function esPlausible(t){
+    for (const campo of Object.keys(SANITY_CHECK)){
+      const valor = t[campo];
+      if (valor === null || valor === undefined) continue;
+      if (valor < SANITY_CHECK[campo].min || valor > SANITY_CHECK[campo].max) return false;
+    }
+    return true;
+  }
+  const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+  function gradosACompass(deg){
+    if (!esNum(deg)) return null;
+    return COMPASS[(Math.round((deg % 360) / 22.5) % 16 + 16) % 16];
+  }
+
+  // El endpoint «current» y el de histórico («history/all») usan nombres de campo distintos
+  // (valor puntual frente a media/máx/mín del periodo): se admiten los dos.
+  function extraerValores(obs){
+    const metric = obs.metric || {};
+    const tempC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
+    const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
+    const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
+    const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
+      ? (metric.pressureMax + metric.pressureMin) / 2 : firstDefined(metric.pressureMax, metric.pressureMin);
+    return {
+      temp_c: tempC,
+      heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewptAvg, metric.dewpoint)),
+      humidity_pct: humPct,
+      pressure_hpa: numOrNull(firstDefined(metric.pressure, presionHist)),
+      wind_kmh: windKmh,
+      gust_kmh: numOrNull(firstDefined(metric.windGust, metric.windgustAvg)),
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir, obs.winddirAvg)),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      rain_total_mm: numOrNull(metric.precipTotal),
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh)),
+      uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
+      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
+    };
+  }
+
+  function construirURL(stationId, apiKey){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm' });
+    if (apiKey) params.set('apiKey', apiKey);   // siempre en la URL: una cabecera propia exigiría preflight CORS
+    return BASE_URL + '?' + params.toString();
+  }
+  function construirURLHistorico(stationId, apiKey, fechaYmd){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm', date: fechaYmd });
+    if (apiKey) params.set('apiKey', apiKey);
+    return HISTORY_URL + '?' + params.toString();
+  }
+
+  /* ============================================================
+     PERSISTENCIA LOCAL (IndexedDB): un histórico por estación
+     ============================================================ */
+  let dbPromise = null, ultimoErrorDB = null;
+  function abrirDB(){
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB){ dbPromise = Promise.reject(new Error('IndexedDB no disponible en este navegador')); return dbPromise; }
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(DB_STORE)){
+          const store = db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('por_estacion', 'stationId', { unique: false });
+          store.createIndex('por_t', ['stationId', 'epochMs'], { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+  function txPromesa(tx){ return new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+
+  async function guardarLote(key, filas){
+    if (!filas.length) return;
+    try {
+      const db = await abrirDB();
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const st = tx.objectStore(DB_STORE);
+      filas.forEach(f => st.add({ stationId: key, epochMs: f.epochMs, vals: f.vals }));
+      await txPromesa(tx);
+    } catch (err) { ultimoErrorDB = err; }
+  }
+  async function consultarRango(key, desde, hasta){
+    try {
+      const db = await abrirDB();
+      const out = await new Promise((resolve, reject) => {
+        const idx = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_t');
+        const res = [];
+        const rq = idx.openCursor(IDBKeyRange.bound([key, desde], [key, hasta]));
+        rq.onsuccess = () => { const c = rq.result; if (!c){ resolve(res); return; } res.push(c.value); c.continue(); };
+        rq.onerror = () => reject(rq.error);
+      });
+      ultimoErrorDB = null;
+      return out;
+    } catch (err) { ultimoErrorDB = err; return []; }
+  }
+  async function borrarEstacionDB(key, antesDe){
+    try {
+      const db = await abrirDB();
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const idx = tx.objectStore(DB_STORE).index('por_t');
+      const rq = idx.openCursor(IDBKeyRange.bound([key, -Infinity], [key, antesDe === undefined ? Infinity : antesDe], false, antesDe !== undefined));
+      rq.onsuccess = () => { const c = rq.result; if (c){ c.delete(); c.continue(); } };
+      await txPromesa(tx);
+    } catch (err) { ultimoErrorDB = err; }
+  }
+  async function purgarAntiguos(){
+    const limite = Date.now() - RETENCION_DIAS * 86400000;
+    const claves = await clavesEnDB();
+    for (const k of claves) await borrarEstacionDB(k, limite);
+  }
+  async function clavesEnDB(){
+    try {
+      const db = await abrirDB();
+      return await new Promise((resolve, reject) => {
+        const idx = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_estacion');
+        const out = [];
+        const rq = idx.openKeyCursor(null, 'nextunique');
+        rq.onsuccess = () => { const c = rq.result; if (!c){ resolve(out); return; } out.push(c.key); c.continue(); };
+        rq.onerror = () => reject(rq.error);
+      });
+    } catch (err) { ultimoErrorDB = err; return []; }
+  }
+  async function resumenAlmacen(){
+    const res = [];
+    try {
+      const db = await abrirDB();
+      for (const k of await clavesEnDB()){
+        const st = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE);
+        const n = await new Promise(r => { const q = st.index('por_estacion').count(IDBKeyRange.only(k)); q.onsuccess = () => r(q.result); q.onerror = () => r(0); });
+        const extremo = dir => new Promise(r => {
+          const q = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_t').openCursor(IDBKeyRange.bound([k, -Infinity], [k, Infinity]), dir);
+          q.onsuccess = () => r(q.result ? q.result.value.epochMs : null); q.onerror = () => r(null);
+        });
+        res.push({ key: k, n: n, min: await extremo('next'), max: await extremo('prev') });
+      }
+    } catch (err) { ultimoErrorDB = err; }
+    return res;
+  }
+
+  // Un día se considera incompleto (y se puede pedir a la API) si ninguna fila tiene temperatura
+  // o si hay un hueco de más de HUECO_MAX_MS al principio, al final o entre dos lecturas.
+  function diaIncompleto(filas, inicioMs, finMs){
+    const validas = filas.filter(f => f.vals && f.vals.temp_c !== null && f.vals.temp_c !== undefined).sort((a, b) => a.epochMs - b.epochMs);
+    if (validas.length === 0) return true;
+    if (validas[0].epochMs - inicioMs > HUECO_MAX_MS) return true;
+    if (finMs - validas[validas.length - 1].epochMs > HUECO_MAX_MS) return true;
+    for (let i = 1; i < validas.length; i++) if (validas[i].epochMs - validas[i - 1].epochMs > HUECO_MAX_MS) return true;
+    return false;
+  }
+  const inicioDia = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+
+  // Completa un día con el histórico de la API SIN borrar nada (solo añade lecturas que faltan).
+  async function completarDia(e, fecha){
+    const key = kEst(e), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+    const existentes = await consultarRango(key, ini, fin);
+    if (existentes.length > 0 && !diaIncompleto(existentes, ini, Math.min(fin, Date.now()))) return { estado: 'cubierto', anadidas: 0 };
+    try {
+      const resp = await fetchConTimeout(construirURLHistorico(key, claveEf(e), fechaYYYYMMDD(fecha)), 15000);
+      if (!resp.ok) return { estado: 'error', anadidas: 0, http: resp.status };
+      const data = resp.status === 204 ? {} : await resp.json();
+      const obsArr = data.observations || [];
+      const epochs = existentes.map(f => f.epochMs).sort((a, b) => a - b);
+      const nuevas = [];
+      for (const obs of obsArr){
+        if (!obs.epoch) continue;
+        const t = obs.epoch * 1000;
+        if (hayCercano(epochs, t, MERGE_TOL_MS)) continue;
+        nuevas.push({ epochMs: t, vals: extraerValores(obs) });
+        insertarOrdenado(epochs, t);
+      }
+      await guardarLote(key, nuevas);
+      return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length };
+    } catch (err) { return { estado: 'error', anadidas: 0 }; }
+  }
+  function hayCercano(sorted, t, tol){
+    let lo = 0, hi = sorted.length;
+    while (lo < hi){ const m = (lo + hi) >> 1; if (sorted[m] < t) lo = m + 1; else hi = m; }
+    return (lo < sorted.length && sorted[lo] - t < tol) || (lo > 0 && t - sorted[lo - 1] < tol);
+  }
+  function insertarOrdenado(sorted, t){
+    let lo = 0, hi = sorted.length;
+    while (lo < hi){ const m = (lo + hi) >> 1; if (sorted[m] < t) lo = m + 1; else hi = m; }
+    sorted.splice(lo, 0, t);
+  }
+
+  /* ============================================================
+     CONFIGURACIÓN (estaciones y ajustes) en localStorage
+     ============================================================ */
+  function colorLibre(){
+    const usados = ests.map(e => e.color);
+    return PALETA.find(c => usados.indexOf(c) < 0) || PALETA[ests.length % PALETA.length];
+  }
+  function cargarTodo(){
+    const guardadas = leerLS(LS.ests, null);
+    if (Array.isArray(guardadas)){
+      ests = guardadas.filter(e => e && typeof e === 'object').slice(0, MAX_EST).map(e => ({
+        id: e.id || nuevoId(), nombre: e.nombre || '', stationId: e.stationId || '', apiKey: e.apiKey || '',
+        color: e.color || PALETA[0], activa: e.activa !== false, meta: e.meta || {}
+      }));
+    } else {
+      // Primera vez: si ya hay una estación configurada en otra app de la familia, se propone.
+      let wuId = '', wuKey = '';
+      try { wuId = localStorage.getItem(LS_WU_STATION) || ''; wuKey = localStorage.getItem(LS_WU_KEY) || ''; } catch (err) { /* sin acceso */ }
+      ests = wuId ? [{ id: nuevoId(), nombre: '', stationId: wuId, apiKey: wuKey, color: PALETA[0], activa: true, meta: {} }] : [];
+    }
+    const c = leerLS(LS.cfg, {});
+    cfg = Object.assign({}, DEF, c);
+    const u = leerLS(LS.ui, {});
+    if (u && typeof u === 'object'){
+      if ([12, 24, 168].indexOf(u.ventanaH) >= 0) ui.ventanaH = u.ventanaH;
+      if (u.modo === 'comparar' || u.modo === 'estacion') ui.modo = u.modo;
+      if (Array.isArray(u.vars)) ui.vars = u.vars.filter(k => VARS_COMPARABLES.some(m => m.key === k));
+      if (Array.isArray(u.ocultas)) ui.ocultas = u.ocultas;
+      if (['tmax', 'tmin', 'tmed', 'lluvia', 'racha'].indexOf(u.resumen) >= 0) ui.resumen = u.resumen;
+      if (typeof u.ref === 'string') ui.ref = u.ref;
+      if (typeof u.detalle === 'string') ui.detalle = u.detalle;
+      if (typeof u.estEvol === 'string') ui.estEvol = u.estEvol;
+    }
+  }
+  function guardarEsts(){ guardarLS(LS.ests, ests); }
+  function guardarCfg(){ guardarLS(LS.cfg, cfg); }
+  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol }); }
+
+  function leerNumero(input, porDefecto, min){
+    const v = parseFloat(String(input.value).replace(',', '.'));
+    return (Number.isFinite(v) && v >= min) ? v : porDefecto;
+  }
+  function volcarAjustesEnFormulario(){
+    el.poll.value = cfg.pollS; el.clave.value = cfg.claveComun; el.timeout.value = cfg.timeoutS; el.stale.value = cfg.staleS;
+    el.bb.value = cfg.backoffBaseS; el.bm.value = cfg.backoffMaxS; el.servBase.value = cfg.servBase;
+  }
+  function leerAjustesDeFormulario(){
+    cfg.pollS = leerNumero(el.poll, DEF.pollS, 5);
+    cfg.claveComun = el.clave.value.trim();
+    cfg.timeoutS = leerNumero(el.timeout, DEF.timeoutS, 1);
+    cfg.staleS = leerNumero(el.stale, DEF.staleS, 10);
+    cfg.backoffBaseS = leerNumero(el.bb, DEF.backoffBaseS, 1);
+    cfg.backoffMaxS = Math.max(cfg.backoffBaseS, leerNumero(el.bm, DEF.backoffMaxS, 1));
+    cfg.servBase = el.servBase.value.trim();
+    guardarCfg();
+    actualizarCuota();
+    actualizarBotones();
+  }
+
+  function renderEstList(){
+    if (ests.length === 0){
+      el.estList.innerHTML = '<p class="est-vacio">Todavía no hay ninguna estación. Pulsa «Añadir estación» e introduce su Station ID.</p>';
+      return;
+    }
+    el.estList.innerHTML = ests.map((e, i) =>
+      '<div class="est-edit" data-id="' + e.id + '">' +
+        '<div class="field"><label for="c-' + e.id + '">Color</label><input type="color" id="c-' + e.id + '" data-f="color" value="' + escHTML(e.color) + '"></div>' +
+        '<div class="field"><label for="n-' + e.id + '">Nombre (opcional)</label><input type="text" id="n-' + e.id + '" data-f="nombre" value="' + escHTML(e.nombre) + '" placeholder="' + escHTML((e.meta && e.meta.neighborhood) || 'Estación ' + (i + 1)) + '" autocomplete="off"></div>' +
+        '<div class="field"><label for="s-' + e.id + '">Station ID</label><input type="text" id="s-' + e.id + '" data-f="stationId" value="' + escHTML(e.stationId) + '" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></div>' +
+        '<div class="field"><label for="k-' + e.id + '">API Key (opcional)</label><div class="keyrow"><input type="password" id="k-' + e.id + '" data-f="apiKey" value="' + escHTML(e.apiKey) + '" placeholder="Vacía = clave común" autocomplete="off" spellcheck="false"><button type="button" class="eye" data-acc="ver" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button></div></div>' +
+        '<div class="est-opts"><label class="chk"><input type="checkbox" data-f="activa"' + (e.activa ? ' checked' : '') + '> Activa</label>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-acc="borrar" aria-label="Quitar la estación ' + escHTML(nombreEst(e)) + '"><svg class="i"><use href="#i-trash"></use></svg></button></div>' +
+      '</div>').join('');
+    bloquearConfig(running);
+  }
+  function bloquearConfig(bloq){
+    document.querySelectorAll('#estList input, #estList button, #btnAddEst, #btnImportar, #pollInput, #claveComunInput, #btnVerClave, #timeoutInput, #staleInput, #backoffBaseInput, #backoffMaxInput')
+      .forEach(x => { x.disabled = !!bloq; });
+    el.cfgMsg.textContent = bloq ? 'Detén el monitor para editar las estaciones y el sondeo.' : '';
+    el.cfgMsg.className = 'msg-linea';
+  }
+
+  let tmGuardar = null;
+  function alEditarEstacion(ev){
+    const fila = ev.target.closest('.est-edit');
+    if (!fila || !ev.target.dataset.f) return;
+    const e = ests.find(x => x.id === fila.dataset.id);
+    if (!e) return;
+    const f = ev.target.dataset.f;
+    if (f === 'activa') e.activa = ev.target.checked;
+    else if (f === 'color') e.color = ev.target.value;
+    else if (f === 'stationId'){ e.stationId = ev.target.value.trim().toUpperCase(); e.meta = {}; rts.delete(e.id); }
+    else e[f] = ev.target.value.trim();
+    clearTimeout(tmGuardar);
+    tmGuardar = setTimeout(() => { guardarEsts(); refrescarListas(false); }, 250);
+  }
+  function alClicEstacion(ev){
+    const b = ev.target.closest('button[data-acc]');
+    if (!b) return;
+    const fila = b.closest('.est-edit');
+    const e = ests.find(x => x.id === fila.dataset.id);
+    if (b.dataset.acc === 'ver'){
+      const inp = fila.querySelector('input[data-f="apiKey"]');
+      const ver = inp.type === 'password';
+      inp.type = ver ? 'text' : 'password';
+      b.setAttribute('aria-pressed', String(ver));
+      b.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
+    } else if (b.dataset.acc === 'borrar' && e){
+      if (!window.confirm('¿Quitar «' + nombreEst(e) + '» de la lista? Su histórico guardado en este navegador se conserva (puedes borrarlo en «Datos y servidor»).')) return;
+      ests = ests.filter(x => x.id !== e.id);
+      rts.delete(e.id);
+      guardarEsts();
+      renderEstList();
+      refrescarListas(true);
+    }
+  }
+  function anadirEstacion(){
+    if (ests.length >= MAX_EST){ el.cfgMsg.textContent = 'Máximo ' + MAX_EST + ' estaciones.'; return; }
+    ests.push({ id: nuevoId(), nombre: '', stationId: '', apiKey: '', color: colorLibre(), activa: true, meta: {} });
+    guardarEsts();
+    renderEstList();
+    refrescarListas(true);
+    const ult = el.estList.querySelector('.est-edit:last-child input[data-f="stationId"]');
+    if (ult) ult.focus();
+  }
+
+  function exportarConfig(){
+    const conClaves = $('chkExportarClaves').checked;
+    const obj = {
+      app: 'telemetmulti', version: 1,
+      ajustes: { pollS: cfg.pollS, timeoutS: cfg.timeoutS, backoffBaseS: cfg.backoffBaseS, backoffMaxS: cfg.backoffMaxS, staleS: cfg.staleS, servBase: cfg.servBase },
+      estaciones: ests.map(e => ({ nombre: e.nombre, stationId: e.stationId, color: e.color, activa: e.activa, apiKey: conClaves ? e.apiKey : undefined }))
+    };
+    if (conClaves) obj.ajustes.claveComun = cfg.claveComun;
+    descargar('telemetmulti-config.json', JSON.stringify(obj, null, 2), 'application/json;charset=utf-8;');
+    el.cfgMsg.textContent = conClaves ? 'Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.' : 'Configuración exportada (sin API Key).';
+  }
+  async function importarConfig(file){
+    try {
+      const obj = JSON.parse(await file.text());
+      if (!obj || obj.app !== 'telemetmulti' || !Array.isArray(obj.estaciones)) throw new Error('no es un archivo de configuración de TeleMet Multi');
+      if (ests.length && !window.confirm('Esto sustituye las estaciones y ajustes actuales por los del archivo. ¿Continuar?')) return;
+      const antiguas = new Map(ests.map(e => [kEst(e), e]));
+      ests = obj.estaciones.slice(0, MAX_EST).map((x, i) => {
+        const previa = antiguas.get(String(x.stationId || '').trim().toUpperCase());
+        return {
+          id: nuevoId(), nombre: String(x.nombre || ''), stationId: String(x.stationId || '').trim().toUpperCase(),
+          apiKey: x.apiKey !== undefined ? String(x.apiKey) : (previa ? previa.apiKey : ''),
+          color: /^#[0-9a-fA-F]{6}$/.test(x.color || '') ? x.color : PALETA[i % PALETA.length], activa: x.activa !== false, meta: {}
+        };
+      });
+      const a = obj.ajustes || {};
+      ['pollS', 'timeoutS', 'backoffBaseS', 'backoffMaxS', 'staleS'].forEach(k => { if (Number.isFinite(a[k]) && a[k] > 0) cfg[k] = a[k]; });
+      if (typeof a.servBase === 'string') cfg.servBase = a.servBase;
+      if (typeof a.claveComun === 'string') cfg.claveComun = a.claveComun;
+      rts.clear();
+      guardarEsts(); guardarCfg();
+      volcarAjustesEnFormulario(); renderEstList(); refrescarListas(true);
+      el.cfgMsg.textContent = 'Configuración importada: ' + ests.length + ' estación(es).';
+    } catch (err) {
+      el.cfgMsg.textContent = 'No se pudo importar: ' + (err && err.message ? err.message : 'archivo no válido') + '.';
+    }
+  }
+
+  // Estimación de llamadas diarias por clave (la cuota es por clave, no por estación).
+  function actualizarCuota(){
+    const act = estsActivas();
+    if (act.length === 0){ el.cuota.textContent = ''; el.cuota.className = 'cuota'; return; }
+    const porClave = new Map();
+    act.forEach(e => { const k = claveEf(e) || '(sin clave)'; porClave.set(k, (porClave.get(k) || 0) + 1); });
+    const llamadasPor = n => Math.round(n * 86400 / Math.max(5, cfg.pollS));
+    let peor = 0;
+    porClave.forEach(n => { peor = Math.max(peor, n); });
+    const total = llamadasPor(act.length), peorLl = llamadasPor(peor);
+    let txt = act.length + ' estación(es) activa(s) · ≈ ' + total.toLocaleString('es-ES') + ' llamadas/día en total';
+    if (porClave.size > 1) txt += ' · la clave más cargada (' + peor + ' estaciones) hace ≈ ' + peorLl.toLocaleString('es-ES') + '/día';
+    el.cuota.className = 'cuota';
+    if (peorLl > LIMITE_LLAMADAS_DIA){
+      const minimo = Math.ceil(86400 * peor / LIMITE_LLAMADAS_DIA);
+      txt += '. Supera el límite habitual de ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + ' llamadas/día por clave (compruébalo en tu cuenta): usa un intervalo de ' + minimo + ' s o más, o claves distintas.';
+      el.cuota.classList.add('aviso-c');
+    } else txt += '. (Límite habitual por clave: ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + '/día.)';
+    el.cuota.textContent = txt;
+  }
+
+  /* ============================================================
+     SONDEO: un ciclo independiente por estación
+     ============================================================ */
+  function programar(e, ms){
+    const r = rt(e);
+    clearTimeout(r.timer);
+    r.proxMs = Date.now() + ms;
+    r.timer = setTimeout(() => ciclo(e), ms);
+  }
+  function reintentar(e, motivo){
+    const r = rt(e);
+    r.reint += 1;
+    const esperaS = Math.min(cfg.backoffBaseS * Math.pow(2, r.reint - 1), cfg.backoffMaxS);
+    r.estado = 'warn'; r.msg = motivo + ' · reintento ' + r.reint + ' en ' + Math.round(esperaS) + ' s';
+    log('warn', e, r.msg);
+    programar(e, esperaS * 1000);
+    tras(e);
+  }
+  function fatal(e, motivo){
+    const r = rt(e);
+    r.fatal = true; r.estado = 'err'; r.msg = motivo; clearTimeout(r.timer);
+    log('err', e, motivo + ' (estación detenida)');
+    tras(e);
+    if (running && estsActivas().every(x => rt(x).fatal)) pararMonitor('Todas las estaciones se han detenido por error.');
+  }
+  function tras(e){ renderTarjeta(e); actualizarLuz(); renderEstadoMeta(); }
+
+  async function ciclo(e){
+    const r = rt(e);
+    if (!running || r.fatal || r.enVuelo) return;
+    r.enVuelo = true;
+    try {
+      const t0 = performance.now();
+      let resp;
+      try { resp = await fetchConTimeout(construirURL(kEst(e), claveEf(e)), cfg.timeoutS * 1000); }
+      catch (err) { if (running) reintentar(e, (err && err.name === 'AbortError') ? 'tiempo límite agotado' : 'fallo de red'); return; }
+      if (!running) return;
+      if (resp.status === 401 || resp.status === 403){ fatal(e, 'HTTP ' + resp.status + ': API Key inválida o sin permiso'); return; }
+      if (resp.status === 404){ fatal(e, '404: Station ID no encontrado'); return; }
+      if (!resp.ok){ reintentar(e, 'HTTP ' + resp.status); return; }
+      let data = {};
+      if (resp.status !== 204){
+        try { data = await resp.json(); } catch (err) { reintentar(e, 'respuesta no válida'); return; }
+      }
+      if (!running) return;
+      const obs = (data.observations || [])[0];
+      r.reint = 0;
+      if (!obs){
+        r.estado = 'ok'; r.msg = 'sin datos nuevos';
+        programar(e, cfg.pollS * 1000); tras(e); return;
+      }
+      const ahora = Date.now();
+      const obsMs = obs.epoch ? obs.epoch * 1000 : ahora;
+      const t = Object.assign(extraerValores(obs), { staleness_s: (ahora - obsMs) / 1000, latency_ms: performance.now() - t0 });
+      const nueva = obsMs !== r.ultimoGuardadoMs;
+      r.prev = nueva ? r.last : r.prev;
+      r.last = t; r.obsMs = obsMs; r.plausible = esPlausible(t); r.msg = '';
+      r.estado = t.staleness_s <= cfg.staleS ? 'ok' : 'warn';
+      if (nueva){
+        r.lecturas += 1; r.ultimoGuardadoMs = obsMs;
+        if (esNum(t.temp_c)){ r.spark.push(t.temp_c); if (r.spark.length > 40) r.spark.shift(); }
+        guardarLote(kEst(e), [{ epochMs: obsMs, vals: t }]);
+      }
+      // Metadatos de la estación (nombre del barrio, coordenadas) para el nombre por defecto y el mapa.
+      const meta = { neighborhood: obs.neighborhood || '', lat: esNum(obs.lat) ? obs.lat : null, lon: esNum(obs.lon) ? obs.lon : null, country: obs.country || '', elev: esNum((obs.metric || {}).elev) ? obs.metric.elev : null };
+      if (JSON.stringify(meta) !== JSON.stringify(e.meta || {})){ e.meta = meta; guardarEsts(); refrescarListas(false); }
+      if (!r.plausible) log('warn', e, 'Lectura fuera de rango plausible.');
+      programar(e, cfg.pollS * 1000);
+      tras(e);
+      renderComparativa(); renderExtremos(); renderMapa();
+      pedirRedibujo();
+    } finally { r.enVuelo = false; }
+  }
+
+  function iniciarMonitor(){
+    const act = estsActivas();
+    if (act.length === 0){ el.cfgMsg.textContent = 'Añade al menos una estación activa con su Station ID.'; return; }
+    leerAjustesDeFormulario();
+    running = true;
+    act.forEach((e, i) => {
+      const r = rt(e);
+      r.fatal = false; r.reint = 0; r.estado = 'off'; r.msg = 'conectando…';
+      programar(e, i * 1500);
+    });
+    log('info', null, 'Monitor iniciado con ' + act.length + ' estación(es), cada ' + cfg.pollS + ' s.');
+    bloquearConfig(true);
+    ests.forEach(renderTarjeta);
+    actualizarLuz(); actualizarBotones(); renderEstadoMeta();
+    setTimeout(() => sincronizarTodas(false), 2500);
+  }
+  function pararMonitor(motivo){
+    running = false;
+    ests.forEach(e => { const r = rt(e); clearTimeout(r.timer); r.enVuelo = false; r.estado = 'off'; r.msg = ''; });
+    log('info', null, motivo || 'Monitor detenido.');
+    bloquearConfig(false);
+    ests.forEach(renderTarjeta);
+    actualizarLuz(); actualizarBotones(); renderEstadoMeta();
+  }
+  function sondearTodas(){
+    if (!running) return;
+    estsActivas().filter(e => !rt(e).fatal).forEach((e, i) => programar(e, i * 400));
+  }
+
+  function actualizarBotones(){
+    const hay = estsActivas().length > 0;
+    el.btnIniciar.disabled = running || !hay;
+    el.btnDetener.disabled = !running;
+    el.btnSondeo.disabled = !running;
+  }
+  function actualizarLuz(){
+    let estado = 'off', txt = 'Monitor detenido';
+    if (running){
+      const act = estsActivas();
+      const n = k => act.filter(e => rt(e).estado === k).length;
+      const ok = n('ok'), warn = n('warn'), err = n('err');
+      if (err === act.length){ estado = 'err'; txt = 'Todas con error'; }
+      else if (err || warn){ estado = 'warn'; txt = ok + '/' + act.length + ' en orden' + (err ? ' · ' + err + ' con error' : ''); }
+      else if (ok === act.length){ estado = 'ok'; txt = act.length + ' estación(es) en marcha'; }
+      else { estado = 'warn'; txt = 'Conectando…'; }
+    }
+    [[el.luzTop, el.luzTopTxt], [el.luzBar, el.luzBarTxt]].forEach(p => { p[0].dataset.s = estado; p[1].textContent = txt; });
+  }
+  function renderEstadoMeta(){
+    if (!running){ el.metaLinea.textContent = estsActivas().length ? 'Monitor detenido. Pulsa «Iniciar» para sondear las estaciones.' : 'Añade estaciones en la sección 01.'; return; }
+    const lect = estsActivas().reduce((s, e) => s + rt(e).lecturas, 0);
+    el.metaLinea.textContent = 'Sondeando ' + estsActivas().length + ' estación(es) cada ' + cfg.pollS + ' s · ' + lect + ' lectura(s) nuevas en esta sesión.';
+  }
+
+  /* ============================================================
+     TARJETAS EN VIVO
+     ============================================================ */
+  function iconoTendencia(clase){
+    const id = clase === 'subida' ? 'i-up' : (clase === 'bajada' ? 'i-down' : 'i-right');
+    return '<svg class="i"><use href="#' + id + '"></use></svg>';
+  }
+  function claseTendencia(nuevo, previo){
+    if (!esNum(nuevo) || !esNum(previo)) return 'estable';
+    const d = nuevo - previo;
+    return d > UMBRAL_TENDENCIA ? 'subida' : (d < -UMBRAL_TENDENCIA ? 'bajada' : 'estable');
+  }
+  function sparkPoints(vals){
+    if (vals.length < 2) return '';
+    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rg = (mx - mn) || 1;
+    return vals.map((v, i) => (2 + i / (vals.length - 1) * 96).toFixed(1) + ',' + (20 - 2 - (v - mn) / rg * 16).toFixed(1)).join(' ');
+  }
+  function textoPie(e){
+    const r = rt(e);
+    if (r.estado === 'err') return r.msg;
+    if (r.estado === 'warn' && r.msg) return r.msg;
+    if (r.obsMs){
+      let s = 'hace ' + edadTxt(r.obsMs);
+      if (running && r.proxMs && r.estado !== 'err') s += ' · próxima en ' + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
+      if (!r.plausible) s += ' · ⚠ fuera de rango';
+      return s;
+    }
+    return running ? (r.msg || 'conectando…') : 'sin datos en esta sesión';
+  }
+  function crearTarjetas(){
+    el.estGrid.innerHTML = '';
+    if (ests.length === 0){ el.estGrid.innerHTML = '<p class="est-vacio">Sin estaciones.</p>'; return; }
+    ests.forEach(e => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'est-card'; b.dataset.id = e.id;
+      b.addEventListener('click', () => { ui.detalle = e.id; guardarUI(); el.detalleSel.value = e.id; renderTarjetasSel(); renderDetalle(); $('secDetalle').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      el.estGrid.appendChild(b);
+      renderTarjeta(e);
+    });
+  }
+  function renderTarjetasSel(){ el.estGrid.querySelectorAll('.est-card').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === ui.detalle))); }
+  function renderTarjeta(e){
+    const b = el.estGrid.querySelector('.est-card[data-id="' + e.id + '"]');
+    if (!b) return;
+    const r = rt(e), t = r.last;
+    b.style.setProperty('--c', e.color);
+    b.classList.toggle('apagada', !e.activa);
+    b.setAttribute('aria-pressed', String(e.id === ui.detalle));
+    const viento = t && esNum(t.wind_kmh) ? fmtN(t.wind_kmh, 1) + ' km/h' + (gradosACompass(t.wind_dir_deg) ? ' ' + gradosACompass(t.wind_dir_deg) : '') : '—';
+    const tend = claseTendencia(t && t.temp_c, r.prev && r.prev.temp_c);
+    const estadoLuz = e.activa ? r.estado : 'off';
+    b.innerHTML =
+      '<div class="ec-cab"><span class="ec-nom">' + escHTML(nombreEst(e)) + '</span><span class="ec-bulbo" data-s="' + estadoLuz + '" title="' + (estadoLuz === 'ok' ? 'En orden' : estadoLuz === 'warn' ? 'Dato obsoleto o reintentando' : estadoLuz === 'err' ? 'Error' : 'Sin sondear') + '"></span></div>' +
+      '<div class="ec-id">' + escHTML(e.stationId || 'sin Station ID') + (e.nombre && e.meta && e.meta.neighborhood ? ' · ' + escHTML(e.meta.neighborhood) : '') + '</div>' +
+      '<div class="ec-temp"><span>' + (t ? fmtN(t.temp_c, 1) : '—') + '</span><small>°C</small><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
+      '<svg class="ec-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + sparkPoints(r.spark) + '"/></svg>' +
+      '<div class="ec-met">' +
+        '<span>Humedad</span><b>' + (t ? fmtN(t.humidity_pct, 0) + ' %' : '—') + '</b>' +
+        '<span>Viento</span><b>' + viento + '</b>' +
+        '<span>Presión</span><b>' + (t ? fmtN(t.pressure_hpa, 1) + ' hPa' : '—') + '</b>' +
+        '<span>Lluvia hoy</span><b>' + (t ? fmtN(t.rain_total_mm, 1) + ' mm' : '—') + '</b>' +
+        '<span>Radiación</span><b>' + (t ? fmtN(t.solarradiation_wm2, 0) + ' W/m²' : '—') + '</b>' +
+        '<span>Índice UV</span><b>' + (t ? fmtN(t.uv_index, 1) : '—') + '</b>' +
+      '</div>' +
+      '<div class="ec-pie' + (r.estado === 'err' ? ' err' : '') + '">' + escHTML(textoPie(e)) + '</div>';
+  }
+  function actualizarPies(){
+    el.estGrid.querySelectorAll('.est-card').forEach(b => {
+      const e = ests.find(x => x.id === b.dataset.id); if (!e) return;
+      const p = b.querySelector('.ec-pie'); if (p) p.textContent = textoPie(e);
+    });
+  }
+
+  /* ============================================================
+     COMPARATIVA, EXTREMOS Y MAPA
+     ============================================================ */
+  const conDato = () => estsActivas().filter(e => rt(e).last);
+
+  function renderComparativa(){
+    const act = estsActivas();
+    if (act.length === 0){ el.tablaComp.innerHTML = '<p class="evol-vacio">Sin estaciones activas.</p>'; return; }
+    const ref = act.find(e => e.id === ui.ref) || null;
+    const lastDe = e => rt(e).last;
+    let h = '<table class="t"><thead><tr><th>Variable</th>';
+    act.forEach(e => { h += '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>'; });
+    if (act.length > 1) h += '<th class="num">Media</th>';
+    h += '</tr></thead><tbody>';
+    GRAFICABLES.forEach(m => {
+      const vals = act.map(e => { const t = lastDe(e); return t && esNum(t[m.key]) ? t[m.key] : null; });
+      const validos = vals.filter(v => v !== null);
+      const usarExt = m.key !== 'wind_dir_deg' && validos.length >= 2;
+      const mx = usarExt ? Math.max.apply(null, validos) : null, mn = usarExt ? Math.min.apply(null, validos) : null;
+      const valRef = ref ? (lastDe(ref) && esNum(lastDe(ref)[m.key]) ? lastDe(ref)[m.key] : null) : null;
+      h += '<tr><td>' + escHTML(m.etiqueta) + (m.unidad ? ' <span style="color:var(--muted)">(' + m.unidad + ')</span>' : '') + '</td>';
+      act.forEach((e, i) => {
+        const v = vals[i];
+        let cls = 'num';
+        if (usarExt && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        if (ref && e.id === ref.id) cls += ' ref';
+        let txt = fmtVar(m.key, v);
+        if (m.key === 'wind_dir_deg' && v !== null) txt += ' ' + gradosACompass(v);
+        if (ref && e.id !== ref.id && v !== null && valRef !== null && m.key !== 'wind_dir_deg') txt += '<span class="dif">' + fmtDif(m.key, v - valRef) + '</span>';
+        else if (ref && e.id === ref.id) txt += '<span class="dif">ref.</span>';
+        h += '<td class="' + cls + '">' + txt + '</td>';
+      });
+      if (act.length > 1){
+        h += '<td class="num">' + (m.key !== 'wind_dir_deg' && validos.length >= 2 ? fmtVar(m.key, validos.reduce((a, b) => a + b, 0) / validos.length) : '—') + '</td>';
+      }
+      h += '</tr>';
+    });
+    h += '<tr><td>Última lectura</td>' + act.map(e => '<td class="num">' + (rt(e).obsMs ? fmtHoraMs(rt(e).obsMs) : '—') + '</td>').join('') + (act.length > 1 ? '<td></td>' : '') + '</tr>';
+    h += '</tbody></table>';
+    el.tablaComp.innerHTML = h;
+  }
+
+  function renderExtremos(){
+    const act = conDato();
+    if (act.length < 2){ el.extremos.innerHTML = ''; return; }
+    const defs = [
+      ['Más cálida', 'temp_c', 'max'], ['Más fría', 'temp_c', 'min'], ['Más húmeda', 'humidity_pct', 'max'], ['Más seca', 'humidity_pct', 'min'],
+      ['Más viento', 'wind_kmh', 'max'], ['Mayor racha', 'gust_kmh', 'max'], ['Mayor presión', 'pressure_hpa', 'max'], ['Más lluvia hoy', 'rain_total_mm', 'max'], ['Más radiación', 'solarradiation_wm2', 'max']
+    ];
+    el.extremos.innerHTML = defs.map(d => {
+      const cand = act.filter(e => esNum(rt(e).last[d[1]]));
+      if (cand.length < 2) return '';
+      let mejor = cand[0];
+      cand.forEach(e => { const v = rt(e).last[d[1]], b = rt(mejor).last[d[1]]; if (d[2] === 'max' ? v > b : v < b) mejor = e; });
+      const v = rt(mejor).last[d[1]];
+      if (d[1] === 'rain_total_mm' && !(v > 0)) return '';
+      const m = DEF_VAR(d[1]);
+      return '<div class="extremo" style="--c:' + mejor.color + '"><div class="e-etq">' + d[0] + '</div><div class="e-val">' + fmtVar(d[1], v) + ' ' + m.unidad + '</div><div class="e-est">' + escHTML(nombreEst(mejor)) + '</div></div>';
+    }).join('');
+  }
+
+  function renderMapa(){
+    const con = ests.filter(e => e.activa && e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
+    if (con.length < 2){ el.mapaWrap.style.display = 'none'; return; }
+    el.mapaWrap.style.display = '';
+    const W = 320, H = 210, P = 34;
+    const lat0 = con.reduce((s, e) => s + e.meta.lat, 0) / con.length;
+    const kx = Math.cos(lat0 * Math.PI / 180);
+    const xs = con.map(e => e.meta.lon * kx), ys = con.map(e => e.meta.lat);
+    const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    const sx = (W - 2 * P) / ((x1 - x0) || 1e-9), sy = (H - 2 * P) / ((y1 - y0) || 1e-9);
+    const s = Math.min(sx, sy);
+    const offX = (W - (x1 - x0) * s) / 2, offY = (H - (y1 - y0) * s) / 2;
+    let g = '<text class="mp-norte" x="' + (W - 14) + '" y="16" text-anchor="middle">N</text><path d="M' + (W - 14) + ' 20l-4 10h8z" fill="var(--muted)"></path>';
+    con.forEach((e, i) => {
+      const x = offX + (xs[i] - x0) * s, y = H - (offY + (ys[i] - y0) * s);
+      const t = rt(e).last;
+      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="7" fill="' + e.color + '" stroke="var(--card-bg)" stroke-width="2"></circle>' +
+        '<text x="' + x.toFixed(1) + '" y="' + (y - 11).toFixed(1) + '" text-anchor="middle">' + escHTML(nombreEst(e)) + (t && esNum(t.temp_c) ? ' · ' + fmtN(t.temp_c, 1) + ' °C' : '') + '</text>';
+    });
+    el.mapa.innerHTML = g;
+    // Distancia máxima entre estaciones (haversine), como dato de contexto.
+    let dmax = 0;
+    for (let i = 0; i < con.length; i++) for (let j = i + 1; j < con.length; j++){
+      const a = con[i].meta, b = con[j].meta, R = 6371;
+      const dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lon - a.lon) * Math.PI / 180;
+      const q = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      dmax = Math.max(dmax, 2 * R * Math.asin(Math.sqrt(q)));
+    }
+    el.mapaPie.innerHTML = 'Posición relativa (sin mapa de fondo; norte arriba). Separación máxima entre estaciones: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
+      con.map(e => '<a href="https://www.openstreetmap.org/?mlat=' + e.meta.lat + '&mlon=' + e.meta.lon + '#map=13/' + e.meta.lat + '/' + e.meta.lon + '" target="_blank" rel="noopener">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
+  }
+
+  /* ============================================================
+     DETALLE DE UNA ESTACIÓN
+     ============================================================ */
+  let detalleToken = 0;
+  async function renderDetalle(){
+    const e = ests.find(x => x.id === ui.detalle) || estsActivas()[0] || ests[0];
+    if (!e){ el.detalleGrid.innerHTML = '<p class="evol-vacio">Sin estaciones.</p>'; el.detalleMeta.textContent = ''; return; }
+    if (ui.detalle !== e.id){ ui.detalle = e.id; el.detalleSel.value = e.id; }
+    const tk = ++detalleToken;
+    const hasta = Date.now(), desde = hasta - 24 * 3600000;
+    const filas = (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs);
+    if (tk !== detalleToken) return;
+    const r = rt(e);
+    const ultimaFila = filas.length ? filas[filas.length - 1] : null;
+    const t = r.last || (ultimaFila ? ultimaFila.vals : null);
+    const prev = r.prev || (filas.length > 1 ? filas[filas.length - 2].vals : null);
+    const m = e.meta || {};
+    el.detalleMeta.innerHTML = escHTML(e.stationId) + (m.neighborhood ? ' · ' + escHTML(m.neighborhood) : '') + (esNum(m.elev) ? ' · ' + fmtN(m.elev, 0) + ' m' : '') +
+      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="https://www.openstreetmap.org/?mlat=' + m.lat + '&mlon=' + m.lon + '#map=14/' + m.lat + '/' + m.lon + '" target="_blank" rel="noopener">ver en el mapa</a>' : '');
+    el.detalleGrid.innerHTML = GRAFICABLES.map(g => {
+      const serie = filas.map(f => f.vals[g.key]).filter(esNum);
+      const v = t ? t[g.key] : null;
+      const tend = claseTendencia(v, prev ? prev[g.key] : null);
+      const mn = serie.length ? Math.min.apply(null, serie) : null, mx = serie.length ? Math.max.apply(null, serie) : null;
+      const paso = Math.max(1, Math.floor(serie.length / 60));
+      const pts = serie.filter((_, i) => i % paso === 0);
+      let valTxt = fmtVar(g.key, v);
+      if (g.key === 'wind_dir_deg' && esNum(v)) valTxt += ' ' + gradosACompass(v);
+      return '<div class="feat" style="--c:' + g.color + '"><div class="fi"><svg class="i"><use href="#i-' + g.icono + '"></use></svg></div>' +
+        '<div class="etiqueta">' + g.etiqueta + '</div>' +
+        '<div class="valor"><span>' + valTxt + '</span><span class="unidad">' + g.unidad + '</span><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="' + sparkDetalle(pts) + '"/></svg>' +
+        '<div class="rango-minmax">24 h: mín ' + fmtVar(g.key, mn) + ' · máx ' + fmtVar(g.key, mx) + '</div></div>';
+    }).join('');
+  }
+  function sparkDetalle(vals){
+    if (vals.length < 2) return '';
+    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rg = (mx - mn) || 1;
+    return vals.map((v, i) => (3 + i / (vals.length - 1) * 94).toFixed(1) + ',' + (30 - 3 - (v - mn) / rg * 24).toFixed(1)).join(' ');
+  }
+
+  /* ============================================================
+     TRAZADO DE GRÁFICAS (el mismo que usa TeleMet Historial)
+     ============================================================ */
+  function construirTarjetaGrafico(titulo, unidad){
+    const el = document.createElement('div');
+    el.className = 'chart-card';
+    el.innerHTML =
+      '<div class="chart-head"><h4>' + escHTML(titulo) + (unidad ? ' (' + escHTML(unidad) + ')' : '') + '</h4><div class="chart-leyenda"></div></div>' +
+      '<div class="chart-plot">' +
+        '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>' +
+        '<div class="chart-tooltip" role="status" aria-live="polite"></div>' +
+      '</div>';
+    return {
+      el: el,
+      leyenda: el.querySelector('.chart-leyenda'),
+      svg: el.querySelector('.chart-svg'),
+      tooltip: el.querySelector('.chart-tooltip')
+    };
+  }
+
+  // Redondea a un "número bonito" (1, 2, 5, 10, 20, 50...) para que los
+  // valores del eje Y sean fáciles de leer en vez de decimales sueltos.
+  function numeroBonito(x, redondear){
+    if (x === 0) return 0;
+    const exp = Math.floor(Math.log10(Math.abs(x)));
+    const f = Math.abs(x) / Math.pow(10, exp);
+    let nf;
+    if (redondear){
+      if (f < 1.5) nf = 1;
+      else if (f < 3) nf = 2;
+      else if (f < 7) nf = 5;
+      else nf = 10;
+    } else {
+      if (f <= 1) nf = 1;
+      else if (f <= 2) nf = 2;
+      else if (f <= 5) nf = 5;
+      else nf = 10;
+    }
+    return (x < 0 ? -1 : 1) * nf * Math.pow(10, exp);
+  }
+
+  // Calcula un rango y una serie de marcas "bonitas" para el eje Y, en vez
+  // de interpolar linealmente entre el mínimo y el máximo exactos de los
+  // datos (que da números como 23,7 / 15,2 / 6,8, difíciles de leer).
+  function escalaBonitaEje(min, max, nMarcasAprox){
+    if (min === max){ min -= 1; max += 1; }
+    let paso = numeroBonito((max - min) / Math.max(1, nMarcasAprox - 1), true);
+    // Para valores de magnitud alta (presión ~1000 hPa, humedad/viento en
+    // decenas...) un paso menor que 1 añade un decimal a un número que ya
+    // tiene varias cifras ("1013,2"), demasiado ancho para el margen del eje
+    // y que se corta. Con esa magnitud, el detalle decimal tampoco aporta
+    // nada que el valor exacto (disponible en el tooltip) no diga ya.
+    const magnitud = Math.max(Math.abs(min), Math.abs(max));
+    if (magnitud >= 50) paso = Math.max(paso, 1);
+    const minBonito = Math.floor(min / paso) * paso;
+    const maxBonito = Math.ceil(max / paso) * paso;
+    const marcas = [];
+    for (let v = minBonito; v <= maxBonito + paso * 0.5; v += paso) marcas.push(Math.round(v / paso) * paso);
+    return { min: minBonito, max: maxBonito, paso: paso, marcas: marcas };
+  }
+
+  // Formatea un valor del eje con el nº de decimales justo para su paso
+  // (sin decimales si el paso es entero, 1 o 2 si es más fino), con coma
+  // decimal (es-ES) y sin separador de miles (evita confundir "1.013" con mil).
+  function formatearNumeroEje(v, paso){
+    const decimales = paso >= 1 ? 0 : (paso >= 0.1 ? 1 : 2);
+    return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
+  }
+
+  // Escala "alineada" para un eje derecho que debe compartir las líneas de
+  // rejilla del izquierdo: mismo nº de intervalos (nInt), base en 0 y un paso
+  // "bonito" tal que paso*nInt cubra el máximo de los datos.
+  function escalaAlineadaEje(max, nInt){
+    const base = [1, 2, 2.5, 3, 4, 5, 6, 8];
+    let e = Math.floor(Math.log10(Math.max(max, 1e-9) / nInt)) - 1;
+    for (let k = 0; k < 60; k++, e += (k % base.length === 0 ? 1 : 0)){
+      const paso = base[(k) % base.length] * Math.pow(10, e);
+      if (paso * nInt >= max - 1e-9){
+        const marcas = [];
+        for (let i = 0; i <= nInt; i++) marcas.push(Math.round(i * paso * 1e6) / 1e6);
+        return { min: 0, max: marcas[nInt], paso: paso, marcas: marcas };
+      }
+    }
+    return escalaBonitaEje(0, max, nInt + 1);
+  }
+
+  // Dibuja (o redibuja) una gráfica de líneas simple dentro de un <svg> ya
+  // insertado en el DOM, con una capa de interacción (línea de referencia +
+  // tooltip al pasar el cursor, también con el teclado vía foco). "series"
+  // es [{ etiqueta, color, puntos:[{x,y}] }] con x ya normalizada a 0..1;
+  // Cada serie admite además { eje:'der' (escala propia a la derecha), unidad,
+  // cero (incluye el 0 en la escala), trazo (stroke-dasharray) };
+  // "xTicks" son las marcas visibles del eje X ([{ frac, etiqueta }]);
+  // "puntosX" son TODAS las posiciones reales de muestra a las que puede
+  // "enganchar" el cursor (una por lectura en 12h, una por día en 7d) —
+  // suele ser una lista más fina que xTicks.
+  function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX, umbralGapFrac){
+    const W = 600, H = 230;
+    // Eje derecho solo si hay series con eje:'der' Y series en el izquierdo.
+    const hayDer = series.some(s => s.eje === 'der' && s.puntos.length > 0) && series.some(s => s.eje !== 'der' && s.puntos.length > 0);
+    const esDer = s => hayDer && s.eje === 'der';
+    const M = { l: 46, r: hayDer ? 46 : 14, t: 14, b: 28 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+
+    leyendaEl.innerHTML = '';
+    const conPuntos = series.filter(s => s.puntos.length > 0);
+    if (conPuntos.length === 0){
+      svg.innerHTML = '<text class="grafico-etiqueta" x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle">Sin datos en este periodo</text>';
+      return;
+    }
+
+    // Rango de datos de cada eje (el izquierdo agrupa todo si no hay doble eje).
+    const rangoEje = der => {
+      let mn = Infinity, mx = -Infinity, cero = false;
+      conPuntos.forEach(s => {
+        if (esDer(s) !== der) return;
+        if (s.cero) cero = true;
+        s.puntos.forEach(p => { if (p.y < mn) mn = p.y; if (p.y > mx) mx = p.y; });
+      });
+      if (cero){ if (mn > 0) mn = 0; if (mx <= 0) mx = 1; }
+      return { mn: mn, mx: mx, cero: cero };
+    };
+    const rI = rangoEje(false);
+    const escala = escalaBonitaEje(rI.mn, rI.mx, 4);
+    let escalaD = null;
+    if (hayDer){
+      const rD = rangoEje(true);
+      escalaD = (rI.cero && rD.cero && escala.min === 0)
+        ? escalaAlineadaEje(rD.mx, escala.marcas.length - 1)
+        : escalaBonitaEje(rD.mn, rD.mx, 4);
+    }
+    const escDe = s => esDer(s) ? escalaD : escala;
+
+    const xPix = f => M.l + f * pw;
+    const yPix = (v, s) => { const e = (s && esDer(s)) ? escalaD : escala; return M.t + (1 - (v - e.min) / ((e.max - e.min) || 1)) * ph; };
+
+    let svgInner = '';
+    escala.marcas.forEach(val => {
+      const y = yPix(val);
+      svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
+      const colI = hayDer ? ' style="fill:' + conPuntos.filter(s => !esDer(s))[0].color + '"' : '';
+      svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end"' + colI + '>' + formatearNumeroEje(val, escala.paso) + '</text>';
+    });
+    if (hayDer){
+      const serD = conPuntos.filter(esDer)[0];
+      escalaD.marcas.forEach(val => {
+        const y = yPix(val, serD);
+        svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (W - M.r + 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="start" style="fill:' + serD.color + '">' + formatearNumeroEje(val, escalaD.paso) + '</text>';
+      });
+    }
+    const ultimoTick = (xTicks || []).length - 1;
+    (xTicks || []).forEach((tk, i) => {
+      // Las marcas de los extremos se anclan hacia dentro (start/end) en
+      // vez de centrarse, para que no queden cortadas contra el borde.
+      const anchor = i === 0 ? 'start' : (i === ultimoTick ? 'end' : 'middle');
+      svgInner += '<text class="grafico-etiqueta" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + escHTML(tk.etiqueta) + '</text>';
+    });
+
+    conPuntos.forEach(s => {
+      const pts = s.puntos.slice().sort((a, b) => a.x - b.x);
+      s._ptsOrdenados = pts; // reutilizado por la capa de interacción, más abajo
+
+      // Si hay un hueco real (sin ninguna lectura, local ni de la API) de
+      // más de umbralGapFrac entre dos lecturas consecutivas, NO se traza
+      // una línea de unión entre ellas: una sola recta de un extremo al
+      // otro del hueco sugeriría un cambio gradual y continuo que en
+      // realidad nunca se ha observado (ver nota junto a UMBRAL_GAP_12H_FRAC
+      // / UMBRAL_GAP_7D_FRAC). Se dibuja un trazo por cada tramo contiguo.
+      //
+      // El umbral es ADAPTATIVO por serie: umbralGapFrac es el máximo
+      // (HUECO_MAX_MS) y el umbral real es 3 veces la separación habitual
+      // (mediana) entre lecturas de esa serie, con un mínimo de
+      // HUECO_MIN_MS. Así, donde hay lecturas cada pocos minutos, un
+      // tramo con lecturas mucho más espaciadas (p. ej. cada 40 min) no se
+      // une con rectas largas: se ve como puntos sueltos.
+      let umbralSerie = umbralGapFrac;
+      if (umbralGapFrac && pts.length > 2){
+        const sep = [];
+        for (let i = 1; i < pts.length; i++) sep.push(pts[i].x - pts[i - 1].x);
+        sep.sort((a, b) => a - b);
+        const mediana = sep[Math.floor(sep.length / 2)];
+        const minFrac = umbralGapFrac * (HUECO_MIN_MS / HUECO_MAX_MS);
+        umbralSerie = Math.min(umbralGapFrac, Math.max(minFrac, 3 * mediana));
+      }
+      const tramos = [[]];
+      pts.forEach((p, i) => {
+        if (i > 0 && umbralSerie && (p.x - pts[i - 1].x) > umbralSerie) tramos.push([]);
+        tramos[tramos.length - 1].push(p);
+      });
+      tramos.forEach(tramo => {
+        if (tramo.length === 0) return;
+        if (tramo.length === 1){
+          // Un punto aislado entre dos huecos no se puede unir con nada:
+          // se marca con un pequeño círculo para que no desaparezca sin más.
+          svgInner += '<circle class="grafico-punto" cx="' + xPix(tramo[0].x).toFixed(1) + '" cy="' + yPix(tramo[0].y, s).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+        } else {
+          const puntosSVG = tramo.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y, s).toFixed(1)).join(' ');
+          svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + (s.trazo ? ';stroke-dasharray:' + s.trazo : '') + '"></polyline>';
+        }
+      });
+
+      const ultimo = pts[pts.length - 1];
+      const ux = xPix(ultimo.x), uy = yPix(ultimo.y, s);
+      svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
+    });
+    svg.innerHTML = svgInner;
+
+    // Capa de interacción: línea de referencia + punto resaltado por serie +
+    // tooltip, enganchados al punto de muestra más cercano al cursor (nunca
+    // a un píxel exacto). El valor mostrado siempre coincide con uno real;
+    // nada de lo que enseña el tooltip deja de estar también en el eje o la
+    // leyenda.
+    if (tooltipEl && puntosX && puntosX.length > 0){
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const crosshair = document.createElementNS(SVGNS, 'line');
+      crosshair.setAttribute('class', 'grafico-crosshair');
+      crosshair.setAttribute('y1', M.t); crosshair.setAttribute('y2', H - M.b);
+      svg.appendChild(crosshair);
+      const puntosHover = conPuntos.map(s => {
+        const c = document.createElementNS(SVGNS, 'circle');
+        c.setAttribute('class', 'grafico-punto-hover');
+        c.setAttribute('r', '4');
+        c.setAttribute('style', 'fill:' + s.color);
+        svg.appendChild(c);
+        return c;
+      });
+
+      const pasoMedio = puntosX.length > 1 ? 1 / (puntosX.length - 1) : 1;
+      const toleranciaX = Math.max(pasoMedio * 0.75, 0.01);
+
+      function alMover(e){
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const svgX = (e.clientX - rect.left) * (W / rect.width);
+        const frac = Math.max(0, Math.min(1, (svgX - M.l) / pw));
+
+        let masCercano = puntosX[0], dist = Infinity;
+        puntosX.forEach(p => { const d = Math.abs(p.frac - frac); if (d < dist){ dist = d; masCercano = p; } });
+
+        const xCross = xPix(masCercano.frac).toFixed(1);
+        crosshair.setAttribute('x1', xCross); crosshair.setAttribute('x2', xCross);
+        crosshair.style.opacity = '1';
+
+        tooltipEl.textContent = '';
+        const cab = document.createElement('div');
+        cab.className = 'tt-cab';
+        cab.textContent = masCercano.etiqueta;
+        tooltipEl.appendChild(cab);
+
+        conPuntos.forEach((s, i) => {
+          let pCercano = null, dMin = Infinity;
+          s._ptsOrdenados.forEach(p => { const d = Math.abs(p.x - masCercano.frac); if (d < dMin){ dMin = d; pCercano = p; } });
+          const dot = puntosHover[i];
+          if (pCercano && dMin <= toleranciaX){
+            dot.setAttribute('cx', xPix(pCercano.x).toFixed(1));
+            dot.setAttribute('cy', yPix(pCercano.y, s).toFixed(1));
+            dot.style.opacity = '1';
+            const fila = document.createElement('div');
+            fila.className = 'tt-fila';
+            const key = document.createElement('span');
+            key.className = 'leyenda-linea';
+            key.style.background = s.color;
+            const val = document.createElement('span');
+            val.className = 'tt-val';
+            val.textContent = formatearNumeroEje(pCercano.y, escDe(s).paso) + (hayDer && s.unidad ? ' ' + s.unidad : '');
+            fila.appendChild(key);
+            fila.appendChild(val);
+            if (conPuntos.length > 1){
+              const nom = document.createElement('span');
+              nom.className = 'tt-nombre';
+              nom.textContent = s.etiqueta;
+              fila.appendChild(nom);
+            }
+            tooltipEl.appendChild(fila);
+          } else {
+            dot.style.opacity = '0';
+          }
+        });
+        tooltipEl.style.opacity = '1';
+
+        const wrapRect = svg.parentElement.getBoundingClientRect();
+        let left = (e.clientX - wrapRect.left) + 14;
+        let top = (e.clientY - wrapRect.top) - 10;
+        const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+        if (left + tw > wrapRect.width - 4) left = (e.clientX - wrapRect.left) - tw - 14;
+        left = Math.max(4, left);
+        top = Math.max(4, Math.min(top, wrapRect.height - th - 4));
+        tooltipEl.style.left = left.toFixed(0) + 'px';
+        tooltipEl.style.top = top.toFixed(0) + 'px';
+      }
+      function alSalir(){
+        crosshair.style.opacity = '0';
+        puntosHover.forEach(d => { d.style.opacity = '0'; });
+        tooltipEl.style.opacity = '0';
+      }
+      svg.onpointermove = alMover;
+      svg.onpointerleave = alSalir;
+      svg.onpointercancel = alSalir;
+    }
+
+    if (series.length > 1){
+      series.forEach(s => {
+        const item = document.createElement('span');
+        item.className = 'leyenda-item';
+        const fondo = s.trazo ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
+        const detalle = hayDer ? ' (' + [s.unidad, esDer(s) ? 'eje der.' : 'eje izq.'].filter(Boolean).join(', ') + ')' : '';
+        item.innerHTML = '<span class="leyenda-linea" style="background:' + fondo + '"></span>' + escHTML(s.etiqueta + detalle);
+        leyendaEl.appendChild(item);
+      });
+    }
+  }
+
+
+  /* ============================================================
+     GRÁFICAS: agrupación en tramos y trazado (comparar estaciones / una estación)
+     ============================================================ */
+  function ticksTiempo(desdeMs, hastaMs, horas){
+    const ticks = [];
+    if (horas <= 24){
+      const n = VENTANAS[horas] ? VENTANAS[horas].ticks : 4;
+      for (let i = 0; i <= n; i++){ const f = i / n; ticks.push({ frac: f, etiqueta: fmtHM(desdeMs + f * (hastaMs - desdeMs)) }); }
+      return ticks;
+    }
+    // 7 días: una marca por cada medianoche (el primer elemento vacío ancla bien la etiqueta siguiente).
+    ticks.push({ frac: 0, etiqueta: '' });
+    const d0 = new Date(desdeMs);
+    for (let k = 1; k <= 8; k++){
+      const t = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k, 0, 0, 0, 0).getTime(); // aritmética de calendario: robusta ante cambios de hora
+      if (t >= hastaMs) break;
+      ticks.push({ frac: (t - desdeMs) / (hastaMs - desdeMs), etiqueta: new Date(t).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }).replace('.', '') });
+    }
+    return ticks;
+  }
+  function agruparTramos(filas, key, desde, ventana, nB){
+    const suma = new Float64Array(nB), cnt = new Uint16Array(nB);
+    for (const f of filas){
+      const v = f.vals ? f.vals[key] : null;
+      if (!esNum(v)) continue;
+      const i = Math.floor((f.epochMs - desde) / ventana * nB);
+      if (i < 0 || i >= nB) continue;
+      suma[i] += v; cnt[i]++;
+    }
+    const out = [];
+    for (let i = 0; i < nB; i++) if (cnt[i]) out.push({ x: (i + 0.5) / nB, y: suma[i] / cnt[i] });
+    return out;
+  }
+  function puntosEngancheX(desde, ventana, nB, conFecha){
+    const out = [];
+    for (let i = 0; i < nB; i++){
+      const ms = desde + (i + 0.5) / nB * ventana;
+      out.push({ frac: (i + 0.5) / nB, etiqueta: conFecha ? fmtFechaHM(ms) : fmtHM(ms) });
+    }
+    return out;
+  }
+  async function cargarFilas(lista, desde, hasta){
+    const m = new Map();
+    for (const e of lista) m.set(e.id, (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs));
+    return m;
+  }
+
+  // Una gráfica por variable, con una línea por estación.
+  function pintarComparar(cont, filasPorEst, lista, vars, desde, ventana, nB, ticks, conFecha){
+    cont.innerHTML = '';
+    const puntosX = puntosEngancheX(desde, ventana, nB, conFecha);
+    let alguna = false;
+    vars.forEach(key => {
+      const def = DEF_VAR(key);
+      if (!def) return;
+      const card = construirTarjetaGrafico(def.etiqueta, def.unidad);
+      cont.appendChild(card.el);
+      const series = lista.map(e => ({
+        etiqueta: nombreEst(e), color: e.color, unidad: def.unidad,
+        puntos: agruparTramos(filasPorEst.get(e.id) || [], key, desde, ventana, nB)
+      })).filter(s => s.puntos.length > 0);
+      if (series.length) alguna = true;
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, ticks, puntosX, HUECO_MAX_MS / ventana);
+    });
+    return alguna;
+  }
+  // Todas las variables de UNA estación, con las agrupaciones de TeleMet Historial (doble eje Y incluido).
+  function pintarEstacion(cont, filas, e, desde, ventana, nB, ticks, conFecha){
+    cont.innerHTML = '';
+    const puntosX = puntosEngancheX(desde, ventana, nB, conFecha);
+    GRUPOS_ESTACION.forEach(g => {
+      const card = construirTarjetaGrafico(g.titulo, g.unidad);
+      cont.appendChild(card.el);
+      const series = g.claves.map(k => {
+        const def = DEF_VAR(k);
+        return {
+          etiqueta: def.etiqueta, unidad: def.unidad,
+          color: (g.colores && g.colores[k]) || def.color,
+          puntos: agruparTramos(filas, k, desde, ventana, nB),
+          eje: (g.ejeDer || []).indexOf(k) >= 0 ? 'der' : 'izq', cero: !!g.cero, trazo: (g.trazos && g.trazos[k]) || ''
+        };
+      });
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, ticks, puntosX, HUECO_MAX_MS / ventana);
+    });
+  }
+  function msgVacio(txt){
+    if (ultimoErrorDB) return '<p class="evol-vacio">No se ha podido leer el histórico guardado en este navegador (' + escHTML(ultimoErrorDB.message || ultimoErrorDB.name || 'motivo desconocido') + '). Puede estar bloqueado por el modo privado o por los ajustes de cookies y datos del sitio.</p>';
+    return '<p class="evol-vacio">' + txt + '</p>';
+  }
+
+  /* ============================================================
+     EVOLUCIÓN (12 h / 24 h / 7 días)
+     ============================================================ */
+  let evolToken = 0;
+  async function renderEvol(){
+    const tk = ++evolToken;
+    const act = estsActivas();
+    if (act.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Añade estaciones e inicia el monitor para ver las gráficas.</p>'; el.evolNota.textContent = ''; return; }
+    const horas = ui.ventanaH, v = VENTANAS[horas];
+    const hasta = Date.now(), ventana = horas * 3600000, desde = hasta - ventana;
+    const ticks = ticksTiempo(desde, hasta, horas), conFecha = horas > 24;
+    if (ui.modo === 'comparar'){
+      const lista = estsVisibles();
+      if (lista.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Activa al menos una estación en los botones de arriba.</p>'; return; }
+      if (ui.vars.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Elige al menos una variable.</p>'; return; }
+      const filas = await cargarFilas(lista, desde, hasta);
+      if (tk !== evolToken) return;
+      const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
+      if (total === 0){ el.charts.innerHTML = msgVacio('Todavía no hay datos de este periodo en este navegador. Inicia el monitor, sincroniza con el servidor o rellena desde la API (sección «Datos y servidor»).'); el.evolNota.textContent = ''; return; }
+      pintarComparar(el.charts, filas, lista, ui.vars, desde, ventana, v.buckets, ticks, conFecha);
+      el.evolNota.textContent = lista.length + ' estación(es) · ' + total.toLocaleString('es-ES') + ' lecturas · tramos de ' + Math.round(ventana / v.buckets / 60000) + ' min (se muestra su media).';
+    } else {
+      const e = act.find(x => x.id === ui.estEvol) || act[0];
+      if (ui.estEvol !== e.id){ ui.estEvol = e.id; el.estSelEvol.value = e.id; }
+      const filas = (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs);
+      if (tk !== evolToken) return;
+      if (filas.length === 0){ el.charts.innerHTML = msgVacio('Todavía no hay datos de «' + escHTML(nombreEst(e)) + '» en este periodo.'); el.evolNota.textContent = ''; return; }
+      pintarEstacion(el.charts, filas, e, desde, ventana, v.buckets, ticks, conFecha);
+      el.evolNota.textContent = nombreEst(e) + ' · ' + filas.length.toLocaleString('es-ES') + ' lecturas · tramos de ' + Math.round(ventana / v.buckets / 60000) + ' min.';
+    }
+  }
+
+  // Redibujado diferido: con varias estaciones llegan muchas lecturas seguidas.
+  let tmRedibujo = null, ultimoRedibujo = 0;
+  function pedirRedibujo(){
+    if (tmRedibujo) return;
+    const espera = Math.max(1500, 20000 - (Date.now() - ultimoRedibujo));
+    tmRedibujo = setTimeout(() => {
+      tmRedibujo = null; ultimoRedibujo = Date.now();
+      if (document.hidden) return;
+      renderEvol(); renderDetalle();
+    }, espera);
+  }
+
+  /* ============================================================
+     RESUMEN DE 7 DÍAS
+     ============================================================ */
+  function resumenDia(filas){
+    let tmax = null, tmin = null, suma = 0, n = 0, lluvia = null, racha = null;
+    filas.forEach(f => {
+      const v = f.vals || {};
+      if (esNum(v.temp_c)){ if (tmax === null || v.temp_c > tmax) tmax = v.temp_c; if (tmin === null || v.temp_c < tmin) tmin = v.temp_c; suma += v.temp_c; n++; }
+      if (esNum(v.rain_total_mm) && (lluvia === null || v.rain_total_mm > lluvia)) lluvia = v.rain_total_mm;
+      if (esNum(v.gust_kmh) && (racha === null || v.gust_kmh > racha)) racha = v.gust_kmh;
+    });
+    return { tmax: tmax, tmin: tmin, tmed: n ? suma / n : null, lluvia: lluvia, racha: racha, n: filas.length };
+  }
+  let semanaToken = 0, ultimaSemana = 0;
+  async function renderSemana(){
+    const tk = ++semanaToken;
+    const act = estsActivas();
+    if (act.length === 0){ el.tablaSemana.innerHTML = '<p class="evol-vacio">Sin estaciones activas.</p>'; return; }
+    const hoy = new Date();
+    const dias = [];
+    for (let i = DIAS_SEMANA - 1; i >= 0; i--) dias.push(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i, 0, 0, 0, 0));
+    const datos = new Map(); // id -> [resumen por día]
+    for (const e of act){
+      const arr = [];
+      for (const d of dias){ const ini = d.getTime(); arr.push(resumenDia(await consultarRango(kEst(e), ini, ini + 86400000 - 1))); }
+      datos.set(e.id, arr);
+    }
+    if (tk !== semanaToken) return;
+    ultimaSemana = Date.now();
+    const campo = ui.resumen, dec = campo === 'lluvia' ? 1 : 1;
+    let h = '<table class="t"><thead><tr><th>Día</th>' + act.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
+    dias.forEach((d, i) => {
+      const vals = act.map(e => datos.get(e.id)[i][campo]);
+      const validos = vals.filter(v => v !== null);
+      const mx = validos.length >= 2 ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 ? Math.min.apply(null, validos) : null;
+      const etq = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) + (i === dias.length - 1 ? ' (hoy)' : '');
+      h += '<tr><td>' + escHTML(etq) + '</td>' + vals.map(v => {
+        let cls = 'num';
+        if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        return '<td class="' + cls + '">' + fmtN(v, dec) + '</td>';
+      }).join('') + '</tr>';
+    });
+    const unidad = campo === 'lluvia' ? 'mm' : (campo === 'racha' ? 'km/h' : '°C');
+    h += '<tr><td>Lecturas (7 d)</td>' + act.map(e => '<td class="num">' + datos.get(e.id).reduce((s, r) => s + r.n, 0).toLocaleString('es-ES') + '</td>').join('') + '</tr>';
+    h += '</tbody></table><p class="evol-nota" style="margin-top:8px">Valores en ' + unidad + '. ' + (campo === 'lluvia' ? 'Lluvia: el acumulado más alto registrado ese día. ' : '') + 'Un «—» significa que no hay lecturas guardadas ese día.</p>';
+    el.tablaSemana.innerHTML = h;
+  }
+
+  /* ============================================================
+     DÍA CONCRETO
+     ============================================================ */
+  let diaUltimo = null;   // { fecha, filasPorEst, lista }
+  async function consultarDia(){
+    const val = el.diaInput.value;
+    if (!val){ mostrarDiaEstado('Elige una fecha.', true); return; }
+    const p = val.split('-').map(Number);
+    const fecha = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+    if (fecha.getTime() > Date.now()){ mostrarDiaEstado('Esa fecha es futura.', true); return; }
+    const lista = estsVisibles();
+    if (lista.length === 0){ mostrarDiaEstado('Activa al menos una estación en las gráficas.', true); return; }
+    $('btnConsultarDia').disabled = true;
+    const ini = fecha.getTime(), fin = ini + 86400000;
+    const notas = [];
+    for (let i = 0; i < lista.length; i++){
+      const e = lista[i];
+      mostrarDiaEstado('Consultando ' + nombreEst(e) + ' (' + (i + 1) + '/' + lista.length + ')…', false);
+      const r = await completarDia(e, fecha);
+      if (r.estado === 'ok') notas.push(nombreEst(e) + ': +' + r.anadidas + ' de la API');
+      else if (r.estado === 'error') notas.push(nombreEst(e) + ': la API no respondió' + (r.http ? ' (HTTP ' + r.http + ')' : ''));
+      else if (r.estado === 'vacio') notas.push(nombreEst(e) + ': la API no tiene más datos de ese día');
+    }
+    if (notas.some(n => /\+[1-9]/.test(n))){ try { renderDatos(); renderSemana(); } catch(_){} }
+    const filas = await cargarFilas(lista, ini, fin - 1);
+    diaUltimo = { fecha: fecha, filasPorEst: filas, lista: lista };
+    const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
+    $('btnConsultarDia').disabled = false;
+    if (total === 0){
+      el.diaResumen.innerHTML = ''; el.chartsDia.innerHTML = '<p class="evol-vacio">No hay datos de ese día para las estaciones elegidas.</p>';
+      el.btnCSVDia.disabled = true; mostrarDiaEstado(notas.join(' · ') || 'Sin datos.', true); return;
+    }
+    mostrarDiaEstado(notas.length ? notas.join(' · ') : 'Todo el día estaba ya guardado en este navegador.', false);
+    el.btnCSVDia.disabled = false;
+    // Tabla de estadísticas del día por estación.
+    const cab = fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const filasTabla = [
+      ['Temp. máxima (°C)', f => estadDia(f, 'temp_c', 'max'), 'temp_c'], ['Temp. mínima (°C)', f => estadDia(f, 'temp_c', 'min'), 'temp_c'],
+      ['Temp. media (°C)', f => estadDia(f, 'temp_c', 'avg'), 'temp_c'], ['Humedad media (%)', f => estadDia(f, 'humidity_pct', 'avg'), 'humidity_pct'],
+      ['Presión media (hPa)', f => estadDia(f, 'pressure_hpa', 'avg'), 'pressure_hpa'], ['Racha máxima (km/h)', f => estadDia(f, 'gust_kmh', 'max'), 'gust_kmh'],
+      ['Lluvia total (mm)', f => estadDia(f, 'rain_total_mm', 'max'), 'rain_total_mm'], ['Radiación máx. (W/m²)', f => estadDia(f, 'solarradiation_wm2', 'max'), 'solarradiation_wm2'],
+      ['UV máximo', f => estadDia(f, 'uv_index', 'max'), 'uv_index'], ['Lecturas', f => f.length, null]
+    ];
+    let h = '<h3 style="font:700 16px var(--display);margin:6px 0 8px;text-transform:capitalize">' + escHTML(cab) + '</h3><div class="tbl-wrap amplia"><table class="t"><thead><tr><th>Resumen</th>' +
+      lista.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
+    filasTabla.forEach(ft => {
+      const vals = lista.map(e => ft[1](filas.get(e.id) || []));
+      const validos = vals.filter(esNum);
+      const mx = validos.length >= 2 && ft[2] ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 && ft[2] ? Math.min.apply(null, validos) : null;
+      h += '<tr><td>' + ft[0] + '</td>' + vals.map(v => {
+        let cls = 'num'; if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        return '<td class="' + cls + '">' + (ft[2] ? fmtVar(ft[2], v) : (v || 0).toLocaleString('es-ES')) + '</td>';
+      }).join('') + '</tr>';
+    });
+    el.diaResumen.innerHTML = h + '</tbody></table></div>';
+    const v = VENTANAS[24];
+    if (ui.modo === 'estacion' && lista.length === 1) pintarEstacion(el.chartsDia, filas.get(lista[0].id), lista[0], ini, 86400000, v.buckets, ticksTiempo(ini, fin, 24), false);
+    else pintarComparar(el.chartsDia, filas, lista, ui.vars.length ? ui.vars : ['temp_c'], ini, 86400000, v.buckets, ticksTiempo(ini, fin, 24), false);
+  }
+  function estadDia(filas, key, modo){
+    const v = filas.map(f => f.vals && f.vals[key]).filter(esNum);
+    if (!v.length) return null;
+    if (modo === 'max') return Math.max.apply(null, v);
+    if (modo === 'min') return Math.min.apply(null, v);
+    return v.reduce((a, b) => a + b, 0) / v.length;
+  }
+  function mostrarDiaEstado(txt, err){ el.diaEstado.style.display = txt ? '' : 'none'; el.diaEstado.textContent = txt; el.diaEstado.className = 'msg-linea' + (err ? ' err' : ''); }
+
+  /* ============================================================
+     CSV
+     ============================================================ */
+  const COLUMNAS_CSV = ['temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code'];
+  const csvCelda = v => { if (v === null || v === undefined) return ''; const s = String(v); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  function csvFilas(lista, filasPorEst){
+    const out = [['estacion', 'station_id', 'fecha_hora_local', 'epoch_ms'].concat(COLUMNAS_CSV).join(',')];
+    lista.forEach(e => {
+      (filasPorEst.get(e.id) || []).forEach(f => {
+        const d = new Date(f.epochMs);
+        const hora = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        out.push([csvCelda(nombreEst(e)), csvCelda(kEst(e)), hora, f.epochMs].concat(COLUMNAS_CSV.map(c => csvCelda(f.vals ? f.vals[c] : null))).join(','));
+      });
+    });
+    return out;
+  }
+  async function exportarCSV(horas){
+    const lista = estsActivas();
+    if (lista.length === 0){ el.datosMsg.textContent = 'No hay estaciones activas.'; return; }
+    const hasta = Date.now(), desde = horas ? hasta - horas * 3600000 : 0;
+    const filas = await cargarFilas(lista, desde, hasta);
+    const lineas = csvFilas(lista, filas);
+    if (lineas.length < 2){ el.datosMsg.textContent = 'No hay lecturas que exportar en ese periodo.'; return; }
+    descargar('telemetmulti-' + (horas ? horas + 'h' : 'todo') + '-' + new Date().toISOString().slice(0, 10) + '.csv', lineas.join('\n'));
+    el.datosMsg.textContent = (lineas.length - 1).toLocaleString('es-ES') + ' lecturas exportadas.';
+  }
+  function exportarCSVDia(){
+    if (!diaUltimo) return;
+    const lineas = csvFilas(diaUltimo.lista, diaUltimo.filasPorEst);
+    if (lineas.length < 2) return;
+    descargar('telemetmulti-dia-' + el.diaInput.value + '.csv', lineas.join('\n'));
+  }
+
+  /* ============================================================
+     SERVIDOR (TeleMet Colector): un JSON por estación
+     ============================================================ */
+  function normalizarBase(b){ b = (b || '').trim(); return b && !/\/$/.test(b) ? b + '/' : b; }
+  async function sincronizarEstacion(e){
+    const r = rt(e), key = kEst(e), seg = nombreArchivoSeguro(key), base = normalizarBase(cfg.servBase);
+    const cands = [base + 'historial_' + seg + '.json', base + 'history_' + seg + '.json', base + 'historial.json', base + 'history.json'];
+    let otra = null, formato = false;
+    for (const url of cands){
+      let data;
+      try {
+        const resp = await fetchConTimeout(url + '?t=' + Date.now(), 15000);
+        if (!resp.ok) continue;
+        data = await resp.json();
+      } catch (err) { continue; }
+      const lecturas = data && (data.lecturas || data.readings);
+      if (!data || !(data.formato === 1 || data.format === 1) || !Array.isArray(lecturas)){ formato = true; continue; }
+      if (String(data.stationId || '').toLowerCase() !== key.toLowerCase()){ otra = data.stationId; continue; }
+      const filas = [];
+      lecturas.forEach(l => { if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v }); });
+      const ultima = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
+      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS };
+      const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
+      const locales = (await consultarRango(key, minMs - SERV_TOL_MS, ultima + SERV_TOL_MS)).map(f => f.epochMs).sort((a, b) => a - b);
+      if (ultimoErrorDB) return { estado: 'error', url: url };
+      // Solo se compara con lo que YA había en local (no con lo que se va añadiendo).
+      const nuevas = filas.filter(f => !hayCercano(locales, f.epochMs, SERV_TOL_MS));
+      await guardarLote(key, nuevas);
+      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: data.intervaloS };
+    }
+    if (otra !== null) return { estado: 'otra-estacion', otra: otra };
+    if (formato) return { estado: 'formato' };
+    return { estado: 'no-disponible' };
+  }
+  let sincronizando = false;
+  async function sincronizarTodas(manual){
+    if (sincronizando) return;
+    sincronizando = true;
+    const btn = $('btnSyncServidor'); btn.disabled = true;
+    let anadidas = 0;
+    try {
+      for (const e of estsActivas()){
+        const res = await sincronizarEstacion(e);
+        rt(e).serv = res; rt(e).servMs = Date.now();
+        if (res.estado === 'ok' && res.anadidas > 0){ anadidas += res.anadidas; log('info', e, 'Servidor: +' + res.anadidas + ' lecturas.'); }
+        renderServidor();
+      }
+    } finally { sincronizando = false; btn.disabled = false; }
+    if (anadidas > 0){ pedirRedibujo(); renderDetalle(); renderSemana(); renderDatos(); }
+  }
+  function renderServidor(){
+    const act = estsActivas();
+    if (act.length === 0){ el.servEstado.innerHTML = ''; return; }
+    let h = '<table class="t"><thead><tr><th>Estación</th><th>Estado</th><th class="num">Recibidas</th><th class="num">Añadidas</th><th>Última lectura</th></tr></thead><tbody>';
+    act.forEach(e => {
+      const s = rt(e).serv;
+      let est = '<span class="tag">pendiente</span>', rec = '—', add = '—', ult = '—';
+      if (s){
+        if (s.estado === 'ok'){
+          est = '<span class="tag ok">sincronizado</span>'; rec = s.recibidas; add = s.anadidas;
+          if (s.ultimaMs){
+            const edadMin = (Date.now() - s.ultimaMs) / 60000, lim = Math.max(SERV_AVISO_MIN, 3 * (s.intervaloS || 0) / 60);
+            ult = fmtFechaHM(s.ultimaMs) + (edadMin > lim ? ' <span class="tag warn">¿colector parado?</span>' : '');
+          }
+        }
+        else if (s.estado === 'no-disponible') est = '<span class="tag">sin archivo</span>';
+        else if (s.estado === 'otra-estacion') est = '<span class="tag err">es de ' + escHTML(s.otra) + '</span>';
+        else if (s.estado === 'formato') est = '<span class="tag err">formato no válido</span>';
+        else est = '<span class="tag err">error local</span>';
+      }
+      h += '<tr><td><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></td><td>' + est + '</td><td class="num">' + rec + '</td><td class="num">' + add + '</td><td>' + ult + '</td></tr>';
+    });
+    el.servEstado.innerHTML = h + '</tbody></table>';
+  }
+
+  /* ============================================================
+     DATOS GUARDADOS, RELLENO DESDE LA API Y BORRADO
+     ============================================================ */
+  let datosToken = 0;
+  async function renderDatos(){
+    const tk = ++datosToken;
+    const res = await resumenAlmacen();
+    if (tk !== datosToken) return;
+    if (res.length === 0){ el.datosTabla.innerHTML = msgVacio('Todavía no hay nada guardado en este navegador.'); return; }
+    let h = '<table class="t"><thead><tr><th>Estación</th><th class="num">Lecturas</th><th>Desde</th><th>Hasta</th><th></th></tr></thead><tbody>';
+    res.forEach(r => {
+      const e = ests.find(x => kEst(x) === r.key);
+      h += '<tr><td>' + (e ? '<span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span>' : escHTML(r.key) + ' <span class="tag">no configurada</span>') +
+        '</td><td class="num">' + r.n.toLocaleString('es-ES') + '</td><td>' + (r.min ? fmtFechaHM(r.min) : '—') + '</td><td>' + (r.max ? fmtFechaHM(r.max) : '—') +
+        '</td><td><button type="button" class="btn btn-ghost btn-sm mini-btn" data-borrar="' + escHTML(r.key) + '" aria-label="Borrar el histórico de ' + escHTML(r.key) + '"><svg class="i"><use href="#i-trash"></use></svg></button></td></tr>';
+    });
+    el.datosTabla.innerHTML = h + '</tbody></table>';
+  }
+  async function rellenarDesdeAPI(){
+    const act = estsActivas();
+    if (act.length === 0){ el.datosMsg.textContent = 'No hay estaciones activas.'; return; }
+    // Primero se cuenta cuántos días necesitan datos, para avisar de cuántas peticiones se harán.
+    const pendientes = [];
+    for (const e of act){
+      for (let i = 0; i < DIAS_SEMANA; i++){
+        const fecha = new Date(Date.now() - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+        const ex = await consultarRango(kEst(e), ini, fin);
+        if (ex.length === 0 || diaIncompleto(ex, ini, Math.min(fin, Date.now()))) pendientes.push({ e: e, fecha: fecha });
+      }
+    }
+    if (pendientes.length === 0){ el.datosMsg.textContent = 'Los últimos 7 días ya están cubiertos para todas las estaciones.'; return; }
+    if (!window.confirm('Se harán hasta ' + pendientes.length + ' peticiones a la API (una por estación y día con huecos). ¿Continuar?')) return;
+    $('btnBackfill').disabled = true;
+    let anadidas = 0, errores = 0;
+    for (let i = 0; i < pendientes.length; i++){
+      el.datosMsg.textContent = 'Rellenando ' + (i + 1) + '/' + pendientes.length + ' · ' + nombreEst(pendientes[i].e) + '…';
+      const r = await completarDia(pendientes[i].e, pendientes[i].fecha);
+      anadidas += r.anadidas; if (r.estado === 'error') errores++;
+      await new Promise(res => setTimeout(res, 300));
+    }
+    $('btnBackfill').disabled = false;
+    el.datosMsg.textContent = 'Listo: ' + anadidas.toLocaleString('es-ES') + ' lecturas añadidas' + (errores ? ' · ' + errores + ' petición(es) sin respuesta (la API puede no tener histórico para tu cuenta)' : '') + '.';
+    log('info', null, 'Relleno desde la API: +' + anadidas + ' lecturas, ' + errores + ' errores.');
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+  async function borrarDatos(key){
+    const txt = key ? 'el histórico guardado de ' + key : 'TODO el histórico guardado en este navegador';
+    if (!window.confirm('¿Borrar ' + txt + '? No se puede deshacer.')) return;
+    if (key) await borrarEstacionDB(key);
+    else for (const k of await clavesEnDB()) await borrarEstacionDB(k);
+    el.datosMsg.textContent = 'Histórico borrado.';
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+
+  function renderRegistro(){
+    if (!registro.length){ el.registro.innerHTML = '<p class="evol-vacio">Sin actividad todavía.</p>'; return; }
+    el.registro.innerHTML = '<table class="t"><thead><tr><th>Hora</th><th>Estación</th><th>Evento</th></tr></thead><tbody>' +
+      registro.map(r => '<tr><td>' + fmtHoraMs(r.t) + '</td><td>' + escHTML(r.est) + '</td><td><span class="tag ' + (r.tipo === 'err' ? 'err' : (r.tipo === 'warn' ? 'warn' : '')) + '">' + r.tipo + '</span> ' + escHTML(r.msg) + '</td></tr>').join('') + '</tbody></table>';
+  }
+
+  /* ============================================================
+     LISTAS, CHIPS Y CONTROLES
+     ============================================================ */
+  function opcionesEst(lista, vacio){ return (vacio ? '<option value="">' + vacio + '</option>' : '') + lista.map(e => '<option value="' + e.id + '">' + escHTML(nombreEst(e)) + (e.stationId ? ' · ' + escHTML(e.stationId) : '') + '</option>').join(''); }
+  function refrescarListas(rehacerTarjetas){
+    const act = estsActivas();
+    if (!act.find(e => e.id === ui.ref)) ui.ref = '';
+    el.refSel.innerHTML = opcionesEst(act, '— ninguna —'); el.refSel.value = ui.ref;
+    const todas = ests.filter(e => kEst(e));
+    if (!todas.find(e => e.id === ui.detalle)) ui.detalle = todas.length ? todas[0].id : '';
+    el.detalleSel.innerHTML = opcionesEst(todas); el.detalleSel.value = ui.detalle;
+    if (!act.find(e => e.id === ui.estEvol)) ui.estEvol = act.length ? act[0].id : '';
+    el.estSelEvol.innerHTML = opcionesEst(act); el.estSelEvol.value = ui.estEvol;
+    ui.ocultas = ui.ocultas.filter(id => act.some(e => e.id === id));
+    el.chipsEst.innerHTML = act.map(e => '<button type="button" class="chip" data-id="' + e.id + '" style="--c:' + e.color + '" aria-pressed="' + (ui.ocultas.indexOf(e.id) < 0) + '"><i></i>' + escHTML(nombreEst(e)) + '</button>').join('') || '<span class="est-vacio">—</span>';
+    el.chipsVar.innerHTML = VARS_COMPARABLES.map(m => '<button type="button" class="chip" data-k="' + m.key + '" style="--c:' + (m.key === 'temp_c' ? '#E4572E' : 'var(--steel)') + '" aria-pressed="' + (ui.vars.indexOf(m.key) >= 0) + '">' + m.etiqueta + '</button>').join('');
+    if (rehacerTarjetas || el.estGrid.children.length !== ests.length) crearTarjetas();
+    else ests.forEach(renderTarjeta);
+    guardarUI();
+    actualizarCuota(); actualizarBotones(); renderEstadoMeta(); actualizarLuz();
+    renderMapa(); renderComparativa(); renderExtremos(); renderServidor();
+    renderTarjetasSel();
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+  function aplicarModoUI(){
+    const comparar = ui.modo === 'comparar';
+    $('modoComparar').setAttribute('aria-pressed', String(comparar));
+    $('modoEstacion').setAttribute('aria-pressed', String(!comparar));
+    $('filaChipsEst').style.display = comparar ? '' : 'none';
+    el.filaChipsVar.style.display = comparar ? '' : 'none';
+    el.filaEstSel.style.display = comparar ? 'none' : '';
+    document.querySelectorAll('#evolVentana button').forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === ui.ventanaH)));
+    document.querySelectorAll('#segResumen button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === ui.resumen)));
+  }
+
+  /* ============================================================
+     ARRANQUE Y EVENTOS
+     ============================================================ */
+  function conectarEventos(){
+    el.estList.addEventListener('input', alEditarEstacion);
+    el.estList.addEventListener('change', alEditarEstacion);
+    el.estList.addEventListener('click', alClicEstacion);
+    $('btnAddEst').addEventListener('click', anadirEstacion);
+    $('btnExportar').addEventListener('click', exportarConfig);
+    $('btnImportar').addEventListener('click', () => $('fileImport').click());
+    $('fileImport').addEventListener('change', ev => { const f = ev.target.files[0]; if (f) importarConfig(f); ev.target.value = ''; });
+    [el.poll, el.clave, el.timeout, el.stale, el.bb, el.bm].forEach(i => i.addEventListener('change', leerAjustesDeFormulario));
+    el.poll.addEventListener('input', leerAjustesDeFormulario);
+    el.servBase.addEventListener('change', leerAjustesDeFormulario);
+    $('btnVerClave').addEventListener('click', ev => {
+      const ver = el.clave.type === 'password'; el.clave.type = ver ? 'text' : 'password';
+      ev.currentTarget.setAttribute('aria-pressed', String(ver)); ev.currentTarget.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
+    });
+
+    el.btnIniciar.addEventListener('click', iniciarMonitor);
+    el.btnDetener.addEventListener('click', () => pararMonitor('Monitor detenido.'));
+    el.btnSondeo.addEventListener('click', sondearTodas);
+
+    el.refSel.addEventListener('change', () => { ui.ref = el.refSel.value; guardarUI(); renderComparativa(); });
+    el.detalleSel.addEventListener('change', () => { ui.detalle = el.detalleSel.value; guardarUI(); renderTarjetasSel(); renderDetalle(); });
+    el.estSelEvol.addEventListener('change', () => { ui.estEvol = el.estSelEvol.value; guardarUI(); renderEvol(); });
+    document.querySelectorAll('#evolVentana button').forEach(b => b.addEventListener('click', () => { ui.ventanaH = parseInt(b.dataset.h, 10); guardarUI(); aplicarModoUI(); renderEvol(); }));
+    $('modoComparar').addEventListener('click', () => { ui.modo = 'comparar'; guardarUI(); aplicarModoUI(); renderEvol(); });
+    $('modoEstacion').addEventListener('click', () => { ui.modo = 'estacion'; guardarUI(); aplicarModoUI(); renderEvol(); });
+    el.chipsEst.addEventListener('click', ev => {
+      const b = ev.target.closest('.chip'); if (!b) return;
+      const i = ui.ocultas.indexOf(b.dataset.id);
+      if (i >= 0) ui.ocultas.splice(i, 1); else ui.ocultas.push(b.dataset.id);
+      b.setAttribute('aria-pressed', String(ui.ocultas.indexOf(b.dataset.id) < 0)); guardarUI(); renderEvol();
+    });
+    el.chipsVar.addEventListener('click', ev => {
+      const b = ev.target.closest('.chip'); if (!b) return;
+      const i = ui.vars.indexOf(b.dataset.k);
+      if (i >= 0) ui.vars.splice(i, 1); else ui.vars.push(b.dataset.k);
+      ui.vars.sort((a, c) => VARS_COMPARABLES.findIndex(m => m.key === a) - VARS_COMPARABLES.findIndex(m => m.key === c));
+      b.setAttribute('aria-pressed', String(ui.vars.indexOf(b.dataset.k) >= 0)); guardarUI(); renderEvol();
+    });
+    document.querySelectorAll('#segResumen button').forEach(b => b.addEventListener('click', () => { ui.resumen = b.dataset.m; guardarUI(); aplicarModoUI(); renderSemana(); }));
+    $('btnConsultarDia').addEventListener('click', consultarDia);
+    el.btnCSVDia.addEventListener('click', exportarCSVDia);
+    $('btnSyncServidor').addEventListener('click', () => { leerAjustesDeFormulario(); sincronizarTodas(true); });
+    $('btnBackfill').addEventListener('click', rellenarDesdeAPI);
+    $('btnCSV24').addEventListener('click', () => exportarCSV(24));
+    $('btnCSV7').addEventListener('click', () => exportarCSV(168));
+    $('btnCSVTodo').addEventListener('click', () => exportarCSV(0));
+    $('btnBorrarTodo').addEventListener('click', () => borrarDatos(null));
+    el.datosTabla.addEventListener('click', ev => { const b = ev.target.closest('button[data-borrar]'); if (b) borrarDatos(b.dataset.borrar); });
+
+    const modal = $('modalGlosario');
+    const abrir = () => modal.classList.add('on'), cerrar = () => modal.classList.remove('on');
+    $('btnHelp').addEventListener('click', abrir); $('btnHelp2').addEventListener('click', abrir); $('modalCerrar').addEventListener('click', cerrar);
+    modal.addEventListener('click', ev => { if (ev.target === modal) cerrar(); });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrar(); });
+    $('goHome').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    $('btnIrConfig').addEventListener('click', () => { $('secEstaciones').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden){ actualizarPies(); pedirRedibujo(); } });
+  }
+
+  function iniciarApp(){
+    cargarTodo();
+    conectarEventos();
+    volcarAjustesEnFormulario();
+    const hoy = new Date();
+    el.diaInput.max = hoy.getFullYear() + '-' + pad2(hoy.getMonth() + 1) + '-' + pad2(hoy.getDate());
+    el.diaInput.value = (function(){ const a = new Date(Date.now() - 86400000); return a.getFullYear() + '-' + pad2(a.getMonth() + 1) + '-' + pad2(a.getDate()); })();
+    renderEstList();
+    aplicarModoUI();
+    refrescarListas(true);
+    renderRegistro();
+    purgarAntiguos().then(renderDatos);
+    // Sincroniza con el colector al abrir y cada SERV_SYNC_CADA_MIN minutos (aunque el monitor esté parado).
+    if (estsActivas().length) setTimeout(() => sincronizarTodas(false), 800);
+    timerSync = setInterval(() => { if (!document.hidden && estsActivas().length) sincronizarTodas(false); }, SERV_SYNC_CADA_MIN * 60000);
+    timerTick = setInterval(() => { if (!document.hidden) actualizarPies(); }, 1000);
+    setInterval(() => { if (!document.hidden && Date.now() - ultimaSemana > 300000) renderSemana(); }, 60000);
+  }
+
+  iniciarApp();
+})();
+</script>
+</body>
+</html>

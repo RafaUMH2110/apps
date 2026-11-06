@@ -16,3 +16,5 @@ Abrir `index.html` (o la versión publicada en GitHub Pages), añadir cada estac
 
 ## Integración con TeleMet Colector
 Con el colector multiestación, cada estación genera `historial_<ID>.json` (o `history_<ID>.json`). Indica en *Datos y servidor* la carpeta (por defecto `datos/`; usa `../historial/datos/` si el colector escribe junto a TeleMet Historial). La app solo **añade** lecturas que faltan; nunca borra lo local.
+
+Si en la carpeta indicada no hay archivo, la app prueba también `../telemethistorial/datos/`, `../telemethistory/data/`, `../historial/datos/` y `../history/data/` (las carpetas habituales de TeleMet Historial/History junto a esta app). En la tabla de sincronización, al pasar el ratón por «sincronizado» se ve el archivo leído y, por «sin archivo», dónde se ha buscado.

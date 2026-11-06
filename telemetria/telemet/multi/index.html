@@ -620,7 +620,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     <h3>Histórico del servidor (TeleMet Colector)</h3>
     <p class="sub">Si el colector corre en el mismo servidor, esta app lee para cada estación su archivo <code>historial_&lt;ID&gt;.json</code> (o <code>history_&lt;ID&gt;.json</code>) y, si no existe, el único <code>historial.json</code> / <code>history.json</code> cuando su <code>stationId</code> coincide. Solo <strong>añade</strong> lecturas que faltan: nunca borra ni modifica lo local. Si no hay colector, simplemente se ignora.</p>
     <div class="grid2" style="align-items:end">
-      <div class="field"><label for="servBaseInput">Carpeta de los JSON (relativa a esta página)</label><input type="text" id="servBaseInput" value="datos/" spellcheck="false" autocomplete="off"><p class="help">Por defecto <code>datos/</code>. Si el colector escribe en la carpeta de TeleMet Historial, usa <code>../telemethistorial/datos/</code>.</p></div>
+      <div class="field"><label for="servBaseInput">Carpeta de los JSON (relativa a esta página)</label><input type="text" id="servBaseInput" value="datos/" spellcheck="false" autocomplete="off"><p class="help">Por defecto <code>datos/</code>. Si ahí no hay archivo, la app prueba también las carpetas habituales de TeleMet Historial/History (<code>../telemethistorial/datos/</code>, <code>../telemethistory/data/</code>, <code>../historial/datos/</code> y <code>../history/data/</code>). Para cualquier otra ubicación, escríbela aquí.</p></div>
       <div class="field"><button type="button" class="btn btn-dark" id="btnSyncServidor" style="width:100%"><svg class="i"><use href="#i-refresh"></use></svg>Sincronizar ahora</button></div>
     </div>
     <div class="tbl-wrap"><div id="servEstado"></div></div>
@@ -652,7 +652,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:37</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 5:09</p>
 </footer>
 
 <div class="bottomnav">
@@ -2181,9 +2181,15 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
      SERVIDOR (TeleMet Colector): un JSON por estación
      ============================================================ */
   function normalizarBase(b){ b = (b || '').trim(); return b && !/\/$/.test(b) ? b + '/' : b; }
+  const SERV_BASES_ALT = ['../telemethistorial/datos/', '../telemethistory/data/', '../historial/datos/', '../history/data/'];
   async function sincronizarEstacion(e){
-    const r = rt(e), key = kEst(e), seg = nombreArchivoSeguro(key), base = normalizarBase(cfg.servBase);
-    const cands = [base + 'historial_' + seg + '.json', base + 'history_' + seg + '.json', base + 'historial.json', base + 'history.json'];
+    const r = rt(e), key = kEst(e), seg = nombreArchivoSeguro(key);
+    // Carpeta indicada por el usuario y, si no hay archivo ahí, las carpetas
+    // habituales de TeleMet Historial/History junto a esta app (hermanas).
+    const bases = [normalizarBase(cfg.servBase)];
+    SERV_BASES_ALT.forEach(x => { if (bases.indexOf(x) < 0) bases.push(x); });
+    const cands = [];
+    bases.forEach(base => { cands.push(base + 'historial_' + seg + '.json', base + 'history_' + seg + '.json', base + 'historial.json', base + 'history.json'); });
     let otra = null, formato = false;
     for (const url of cands){
       let data;
@@ -2209,7 +2215,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     }
     if (otra !== null) return { estado: 'otra-estacion', otra: otra };
     if (formato) return { estado: 'formato' };
-    return { estado: 'no-disponible' };
+    return { estado: 'no-disponible', probadas: cands.slice(0, 4).concat(cands.length > 4 ? ['…'] : []) };
   }
   let sincronizando = false;
   async function sincronizarTodas(manual){
@@ -2236,13 +2242,13 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       let est = '<span class="tag">pendiente</span>', rec = '—', add = '—', ult = '—';
       if (s){
         if (s.estado === 'ok'){
-          est = '<span class="tag ok">sincronizado</span>'; rec = s.recibidas; add = s.anadidas;
+          est = '<span class="tag ok" title="' + escHTML(String(s.url || '')) + '">sincronizado</span>'; rec = s.recibidas; add = s.anadidas;
           if (s.ultimaMs){
             const edadMin = (Date.now() - s.ultimaMs) / 60000, lim = Math.max(SERV_AVISO_MIN, 3 * (s.intervaloS || 0) / 60);
             ult = fmtFechaHM(s.ultimaMs) + (edadMin > lim ? ' <span class="tag warn">¿colector parado?</span>' : '');
           }
         }
-        else if (s.estado === 'no-disponible') est = '<span class="tag">sin archivo</span>';
+        else if (s.estado === 'no-disponible') est = '<span class="tag" title="No se ha encontrado historial_' + escHTML(String(e.stationId || '')) + '.json en la carpeta indicada ni en ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ o ../history/data/">sin archivo</span>';
         else if (s.estado === 'otra-estacion') est = '<span class="tag err">es de ' + escHTML(s.otra) + '</span>';
         else if (s.estado === 'formato') est = '<span class="tag err">formato no válido</span>';
         else est = '<span class="tag err">error local</span>';

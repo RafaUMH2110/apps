@@ -653,7 +653,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 11:36</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 11:43</p>
 </footer>
 
 <div class="bottomnav">
@@ -1021,10 +1021,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   const inicioDia = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
 
   // Completa un día con el histórico de la API SIN borrar nada (solo añade lecturas que faltan).
-  async function completarDia(e, fecha){
+  async function completarDia(e, fecha, forzar){
     const key = kEst(e), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
     const existentes = await consultarRango(key, ini, fin);
-    if (existentes.length > 0 && !diaIncompleto(existentes, ini, Math.min(fin, Date.now()))) return { estado: 'cubierto', anadidas: 0 };
+    if (!forzar && existentes.length > 0 && !diaIncompleto(existentes, ini, Math.min(fin, Date.now()))) return { estado: 'cubierto', anadidas: 0 };
     try {
       const resp = await fetchConTimeout(construirURLHistorico(key, claveEf(e), fechaYYYYMMDD(fecha)), 15000);
       if (!resp.ok) return { estado: 'error', anadidas: 0, http: resp.status };
@@ -1042,6 +1042,49 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       await guardarLote(key, nuevas);
       return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length };
     } catch (err) { return { estado: 'error', anadidas: 0 }; }
+  }
+  // Al iniciar el monitor: une el histórico que ya hay en el navegador (y el del
+  // colector) con la primera lectura en vivo. Si en las últimas 24 h hay algún hueco de
+  // más de HUECO_MIN_MS (al principio de la ventana, entre lecturas o hasta ahora), se pide
+  // a la API el histórico de ese día para taparlo. Solo añade lo que falta; como mucho
+  // 2 peticiones por estación y no repite la misma petición en menos de 20 minutos.
+  let autoRellenando = false;
+  async function rellenarHuecosAuto(){
+    if (autoRellenando || !running) return;
+    autoRellenando = true;
+    let total = 0;
+    try {
+      let marcas = {};
+      try { marcas = JSON.parse(localStorage.getItem('telemetmulti_autorell') || '{}') || {}; } catch (_) { marcas = {}; }
+      for (const e of estsActivas()){
+        if (!running) break;
+        const key = kEst(e), rte = rt(e);
+        if (!key || !claveEf(e) || rte.fatal) continue;
+        const ahora = Date.now(), desdeV = ahora - 24 * 3600000;
+        for (let i = 0; i < 2; i++){
+          const fecha = new Date(ahora - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+          const desde = Math.max(ini, desdeV), hasta = Math.min(fin, ahora);
+          if (hasta <= desde) continue;
+          const filas = (await consultarRango(key, desde, hasta)).filter(f => f.vals && esNum(f.vals.temp_c)).sort((a, b) => a.epochMs - b.epochMs);
+          let hueco = filas.length === 0;
+          if (!hueco){
+            if (filas[0].epochMs - desde > HUECO_MIN_MS && desde > ini) hueco = true;
+            if (hasta - filas[filas.length - 1].epochMs > HUECO_MIN_MS) hueco = true;
+            for (let k = 1; !hueco && k < filas.length; k++) if (filas[k].epochMs - filas[k - 1].epochMs > HUECO_MIN_MS) hueco = true;
+          }
+          if (!hueco) continue;
+          const mk = key + '|' + fechaYYYYMMDD(fecha);
+          if (marcas[mk] && ahora - marcas[mk] < 20 * 60000) continue;
+          marcas[mk] = ahora;
+          const r = await completarDia(e, fecha, true);
+          if (r.estado === 'ok'){ total += r.anadidas; log('info', e, 'Histórico de la API (' + fechaYYYYMMDD(fecha) + '): +' + r.anadidas + ' lecturas para unir con la primera lectura.'); }
+          else if (r.estado === 'error') log('warn', e, 'No se pudo completar el histórico de ' + fechaYYYYMMDD(fecha) + (r.http ? ' (HTTP ' + r.http + ')' : '') + '.');
+          await new Promise(res => setTimeout(res, 300));
+        }
+      }
+      try { localStorage.setItem('telemetmulti_autorell', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - kv[1] < 86400000)))); } catch (_) {}
+    } finally { autoRellenando = false; }
+    if (total > 0){ renderEvol(); renderDetalle(); renderSemana(); renderDatos(); }
   }
   function hayCercano(sorted, t, tol){
     let lo = 0, hi = sorted.length;
@@ -1327,7 +1370,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     bloquearConfig(true);
     ests.forEach(renderTarjeta);
     actualizarLuz(); actualizarBotones(); renderEstadoMeta();
-    setTimeout(() => sincronizarTodas(false), 2500);
+    setTimeout(() => { sincronizarTodas(false).then(rellenarHuecosAuto); }, 2500);
   }
   function pararMonitor(motivo){
     running = false;

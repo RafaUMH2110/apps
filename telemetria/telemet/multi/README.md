@@ -11,6 +11,9 @@ App web de un solo archivo (`index.html`) para seguir **varias estaciones meteor
 - **Resumen de 7 días** y **consulta de un día concreto** (completa los huecos con el histórico de la API).
 - **Datos y servidor**: histórico persistente por estación (IndexedDB, 9 días), sincronización con los JSON de TeleMet Colector, relleno de huecos desde la API, CSV (24 h / 7 días / todo) y borrado.
 
+## Unión del histórico con la primera lectura
+Al pulsar **Iniciar**, la app mira las últimas 24 h de cada estación (lo guardado en el navegador más lo del colector). Si hay algún hueco de más de 15 min, entre ese histórico y la primera lectura en vivo o dentro de él, pide a la API el histórico de ese día y añade solo lo que falta, para que la línea de la gráfica sea continua. Hace como mucho 2 peticiones por estación (hoy y ayer) y no repite la misma petición en menos de 20 minutos. Si la API no tiene datos para ese tramo, el hueco se queda como hueco: nunca se une con una recta inventada.
+
 ## Uso
 Abrir `index.html` (o la versión publicada en GitHub Pages), añadir cada estación (Station ID y API Key) y pulsar **Iniciar**. Los datos y las claves se guardan solo en el navegador.
 

@@ -640,7 +640,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   <div class="card">
     <h3>Histórico del servidor (TeleMet Colector)</h3>
-    <p class="sub">Si el colector corre en el mismo servidor, esta app lee para cada estación su archivo <code>historial_&lt;ID&gt;.json</code> (o <code>history_&lt;ID&gt;.json</code>) y, si no existe, el único <code>historial.json</code> / <code>history.json</code> cuando su <code>stationId</code> coincide. Solo <strong>añade</strong> lecturas que faltan: nunca borra ni modifica lo local. Si no hay colector, simplemente se ignora.</p>
+    <p class="sub">Si el colector corre en el mismo servidor, esta app lee para cada estación su archivo <code>historial_&lt;ID&gt;.json</code> (o <code>history_&lt;ID&gt;.json</code>) y, si no existe, el único <code>historial.json</code> / <code>history.json</code> cuando su <code>stationId</code> coincide. Solo <strong>añade</strong> lecturas que faltan: nunca borra ni modifica lo local. Si no hay colector, simplemente se ignora. Se sincroniza solo al abrir la página y cada 2 minutos; estas tablas se actualizan automáticamente.</p>
     <div class="grid2" style="align-items:end">
       <div class="field"><label for="servBaseInput">Carpeta de los JSON (relativa a esta página)</label><input type="text" id="servBaseInput" value="datos/" spellcheck="false" autocomplete="off"><p class="help">Por defecto <code>datos/</code>. Si ahí no hay archivo, la app prueba también las carpetas habituales de TeleMet Historial/History (<code>../telemethistorial/datos/</code>, <code>../telemethistory/data/</code>, <code>../historial/datos/</code> y <code>../history/data/</code>). Para cualquier otra ubicación, escríbela aquí.</p></div>
       <div class="field"><button type="button" class="btn btn-dark" id="btnSyncServidor" style="width:100%"><svg class="i"><use href="#i-refresh"></use></svg>Sincronizar ahora</button></div>
@@ -674,7 +674,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:28</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:48</p>
 </footer>
 
 <div class="bottomnav">
@@ -733,7 +733,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   const DB_NAME = 'telemetmulti_db', DB_VERSION = 1, DB_STORE = 'lecturas';
   const RETENCION_DIAS = 9, DIAS_SEMANA = 7;
-  const SERV_SYNC_CADA_MIN = 10, SERV_TOL_MS = 30 * 1000, SERV_AVISO_MIN = 15;
+  const SERV_SYNC_CADA_MIN = 2, SERV_TOL_MS = 30 * 1000, SERV_AVISO_MIN = 15;
   const MERGE_TOL_MS = 90 * 1000;
   const HUECO_MAX_MS = 90 * 60 * 1000, HUECO_MIN_MS = 15 * 60 * 1000;
   const UMBRAL_TENDENCIA = 0.05;
@@ -967,6 +967,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   }
   function txPromesa(tx){ return new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
 
+  // Las tablas de «Datos y servidor» se actualizan solas cuando cambia lo guardado (con una pequeña
+  // espera para agrupar las lecturas seguidas) y cada 30 s para el estado y la edad del colector.
+  let tmRefrescoTablas = null;
+  function programarRefrescoTablas(){
+    if (tmRefrescoTablas) return;
+    tmRefrescoTablas = setTimeout(() => {
+      tmRefrescoTablas = null;
+      if (document.hidden) return;
+      try { renderDatos(); renderServidor(); } catch (_) {}
+    }, 1500);
+  }
   async function guardarLote(key, filas){
     if (!filas.length) return;
     try {
@@ -975,6 +986,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const st = tx.objectStore(DB_STORE);
       filas.forEach(f => st.add({ stationId: key, epochMs: f.epochMs, vals: f.vals }));
       await txPromesa(tx);
+      programarRefrescoTablas();
     } catch (err) { ultimoErrorDB = err; }
   }
   async function consultarRango(key, desde, hasta){
@@ -2663,6 +2675,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (estsActivas().length) setTimeout(() => { Promise.resolve(sincronizarTodas(false)).catch(() => {}).then(() => rellenarHuecosAuto()); }, 800);
     timerSync = setInterval(() => { if (!document.hidden && estsActivas().length) sincronizarTodas(false); }, SERV_SYNC_CADA_MIN * 60000);
     timerTick = setInterval(() => { if (!document.hidden) actualizarPies(); }, 1000);
+    setInterval(() => { if (!document.hidden) { try { renderServidor(); renderDatos(); } catch (_) {} } }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden){ try { renderServidor(); renderDatos(); renderEvol(); } catch (_) {} } });
     setInterval(() => { if (!document.hidden && Date.now() - ultimaSemana > 300000) renderSemana(); }, 60000);
   }
 

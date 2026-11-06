@@ -705,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 13:09</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 13:16</p>
 </footer>
 
 <div class="bottomnav">
@@ -1162,8 +1162,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     try {
       let marcas = {};
       if (manual !== true){ try { marcas = JSON.parse(localStorage.getItem('telemetmulti_autorell2') || '{}') || {}; } catch (_) { marcas = {}; } }
-      const guardarMarcas = () => { try { localStorage.setItem('telemetmulti_autorell2', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - kv[1] < 86400000)))); } catch (_) {} };
-      const inf = e => { if (!informe.has(e.id)) informe.set(e.id, { e: e, ok: [], vacio: [], error: [], horario: 0, horDias: [], errHor: null }); return informe.get(e.id); };
+      // Cada marca: { t: cuándo, e: 'ok' | 'vacio' | 'error' } (las antiguas eran solo la hora).
+      const mt = m => (typeof m === 'number' ? m : (m && m.t) || 0), me = m => (m && m.e) || 'ok';
+      const guardarMarcas = () => { try { localStorage.setItem('telemetmulti_autorell2', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - mt(kv[1]) < 86400000)))); } catch (_) {} };
+      const inf = e => { if (!informe.has(e.id)) informe.set(e.id, { e: e, ok: [], vacio: [], error: [], horario: 0, horDias: [], vacioCache: [], errHor: null }); return informe.get(e.id); };
       // 1) Lista de días con huecos (sin tocar la red).
       const tareas = [];
       for (const e of estsActivas()){
@@ -1184,8 +1186,13 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
             for (let k = 1; !hueco && k < filas.length; k++) if (filas[k].epochMs - filas[k - 1].epochMs > umbral) hueco = true;
           }
           if (!hueco) continue;
-          const mk = key + '|' + fechaYYYYMMDD(fecha);
-          if (marcas[mk] && ahora - marcas[mk] < (i < 2 ? 20 * 60000 : 12 * 3600000)) continue;
+          const mk = key + '|' + fechaYYYYMMDD(fecha), mc = marcas[mk];
+          // Un día ya consultado no se repite en un rato, salvo que antes se hubiera completado y ahora esté
+          // vacío (por ejemplo, tras borrar el histórico de la estación).
+          if (mc && ahora - mt(mc) < (i < 2 ? 20 * 60000 : 12 * 3600000) && !(filas.length === 0 && me(mc) === 'ok')){
+            if (me(mc) === 'vacio') inf(e).vacioCache.push(fechaYYYYMMDD(fecha));
+            continue;
+          }
           tareas.push({ e: e, fecha: fecha, mk: mk, clave: claveEf(e), i: i });
         }
       }
@@ -1200,14 +1207,14 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         const r = await completarDia(t.e, t.fecha, true);
         const dia = fechaYYYYMMDD(t.fecha), I = inf(t.e);
         if (r.estado === 'ok'){
-          marcas[t.mk] = Date.now(); total += r.anadidas; I.ok.push(dia);
+          marcas[t.mk] = { t: Date.now(), e: 'ok' }; total += r.anadidas; I.ok.push(dia);
           log('info', t.e, 'Histórico de la API (' + dia + '): +' + r.anadidas + ' lecturas.');
           renderEvol(); renderSemana(); renderDatos();
         } else if (r.estado === 'vacio' || r.estado === 'cubierto'){
-          marcas[t.mk] = Date.now(); if (r.estado === 'vacio') I.vacio.push(dia);
+          marcas[t.mk] = { t: Date.now(), e: r.estado === 'vacio' ? 'vacio' : 'ok' }; if (r.estado === 'vacio') I.vacio.push(dia);
           log('info', t.e, 'La API no tiene lecturas nuevas para ' + dia + '.');
         } else {
-          marcas[t.mk] = Date.now() - 11.5 * 3600000;   // se podrá reintentar en unos minutos
+          marcas[t.mk] = { t: Date.now() - 11.5 * 3600000, e: 'error' };   // se podrá reintentar en unos minutos
           fallos++; I.error.push(dia + (r.http ? ' (HTTP ' + r.http + ')' : ''));
           if (r.http === 429){ bloqueadas.add(t.clave); reintentar++; log('warn', t.e, 'La API responde «demasiadas peticiones» (HTTP 429); se reintentará en 1 minuto.'); }
           else log('warn', t.e, 'No se pudo completar el histórico de ' + dia + (r.http ? ' (HTTP ' + r.http + ')' : ' (sin respuesta de la API)') + '.');
@@ -1248,7 +1255,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     // Informe visible: qué ha respondido la API para cada estación.
     const partes = [];
     for (const I of informe.values()){
-      const sin = I.vacio.filter(d => I.horDias.indexOf(d) < 0).map(dmCorto);
+      const sin = I.vacio.concat(I.vacioCache).filter((d, k, a) => a.indexOf(d) === k && I.horDias.indexOf(d) < 0).sort().map(dmCorto);
       let t = nombreEst(I.e) + ': ';
       if (I.ok.length || I.horario) t += 'completado ' + (I.ok.length ? I.ok.length + ' día(s) con la API' : '') + (I.horario ? (I.ok.length ? ' y ' : '') + I.horario + ' lecturas horarias' : '') + '. ';
       if (sin.length) t += 'la API no tiene datos de ' + sin.join(', ') + '. ';
@@ -2636,8 +2643,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   async function borrarDatos(key){
     const txt = key ? 'el histórico guardado de ' + key : 'TODO el histórico guardado en este navegador';
     if (!window.confirm('¿Borrar ' + txt + '? No se puede deshacer.')) return;
+    if (key){ try { const m = JSON.parse(localStorage.getItem('telemetmulti_autorell2') || '{}') || {}; Object.keys(m).forEach(k => { if (k.indexOf(key + '|') === 0) delete m[k]; }); localStorage.setItem('telemetmulti_autorell2', JSON.stringify(m)); } catch (_) {} }
     if (key) await borrarEstacionDB(key);
-    else for (const k of await clavesEnDB()) await borrarEstacionDB(k);
+    else { try { localStorage.removeItem('telemetmulti_autorell2'); } catch (_) {} for (const k of await clavesEnDB()) await borrarEstacionDB(k); }
     el.datosMsg.textContent = 'Histórico borrado.';
     renderEvol(); renderDetalle(); renderSemana(); renderDatos();
   }

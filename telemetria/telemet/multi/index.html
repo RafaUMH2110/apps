@@ -350,6 +350,12 @@ table.t td.ref{background:color-mix(in srgb,var(--steel) 10%,transparent)}
 table.t th.num{text-align:right}
 table.t th,table.t td{vertical-align:middle}
 table.t th.num,table.t td.num{width:1%;white-space:nowrap}
+/* Tablas de «Datos y servidor»: columnas ajustadas a su contenido (sin huecos enormes entre ellas) */
+table.t.t-compacta{width:100%}
+table.t.t-compacta .ocupa{width:100%}
+table.t.t-compacta th,table.t.t-compacta td{white-space:nowrap}
+table.t.t-compacta th.num,table.t.t-compacta td.num{width:auto;text-align:right}
+table.t.t-compacta td:last-child:empty,table.t.t-compacta th:last-child:empty{width:44px}
 .tbl-wrap.amplia table.t th:first-child,.tbl-wrap.amplia table.t td:first-child{min-width:150px}
 .ctrl-fila{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:0 0 12px}
 .ctrl-fila .etq{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -590,6 +596,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     <div class="ctrl-fila" id="filaChipsVar"><span class="etq">Variables</span><div class="chips" id="chipsVar"></div></div>
     <div class="ctrl-fila" id="filaEstSel" style="display:none"><span class="etq">Estación</span><select id="estSelEvol" aria-label="Estación"></select></div>
     <p class="evol-nota" id="evolNota"></p>
+    <p class="evol-nota" id="autoEstado" role="status" aria-live="polite" style="display:none;margin-top:-8px"></p>
     <div id="charts"><p class="evol-vacio">Añade estaciones e inicia el monitor para ver las gráficas.</p></div>
   </div>
 
@@ -663,7 +670,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:04</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:19</p>
 </footer>
 
 <div class="bottomnav">
@@ -782,7 +789,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     mapaWrap: $('mapaWrap'), mapaFondo: $('mapaFondo'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
     detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
     chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
-    evolNota: $('evolNota'), charts: $('charts'), tablaSemana: $('tablaSemana'),
+    evolNota: $('evolNota'), autoEstado: $('autoEstado'), charts: $('charts'), tablaSemana: $('tablaSemana'),
     diaInput: $('diaInput'), diaEstado: $('diaEstado'), diaResumen: $('diaResumen'), chartsDia: $('chartsDia'), btnCSVDia: $('btnCSVDia'),
     servBase: $('servBaseInput'), servEstado: $('servEstado'), datosTabla: $('datosTabla'), datosMsg: $('datosMsg'), registro: $('registro'),
     cuota: $('cuotaLinea'),
@@ -1053,28 +1060,38 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length };
     } catch (err) { return { estado: 'error', anadidas: 0 }; }
   }
-  // Al abrir la app y al pulsar Iniciar: une el histórico guardado en el navegador (y el
-  // del colector) con la primera lectura en vivo y completa los últimos 7 días. Si un día
-  // tiene huecos (hoy/ayer: más de 15 min; antes: más de 90 min) se pide a la API el
-  // histórico de ese día. Solo añade lo que falta. No repite la misma petición en menos de
-  // 20 min (hoy y ayer) ni de 12 h (días anteriores); como mucho 7 peticiones por estación.
-  let autoRellenando = false;
+  // Al abrir la app, al pulsar Iniciar y al elegir «7 d»: une el histórico guardado en el
+  // navegador (y el del colector) con la primera lectura en vivo y completa los últimos 7 días.
+  // Si un día tiene huecos (hoy/ayer: más de 15 min; antes: más de 90 min) se pide a la API el
+  // histórico de ese día y solo se añade lo que falta.
+  // La API de Weather Underground limita las peticiones por minuto (unas 30 por clave), así que
+  // se espacian (2,5 s entre peticiones), se redibuja tras cada día y, si responde 429
+  // (demasiadas peticiones) o falla la red, se reintenta más tarde sin marcar el día como hecho.
+  const PAUSA_API_MS = 2500;
+  let autoRellenando = false, autoReintento = null;
+  function estadoAuto(txt){
+    if (!el.autoEstado) return;
+    el.autoEstado.textContent = txt || '';
+    el.autoEstado.style.display = txt ? '' : 'none';
+  }
   async function rellenarHuecosAuto(){
     if (autoRellenando) return;
     autoRellenando = true;
-    let total = 0;
+    let total = 0, reintentar = 0, fallos = 0, pet = 0;
     try {
       let marcas = {};
       try { marcas = JSON.parse(localStorage.getItem('telemetmulti_autorell') || '{}') || {}; } catch (_) { marcas = {}; }
+      const guardarMarcas = () => { try { localStorage.setItem('telemetmulti_autorell', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - kv[1] < 86400000)))); } catch (_) {} };
+      // 1) Lista de días con huecos (sin tocar la red).
+      const tareas = [];
       for (const e of estsActivas()){
         const key = kEst(e), rte = rt(e);
         if (!key || !claveEf(e) || rte.fatal) continue;
         const ahora = Date.now();
         for (let i = 0; i < DIAS_SEMANA; i++){
           const fecha = new Date(ahora - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
-          const desde = ini, hasta = Math.min(fin, ahora);
-          if (hasta <= desde) continue;
-          // Hoy y ayer: se tapan huecos de más de 15 min; días anteriores: de más de 90 min.
+          const hasta = Math.min(fin, ahora);
+          if (hasta <= ini) continue;
           const umbral = i < 2 ? HUECO_MIN_MS : HUECO_MAX_MS;
           const desdeV = i < 2 ? Math.max(ini, ahora - 24 * 3600000) : ini;
           const filas = (await consultarRango(key, desdeV, hasta)).filter(f => f.vals && esNum(f.vals.temp_c)).sort((a, b) => a.epochMs - b.epochMs);
@@ -1087,16 +1104,46 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
           if (!hueco) continue;
           const mk = key + '|' + fechaYYYYMMDD(fecha);
           if (marcas[mk] && ahora - marcas[mk] < (i < 2 ? 20 * 60000 : 12 * 3600000)) continue;
-          marcas[mk] = ahora;
-          const r = await completarDia(e, fecha, true);
-          if (r.estado === 'ok'){ total += r.anadidas; log('info', e, 'Histórico de la API (' + fechaYYYYMMDD(fecha) + '): +' + r.anadidas + ' lecturas.'); }
-          else if (r.estado === 'error') log('warn', e, 'No se pudo completar el histórico de ' + fechaYYYYMMDD(fecha) + (r.http ? ' (HTTP ' + r.http + ')' : '') + '.');
-          await new Promise(res => setTimeout(res, 300));
+          tareas.push({ e: e, fecha: fecha, mk: mk, clave: claveEf(e) });
         }
       }
-      try { localStorage.setItem('telemetmulti_autorell', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - kv[1] < 86400000)))); } catch (_) {}
+      // 2) Peticiones espaciadas, de la más reciente a la más antigua; redibujo tras cada día.
+      const bloqueadas = new Set();   // claves API que ya han respondido 429 en esta pasada
+      for (let n = 0; n < tareas.length; n++){
+        const t = tareas[n];
+        if (bloqueadas.has(t.clave)){ reintentar++; continue; }
+        if (pet > 0) await new Promise(res => setTimeout(res, PAUSA_API_MS));
+        estadoAuto('Completando el histórico de 7 días con la API… ' + (n + 1) + '/' + tareas.length + ' · ' + nombreEst(t.e));
+        pet++;
+        const r = await completarDia(t.e, t.fecha, true);
+        const dia = fechaYYYYMMDD(t.fecha);
+        if (r.estado === 'ok'){
+          marcas[t.mk] = Date.now(); total += r.anadidas;
+          log('info', t.e, 'Histórico de la API (' + dia + '): +' + r.anadidas + ' lecturas.');
+          renderEvol(); renderSemana(); renderDatos();
+        } else if (r.estado === 'vacio' || r.estado === 'cubierto'){
+          marcas[t.mk] = Date.now();
+          log('info', t.e, 'La API no tiene lecturas nuevas para ' + dia + '.');
+        } else {
+          marcas[t.mk] = Date.now() - 11.5 * 3600000;   // se podrá reintentar en unos minutos
+          fallos++;
+          if (r.http === 429){ bloqueadas.add(t.clave); reintentar++; log('warn', t.e, 'La API responde «demasiadas peticiones» (HTTP 429); se reintentará en 1 minuto.'); }
+          else log('warn', t.e, 'No se pudo completar el histórico de ' + dia + (r.http ? ' (HTTP ' + r.http + ')' : ' (sin respuesta de la API)') + '.');
+        }
+        guardarMarcas();
+      }
+      guardarMarcas();
     } finally { autoRellenando = false; }
     if (total > 0){ renderEvol(); renderDetalle(); renderSemana(); renderDatos(); }
+    if (reintentar > 0){
+      estadoAuto('Histórico de 7 días incompleto: la API ha limitado las peticiones. Se reintentará en 1 minuto…');
+      clearTimeout(autoReintento);
+      autoReintento = setTimeout(() => { rellenarHuecosAuto(); }, 62000);
+    } else if (fallos > 0){
+      estadoAuto('No se pudo obtener parte del histórico de 7 días desde la API (consulta el registro de la sección 07). Se reintentará en unos minutos.');
+    } else {
+      estadoAuto('');
+    }
   }
   function hayCercano(sorted, t, tol){
     let lo = 0, hi = sorted.length;
@@ -1383,7 +1430,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     bloquearConfig(true);
     ests.forEach(renderTarjeta);
     actualizarLuz(); actualizarBotones(); renderEstadoMeta();
-    setTimeout(() => { sincronizarTodas(false).then(rellenarHuecosAuto); }, 2500);
+    setTimeout(() => { Promise.resolve(sincronizarTodas(false)).catch(() => {}).then(rellenarHuecosAuto); }, 2500);
   }
   function pararMonitor(motivo){
     running = false;
@@ -2341,7 +2388,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function renderServidor(){
     const act = estsActivas();
     if (act.length === 0){ el.servEstado.innerHTML = ''; return; }
-    let h = '<table class="t"><thead><tr><th>Estación</th><th>Estado</th><th class="num">Recibidas</th><th class="num">Añadidas</th><th>Última lectura</th></tr></thead><tbody>';
+    let h = '<table class="t t-compacta"><thead><tr><th>Estación</th><th>Estado</th><th class="num">Recibidas</th><th class="num">Añadidas</th><th class="ocupa">Última lectura</th></tr></thead><tbody>';
     act.forEach(e => {
       const s = rt(e).serv;
       let est = '<span class="tag">pendiente</span>', rec = '—', add = '—', ult = '—';
@@ -2372,7 +2419,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const res = await resumenAlmacen();
     if (tk !== datosToken) return;
     if (res.length === 0){ el.datosTabla.innerHTML = msgVacio('Todavía no hay nada guardado en este navegador.'); return; }
-    let h = '<table class="t"><thead><tr><th>Estación</th><th class="num">Lecturas</th><th>Desde</th><th>Hasta</th><th></th></tr></thead><tbody>';
+    let h = '<table class="t t-compacta"><thead><tr><th>Estación</th><th class="num">Lecturas</th><th>Desde</th><th class="ocupa">Hasta</th><th></th></tr></thead><tbody>';
     res.forEach(r => {
       const e = ests.find(x => kEst(x) === r.key);
       h += '<tr><td>' + (e ? '<span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span>' : escHTML(r.key) + ' <span class="tag">no configurada</span>') +
@@ -2535,7 +2582,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     renderRegistro();
     purgarAntiguos().then(renderDatos);
     // Sincroniza con el colector al abrir y cada SERV_SYNC_CADA_MIN minutos (aunque el monitor esté parado).
-    if (estsActivas().length) setTimeout(() => { sincronizarTodas(false).then(rellenarHuecosAuto); }, 800);
+    if (estsActivas().length) setTimeout(() => { Promise.resolve(sincronizarTodas(false)).catch(() => {}).then(rellenarHuecosAuto); }, 800);
     timerSync = setInterval(() => { if (!document.hidden && estsActivas().length) sincronizarTodas(false); }, SERV_SYNC_CADA_MIN * 60000);
     timerTick = setInterval(() => { if (!document.hidden) actualizarPies(); }, 1000);
     setInterval(() => { if (!document.hidden && Date.now() - ultimaSemana > 300000) renderSemana(); }, 60000);

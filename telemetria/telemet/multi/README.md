@@ -16,6 +16,7 @@ Al cargar la app, al pulsar **Iniciar** y al elegir la ventana **7 d**, la app r
 - Hoy y ayer: se mira la ventana de las últimas 24 h y se rellena todo hueco de más de 15 min.
 - Días anteriores: se rellenan los días con huecos grandes (más de 90 min).
 - Coste: hasta 7 peticiones por estación (la API entrega un día por petición). Para ahorrar cuota no se repite el mismo día en 20 min (hoy y ayer) ni en 12 h (días anteriores).
+- Las peticiones se espacian 2,5 s (la API limita a unas 30 por minuto y clave) y la gráfica se redibuja tras cada día. Si la API responde 429 (demasiadas peticiones) o falla, un aviso bajo la gráfica lo indica, el día no se da por hecho y se reintenta en 1 minuto; el motivo queda en el registro de la sección 07.
 - Si la API no tiene datos para un tramo, el hueco se queda como hueco: nunca se une con una recta inventada.
 
 ## Mapa con fondo OpenStreetMap

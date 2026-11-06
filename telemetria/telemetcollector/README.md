@@ -2,10 +2,10 @@
 
 A **Python** program (standard library only, no `pip install`) that runs continuously on the Linux server:
 
-1. Reads your weather station every 5 minutes (configurable) through Weather Underground / Earth Network.
+1. Reads your weather station every 5 minutes (configurable) through Weather Underground / Earth Network. It can read **several stations**, each with its own API Key (see “Several stations”).
 2. Stores the readings in a SQLite database.
 3. Keeps only the last **24 hours** (sliding mode, the default; adjustable with `duration_hours`, `--hours` or `TELEMET_HOURS`); it can also wipe everything and start again once those hours are up (`mode = reset`).
-4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h and 24 h evolution charts (even if the browser has been closed).
+4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h and 24 h evolution charts (even if the browser has been closed). With several stations, the **TeleMet Multi** app reads the JSON of each one and shows them together (its interface is in Spanish).
 
 ```
 station ──► Weather Underground API ──► telemet_collector.py ──► SQLite (data/telemet.sqlite)
@@ -84,6 +84,23 @@ interval_s = 600         # optional: own pace
 - Secrets can go through the environment: `TELEMET_API_KEY_<ID>` (key of a section without `api_key`) or `TELEMET_STATIONS=ID1:KEY1,ID2:KEY2`.
 - `--test`, `--once` and `--status` act on all the stations.
 - A `config.ini` with a single station in `[station]` keeps working exactly as before (same DB and JSON names).
+
+**Putting several stations into service, step by step**
+
+```bash
+# 1. Install as for one station (user, folder, json_path, service): there is only one folder and one service.
+# 2. In config.ini delete/empty [station] and add one [station:ID] section per station (example above).
+# 3. Test the keys (goes through all the stations; if one fails it exits with code 1 and says which):
+sudo -u telemet python3 telemet_collector.py --test
+# 4. One real reading: creates one DB and one JSON per station:
+sudo -u telemet python3 telemet_collector.py --once
+ls /var/www/htdocs/rafa/telemethistory/data/            # history_IELCHE12.json  history_IALICA34.json
+# 5. Start (or restart) the service, which reads all of them at once:
+sudo systemctl restart telemet-collector
+journalctl -u telemet-collector -f                      # every line carries the station [ID]
+```
+
+**Which app to use.** *TeleMet History* (one station): open `…/telemethistory/`; it reads `data/history_<ITS_ID>.json`. *TeleMet Multi* (several): copy `telemetria/telemet/multi/{index.html,apple-touch-icon.png}` to `/var/www/htdocs/rafa/telemetmulti/`, register the stations and, in “07 · Datos y servidor”, set the folder to `../telemethistory/data/` (or the one you use) and press “Sincronizar ahora”. More detail in the [MANUAL](MANUAL.md#85-telemet-multi-several-stations).
 
 ## Installing the TeleMet History app on the same server
 

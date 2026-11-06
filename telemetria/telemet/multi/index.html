@@ -705,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 13:16</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 13:21</p>
 </footer>
 
 <div class="bottomnav">
@@ -1523,6 +1523,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       txt += '. Supera el límite habitual de ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + ' llamadas/día por clave (compruébalo en tu cuenta): usa un intervalo de ' + minimo + ' s o más, o claves distintas.';
       el.cuota.classList.add('aviso-c');
     } else txt += '. (Límite habitual por clave: ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + '/día.)';
+    txt += ' Si el colector u otra app usa la misma clave, suma sus llamadas (el colector con intervalo_s = 60 hace 1.440/día).';
     el.cuota.textContent = txt;
   }
 
@@ -1535,10 +1536,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     r.proxMs = Date.now() + ms;
     r.timer = setTimeout(() => ciclo(e), ms);
   }
-  function reintentar(e, motivo){
+  function reintentar(e, motivo, minS){
     const r = rt(e);
     r.reint += 1;
-    const esperaS = Math.min(cfg.backoffBaseS * Math.pow(2, r.reint - 1), cfg.backoffMaxS);
+    const esperaS = Math.max(minS || 0, Math.min(cfg.backoffBaseS * Math.pow(2, r.reint - 1), cfg.backoffMaxS));
     r.estado = 'warn'; r.msg = motivo + ' · reintento ' + r.reint + ' en ' + Math.round(esperaS) + ' s';
     log('warn', e, r.msg);
     programar(e, esperaS * 1000);
@@ -1565,6 +1566,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (!running) return;
       if (resp.status === 401 || resp.status === 403){ fatal(e, 'HTTP ' + resp.status + ': API Key inválida o sin permiso'); return; }
       if (resp.status === 404){ fatal(e, '404: Station ID no encontrado'); return; }
+      if (resp.status === 429){ reintentar(e, 'HTTP 429: límite de llamadas de la clave alcanzado (¿la comparte con el colector u otra app?)', Math.max(120, cfg.pollS)); return; }
       if (!resp.ok){ reintentar(e, 'HTTP ' + resp.status); return; }
       let data = {};
       if (resp.status !== 204){
@@ -1585,6 +1587,16 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       r.last = t; r.obsMs = obsMs; r.plausible = esPlausible(t); r.msg = '';
       r.estado = t.staleness_s <= cfg.staleS ? 'ok' : 'warn';
       if (nueva){
+        if (r.ultimoGuardadoMs){
+          const d = (obsMs - r.ultimoGuardadoMs) / 1000;
+          if (d > 0 && d < 3600){
+            (r.deltas = r.deltas || []).push(d); if (r.deltas.length > 12) r.deltas.shift();
+            if (r.deltas.length >= 4 && !r.avisoRitmo){
+              const ord = r.deltas.slice().sort((a, b) => a - b), med = ord[ord.length >> 1];
+              if (med > cfg.pollS * 1.5){ r.avisoRitmo = true; log('info', e, 'La estación publica un dato nuevo cada ≈ ' + Math.round(med) + ' s: sondear más a menudo (' + cfg.pollS + ' s) devuelve la misma lectura y gasta llamadas de la API.'); }
+            }
+          }
+        }
         r.lecturas += 1; r.ultimoGuardadoMs = obsMs;
         if (esNum(t.temp_c)){ r.spark.push({ t: obsMs, v: t.temp_c }); if (r.spark.length > 40) r.spark.shift(); }
         guardarLote(kEst(e), [{ epochMs: obsMs, vals: t }]);
@@ -1702,6 +1714,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (r.obsMs){
       let s = 'hace ' + edadTxt(r.obsMs);
       if (running && r.proxMs && r.estado !== 'err') s += ' · próxima en ' + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
+      if (r.deltas && r.deltas.length >= 3){ const o = r.deltas.slice().sort((a, b) => a - b); s += ' · dato nuevo cada ≈ ' + (o[o.length >> 1] >= 90 ? Math.round(o[o.length >> 1] / 60) + ' min' : Math.round(o[o.length >> 1]) + ' s'); }
       if (!r.plausible) s += ' · ⚠ fuera de rango';
       return s;
     }

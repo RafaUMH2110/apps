@@ -340,7 +340,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .ec-spark{width:100%;height:22px;display:block;margin-top:4px}
 .sparkline line,.ec-spark line{stroke:var(--c);stroke-width:2;stroke-linecap:round}
 .ec-spark polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.cab-est{display:flex;align-items:center;gap:7px}
+.cab-est{display:inline-flex;align-items:center;gap:7px;vertical-align:middle}
 .cab-est i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
 table.t td.num{text-align:right;white-space:nowrap}
 table.t td.max{color:var(--brasa);font-weight:700}
@@ -348,6 +348,8 @@ table.t td.min{color:var(--c-hum);font-weight:700}
 table.t td .dif{display:block;font-size:11px;color:var(--muted);font-weight:500}
 table.t td.ref{background:color-mix(in srgb,var(--steel) 10%,transparent)}
 table.t th.num{text-align:right}
+table.t th,table.t td{vertical-align:middle}
+table.t th.num,table.t td.num{width:1%;white-space:nowrap}
 .tbl-wrap.amplia table.t th:first-child,.tbl-wrap.amplia table.t td:first-child{min-width:150px}
 .ctrl-fila{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:0 0 12px}
 .ctrl-fila .etq{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -363,9 +365,16 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 .extremo .e-val{font:700 18px var(--display);margin-top:1px}
 .extremo .e-est{font-size:12.5px;color:var(--muted)}
 .mapa-wrap{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 20px}
-.mapa-wrap svg.mapa{width:100%;max-width:620px;height:auto;max-height:300px;display:block;margin:0 auto;background:var(--page-bg);border-radius:10px}
-.mapa text{font:600 11px var(--texto);fill:var(--ink);paint-order:stroke;stroke:var(--page-bg);stroke-width:3px}
-.mapa .mp-norte{fill:var(--muted);stroke:none;font-size:10px}
+.mapa-wrap svg.mapa{width:100%;max-width:760px;height:auto;display:block;margin:0 auto;background:var(--page-bg);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.mapa-ctl{max-width:760px;margin:0 auto 8px;font-size:12.5px;color:var(--muted)}
+.mapa-ctl label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.mapa text{font:600 13px var(--texto);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.mapa .mp-grid{stroke:var(--line);stroke-width:1;opacity:.7}
+.mapa .mp-escala{stroke:#1b2a3a;stroke-width:2;fill:none}
+.mapa .mp-escala-t{font:700 11px var(--mono)}
+.mapa .mp-attr{font:500 10px var(--texto);fill:#333;stroke:#fff;stroke-width:3px}
+.mapa image{image-rendering:auto}
+.mapa .mp-norte{fill:#1b2a3a;stroke:#fff;stroke-width:3px;font-size:12px}
 .mapa-pie{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
 .tag{display:inline-block;font:700 11px var(--mono);padding:2px 7px;border-radius:6px;background:var(--line-2);color:var(--steel)}
 .tag.ok{background:var(--forjado-suave);color:var(--forjado)}
@@ -538,7 +547,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   <div id="extremos" class="extremos"></div>
 
   <div class="mapa-wrap" id="mapaWrap" style="display:none">
-    <svg class="mapa" id="mapa" viewBox="0 0 320 210" role="img" aria-label="Posición relativa de las estaciones"></svg>
+    <div class="mapa-ctl"><label><input type="checkbox" id="mapaFondo" checked> Mapa de fondo (OpenStreetMap)</label></div>
+    <svg class="mapa" id="mapa" viewBox="0 0 640 340" role="img" aria-label="Posición de las estaciones"></svg>
     <p class="mapa-pie" id="mapaPie"></p>
   </div>
 
@@ -653,7 +663,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 11:43</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:04</p>
 </footer>
 
 <div class="bottomnav">
@@ -683,7 +693,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         <div><b>Gráficas superpuestas</b><span>Cada línea es una estación. Para ahorrar puntos, los datos se agrupan en tramos de 3 min (12 h), 5 min (24 h) o 30 min (7 d) y se muestra su media. Los huecos largos sin datos no se unen con una recta.</span></div>
         <div><b>Histórico del navegador</b><span>Cada lectura se guarda en IndexedDB (9 días por estación). Persiste entre sesiones en este mismo navegador y dispositivo.</span></div>
         <div><b>TeleMet Colector</b><span>Programa Python del servidor que lee las estaciones aunque nadie tenga la app abierta y publica un JSON por estación. Esta app los lee y añade las lecturas que le faltan.</span></div>
-        <div><b>Mapa esquemático</b><span>Posición relativa de las estaciones según las coordenadas que informan (sin mapa de fondo, funciona sin conexión). El norte está arriba.</span></div>
+        <div><b>Mapa esquemático</b><span>Posición de las estaciones según las coordenadas que informan, sobre un mapa de fondo de OpenStreetMap (se puede desactivar; sin conexión funciona sin conexión). El norte está arriba.</span></div>
       </div>
     </div>
   </div>
@@ -762,14 +772,14 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   let cfg = Object.assign({}, DEF);
   let running = false;
   const rts = new Map();           // id de estación -> estado en tiempo de ejecución
-  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax' };
+  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax', mapaFondo: true };
   const registro = [];
   let timerSync = null, timerTick = null;
 
   const $ = id => document.getElementById(id);
   const el = {
     estList: $('estList'), cfgMsg: $('cfgMsg'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
-    mapaWrap: $('mapaWrap'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
+    mapaWrap: $('mapaWrap'), mapaFondo: $('mapaFondo'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
     detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
     chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
     evolNota: $('evolNota'), charts: $('charts'), tablaSemana: $('tablaSemana'),
@@ -1043,41 +1053,43 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length };
     } catch (err) { return { estado: 'error', anadidas: 0 }; }
   }
-  // Al iniciar el monitor: une el histórico que ya hay en el navegador (y el del
-  // colector) con la primera lectura en vivo. Si en las últimas 24 h hay algún hueco de
-  // más de HUECO_MIN_MS (al principio de la ventana, entre lecturas o hasta ahora), se pide
-  // a la API el histórico de ese día para taparlo. Solo añade lo que falta; como mucho
-  // 2 peticiones por estación y no repite la misma petición en menos de 20 minutos.
+  // Al abrir la app y al pulsar Iniciar: une el histórico guardado en el navegador (y el
+  // del colector) con la primera lectura en vivo y completa los últimos 7 días. Si un día
+  // tiene huecos (hoy/ayer: más de 15 min; antes: más de 90 min) se pide a la API el
+  // histórico de ese día. Solo añade lo que falta. No repite la misma petición en menos de
+  // 20 min (hoy y ayer) ni de 12 h (días anteriores); como mucho 7 peticiones por estación.
   let autoRellenando = false;
   async function rellenarHuecosAuto(){
-    if (autoRellenando || !running) return;
+    if (autoRellenando) return;
     autoRellenando = true;
     let total = 0;
     try {
       let marcas = {};
       try { marcas = JSON.parse(localStorage.getItem('telemetmulti_autorell') || '{}') || {}; } catch (_) { marcas = {}; }
       for (const e of estsActivas()){
-        if (!running) break;
         const key = kEst(e), rte = rt(e);
         if (!key || !claveEf(e) || rte.fatal) continue;
-        const ahora = Date.now(), desdeV = ahora - 24 * 3600000;
-        for (let i = 0; i < 2; i++){
+        const ahora = Date.now();
+        for (let i = 0; i < DIAS_SEMANA; i++){
           const fecha = new Date(ahora - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
-          const desde = Math.max(ini, desdeV), hasta = Math.min(fin, ahora);
+          const desde = ini, hasta = Math.min(fin, ahora);
           if (hasta <= desde) continue;
-          const filas = (await consultarRango(key, desde, hasta)).filter(f => f.vals && esNum(f.vals.temp_c)).sort((a, b) => a.epochMs - b.epochMs);
+          // Hoy y ayer: se tapan huecos de más de 15 min; días anteriores: de más de 90 min.
+          const umbral = i < 2 ? HUECO_MIN_MS : HUECO_MAX_MS;
+          const desdeV = i < 2 ? Math.max(ini, ahora - 24 * 3600000) : ini;
+          const filas = (await consultarRango(key, desdeV, hasta)).filter(f => f.vals && esNum(f.vals.temp_c)).sort((a, b) => a.epochMs - b.epochMs);
           let hueco = filas.length === 0;
           if (!hueco){
-            if (filas[0].epochMs - desde > HUECO_MIN_MS && desde > ini) hueco = true;
-            if (hasta - filas[filas.length - 1].epochMs > HUECO_MIN_MS) hueco = true;
-            for (let k = 1; !hueco && k < filas.length; k++) if (filas[k].epochMs - filas[k - 1].epochMs > HUECO_MIN_MS) hueco = true;
+            if (filas[0].epochMs - desdeV > umbral && (i >= 2 || desdeV > ini)) hueco = true;
+            if (hasta - filas[filas.length - 1].epochMs > umbral) hueco = true;
+            for (let k = 1; !hueco && k < filas.length; k++) if (filas[k].epochMs - filas[k - 1].epochMs > umbral) hueco = true;
           }
           if (!hueco) continue;
           const mk = key + '|' + fechaYYYYMMDD(fecha);
-          if (marcas[mk] && ahora - marcas[mk] < 20 * 60000) continue;
+          if (marcas[mk] && ahora - marcas[mk] < (i < 2 ? 20 * 60000 : 12 * 3600000)) continue;
           marcas[mk] = ahora;
           const r = await completarDia(e, fecha, true);
-          if (r.estado === 'ok'){ total += r.anadidas; log('info', e, 'Histórico de la API (' + fechaYYYYMMDD(fecha) + '): +' + r.anadidas + ' lecturas para unir con la primera lectura.'); }
+          if (r.estado === 'ok'){ total += r.anadidas; log('info', e, 'Histórico de la API (' + fechaYYYYMMDD(fecha) + '): +' + r.anadidas + ' lecturas.'); }
           else if (r.estado === 'error') log('warn', e, 'No se pudo completar el histórico de ' + fechaYYYYMMDD(fecha) + (r.http ? ' (HTTP ' + r.http + ')' : '') + '.');
           await new Promise(res => setTimeout(res, 300));
         }
@@ -1128,12 +1140,13 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (['tmax', 'tmin', 'tmed', 'lluvia', 'racha'].indexOf(u.resumen) >= 0) ui.resumen = u.resumen;
       if (typeof u.ref === 'string') ui.ref = u.ref;
       if (typeof u.detalle === 'string') ui.detalle = u.detalle;
+      if (typeof u.mapaFondo === 'boolean') ui.mapaFondo = u.mapaFondo;
       if (typeof u.estEvol === 'string') ui.estEvol = u.estEvol;
     }
   }
   function guardarEsts(){ guardarLS(LS.ests, ests); }
   function guardarCfg(){ guardarLS(LS.cfg, cfg); }
-  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol }); }
+  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol, mapaFondo: ui.mapaFondo }); }
 
   function leerNumero(input, porDefecto, min){
     const v = parseFloat(String(input.value).replace(',', '.'));
@@ -1572,22 +1585,50 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const con = ests.filter(e => e.activa && e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
     if (con.length < 2){ el.mapaWrap.style.display = 'none'; return; }
     el.mapaWrap.style.display = '';
-    const W = 320, H = 210, P = 34;
-    const lat0 = con.reduce((s, e) => s + e.meta.lat, 0) / con.length;
-    const kx = Math.cos(lat0 * Math.PI / 180);
-    const xs = con.map(e => e.meta.lon * kx), ys = con.map(e => e.meta.lat);
-    const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
-    const sx = (W - 2 * P) / ((x1 - x0) || 1e-9), sy = (H - 2 * P) / ((y1 - y0) || 1e-9);
-    const s = Math.min(sx, sy);
-    const offX = (W - (x1 - x0) * s) / 2, offY = (H - (y1 - y0) * s) / 2;
-    let g = '<text class="mp-norte" x="' + (W - 14) + '" y="16" text-anchor="middle">N</text><path d="M' + (W - 14) + ' 20l-4 10h8z" fill="var(--muted)"></path>';
+    const W = 640, H = 340, P = 60;
+    const lats = con.map(e => e.meta.lat), lons = con.map(e => e.meta.lon);
+    const latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats), lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
+    // Proyección Web Mercator (la de los mapas de OpenStreetMap): z = nivel de zoom, 256 px por baldosa.
+    const mx = (lon, z) => 256 * Math.pow(2, z) * (lon + 180) / 360;
+    const my = (lat, z) => { const r = lat * Math.PI / 180; return 256 * Math.pow(2, z) * (0.5 - Math.log(Math.tan(Math.PI / 4 + r / 2)) / (2 * Math.PI)); };
+    let z = 17;
+    while (z > 2){
+      const w = mx(lonMax, z) - mx(lonMin, z), h = my(latMin, z) - my(latMax, z);
+      if (w <= W - 2 * P && h <= H - 2 * P) break;
+      z--;
+    }
+    const cx = (mx(lonMin, z) + mx(lonMax, z)) / 2, cy = (my(latMin, z) + my(latMax, z)) / 2;
+    const ox = cx - W / 2, oy = cy - H / 2;
+    // Fondo base (rejilla suave): se ve si no hay mapa de fondo o si las baldosas no cargan.
+    let g = '<defs><linearGradient id="mpFondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3F8"/><stop offset="1" stop-color="#E0E9F1"/></linearGradient></defs>' +
+      '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#mpFondo)"></rect>';
+    for (let gx = 0; gx <= W; gx += 64) g += '<line class="mp-grid" x1="' + gx + '" y1="0" x2="' + gx + '" y2="' + H + '"></line>';
+    for (let gy = 0; gy <= H; gy += 68) g += '<line class="mp-grid" x1="0" y1="' + gy + '" x2="' + W + '" y2="' + gy + '"></line>';
+    if (ui.mapaFondo){
+      const tx0 = Math.floor(ox / 256), tx1 = Math.floor((ox + W) / 256), ty0 = Math.max(0, Math.floor(oy / 256)), ty1 = Math.min(Math.pow(2, z) - 1, Math.floor((oy + H) / 256));
+      const n = Math.pow(2, z);
+      for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++){
+        const txw = ((tx % n) + n) % n;
+        g += '<image href="https://tile.openstreetmap.org/' + z + '/' + txw + '/' + ty + '.png" x="' + (tx * 256 - ox).toFixed(1) + '" y="' + (ty * 256 - oy).toFixed(1) + '" width="256" height="256" preserveAspectRatio="none"></image>';
+      }
+    }
+    // Escala: longitud "redonda" más cercana a 110 px.
+    const latC = (latMin + latMax) / 2, mPorPx = 156543.03392 * Math.cos(latC * Math.PI / 180) / Math.pow(2, z);
+    const bonitos = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
+    let metros = bonitos[0];
+    bonitos.forEach(b => { if (Math.abs(b / mPorPx - 110) < Math.abs(metros / mPorPx - 110)) metros = b; });
+    const lenPx = metros / mPorPx;
+    g += '<path class="mp-escala" d="M16 ' + (H - 26) + 'v6h' + lenPx.toFixed(1) + 'v-6"></path><text class="mp-escala-t" x="16" y="' + (H - 30) + '">' + (metros >= 1000 ? (metros / 1000) + ' km' : metros + ' m') + '</text>';
+    g += '<text class="mp-norte" x="' + (W - 22) + '" y="22" text-anchor="middle">N</text><path d="M' + (W - 22) + ' 27l-6 14h12z" fill="#1b2a3a" stroke="#fff" stroke-width="2"></path>';
+    if (ui.mapaFondo) g += '<text class="mp-attr" x="' + (W - 6) + '" y="' + (H - 6) + '" text-anchor="end">© colaboradores de OpenStreetMap</text>';
     con.forEach((e, i) => {
-      const x = offX + (xs[i] - x0) * s, y = H - (offY + (ys[i] - y0) * s);
+      const x = mx(e.meta.lon, z) - ox, y = my(e.meta.lat, z) - oy;
       const t = rt(e).last;
-      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="7" fill="' + e.color + '" stroke="var(--card-bg)" stroke-width="2"></circle>' +
-        '<text x="' + x.toFixed(1) + '" y="' + (y - 11).toFixed(1) + '" text-anchor="middle">' + escHTML(nombreEst(e)) + (t && esNum(t.temp_c) ? ' · ' + fmtN(t.temp_c, 1) + ' °C' : '') + '</text>';
+      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="9" fill="' + e.color + '" stroke="#fff" stroke-width="3"></circle>' +
+        '<text x="' + x.toFixed(1) + '" y="' + (y - 15).toFixed(1) + '" text-anchor="middle">' + escHTML(nombreEst(e)) + (t && esNum(t.temp_c) ? ' · ' + fmtN(t.temp_c, 1) + ' °C' : '') + '</text>';
     });
     el.mapa.innerHTML = g;
+    el.mapaFondo.checked = ui.mapaFondo;
     // Distancia máxima entre estaciones (haversine), como dato de contexto.
     let dmax = 0;
     for (let i = 0; i < con.length; i++) for (let j = i + 1; j < con.length; j++){
@@ -1596,7 +1637,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const q = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
       dmax = Math.max(dmax, 2 * R * Math.asin(Math.sqrt(q)));
     }
-    el.mapaPie.innerHTML = 'Posición relativa (sin mapa de fondo; norte arriba). Separación máxima entre estaciones: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
+    el.mapaPie.innerHTML = (ui.mapaFondo ? 'Mapa de fondo © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>; norte arriba. ' : 'Posición relativa (sin mapa de fondo; norte arriba). ') + 'Separación máxima entre estaciones: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
       con.map(e => '<a href="https://www.openstreetmap.org/?mlat=' + e.meta.lat + '&mlon=' + e.meta.lon + '#map=13/' + e.meta.lat + '/' + e.meta.lon + '" target="_blank" rel="noopener">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
   }
 
@@ -2443,7 +2484,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     el.refSel.addEventListener('change', () => { ui.ref = el.refSel.value; guardarUI(); renderComparativa(); });
     el.detalleSel.addEventListener('change', () => { ui.detalle = el.detalleSel.value; guardarUI(); renderTarjetasSel(); renderDetalle(); });
     el.estSelEvol.addEventListener('change', () => { ui.estEvol = el.estSelEvol.value; guardarUI(); renderEvol(); });
-    document.querySelectorAll('#evolVentana button').forEach(b => b.addEventListener('click', () => { ui.ventanaH = parseInt(b.dataset.h, 10); guardarUI(); aplicarModoUI(); renderEvol(); }));
+    document.querySelectorAll('#evolVentana button').forEach(b => b.addEventListener('click', () => { ui.ventanaH = parseInt(b.dataset.h, 10); guardarUI(); aplicarModoUI(); renderEvol(); if (ui.ventanaH === 168) rellenarHuecosAuto(); }));
     $('modoComparar').addEventListener('click', () => { ui.modo = 'comparar'; guardarUI(); aplicarModoUI(); renderEvol(); });
     $('modoEstacion').addEventListener('click', () => { ui.modo = 'estacion'; guardarUI(); aplicarModoUI(); renderEvol(); });
     el.chipsEst.addEventListener('click', ev => {
@@ -2465,6 +2506,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     $('btnSyncServidor').addEventListener('click', () => { leerAjustesDeFormulario(); sincronizarTodas(true); });
     $('btnBackfill').addEventListener('click', rellenarDesdeAPI);
     $('btnCSV24').addEventListener('click', () => exportarCSV(24));
+    el.mapaFondo.addEventListener('change', () => { ui.mapaFondo = el.mapaFondo.checked; guardarUI(); renderMapa(); });
     $('btnCSV7').addEventListener('click', () => exportarCSV(168));
     $('btnCSVTodo').addEventListener('click', () => exportarCSV(0));
     $('btnBorrarTodo').addEventListener('click', () => borrarDatos(null));
@@ -2493,7 +2535,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     renderRegistro();
     purgarAntiguos().then(renderDatos);
     // Sincroniza con el colector al abrir y cada SERV_SYNC_CADA_MIN minutos (aunque el monitor esté parado).
-    if (estsActivas().length) setTimeout(() => sincronizarTodas(false), 800);
+    if (estsActivas().length) setTimeout(() => { sincronizarTodas(false).then(rellenarHuecosAuto); }, 800);
     timerSync = setInterval(() => { if (!document.hidden && estsActivas().length) sincronizarTodas(false); }, SERV_SYNC_CADA_MIN * 60000);
     timerTick = setInterval(() => { if (!document.hidden) actualizarPies(); }, 1000);
     setInterval(() => { if (!document.hidden && Date.now() - ultimaSemana > 300000) renderSemana(); }, 60000);

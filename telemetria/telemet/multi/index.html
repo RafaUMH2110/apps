@@ -705,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:59</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 13:09</p>
 </footer>
 
 <div class="bottomnav">
@@ -1862,7 +1862,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       dmax = Math.max(dmax, 2 * R * Math.asin(Math.sqrt(q)));
     }
     el.mapaPie.innerHTML = (ui.mapaFondo ? 'Mapa de fondo © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>; norte arriba. ' : 'Posición relativa (sin mapa de fondo; norte arriba). ') + 'Separación máxima entre estaciones: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
-      con.map(e => '<a href="https://www.openstreetmap.org/?mlat=' + e.meta.lat + '&mlon=' + e.meta.lon + '#map=13/' + e.meta.lat + '/' + e.meta.lon + '" target="_blank" rel="noopener">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
+      '<a href="#" data-mapa="">Abrir mapa interactivo con todas las estaciones</a> · Centrar en: ' +
+      con.map(e => '<a href="#" data-mapa="' + e.id + '">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
   }
 
   /* ============================================================
@@ -1883,7 +1884,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const prev = r.prev || (filas.length > 1 ? filas[filas.length - 2].vals : null);
     const m = e.meta || {};
     el.detalleMeta.innerHTML = escHTML(e.stationId) + (m.neighborhood ? ' · ' + escHTML(m.neighborhood) : '') + (esNum(m.elev) ? ' · ' + fmtN(m.elev, 0) + ' m' : '') +
-      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="https://www.openstreetmap.org/?mlat=' + m.lat + '&mlon=' + m.lon + '#map=14/' + m.lat + '/' + m.lon + '" target="_blank" rel="noopener">ver en el mapa</a>' : '');
+      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="#" data-mapa="' + e.id + '">ver en el mapa</a>' : '');
     el.detalleGrid.innerHTML = GRAFICABLES.map(g => {
       const serie = filas.map(f => f.vals[g.key]).filter(esNum);
       const v = t ? t[g.key] : null;
@@ -2696,6 +2697,12 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const alEditarAjuste = () => { leerAjustesDeFormulario(false); marcarCambiosCfg(); };
     [el.poll, el.clave, el.timeout, el.stale, el.bb, el.bm].forEach(i => { i.addEventListener('change', alEditarAjuste); i.addEventListener('input', alEditarAjuste); });
     el.servBase.addEventListener('change', () => { cfg.servBase = el.servBase.value.trim(); guardarCfg(); });
+    document.addEventListener('click', ev => {
+      const a = ev.target.closest('a[data-mapa]');
+      if (!a) return;
+      ev.preventDefault();
+      abrirMapaEstaciones(a.dataset.mapa);
+    });
     $('btnGuardarCfg').addEventListener('click', () => guardarConfiguracion());
     $('btnGuardarCfg2').addEventListener('click', () => guardarConfiguracion());
     window.addEventListener('beforeunload', ev => { if (!running && hayCambiosCfg()){ ev.preventDefault(); ev.returnValue = ''; } });
@@ -2814,6 +2821,50 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     document.querySelectorAll('.nav-secc a[href^="#"]').forEach(a => a.addEventListener('click', () => abrirDestino(a.getAttribute('href').slice(1))));
     window.addEventListener('hashchange', () => abrirDestino(location.hash.slice(1)));
     const ir = $('btnIrConfig'); if (ir) ir.addEventListener('click', () => abrirDestino('secEstaciones'));
+  }
+
+  /* ============================================================
+     MAPA INTERACTIVO CON TODAS LAS ESTACIONES (ventana nueva, Leaflet + OpenStreetMap)
+     ============================================================ */
+  function abrirMapaEstaciones(idDestacada){
+    const con = estsActivas().filter(e => e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
+    if (con.length === 0){ mostrarToast('Aún no hay coordenadas: inicia el monitor para que cada estación informe de su posición.'); return; }
+    const datos = con.map(e => {
+      const l = rt(e).last || {}, m = e.meta;
+      return { id: e.id, nombre: nombreEst(e), sid: e.stationId, color: e.color, lat: m.lat, lon: m.lon,
+        barrio: m.neighborhood || '', elev: esNum(m.elev) ? Math.round(m.elev) : null,
+        temp: esNum(l.temp_c) ? Math.round(l.temp_c * 10) / 10 : null, hum: esNum(l.humidity_pct) ? Math.round(l.humidity_pct) : null };
+    });
+    const json = JSON.stringify({ est: datos, dest: idDestacada || '' }).replace(/</g, '\\u003c');
+    const html = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>TeleMet Multi · Mapa de las estaciones</title>' +
+      '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="">' +
+      '<style>html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif}#m{height:100%}' +
+      '.leyenda{position:absolute;z-index:1000;top:10px;right:10px;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 4px 18px rgba(0,0,0,.28);font-size:13px;max-width:60vw}' +
+      '.leyenda b{display:block;margin-bottom:6px}.leyenda button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:4px 2px;font:inherit;cursor:pointer;text-align:left}' +
+      '.leyenda button:hover{background:#f0f3f7}.leyenda i{width:12px;height:12px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px #0004}' +
+      '.etq-est{font-weight:700;font-size:12.5px;background:#fff;border:1px solid #0003;border-radius:6px;padding:2px 6px}</style></head><body>' +
+      '<div id="m"></div><div class="leyenda" id="ley"><b>Estaciones</b></div>' +
+      '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin=""><\/script>' +
+      '<script>(function(){var D=' + json + ';' +
+      'var esc=function(t){return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]})};' +
+      'var map=L.map("m",{zoomControl:true});' +
+      'L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\\u00a9 colaboradores de <a href=\\"https://www.openstreetmap.org/copyright\\">OpenStreetMap</a>"}).addTo(map);' +
+      'var ms={},pts=[],ley=document.getElementById("ley");' +
+      'D.est.forEach(function(e){var dest=e.id===D.dest;' +
+      'var mk=L.circleMarker([e.lat,e.lon],{radius:dest?13:10,color:"#fff",weight:3,fillColor:e.color,fillOpacity:1}).addTo(map);' +
+      'var t=(e.temp!==null?e.temp.toString().replace(".",",")+" \\u00b0C":"");' +
+      'mk.bindTooltip(esc(e.nombre)+(t?" \\u00b7 "+t:""),{permanent:true,direction:"top",offset:[0,-10],className:"etq-est"});' +
+      'mk.bindPopup("<b>"+esc(e.nombre)+"</b><br>"+esc(e.sid)+(e.barrio?"<br>"+esc(e.barrio):"")+(e.elev!==null?"<br>"+e.elev+" m":"")+(t?"<br>Temperatura: "+t:"")+(e.hum!==null?"<br>Humedad: "+e.hum+" %":""));' +
+      'ms[e.id]=mk;pts.push([e.lat,e.lon]);' +
+      'var b=document.createElement("button");b.innerHTML=\'<i style="background:\'+esc(e.color)+\'"></i>\'+esc(e.nombre);b.onclick=function(){map.setView([e.lat,e.lon],Math.max(map.getZoom(),14));mk.openPopup()};ley.appendChild(b);});' +
+      'if(pts.length>1)map.fitBounds(pts,{padding:[70,70],maxZoom:15});else map.setView(pts[0],14);' +
+      'if(D.dest&&ms[D.dest])ms[D.dest].openPopup();' +
+      '})();<\/script></body></html>';
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    const w = window.open(url, '_blank');
+    if (!w) mostrarToast('El navegador ha bloqueado la ventana del mapa: permite las ventanas emergentes para esta página.');
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
   }
 
   function iniciarApp(){

@@ -388,6 +388,30 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 .tag.warn{background:var(--tip-bg);color:var(--tip-ink)}
 .msg-linea{font-size:13px;color:var(--muted);margin:6px 0 12px}
 .msg-linea.err{color:var(--aviso-ink)}
+.msg-linea.ok{color:var(--forjado);font-weight:700}
+.msg-linea.pend{color:var(--aviso-ink);font-weight:700}
+/* Botón de guardar configuración */
+.guardar-fila{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px}
+.guardar-fila .msg-linea{margin:0}
+.btn.pendiente{box-shadow:0 0 0 3px color-mix(in srgb,var(--brasa) 35%,transparent)}
+/* Aviso emergente de confirmación */
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,16px);z-index:60;background:var(--panel-dark);color:var(--on-dark);padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 14px 30px -12px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;max-width:min(92vw,520px);display:flex;gap:9px;align-items:center}
+.toast.ver{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:#5fe0c3;flex:none}
+/* Fichas y secciones plegables */
+.plegar{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;letter-spacing:inherit}
+.plegar .chev{margin-left:auto;flex:none;transition:transform .2s;color:var(--steel-soft)}
+.plegar[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.plegar:focus-visible,.sh-plegar:focus-visible{outline:2px solid var(--brasa);outline-offset:3px;border-radius:6px}
+.card-cab{margin:0 0 6px}
+.mapa-wrap .card-cab{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 8px}
+.plegada>.card-cab{margin-bottom:0}
+.sh-plegar{margin-left:auto;flex:none;align-self:center;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card-bg);color:var(--steel);border-radius:999px;padding:7px 13px;font:600 12.5px inherit;font-family:inherit;cursor:pointer}
+.sh-plegar:hover{background:var(--page-bg)}
+.sh-plegar .chev{transition:transform .2s}
+.sh-plegar[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.sh>div:nth-child(2){min-width:0}
+@media(max-width:560px){.sh-plegar .lbl{display:none}.sh-plegar{padding:8px 10px}}
 .cuota{font-size:13px;margin:10px 0 0;color:var(--muted)}
 .cuota.aviso-c{color:var(--aviso-ink);font-weight:600}
 .mini-btn{font-size:12px;padding:4px 9px}
@@ -511,7 +535,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       <label class="chk" style="font-size:13px;display:inline-flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="chkExportarClaves"> incluir las API Key en el archivo</label>
       <input type="file" id="fileImport" accept="application/json,.json" style="display:none">
     </div>
-    <p class="msg-linea" id="cfgMsg" role="status" aria-live="polite"></p>
+    <div class="guardar-fila">
+      <button type="button" class="btn btn-primary" id="btnGuardarCfg"><svg class="i"><use href="#i-check"></use></svg>Guardar configuración</button>
+      <p class="msg-linea" id="cfgMsg" role="status" aria-live="polite"></p>
+    </div>
   </div>
 
   <div class="card">
@@ -531,6 +558,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       </div>
     </div>
     <p class="cuota" id="cuotaLinea"></p>
+    <div class="guardar-fila">
+      <button type="button" class="btn btn-primary" id="btnGuardarCfg2"><svg class="i"><use href="#i-check"></use></svg>Guardar configuración</button>
+      <p class="msg-linea" id="cfgMsg2" role="status" aria-live="polite"></p>
+    </div>
     <details class="acc" style="margin-top:14px">
       <summary>Ajustes avanzados<svg class="i chev"><use href="#i-down"></use></svg></summary>
       <div class="inner">
@@ -552,7 +583,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   <div id="extremos" class="extremos"></div>
 
-  <div class="mapa-wrap" id="mapaWrap" style="display:none">
+  <div class="mapa-wrap" id="mapaWrap" style="display:none" data-titulo="Mapa de las estaciones">
     <div class="mapa-ctl"><label><input type="checkbox" id="mapaFondo" checked> Mapa de fondo (OpenStreetMap)</label></div>
     <svg class="mapa" id="mapa" viewBox="0 0 640 340" role="img" aria-label="Posición de las estaciones"></svg>
     <p class="mapa-pie" id="mapaPie"></p>
@@ -580,7 +611,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   <!-- ============ 04 · EVOLUCIÓN ============ -->
   <header class="sh" style="--c:#6B4FD8" id="secEvol"><div class="sh-ico"><svg class="i"><use href="#i-activity"></use></svg></div><div><p class="sh-step">04 · Lo registrado</p><h2>Gráficas de evolución</h2><p class="sh-lede">Se construyen con el histórico guardado en este navegador (completado con el del servidor si está disponible). Compara una misma variable entre estaciones o mira todas las variables de una sola estación.</p></div></header>
 
-  <div class="card" id="cardEvol">
+  <div class="card" id="cardEvol" data-titulo="Gráficas de evolución">
     <div class="ctrl-fila">
       <span class="etq">Ventana</span>
       <div class="evol-ventana" role="group" aria-label="Ventana de tiempo" id="evolVentana" style="margin:0">
@@ -602,7 +633,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   <!-- ============ 05 · 7 DÍAS ============ -->
   <header class="sh" style="--c:#C98200" id="secSemana"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">05 · La semana</p><h2>Resumen de los últimos 7 días</h2><p class="sh-lede">Un valor por día y por estación, a partir del histórico guardado. En rojo el más alto de cada día y en azul el más bajo.</p></div></header>
-  <div class="card">
+  <div class="card" data-titulo="Resumen semanal">
     <div class="ctrl-fila">
       <span class="etq">Mostrar</span>
       <div class="segmentado" role="group" aria-label="Magnitud del resumen" id="segResumen">
@@ -622,7 +653,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   <!-- ============ 06 · DÍA CONCRETO ============ -->
   <header class="sh" style="--c:#4F772D" id="secDia"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">06 · El pasado</p><h2>Consultar un día en concreto</h2><p class="sh-lede">Elige cualquier fecha: se usa lo guardado en este navegador y, si falta cobertura, se completa con el histórico de la API (una petición por estación y día). Usa las estaciones y variables elegidas en las gráficas.</p></div></header>
-  <div class="card">
+  <div class="card" data-titulo="Consulta de un día">
     <div class="grid2" style="align-items:end">
       <div class="field"><label for="diaInput">Fecha</label><input type="date" id="diaInput"></div>
       <div class="field"><button type="button" class="btn btn-dark" id="btnConsultarDia" style="width:100%"><svg class="i"><use href="#i-activity"></use></svg>Consultar</button></div>
@@ -674,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:48</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 12:59</p>
 </footer>
 
 <div class="bottomnav">
@@ -685,6 +716,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     <button type="button" class="btn btn-ghost btn-sm" id="btnSondeoBar" disabled title="Sondear todas ahora"><svg class="i"><use href="#i-refresh"></use></svg><span class="lbl">Sondear</span></button>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><svg class="i"><use href="#i-check"></use></svg><span id="toastTxt"></span></div>
 
 <div class="modal" id="modalGlosario">
   <div class="modal-box">
@@ -790,7 +823,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   const $ = id => document.getElementById(id);
   const el = {
-    estList: $('estList'), cfgMsg: $('cfgMsg'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
+    estList: $('estList'), cfgMsg: $('cfgMsg'), cfgMsg2: $('cfgMsg2'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
     mapaWrap: $('mapaWrap'), mapaFondo: $('mapaFondo'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
     detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
     chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
@@ -825,7 +858,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (s < 172800) return Math.round(s / 3600) + ' h';
     return Math.round(s / 86400) + ' d';
   }
-  function guardarLS(clave, valor){ try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) { /* almacenamiento no disponible */ } }
+  function guardarLS(clave, valor){ try { localStorage.setItem(clave, JSON.stringify(valor)); return true; } catch (e) { return false; /* almacenamiento no disponible */ } }
   function leerLS(clave, porDefecto){ try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); } catch (e) { return porDefecto; } }
   function nuevoId(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -1280,8 +1313,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (typeof u.estEvol === 'string') ui.estEvol = u.estEvol;
     }
   }
-  function guardarEsts(){ guardarLS(LS.ests, ests); }
-  function guardarCfg(){ guardarLS(LS.cfg, cfg); }
+  function guardarEsts(){ return guardarLS(LS.ests, ests); }
+  function guardarCfg(){ return guardarLS(LS.cfg, cfg); }
   function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol, mapaFondo: ui.mapaFondo }); }
 
   function leerNumero(input, porDefecto, min){
@@ -1292,7 +1325,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     el.poll.value = cfg.pollS; el.clave.value = cfg.claveComun; el.timeout.value = cfg.timeoutS; el.stale.value = cfg.staleS;
     el.bb.value = cfg.backoffBaseS; el.bm.value = cfg.backoffMaxS; el.servBase.value = cfg.servBase;
   }
-  function leerAjustesDeFormulario(){
+  function leerAjustesDeFormulario(guardar){
     cfg.pollS = leerNumero(el.poll, DEF.pollS, 5);
     cfg.claveComun = el.clave.value.trim();
     cfg.timeoutS = leerNumero(el.timeout, DEF.timeoutS, 1);
@@ -1300,9 +1333,66 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     cfg.backoffBaseS = leerNumero(el.bb, DEF.backoffBaseS, 1);
     cfg.backoffMaxS = Math.max(cfg.backoffBaseS, leerNumero(el.bm, DEF.backoffMaxS, 1));
     cfg.servBase = el.servBase.value.trim();
-    guardarCfg();
+    if (guardar !== false) guardarCfg();
     actualizarCuota();
     actualizarBotones();
+  }
+
+  /* ---- Guardar configuración (estaciones + sondeo) de forma explícita ---- */
+  let firmaGuardada = '';
+  function firmaConfig(){
+    return JSON.stringify({
+      e: ests.map(x => [x.nombre, x.stationId, x.apiKey, x.color, !!x.activa]),
+      c: [cfg.pollS, cfg.claveComun, cfg.timeoutS, cfg.staleS, cfg.backoffBaseS, cfg.backoffMaxS]
+    });
+  }
+  const hayCambiosCfg = () => firmaConfig() !== firmaGuardada;
+  function msgCfg(txt, clase){
+    [el.cfgMsg, el.cfgMsg2].forEach(n => { if (!n) return; n.textContent = txt || ''; n.className = 'msg-linea' + (clase ? ' ' + clase : ''); });
+  }
+  let tmToast = null;
+  function mostrarToast(txt){
+    const t = $('toast'); if (!t) return;
+    $('toastTxt').textContent = txt;
+    t.classList.add('ver');
+    clearTimeout(tmToast);
+    tmToast = setTimeout(() => t.classList.remove('ver'), 4000);
+  }
+  // Marca «cambios sin guardar» (o limpia el aviso si lo escrito coincide con lo guardado).
+  function marcarCambiosCfg(){
+    if (running) return;
+    const sucio = hayCambiosCfg();
+    [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.toggle('pendiente', sucio); });
+    if (sucio) msgCfg('Hay cambios sin guardar. Pulsa «Guardar configuración».', 'pend');
+    else if (el.cfgMsg.classList.contains('pend')) msgCfg('');
+  }
+  function guardarConfiguracion(motivo){
+    leerAjustesDeFormulario(false);
+    const avisos = [];
+    ests.forEach((e, i) => {
+      const n = nombreEst(e) || ('estación ' + (i + 1));
+      if (!e.stationId) avisos.push('«' + n + '» no tiene Station ID');
+      else if (!claveEf(e)) avisos.push('«' + n + '» no tiene API Key ni hay clave común');
+    });
+    const dup = new Set(), vistos = new Set();
+    ests.forEach(e => { if (e.stationId){ if (vistos.has(e.stationId)) dup.add(e.stationId); vistos.add(e.stationId); } });
+    dup.forEach(id => avisos.push('el Station ID ' + id + ' está repetido'));
+    const okE = guardarEsts(), okC = guardarCfg();
+    if (!okE || !okC){
+      msgCfg('No se pudo guardar: el navegador no permite almacenar datos (¿modo privado o almacenamiento bloqueado?).', 'err');
+      return false;
+    }
+    firmaGuardada = firmaConfig();
+    [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.remove('pendiente'); });
+    refrescarListas(true);
+    const hora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const act = estsActivas().length;
+    let txt = '✓ Configuración guardada' + (motivo ? ' ' + motivo : '') + ' a las ' + hora + ': ' + ests.length + ' estación(es), ' + act + ' activa(s), sondeo cada ' + cfg.pollS + ' s.';
+    if (avisos.length) txt += ' Aviso: ' + avisos.join('; ') + '.';
+    msgCfg(txt, avisos.length ? '' : 'ok');
+    mostrarToast('Configuración guardada (' + ests.length + ' estación' + (ests.length === 1 ? '' : 'es') + ')');
+    log('info', null, 'Configuración guardada: ' + ests.length + ' estación(es).');
+    return true;
   }
 
   function renderEstList(){
@@ -1322,10 +1412,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     bloquearConfig(running);
   }
   function bloquearConfig(bloq){
-    document.querySelectorAll('#estList input, #estList button, #btnAddEst, #btnImportar, #pollInput, #claveComunInput, #btnVerClave, #timeoutInput, #staleInput, #backoffBaseInput, #backoffMaxInput')
+    document.querySelectorAll('#estList input, #estList button, #btnAddEst, #btnImportar, #pollInput, #claveComunInput, #btnVerClave, #timeoutInput, #staleInput, #backoffBaseInput, #backoffMaxInput, #btnGuardarCfg, #btnGuardarCfg2')
       .forEach(x => { x.disabled = !!bloq; });
-    el.cfgMsg.textContent = bloq ? 'Detén el monitor para editar las estaciones y el sondeo.' : '';
-    el.cfgMsg.className = 'msg-linea';
+    msgCfg(bloq ? 'Detén el monitor para editar las estaciones y el sondeo.' : '');
   }
 
   let tmGuardar = null;
@@ -1340,7 +1429,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     else if (f === 'stationId'){ e.stationId = ev.target.value.trim().toUpperCase(); e.meta = {}; rts.delete(e.id); }
     else e[f] = ev.target.value.trim();
     clearTimeout(tmGuardar);
-    tmGuardar = setTimeout(() => { guardarEsts(); refrescarListas(false); }, 250);
+    tmGuardar = setTimeout(() => { refrescarListas(false); marcarCambiosCfg(); }, 250);
   }
   function alClicEstacion(ev){
     const b = ev.target.closest('button[data-acc]');
@@ -1357,17 +1446,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (!window.confirm('¿Quitar «' + nombreEst(e) + '» de la lista? Su histórico guardado en este navegador se conserva (puedes borrarlo en «Datos y servidor»).')) return;
       ests = ests.filter(x => x.id !== e.id);
       rts.delete(e.id);
-      guardarEsts();
       renderEstList();
       refrescarListas(true);
+      marcarCambiosCfg();
     }
   }
   function anadirEstacion(){
-    if (ests.length >= MAX_EST){ el.cfgMsg.textContent = 'Máximo ' + MAX_EST + ' estaciones.'; return; }
+    if (ests.length >= MAX_EST){ msgCfg('Máximo ' + MAX_EST + ' estaciones.', 'err'); return; }
     ests.push({ id: nuevoId(), nombre: '', stationId: '', apiKey: '', color: colorLibre(), activa: true, meta: {} });
-    guardarEsts();
     renderEstList();
     refrescarListas(true);
+    marcarCambiosCfg();
     const ult = el.estList.querySelector('.est-edit:last-child input[data-f="stationId"]');
     if (ult) ult.focus();
   }
@@ -1381,7 +1470,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     };
     if (conClaves) obj.ajustes.claveComun = cfg.claveComun;
     descargar('telemetmulti-config.json', JSON.stringify(obj, null, 2), 'application/json;charset=utf-8;');
-    el.cfgMsg.textContent = conClaves ? 'Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.' : 'Configuración exportada (sin API Key).';
+    msgCfg(conClaves ? 'Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.' : 'Configuración exportada (sin API Key).');
   }
   async function importarConfig(file){
     try {
@@ -1402,11 +1491,10 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (typeof a.servBase === 'string') cfg.servBase = a.servBase;
       if (typeof a.claveComun === 'string') cfg.claveComun = a.claveComun;
       rts.clear();
-      guardarEsts(); guardarCfg();
       volcarAjustesEnFormulario(); renderEstList(); refrescarListas(true);
-      el.cfgMsg.textContent = 'Configuración importada: ' + ests.length + ' estación(es).';
+      guardarConfiguracion('(importada del archivo)');
     } catch (err) {
-      el.cfgMsg.textContent = 'No se pudo importar: ' + (err && err.message ? err.message : 'archivo no válido') + '.';
+      msgCfg('No se pudo importar: ' + (err && err.message ? err.message : 'archivo no válido') + '.', 'err');
     }
   }
 
@@ -1507,8 +1595,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   function iniciarMonitor(){
     const act = estsActivas();
-    if (act.length === 0){ el.cfgMsg.textContent = 'Añade al menos una estación activa con su Station ID.'; return; }
-    leerAjustesDeFormulario();
+    if (act.length === 0){ msgCfg('Añade al menos una estación activa con su Station ID.', 'err'); return; }
+    if (hayCambiosCfg()) guardarConfiguracion('al iniciar el monitor'); else leerAjustesDeFormulario();
     running = true;
     act.forEach((e, i) => {
       const r = rt(e);
@@ -2605,9 +2693,12 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     $('btnExportar').addEventListener('click', exportarConfig);
     $('btnImportar').addEventListener('click', () => $('fileImport').click());
     $('fileImport').addEventListener('change', ev => { const f = ev.target.files[0]; if (f) importarConfig(f); ev.target.value = ''; });
-    [el.poll, el.clave, el.timeout, el.stale, el.bb, el.bm].forEach(i => i.addEventListener('change', leerAjustesDeFormulario));
-    el.poll.addEventListener('input', leerAjustesDeFormulario);
-    el.servBase.addEventListener('change', leerAjustesDeFormulario);
+    const alEditarAjuste = () => { leerAjustesDeFormulario(false); marcarCambiosCfg(); };
+    [el.poll, el.clave, el.timeout, el.stale, el.bb, el.bm].forEach(i => { i.addEventListener('change', alEditarAjuste); i.addEventListener('input', alEditarAjuste); });
+    el.servBase.addEventListener('change', () => { cfg.servBase = el.servBase.value.trim(); guardarCfg(); });
+    $('btnGuardarCfg').addEventListener('click', () => guardarConfiguracion());
+    $('btnGuardarCfg2').addEventListener('click', () => guardarConfiguracion());
+    window.addEventListener('beforeunload', ev => { if (!running && hayCambiosCfg()){ ev.preventDefault(); ev.returnValue = ''; } });
     $('btnVerClave').addEventListener('click', ev => {
       const ver = el.clave.type === 'password'; el.clave.type = ver ? 'text' : 'password';
       ev.currentTarget.setAttribute('aria-pressed', String(ver)); ev.currentTarget.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
@@ -2639,7 +2730,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     document.querySelectorAll('#segResumen button').forEach(b => b.addEventListener('click', () => { ui.resumen = b.dataset.m; guardarUI(); aplicarModoUI(); renderSemana(); }));
     $('btnConsultarDia').addEventListener('click', consultarDia);
     el.btnCSVDia.addEventListener('click', exportarCSVDia);
-    $('btnSyncServidor').addEventListener('click', () => { leerAjustesDeFormulario(); sincronizarTodas(true); });
+    $('btnSyncServidor').addEventListener('click', () => { cfg.servBase = el.servBase.value.trim(); guardarCfg(); sincronizarTodas(true); });
     $('btnBackfill').addEventListener('click', rellenarDesdeAPI);
     $('btnSemana7').addEventListener('click', () => rellenarHuecosAuto(true));
     $('btnCSV24').addEventListener('click', () => exportarCSV(24));
@@ -2659,10 +2750,78 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     document.addEventListener('visibilitychange', () => { if (!document.hidden){ actualizarPies(); pedirRedibujo(); } });
   }
 
+  /* ============================================================
+     FICHAS Y SECCIONES PLEGABLES (el estado se recuerda en este navegador)
+     ============================================================ */
+  const LS_PLEG = 'telemetmulti_plegadas';
+  let plegadas = leerLS(LS_PLEG, {}) || {};
+  const slug = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const CHEV = '<svg class="i chev" aria-hidden="true"><use href="#i-down"></use></svg>';
+  function fijarPlegado(clave, cuerpo, boton, caja, plegar){
+    cuerpo.hidden = plegar;
+    boton.setAttribute('aria-expanded', String(!plegar));
+    if (caja) caja.classList.toggle('plegada', plegar);
+    if (plegar) plegadas[clave] = 1; else delete plegadas[clave];
+  }
+  function iniciarPlegables(){
+    const main = document.querySelector('main');
+    // 1) Secciones: todo lo que hay entre una cabecera y la siguiente.
+    const cabs = Array.from(main.querySelectorAll(':scope > header.sh'));
+    cabs.forEach((h, i) => {
+      const cuerpo = document.createElement('div');
+      cuerpo.className = 'sec-cuerpo'; cuerpo.id = 'cuerpo-' + h.id;
+      let n = h.nextSibling;
+      while (n && !(n.nodeType === 1 && n.matches('header.sh'))){ const sig = n.nextSibling; cuerpo.appendChild(n); n = sig; }
+      h.after(cuerpo);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sh-plegar'; b.setAttribute('aria-controls', cuerpo.id);
+      b.innerHTML = '<span class="lbl"></span>' + CHEV;
+      h.appendChild(b);
+      const poner = plegar => {
+        fijarPlegado('sec:' + h.id, cuerpo, b, null, plegar);
+        b.querySelector('.lbl').textContent = plegar ? 'Mostrar' : 'Ocultar';
+        b.title = (plegar ? 'Mostrar' : 'Ocultar') + ' la sección «' + (h.querySelector('h2') || {}).textContent + '»';
+      };
+      poner(!!plegadas['sec:' + h.id]);
+      b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
+      h._poner = poner; h._cuerpo = cuerpo;
+    });
+    // 2) Fichas: cada tarjeta (.card) y el mapa, plegables desde su título.
+    main.querySelectorAll('.card, .mapa-wrap').forEach((c, k) => {
+      let tit = c.querySelector(':scope > h3');
+      const nombre = tit ? tit.textContent.trim() : (c.dataset.titulo || ('Ficha ' + (k + 1)));
+      if (!tit){ tit = document.createElement('h3'); c.insertBefore(tit, c.firstChild); }
+      const cuerpo = document.createElement('div');
+      cuerpo.className = 'card-cuerpo'; cuerpo.id = 'ficha-' + slug(nombre);
+      while (tit.nextSibling) cuerpo.appendChild(tit.nextSibling);
+      c.appendChild(cuerpo);
+      tit.className = 'card-cab';
+      tit.innerHTML = '';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'plegar'; b.setAttribute('aria-controls', cuerpo.id);
+      b.innerHTML = '<span></span>' + CHEV; b.firstChild.textContent = nombre;
+      tit.appendChild(b);
+      const clave = 'ficha:' + slug(nombre);
+      const poner = plegar => { fijarPlegado(clave, cuerpo, b, c, plegar); b.title = (plegar ? 'Mostrar «' : 'Ocultar «') + nombre + '»'; };
+      poner(!!plegadas[clave]);
+      b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
+    });
+    // 3) Los enlaces del menú despliegan la sección de destino si estaba oculta.
+    const abrirDestino = id => {
+      const h = cabs.find(x => x.id === id);
+      if (h && h._cuerpo.hidden){ h._poner(false); guardarLS(LS_PLEG, plegadas); }
+    };
+    document.querySelectorAll('.nav-secc a[href^="#"]').forEach(a => a.addEventListener('click', () => abrirDestino(a.getAttribute('href').slice(1))));
+    window.addEventListener('hashchange', () => abrirDestino(location.hash.slice(1)));
+    const ir = $('btnIrConfig'); if (ir) ir.addEventListener('click', () => abrirDestino('secEstaciones'));
+  }
+
   function iniciarApp(){
     cargarTodo();
+    iniciarPlegables();
     conectarEventos();
     volcarAjustesEnFormulario();
+    firmaGuardada = firmaConfig();
     const hoy = new Date();
     el.diaInput.max = hoy.getFullYear() + '-' + pad2(hoy.getMonth() + 1) + '-' + pad2(hoy.getDate());
     el.diaInput.value = (function(){ const a = new Date(Date.now() - 86400000); return a.getFullYear() + '-' + pad2(a.getMonth() + 1) + '-' + pad2(a.getDate()); })();

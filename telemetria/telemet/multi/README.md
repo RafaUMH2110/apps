@@ -3,7 +3,8 @@
 App web de un solo archivo (`index.html`) para seguir **varias estaciones meteorológicas de Weather Underground a la vez**. Parte de TeleMet Historial y mantiene su estilo y sus gráficas.
 
 ## Qué hace
-- **Estaciones**: alta, baja, activación, nombre y color de cada una; clave API propia o común. Importar/exportar la configuración en JSON.
+- **Estaciones**: alta, baja, activación, nombre y color de cada una; clave API propia o común. Importar/exportar la configuración en JSON. Los cambios se guardan con el botón **Guardar configuración** (confirma con un mensaje; mientras haya cambios sin guardar se avisa, y se guardan solos al pulsar Iniciar).
+- **Fichas plegables**: cada ficha y cada sección (botón «Ocultar/Mostrar») se puede plegar; el estado se recuerda en el navegador.
 - **Sondeo independiente** por estación con backoff propio; un error 401/403/404 solo detiene a esa estación. Estimación de cuota por clave (orientativa).
 - **Ahora**: tarjeta por estación, tabla comparativa (máximo/mínimo resaltados y diferencia respecto a una referencia), extremos entre estaciones y mapa con fondo de OpenStreetMap (proyección Mercator, escala y norte).
 - **Detalle**: 12 variables con mín/máx de 24 h y minigráfico.

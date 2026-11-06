@@ -652,7 +652,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 5:09</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 10:09</p>
 </footer>
 
 <div class="bottomnav">
@@ -2249,7 +2249,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
           }
         }
         else if (s.estado === 'no-disponible') est = '<span class="tag" title="No se ha encontrado historial_' + escHTML(String(e.stationId || '')) + '.json en la carpeta indicada ni en ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ o ../history/data/">sin archivo</span>';
-        else if (s.estado === 'otra-estacion') est = '<span class="tag err">es de ' + escHTML(s.otra) + '</span>';
+        else if (s.estado === 'otra-estacion') est = '<span class="tag warn" title="No existe historial_' + escHTML(String(e.stationId || '')) + '.json. En la carpeta solo hay un historial.json, que es de la estación ' + escHTML(String(s.otra)) + '. El colector debe tener configurada también esta estación ([estacion:' + escHTML(String(e.stationId || '')) + '] en su config.ini) para generar su propio archivo.">sin archivo propio · el JSON es de ' + escHTML(String(s.otra)) + '</span>';
         else if (s.estado === 'formato') est = '<span class="tag err">formato no válido</span>';
         else est = '<span class="tag err">error local</span>';
       }

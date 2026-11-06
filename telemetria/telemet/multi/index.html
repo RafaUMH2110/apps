@@ -652,7 +652,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 0:44</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:20</p>
 </footer>
 
 <div class="bottomnav">
@@ -1642,6 +1642,12 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
+  // Valor de la ficha emergente de las gráficas: siempre con un decimal
+  // (formato es-ES, coma decimal), con independencia del paso del eje.
+  function formatearNumeroTooltip(v){
+    return v.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
+  }
+
   // Escala "alineada" para un eje derecho que debe compartir las líneas de
   // rejilla del izquierdo: mismo nº de intervalos (nInt), base en 0 y un paso
   // "bonito" tal que paso*nInt cubra el máximo de los datos.
@@ -1837,7 +1843,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatearNumeroEje(pCercano.y, escDe(s).paso) + (hayDer && s.unidad ? ' ' + s.unidad : '');
+            val.textContent = formatearNumeroTooltip(pCercano.y) + (hayDer && s.unidad ? ' ' + s.unidad : '');
             fila.appendChild(key);
             fila.appendChild(val);
             if (conPuntos.length > 1){

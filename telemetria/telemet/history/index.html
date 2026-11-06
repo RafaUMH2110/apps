@@ -660,7 +660,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 6 November 2026, 00:05</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 6 November 2026, 03:20</p>
 </footer>
 
 <div class="bottomnav">
@@ -2084,6 +2084,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return v.toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false });
   }
 
+  // Value shown in the chart tooltip: always one decimal, whatever the axis step.
+  function formatTooltipNumber(v){
+    return v.toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
+  }
+
   // "Aligned" scale for a right axis that must share the left axis grid
   // lines: same number of intervals (nInt), base at 0 and a "nice" step such
   // that step*nInt covers the data maximum.
@@ -2279,7 +2284,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatAxisNumber(nearestPoint.y, scaleOf(s).stepSize) + (hasRight && s.unit ? ' ' + s.unit : '');
+            val.textContent = formatTooltipNumber(nearestPoint.y) + (hasRight && s.unit ? ' ' + s.unit : '');
             row.appendChild(key);
             row.appendChild(val);
             if (withPoints.length > 1){

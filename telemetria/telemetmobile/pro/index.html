@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 5 de noviembre de 2026, 22:09</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:20</div>
 </section>
 
 <script>
@@ -1733,7 +1733,7 @@
       if (v !== null && v !== undefined){
         valorTxt = chart.cfg.tipo === 'direccion'
           ? (Math.round(v)) + '° ' + (gradosACompass(v) || '')
-          : String(Math.round(v * 100) / 100);
+          : v.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
       }
       filas.push({ nombre: s.nombre, color: s.color, valor: valorTxt, unidad: (s.unidad !== undefined ? s.unidad : chart.cfg.unidad) });
     });

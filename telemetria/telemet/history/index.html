@@ -660,7 +660,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet History. Your data (Station ID and API Key) is saved only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 6 November 2026, 03:20</p>
+  <p class="signature">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 6 November 2026, 03:37</p>
 </footer>
 
 <div class="bottomnav">
@@ -2084,9 +2084,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return v.toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false });
   }
 
-  // Value shown in the chart tooltip: always one decimal, whatever the axis step.
-  function formatTooltipNumber(v){
-    return v.toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
+  // Value shown in the chart tooltip: one decimal whatever the axis step; rain
+  // (mm and mm/h) gets two decimals because its values are very small.
+  function formatTooltipNumber(v, unit){
+    const d = /^mm(\/h)?$/.test(unit || '') ? 2 : 1;
+    return v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
   }
 
   // "Aligned" scale for a right axis that must share the left axis grid
@@ -2284,7 +2286,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatTooltipNumber(nearestPoint.y) + (hasRight && s.unit ? ' ' + s.unit : '');
+            val.textContent = formatTooltipNumber(nearestPoint.y, s.unit) + (hasRight && s.unit ? ' ' + s.unit : '');
             row.appendChild(key);
             row.appendChild(val);
             if (withPoints.length > 1){

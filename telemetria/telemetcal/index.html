@@ -705,7 +705,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:20</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:37</p>
 </footer>
 
 <div class="bottomnav">
@@ -2253,10 +2253,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
-  // Valor de la ficha emergente de las gráficas: siempre con un decimal
-  // (formato es-ES, coma decimal), con independencia del paso del eje.
-  function formatearNumeroTooltip(v){
-    return v.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
+  // Valor de la ficha emergente de las gráficas: con un decimal (formato
+  // es-ES, coma decimal), con independencia del paso del eje. La lluvia
+  // (mm y mm/h) lleva dos decimales porque sus valores son muy pequeños.
+  function formatearNumeroTooltip(v, unidad){
+    const d = /^mm(\/h)?$/.test(unidad || '') ? 2 : 1;
+    return v.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
   }
 
   // Escala "alineada" para un eje derecho que debe compartir las líneas de
@@ -2438,7 +2440,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             key.style.background = s.color;
             const val = document.createElement('span');
             val.className = 'tt-val';
-            val.textContent = formatearNumeroTooltip(pCercano.y) + (hayDer && s.unidad ? ' ' + s.unidad : '');
+            val.textContent = formatearNumeroTooltip(pCercano.y, s.unidad) + (hayDer && s.unidad ? ' ' + s.unidad : '');
             fila.appendChild(key);
             fila.appendChild(val);
             if (conPuntos.length > 1){

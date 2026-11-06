@@ -652,7 +652,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 5:09</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 5:55</p>
 </footer>
 
 <div class="bottomnav">
@@ -2204,14 +2204,14 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const filas = [];
       lecturas.forEach(l => { if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v }); });
       const ultima = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
-      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS };
+      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: (data.intervaloS || data.intervalS) };
       const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
       const locales = (await consultarRango(key, minMs - SERV_TOL_MS, ultima + SERV_TOL_MS)).map(f => f.epochMs).sort((a, b) => a - b);
       if (ultimoErrorDB) return { estado: 'error', url: url };
       // Solo se compara con lo que YA había en local (no con lo que se va añadiendo).
       const nuevas = filas.filter(f => !hayCercano(locales, f.epochMs, SERV_TOL_MS));
       await guardarLote(key, nuevas);
-      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: data.intervaloS };
+      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: (data.intervaloS || data.intervalS) };
     }
     if (otra !== null) return { estado: 'otra-estacion', otra: otra };
     if (formato) return { estado: 'formato' };

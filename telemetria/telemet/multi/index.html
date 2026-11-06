@@ -338,6 +338,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .ec-pie{margin-top:8px;font-size:12px;color:var(--muted);min-height:1.3em}
 .ec-pie.err{color:var(--aviso-ink)}
 .ec-spark{width:100%;height:22px;display:block;margin-top:4px}
+.sparkline line,.ec-spark line{stroke:var(--c);stroke-width:2;stroke-linecap:round}
 .ec-spark polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .cab-est{display:flex;align-items:center;gap:7px}
 .cab-est i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
@@ -652,7 +653,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 10:09</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 11:36</p>
 </footer>
 
 <div class="bottomnav">
@@ -1298,7 +1299,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       r.estado = t.staleness_s <= cfg.staleS ? 'ok' : 'warn';
       if (nueva){
         r.lecturas += 1; r.ultimoGuardadoMs = obsMs;
-        if (esNum(t.temp_c)){ r.spark.push(t.temp_c); if (r.spark.length > 40) r.spark.shift(); }
+        if (esNum(t.temp_c)){ r.spark.push({ t: obsMs, v: t.temp_c }); if (r.spark.length > 40) r.spark.shift(); }
         guardarLote(kEst(e), [{ epochMs: obsMs, vals: t }]);
       }
       // Metadatos de la estación (nombre del barrio, coordenadas) para el nombre por defecto y el mapa.
@@ -1378,10 +1379,34 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const d = nuevo - previo;
     return d > UMBRAL_TENDENCIA ? 'subida' : (d < -UMBRAL_TENDENCIA ? 'bajada' : 'estable');
   }
-  function sparkPoints(vals){
-    if (vals.length < 2) return '';
-    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rg = (mx - mn) || 1;
-    return vals.map((v, i) => (2 + i / (vals.length - 1) * 96).toFixed(1) + ',' + (20 - 2 - (v - mn) / rg * 16).toFixed(1)).join(' ');
+  // Minigráficos con eje de tiempo real. pts = [{ t (ms), v }] ordenados. Si entre dos
+  // lecturas consecutivas hay un hueco (más de 3 veces la separación habitual,
+  // con un mínimo de minHuecoMs y un máximo de maxHuecoMs) NO se unen: cada tramo
+  // contiguo es una línea propia y los puntos aislados se marcan como un punto.
+  // Devuelve el contenido SVG (polilíneas) dentro de un viewBox W x H.
+  function sparkSvg(pts, desdeMs, hastaMs, W, H, pad, minHuecoMs, maxHuecoMs){
+    if (!pts || pts.length === 0) return '';
+    const rango = Math.max(1, hastaMs - desdeMs);
+    let mn = Infinity, mx = -Infinity;
+    pts.forEach(p => { if (p.v < mn) mn = p.v; if (p.v > mx) mx = p.v; });
+    const rg = (mx - mn) || 1;
+    let umbral = maxHuecoMs;
+    if (pts.length > 2){
+      const sep = [];
+      for (let i = 1; i < pts.length; i++) sep.push(pts[i].t - pts[i - 1].t);
+      sep.sort((a, b) => a - b);
+      umbral = Math.min(maxHuecoMs, Math.max(minHuecoMs, 3 * sep[Math.floor(sep.length / 2)]));
+    }
+    const X = t => (pad + (t - desdeMs) / rango * (W - 2 * pad)).toFixed(1);
+    const Y = v => (H - pad - (v - mn) / rg * (H - 2 * pad)).toFixed(1);
+    const tramos = [[]];
+    pts.forEach((p, i) => {
+      if (i > 0 && p.t - pts[i - 1].t > umbral) tramos.push([]);
+      tramos[tramos.length - 1].push(p);
+    });
+    return tramos.map(tr => tr.length === 1
+      ? '<line x1="' + X(tr[0].t) + '" y1="' + Y(tr[0].v) + '" x2="' + (parseFloat(X(tr[0].t)) + 0.01).toFixed(2) + '" y2="' + Y(tr[0].v) + '"/>'
+      : '<polyline points="' + tr.map(p => X(p.t) + ',' + Y(p.v)).join(' ') + '"/>').join('');
   }
   function textoPie(e){
     const r = rt(e);
@@ -1421,7 +1446,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       '<div class="ec-cab"><span class="ec-nom">' + escHTML(nombreEst(e)) + '</span><span class="ec-bulbo" data-s="' + estadoLuz + '" title="' + (estadoLuz === 'ok' ? 'En orden' : estadoLuz === 'warn' ? 'Dato obsoleto o reintentando' : estadoLuz === 'err' ? 'Error' : 'Sin sondear') + '"></span></div>' +
       '<div class="ec-id">' + escHTML(e.stationId || 'sin Station ID') + (e.nombre && e.meta && e.meta.neighborhood ? ' · ' + escHTML(e.meta.neighborhood) : '') + '</div>' +
       '<div class="ec-temp"><span>' + (t ? fmtN(t.temp_c, 1) : '—') + '</span><small>°C</small><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
-      '<svg class="ec-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + sparkPoints(r.spark) + '"/></svg>' +
+      '<svg class="ec-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">' + sparkSvg(r.spark, r.spark.length ? r.spark[0].t : 0, r.spark.length ? r.spark[r.spark.length - 1].t : 1, 100, 20, 2, 10 * 60000, 90 * 60000) + '</svg>' +
       '<div class="ec-met">' +
         '<span>Humedad</span><b>' + (t ? fmtN(t.humidity_pct, 0) + ' %' : '—') + '</b>' +
         '<span>Viento</span><b>' + viento + '</b>' +
@@ -1556,21 +1581,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const v = t ? t[g.key] : null;
       const tend = claseTendencia(v, prev ? prev[g.key] : null);
       const mn = serie.length ? Math.min.apply(null, serie) : null, mx = serie.length ? Math.max.apply(null, serie) : null;
-      const paso = Math.max(1, Math.floor(serie.length / 60));
-      const pts = serie.filter((_, i) => i % paso === 0);
+      const conT = filas.filter(f => esNum(f.vals[g.key])).map(f => ({ t: f.epochMs, v: f.vals[g.key] }));
+      const paso = Math.max(1, Math.floor(conT.length / 120));
+      const pts = conT.filter((_, i) => i % paso === 0 || i === conT.length - 1);
       let valTxt = fmtVar(g.key, v);
       if (g.key === 'wind_dir_deg' && esNum(v)) valTxt += ' ' + gradosACompass(v);
       return '<div class="feat" style="--c:' + g.color + '"><div class="fi"><svg class="i"><use href="#i-' + g.icono + '"></use></svg></div>' +
         '<div class="etiqueta">' + g.etiqueta + '</div>' +
         '<div class="valor"><span>' + valTxt + '</span><span class="unidad">' + g.unidad + '</span><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
-        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="' + sparkDetalle(pts) + '"/></svg>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">' + sparkSvg(pts, desde, hasta, 100, 30, 3, 15 * 60000, 90 * 60000) + '</svg>' +
         '<div class="rango-minmax">24 h: mín ' + fmtVar(g.key, mn) + ' · máx ' + fmtVar(g.key, mx) + '</div></div>';
     }).join('');
-  }
-  function sparkDetalle(vals){
-    if (vals.length < 2) return '';
-    const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rg = (mx - mn) || 1;
-    return vals.map((v, i) => (3 + i / (vals.length - 1) * 94).toFixed(1) + ',' + (30 - 3 - (v - mn) / rg * 24).toFixed(1)).join(' ');
   }
 
   /* ============================================================

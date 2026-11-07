@@ -131,7 +131,7 @@ class Config:
         if ini_path:
             if not os.path.isfile(ini_path):
                 raise SystemExit("Configuration file not found: %s" % ini_path)
-            cp.read(ini_path, encoding="utf-8")
+            cp.read(ini_path, encoding="utf-8-sig")
         self.base_dir = os.path.dirname(os.path.abspath(ini_path)) if ini_path else os.getcwd()
 
         # Stations. The secrets may come from the environment (they take priority over the .ini

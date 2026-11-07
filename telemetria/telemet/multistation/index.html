@@ -705,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet MultiStation. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 7 November 2026, 22:43</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 7 November 2026, 23:07</p>
 </footer>
 
 <div class="bottomnav">
@@ -1257,7 +1257,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     for (const I of informe.values()){
       const sin = I.vacio.concat(I.vacioCache).filter((d, k, a) => a.indexOf(d) === k && I.horDias.indexOf(d) < 0).sort().map(dmCorto);
       let t = nombreEst(I.e) + ': ';
-      if (I.ok.length || I.horario) t += 'completed ' + (I.ok.length ? I.ok.length + ' day(s) with the API' : '') + (I.horario ? (I.ok.length ? ' y ' : '') + I.horario + ' hourly readings' : '') + '. ';
+      if (I.ok.length || I.horario) t += 'completed ' + (I.ok.length ? I.ok.length + ' day(s) with the API' : '') + (I.horario ? (I.ok.length ? ' and ' : '') + I.horario + ' hourly readings' : '') + '. ';
       if (sin.length) t += 'the API has no data for ' + sin.join(', ') + '. ';
       if (I.error.length) t += 'error on ' + I.error.map(d => dmCorto(d.slice(0, 8)) + d.slice(8)).join(', ') + '. ';
       if (I.errHor) t += 'the hourly history failed (' + I.errHor + '). ';
@@ -2556,14 +2556,14 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const filas = [];
       lecturas.forEach(l => { if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v }); });
       const ultima = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
-      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS };
+      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS || data.intervalS };
       const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
       const locales = (await consultarRango(key, minMs - SERV_TOL_MS, ultima + SERV_TOL_MS)).map(f => f.epochMs).sort((a, b) => a - b);
       if (ultimoErrorDB) return { estado: 'error', url: url };
       // It is only compared with what was ALREADY local (not with what is being added).
       const nuevas = filas.filter(f => !hayCercano(locales, f.epochMs, SERV_TOL_MS));
       await guardarLote(key, nuevas);
-      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: data.intervaloS };
+      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: data.intervaloS || data.intervalS };
     }
     if (otra !== null) return { estado: 'otra-estacion', otra: otra };
     if (formato) return { estado: 'formato' };

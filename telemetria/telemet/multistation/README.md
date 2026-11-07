@@ -26,7 +26,7 @@ When the app loads, when you press **Start** and when you choose the **7 d** win
 The map in the *Now* tab draws the stations over OpenStreetMap tiles, with scale, north indicator and attribution. It can be turned off with the “Background map (OpenStreetMap)” checkbox; without it a neutral grid is shown. Tiles are loaded from `tile.openstreetmap.org`, so the browser only contacts that service while the background is on.
 
 ## Interactive map with all the stations
-“view on map” (Detail) and the links under the *Now* map open a new window with an OpenStreetMap map (Leaflet) showing **all the stations** with their colour, name and temperature; the chosen station is highlighted and its popup opens. The view fits all of them, and the legend lets you centre on each one. That window loads Leaflet from unpkg.com (with an integrity check) and the tiles from tile.openstreetmap.org. Stations appear once they have reported their position (after the first poll).
+“view on map” (Detail) and the links under the *Now* map open a new window (`map.html`, a real page so the browser sends a Referer and the OpenStreetMap tile servers accept the requests) with an OpenStreetMap map (Leaflet) showing **all the stations** with their colour, name and temperature; the chosen station is highlighted and its popup opens. The view fits all of them, and the legend lets you centre on each one. That window loads Leaflet from unpkg.com (with an integrity check) and the tiles from tile.openstreetmap.org. Stations appear once they have reported their position (after the first poll).
 
 ## Usage
 Open `index.html` (or the version published on GitHub Pages), add each station (Station ID and API Key) and press **Start**. Data and keys are stored only in the browser.

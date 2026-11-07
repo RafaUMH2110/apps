@@ -1,0 +1,2918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0F2237">
+<title>TeleMet MultiStation · Several weather stations at once</title>
+<meta name="description" content="Monitor several personal Weather Underground / Earth Network weather stations at once, each with its own Station ID and API Key: live cards, comparison table, overlaid 12 h, 24 h and 7-day charts, weekly summary, single-day lookup and synchronisation with TeleMet Collector.">
+<meta name="author" content="Rafael Puerto">
+<!-- Icon for "Add to Home Screen": it must be a real file, not a
+     data: URI, which iOS Safari does not always respect when creating the app icon. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232E6FD9'/%3E%3Cstop offset='1' stop-color='%230B3C78'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cline x1='15' y1='22' x2='15' y2='9' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M15 9L21.5 12.2L15 15.4Z' fill='white'/%3E%3Ccircle cx='23.5' cy='23.5' r='3.4' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Brand — constant in light and dark */
+  --brasa:#E4572E; --brasa-osc:#C9441F;
+  --forjado:#0E7C6B;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9;
+  --r:14px;
+  --display:'Bricolage Grotesque',Georgia,serif;
+  --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme: light dark;
+
+  /* Surface — light mode */
+  --ink:#0F2237; --muted:#5D7691;
+  --page-bg:#F3F6FA; --card-bg:#FFFFFF;
+  --line:#D8E0E9; --line-2:#E8EEF4;
+  --steel:#2E4B6B; --steel-soft:#7C93AC;
+  --panel-dark:#0F2237; --on-dark:#EAF1F7; --on-dark-muted:#8FA7BE; --panel-line:#3E5C7D;
+  --brasa-suave:#FDEBE4; --forjado-suave:#E0F3EE; --aviso-ink:#8A3617;
+  --tip-bg:#FFF8E6; --tip-bd:#F3DDA0; --tip-ink:#6B4E00; --tip-ico:#C98200;
+  --sombra:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
+  --sombra-alta:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EAF1F7; --muted:#92ACC4;
+    --page-bg:#0B1420; --card-bg:#121C2B;
+    --line:#223247; --line-2:#1A2638;
+    --steel:#9CB7D6; --steel-soft:#51708F;
+    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
+    --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
+    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
+    --forjado:#1FBE9F;
+    --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
+    --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--ink);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:84px}
+a{color:var(--steel)}
+:focus-visible{outline:3px solid var(--brasa);outline-offset:2px;border-radius:6px}
+svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1px 5px;border-radius:5px}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:40;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 6px 24px -14px rgba(0,0,0,.6)}
+.tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
+.logo em{font-style:normal;color:var(--brasa)}
+.logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brasa),var(--forjado));display:grid;place-items:center;color:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tb-btn:hover{border-color:var(--brasa);color:var(--on-dark)}
+@media(max-width:560px){.tb-btn .lbl{display:none}}
+
+/* Status light (monitor traffic light) */
+.light{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.light .bulbo{width:12px;height:12px;border-radius:50%;background:#B8C5D3;box-shadow:0 0 0 4px rgba(184,197,211,.3);flex:none;transition:all .2s}
+.light[data-s="ok"] .bulbo{background:#16A34A;box-shadow:0 0 0 4px rgba(22,163,74,.25);animation:pulso 1.3s ease-in-out infinite}
+.light[data-s="warn"] .bulbo{background:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.25)}
+.light[data-s="err"] .bulbo{background:var(--brasa);box-shadow:0 0 0 4px rgba(228,87,46,.25)}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.35}}
+.topbar .light{color:var(--on-dark-muted)}
+.topbar .light .ltxt{display:none}
+@media(min-width:720px){.topbar .light .ltxt{display:inline}}
+
+main{max-width:1100px;margin:0 auto;padding:26px 16px 10px}
+
+/* Hero */
+.hero{background:var(--panel-dark);color:var(--on-dark);border-radius:22px;padding:38px 36px;position:relative;overflow:hidden;margin-bottom:26px;box-shadow:var(--sombra-alta)}
+.hero::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(228,87,46,.5),transparent 65%)}
+.hero::after{content:"";position:absolute;left:25%;bottom:-140px;width:380px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(14,140,122,.35),transparent 65%)}
+.hero>*{position:relative;z-index:1}
+@media(max-width:600px){.hero{padding:26px 20px;border-radius:18px}}
+.eyebrow{font:600 11.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--on-dark-muted);margin:0 0 12px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1;letter-spacing:-.03em;margin:0 0 14px}
+.hero h1 em{font-style:normal;color:var(--brasa)}
+.hero p.lede{max-width:62ch;font-size:16.5px;color:var(--on-dark-muted);margin:0 0 20px}
+.hero .actions .btn-ghost{background:transparent;color:#fff;border-color:var(--panel-line)}
+.hero .actions .btn-ghost:hover{border-color:#fff}
+.draft{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.8px}
+.draft:empty{display:none}
+
+/* Section headings */
+.sh{display:flex;gap:16px;align-items:flex-start;margin:34px 0 18px}
+.sh:first-of-type{margin-top:4px}
+.sh-ico{width:52px;height:52px;border-radius:15px;background:var(--c,var(--brasa));color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 10px 20px -12px var(--c,var(--brasa))}
+.sh-ico svg{width:26px;height:26px}
+.sh-step{font:600 11.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel-soft);margin:3px 0}
+.sh h2{font-family:var(--display);font-weight:800;font-size:clamp(21px,3vw,27px);letter-spacing:-.02em;line-height:1.1;margin:0 0 4px}
+.sh-lede{margin:0;color:var(--muted);font-size:14.5px;max-width:72ch}
+@media(max-width:560px){.sh-ico{width:42px;height:42px;border-radius:12px}.sh-ico svg{width:21px;height:21px}}
+
+.card{background:var(--card-bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sombra);padding:20px;margin-bottom:16px}
+.config-resumen-fila{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.card h3{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 4px}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+label{display:block;font-size:13.5px;font-weight:700;margin:0 0 6px;color:var(--steel)}
+.field{margin-bottom:16px}
+.help{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:var(--texto);font-size:14.5px;color:var(--ink);background:var(--card-bg);transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--steel-soft);box-shadow:0 0 0 4px rgba(124,147,172,.18)}
+input:disabled{background:var(--line-2);color:var(--muted);cursor:not-allowed}
+input::placeholder{color:var(--steel-soft)}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1;font-family:var(--mono);font-size:13.5px}
+.eye{width:44px;flex:none;border:1.5px solid var(--line);background:var(--card-bg);border-radius:10px;color:var(--steel);display:grid;place-items:center;cursor:pointer}
+.eye:hover{border-color:var(--steel-soft)}
+
+button{font-family:var(--texto);cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-weight:700;font-size:14.5px;border:1.5px solid transparent;padding:10px 17px;transition:transform .08s,background .15s,border-color .15s;line-height:1.2}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--brasa);color:#fff;box-shadow:0 8px 18px -10px var(--brasa)}
+.btn-primary:hover:not(:disabled){background:var(--brasa-osc)}
+.btn-big{font-size:16px;padding:13px 22px;border-radius:13px}
+.btn-dark{background:var(--panel-dark);color:var(--on-dark)}
+.btn-dark:hover:not(:disabled){opacity:.88}
+.btn-ghost{background:var(--card-bg);border-color:var(--line);color:var(--steel)}
+.btn-ghost:hover:not(:disabled){border-color:var(--steel-soft)}
+.btn-ok{background:var(--forjado);color:#fff}
+.btn-ok:hover:not(:disabled){filter:brightness(.92)}
+.btn-sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.herramientas-graf{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 6px}
+.herramientas-etq{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.segmentado{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;padding:2px;background:var(--card-bg)}
+.segmentado button{background:transparent;border:0;border-radius:8px;padding:6px 12px;font:600 13px var(--texto);color:var(--muted);cursor:pointer}
+.segmentado button[aria-pressed="true"]{background:var(--brasa);color:#fff}
+
+.tip{display:flex;gap:11px;background:var(--tip-bg);border:1px solid var(--tip-bd);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--tip-ink);margin-bottom:16px}
+.tip svg{width:20px;height:20px;color:var(--tip-ico);flex:none;margin-top:1px}
+.aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
+.aviso svg{width:20px;height:20px;flex:none;margin-top:1px}
+.okbox{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forjado);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
+
+/* Advanced settings accordion */
+.acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;color:var(--steel)}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.acc .inner{padding-top:14px}
+
+/* Evolution accordion (12 h / 7-day charts), same pattern as .acc
+   but as its own block with a card background (not nested in one). */
+.acc-evol{border:1px solid var(--line);border-radius:var(--r);background:var(--card-bg);box-shadow:var(--sombra);padding:16px 18px;margin-bottom:14px;scroll-margin-bottom:84px}
+.acc-evol>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);font-family:var(--display)}
+.acc-evol>summary::-webkit-details-marker{display:none}
+.acc-evol>summary .chev{margin-left:auto;transition:transform .2s;color:var(--steel-soft)}
+.acc-evol[open]>summary .chev{transform:rotate(180deg)}
+.acc-evol .inner{padding-top:16px}
+.evol-nota{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.evol-vacio{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+/* Window selector (12 h / 24 h) for the evolution charts */
+.evol-ventana{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 14px}
+.evol-ventana button{font:inherit;font-size:13px;font-weight:700;padding:6px 18px;border:0;background:transparent;color:var(--steel);cursor:pointer}
+.evol-ventana button[aria-pressed="true"]{background:var(--steel);color:#fff}
+.evol-ventana button:focus-visible{outline:2px solid var(--steel);outline-offset:-2px}
+
+.chart-card{margin-bottom:16px}
+.chart-card:last-child{margin-bottom:0}
+.chart-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 16px;margin:0 0 6px}
+.chart-head h4{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0;letter-spacing:-.01em}
+.chart-leyenda{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+.leyenda-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.leyenda-linea{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chart-plot{position:relative}
+.chart-svg{width:100%;height:230px;display:block;background:var(--page-bg);border-radius:10px;cursor:crosshair}
+.chart-svg .grafico-linea{fill:none;stroke-width:1.25;stroke-linejoin:round;stroke-linecap:round}
+.chart-svg .grafico-rejilla{stroke:var(--line);stroke-width:1}
+.chart-svg .grafico-etiqueta{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.01em;fill:var(--muted)}
+.chart-svg .grafico-etiqueta-eje{font-size:10px;font-weight:600;fill:var(--ink)}
+.chart-svg .grafico-punto{stroke:var(--card-bg);stroke-width:1.25}
+.chart-svg .grafico-crosshair{stroke:var(--steel-soft);stroke-width:1;pointer-events:none;opacity:0}
+.chart-svg .grafico-punto-hover{stroke:var(--card-bg);stroke-width:1.5;pointer-events:none;opacity:0}
+
+/* Tooltip when hovering over an evolution chart */
+.chart-tooltip{position:absolute;top:0;left:0;pointer-events:none;opacity:0;z-index:2;
+  background:var(--card-bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sombra-alta);
+  padding:7px 10px;font-size:12px;white-space:nowrap;transition:opacity .08s linear}
+.tt-cab{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.tt-fila{display:flex;align-items:center;gap:7px}
+.tt-fila+.tt-fila{margin-top:3px}
+.tt-fila .leyenda-linea{flex:none}
+.tt-val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tt-nombre{color:var(--muted);margin-left:auto;padding-left:8px}
+
+/* Statistics */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--page-bg);border-radius:12px;padding:11px 13px}
+.stat b{display:block;font:800 23px var(--display);letter-spacing:-.02em;line-height:1.1;font-family:var(--mono)}
+.stat span{font-size:12px;color:var(--muted)}
+
+.progreso{height:6px;background:var(--line-2);border-radius:3px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+.progreso-fill{height:100%;width:0;background:var(--brasa);transition:width .25s linear}
+.progreso-etiqueta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+
+/* Metric cards */
+.datos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px}
+@media(max-width:760px){.datos-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.datos-grid{grid-template-columns:1fr}}
+.feat{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:14px 15px;border-top:4px solid var(--c)}
+.feat .fi{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 16%,var(--card-bg));color:var(--c);display:grid;place-items:center;margin-bottom:9px}
+.feat .fi svg{width:18px;height:18px}
+.feat .etiqueta{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+.feat .valor{font-family:var(--display);font-size:21px;font-weight:700;margin-top:2px;display:flex;align-items:baseline;gap:5px}
+.feat .unidad{font-size:12px;color:var(--muted);margin-left:1px;font-family:var(--texto);font-weight:400}
+.feat .tendencia{display:inline-flex;align-items:center}
+.feat .tendencia svg{width:15px;height:15px}
+.feat .tendencia.subida{color:#16A34A}
+.feat .tendencia.bajada{color:var(--brasa)}
+.feat .tendencia.estable{color:var(--steel-soft)}
+.sparkline{width:100%;height:13px;display:block;margin-top:5px}
+.sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
+.tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.tile-calidad .fi{margin-bottom:0;flex-shrink:0}
+.tile-calidad .valor{font-size:17px;margin-top:1px}
+.tile-calidad .valor.ok{color:#16A34A}
+.tile-calidad .valor.duda{color:var(--muted)}
+
+.dias-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px}
+@media(max-width:760px){.dias-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:480px){.dias-grid{grid-template-columns:repeat(3,1fr)}}
+.dia-card{background:var(--card-bg);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
+.dia-card.hoy{box-shadow:inset 0 0 0 1.5px var(--brasa)}
+.dia-card .dc-fecha{font-size:11px;font-weight:700;color:var(--steel-soft);text-transform:uppercase;letter-spacing:.03em}
+.dia-card .dc-temps{font-family:var(--display);font-weight:700;margin-top:7px;display:flex;justify-content:center;gap:6px;font-size:15px}
+.dia-card .dc-max{color:var(--c-temp)}
+.dia-card .dc-min{color:var(--steel-soft)}
+.dia-card .dc-barra{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
+.dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--c-hum),var(--c-temp));border-radius:2px}
+.dia-card .dc-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.resumen-dia-solo{max-width:220px;margin:4px 0 16px}
+.dias-vacio{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
+
+.meta-linea{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+/* History */
+.historial-vacio{color:var(--muted);font-size:13.5px;font-style:italic}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.t{width:100%;border-collapse:collapse;font-size:12.8px;font-family:var(--mono)}
+table.t th{background:var(--panel-dark);color:var(--on-dark);text-align:left;padding:9px 10px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line-2)}
+table.t tr:nth-child(even) td{background:var(--page-bg)}
+table.t th:first-child,table.t td:first-child{position:sticky;left:0;z-index:1}
+table.t th:first-child{background:var(--panel-dark)}
+table.t td:first-child{background:var(--card-bg)}
+table.t tr:nth-child(even) td:first-child{background:var(--page-bg)}
+.estado-stale{color:var(--brasa);font-weight:700}
+.historial-envoltorio{max-height:260px;overflow-y:auto}
+
+/* Fixed bottom bar */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel-dark);color:var(--on-dark);box-shadow:0 -6px 24px -14px rgba(0,0,0,.6)}
+.bn-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.bn-in .light{flex:1;min-width:0}
+.bn-in .btn-ghost{background:transparent;color:var(--on-dark);border-color:var(--panel-line)}
+.bn-in .btn-ghost:hover:not(:disabled){border-color:var(--brasa)}
+
+@media(max-width:480px){.bn-in .btn .lbl{display:none}}
+
+/* Glossary modal */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(15,34,55,.55);display:none;align-items:flex-start;justify-content:center;padding:8vh 16px;overflow:auto}
+.modal.on{display:flex}
+.modal-box{background:var(--card-bg);border-radius:18px;max-width:640px;width:100%;box-shadow:var(--sombra-alta);overflow:hidden}
+.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--panel-dark);color:var(--on-dark)}
+.modal-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1}
+.modal-head button{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark);border-radius:9px;padding:6px 10px}
+.modal-body{padding:18px 20px 22px}
+.glos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.glos{grid-template-columns:1fr}}
+.glos div{background:var(--page-bg);border-radius:12px;padding:12px 14px}
+.glos b{display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+.glos span{font-size:13px;color:var(--muted)}
+
+footer.app-footer{max-width:1100px;margin:0 auto;padding:18px 16px 0;font-size:12.5px;color:var(--muted)}
+footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
+.firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
+
+/* ===== TeleMet MultiStation: own styles (on top of the TeleMet History base) ===== */
+.nav-secc{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px}
+.nav-secc a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;font-weight:700;color:var(--steel);background:var(--card-bg);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+.nav-secc a:hover{border-color:var(--steel-soft)}
+.est-edit{display:grid;grid-template-columns:auto 1fr 1fr 1.4fr auto;gap:12px;align-items:end;padding:14px 0;border-top:1px solid var(--line-2)}
+.est-edit:first-child{border-top:0;padding-top:2px}
+.est-edit .field{margin:0}
+.est-edit input[type=color]{width:42px;height:42px;padding:2px;border:1.5px solid var(--line);border-radius:10px;background:var(--card-bg);cursor:pointer}
+.est-edit .est-opts{display:flex;gap:8px;align-items:center;padding-bottom:6px}
+.est-edit label.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600;margin:0;white-space:nowrap}
+@media(max-width:860px){.est-edit{grid-template-columns:auto 1fr;}.est-edit .est-opts{grid-column:1 / -1}}
+.est-vacio{color:var(--muted);font-size:14px;margin:6px 0 0}
+.est-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:6px 0 20px}
+.est-card{background:var(--card-bg);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:14px;padding:13px 15px;box-shadow:var(--sombra);cursor:pointer;text-align:left;font:inherit;color:inherit;display:block;width:100%}
+.est-card:hover{border-color:var(--steel-soft);border-top-color:var(--c)}
+.est-card[aria-pressed="true"]{box-shadow:0 0 0 2px var(--c),var(--sombra)}
+.est-card.apagada{opacity:.55}
+.ec-cab{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ec-nom{font:700 15px var(--display);letter-spacing:-.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec-id{font:11.5px var(--mono);color:var(--muted)}
+.ec-bulbo{width:11px;height:11px;border-radius:50%;background:#B8C5D3;flex:none}
+.ec-bulbo[data-s="ok"]{background:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.22)}
+.ec-bulbo[data-s="warn"]{background:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.22)}
+.ec-bulbo[data-s="err"]{background:var(--brasa);box-shadow:0 0 0 3px rgba(228,87,46,.22)}
+.ec-temp{font:800 34px var(--display);letter-spacing:-.03em;line-height:1.1;margin:8px 0 2px;display:flex;align-items:baseline;gap:6px}
+.ec-temp small{font:600 14px var(--texto);color:var(--muted)}
+.ec-temp .tendencia{display:inline-flex}
+.ec-temp .tendencia svg{width:17px;height:17px}
+.ec-temp .tendencia.subida{color:#16A34A}.ec-temp .tendencia.bajada{color:var(--brasa)}.ec-temp .tendencia.estable{color:var(--steel-soft)}
+.ec-met{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:13px;margin-top:6px}
+.ec-met span{color:var(--muted)}
+.ec-met b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.ec-pie{margin-top:8px;font-size:12px;color:var(--muted);min-height:1.3em}
+.ec-pie.err{color:var(--aviso-ink)}
+.ec-spark{width:100%;height:22px;display:block;margin-top:4px}
+.sparkline line,.ec-spark line{stroke:var(--c);stroke-width:2;stroke-linecap:round}
+.ec-spark polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.cab-est{display:inline-flex;align-items:center;gap:7px;vertical-align:middle}
+.cab-est i{width:10px;height:10px;border-radius:3px;background:var(--c);flex:none}
+table.t td.num{text-align:right;white-space:nowrap}
+table.t td.max{color:var(--brasa);font-weight:700}
+table.t td.min{color:var(--c-hum);font-weight:700}
+table.t td .dif{display:block;font-size:11px;color:var(--muted);font-weight:500}
+table.t td.ref{background:color-mix(in srgb,var(--steel) 10%,transparent)}
+table.t th.num{text-align:right}
+table.t th,table.t td{vertical-align:middle}
+table.t th.num,table.t td.num{width:1%;white-space:nowrap}
+/* “Data and server” tables: columns fitted to their content (no huge gaps between them) */
+table.t.t-compacta{width:100%}
+table.t.t-compacta .ocupa{width:100%}
+table.t.t-compacta th,table.t.t-compacta td{white-space:nowrap}
+table.t.t-compacta th.num,table.t.t-compacta td.num{width:auto;text-align:right}
+table.t.t-compacta td:last-child:empty,table.t.t-compacta th:last-child:empty{width:44px}
+.tbl-wrap.amplia table.t th:first-child,.tbl-wrap.amplia table.t td:first-child{min-width:150px}
+.ctrl-fila{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:0 0 12px}
+.ctrl-fila .etq{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;background:var(--card-bg);color:var(--muted);font:600 13px var(--texto);padding:5px 12px;cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--steel-soft));flex:none;opacity:.45}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--c,var(--steel));background:color-mix(in srgb,var(--c,var(--steel)) 10%,var(--card-bg))}
+.chip[aria-pressed="true"] i{opacity:1}
+select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card-bg);color:var(--ink);max-width:100%}
+.extremos{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:0 0 20px}
+.extremo{background:var(--card-bg);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:10px 12px}
+.extremo .e-etq{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.extremo .e-val{font:700 18px var(--display);margin-top:1px}
+.extremo .e-est{font-size:12.5px;color:var(--muted)}
+.mapa-wrap{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 20px}
+.mapa-wrap svg.mapa{width:100%;max-width:760px;height:auto;display:block;margin:0 auto;background:var(--page-bg);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.mapa-ctl{max-width:760px;margin:0 auto 8px;font-size:12.5px;color:var(--muted)}
+.mapa-ctl label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.mapa text{font:600 13px var(--texto);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.mapa .mp-grid{stroke:var(--line);stroke-width:1;opacity:.7}
+.mapa .mp-escala{stroke:#1b2a3a;stroke-width:2;fill:none}
+.mapa .mp-escala-t{font:700 11px var(--mono)}
+.mapa .mp-attr{font:500 10px var(--texto);fill:#333;stroke:#fff;stroke-width:3px}
+.mapa image{image-rendering:auto}
+.mapa .mp-norte{fill:#1b2a3a;stroke:#fff;stroke-width:3px;font-size:12px}
+.mapa-pie{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
+.tag{display:inline-block;font:700 11px var(--mono);padding:2px 7px;border-radius:6px;background:var(--line-2);color:var(--steel)}
+.tag.ok{background:var(--forjado-suave);color:var(--forjado)}
+.tag.err{background:var(--brasa-suave);color:var(--aviso-ink)}
+.tag.warn{background:var(--tip-bg);color:var(--tip-ink)}
+.msg-linea{font-size:13px;color:var(--muted);margin:6px 0 12px}
+.msg-linea.err{color:var(--aviso-ink)}
+.msg-linea.ok{color:var(--forjado);font-weight:700}
+.msg-linea.pend{color:var(--aviso-ink);font-weight:700}
+/* Save configuration button */
+.guardar-fila{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px}
+.guardar-fila .msg-linea{margin:0}
+.btn.pendiente{box-shadow:0 0 0 3px color-mix(in srgb,var(--brasa) 35%,transparent)}
+/* Confirmation toast */
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,16px);z-index:60;background:var(--panel-dark);color:var(--on-dark);padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 14px 30px -12px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;max-width:min(92vw,520px);display:flex;gap:9px;align-items:center}
+.toast.ver{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:#5fe0c3;flex:none}
+/* Collapsible cards and sections */
+.plegar{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;letter-spacing:inherit}
+.plegar .chev{margin-left:auto;flex:none;transition:transform .2s;color:var(--steel-soft)}
+.plegar[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.plegar:focus-visible,.sh-plegar:focus-visible{outline:2px solid var(--brasa);outline-offset:3px;border-radius:6px}
+.card-cab{margin:0 0 6px}
+.mapa-wrap .card-cab{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;margin:0 0 8px}
+.plegada>.card-cab{margin-bottom:0}
+.sh-plegar{margin-left:auto;flex:none;align-self:center;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card-bg);color:var(--steel);border-radius:999px;padding:7px 13px;font:600 12.5px inherit;font-family:inherit;cursor:pointer}
+.sh-plegar:hover{background:var(--page-bg)}
+.sh-plegar .chev{transition:transform .2s}
+.sh-plegar[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.sh>div:nth-child(2){min-width:0}
+@media(max-width:560px){.sh-plegar .lbl{display:none}.sh-plegar{padding:8px 10px}}
+.cuota{font-size:13px;margin:10px 0 0;color:var(--muted)}
+.cuota.aviso-c{color:var(--aviso-ink);font-weight:600}
+.mini-btn{font-size:12px;padding:4px 9px}
+@media(max-width:560px){.ec-temp{font-size:30px}}
+</style>
+</head>
+<body data-app-title="TeleMet MultiStation" data-app-description="Monitor several personal Weather Underground / Earth Network weather stations at once, each with its own Station ID and API Key: live cards, comparison table with highs, lows and differences from a reference, overlaid 12 h, 24 h and 7-day charts, weekly summary, single-day lookup, schematic map and synchronisation with TeleMet Collector." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="weather station,several stations,multistation,weather underground,pws,telemetry,iot,sensors,comparison,charts,history,collector,real time" data-client-only="true">
+
+<!--
+  ============================================================================
+  TeleMet MultiStation — Design and configuration notes
+  ============================================================================
+  WHAT IT IS
+  A variant of TeleMet History (apps/telemetria/telemet/history) designed to
+  view SEVERAL stations at once. It reuses its reading engine, its value
+  extraction, its local history (IndexedDB), its fill from the API and its
+  chart drawing, and adds: a list of stations, each with its own API Key and
+  colour, independent polling per station, cards and a comparison table
+  (with differences from a reference), extremes, a schematic map, overlaid
+  charts (one line per station) or per-station charts, a 7-day summary,
+  single-day lookup, synchronisation with the per-station JSON files of
+  TeleMet Collector and export/import of the configuration.
+
+  WHERE THE DATA LIVES
+  - localStorage: telemetmultistation_stations (stations and keys),
+    telemetmultistation_settings (polling, shared key, JSON folder) and
+    telemetmultistation_ui (chart view). If there are no saved stations and
+    wu_station_id / wu_api_key exist (rest of the family), they are offered
+    as the first station.
+  - IndexedDB telemetmultistation_db / readings: one row per reading and
+    station (indexes by station and by [station, instant]); 9 days are kept.
+
+  WHICH CONSTANTS TO EDIT (search in the final script)
+  MAX_EST, PALETA, DEF (default polling), LIMITE_LLAMADAS_DIA (quota
+  warning), RETENCION_DIAS, VENTANAS (number of intervals of each chart) and
+  SERV_SYNC_CADA_MIN / SERV_AVISO_MIN (collector).
+  ============================================================================
+-->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Brand icon (flag + signal waves, the same as apple-touch-icon.png
+       and the favicon): simplified to a flag + base dot so it reads
+       well at the tiny size of the header logo. -->
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M12 18V6"></path><path d="M12 6l6 3-6 3z" fill="currentColor" stroke="none"></path><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"></circle></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m10 8 6 4-6 4z"></path></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"></path></symbol>
+  <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"></path></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 15a8.5 8.5 0 1 1 17 0"></path><path d="M12 15l3.3-3.3"></path><circle cx="12" cy="15" r="1.3"></circle></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 4.22-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.9 19.9 0 0 1-2.22 3.2M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"></path></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"></path></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="8" rx="2"></rect><rect x="2" y="13" width="20" height="8" rx="2"></rect><path d="M6 7h.01M6 17h.01"></path></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="tb-in">
+    <button class="logo" id="goHome" type="button" aria-label="Go to the top"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>MultiStation</em></span></button>
+    <div class="tb-right">
+      <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Stopped</span></div>
+      <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glossary</span></button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div class="hero">
+    <p class="eyebrow">SEVERAL STATIONS · WEATHER UNDERGROUND / EARTH NETWORK</p>
+    <h1>Your stations, <em>side by side</em></h1>
+    <p class="lede">Monitor several personal weather stations at once, each with its own Station ID and API Key: live cards, comparison table with highs and lows, overlaid 12 h, 24 h and 7-day charts, weekly summary, single-day lookup and synchronisation with TeleMet Collector.</p>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-big" id="btnIrConfig"><svg class="i"><use href="#i-sliders"></use></svg>Set up my stations</button>
+      <button type="button" class="btn btn-ghost btn-big" id="btnHelp2"><svg class="i"><use href="#i-help"></use></svg>What does each term mean?</button>
+    </div>
+  </div>
+
+  <div class="tip" style="margin-bottom:18px">
+    <svg class="i"><use href="#i-alert"></use></svg>
+    <span><strong>Note:</strong> polling only works while this tab stays open. To keep the full history even if you close it, install TeleMet Collector on the server (section “Data and server”).</span>
+  </div>
+
+  <nav class="nav-secc" aria-label="Sections">
+    <a href="#secEstaciones"><svg class="i"><use href="#i-sliders"></use></svg>Stations</a>
+    <a href="#secAhora"><svg class="i"><use href="#i-thermometer"></use></svg>Now</a>
+    <a href="#secDetalle"><svg class="i"><use href="#i-gauge"></use></svg>Detail</a>
+    <a href="#secEvol"><svg class="i"><use href="#i-activity"></use></svg>Charts</a>
+    <a href="#secSemana"><svg class="i"><use href="#i-archive"></use></svg>7 days</a>
+    <a href="#secDia"><svg class="i"><use href="#i-archive"></use></svg>Single day</a>
+    <a href="#secDatos"><svg class="i"><use href="#i-server"></use></svg>Data and server</a>
+  </nav>
+
+  <!-- ============ 01 · STATIONS ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="secEstaciones"><div class="sh-ico"><svg class="i"><use href="#i-sliders"></use></svg></div><div><p class="sh-step">01 · Before you start</p><h2>Stations</h2><p class="sh-lede">Add up to 12 stations. The data (Station ID and API Key) is stored only in this browser. The fields are locked while the monitor is running.</p></div></header>
+
+  <div class="card">
+    <h3>My stations</h3>
+    <p class="sub">Each station can have its own API Key; if you leave a station’s key empty, the “shared key” below is used. The name is optional (if left empty, the name reported by the station is used).</p>
+    <div id="estList"></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-dark btn-sm" id="btnAddEst"><svg class="i"><use href="#i-plus"></use></svg>Add station</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnImportar"><svg class="i"><use href="#i-upload"></use></svg>Import configuration</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnExportar"><svg class="i"><use href="#i-download"></use></svg>Export configuration</button>
+      <label class="chk" style="font-size:13px;display:inline-flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="chkExportarClaves"> include the API Keys in the file</label>
+      <input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+    </div>
+    <div class="guardar-fila">
+      <button type="button" class="btn btn-primary" id="btnGuardarCfg"><svg class="i"><use href="#i-check"></use></svg>Save configuration</button>
+      <p class="msg-linea" id="cfgMsg" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Polling</h3>
+    <p class="sub">Each station is queried separately, at its own pace and with its own retries: if one fails, the others carry on. Start-ups are staggered by a few seconds so that not all requests go out at once.</p>
+    <div class="grid2">
+      <div class="field">
+        <label for="pollInput">Polling interval per station (s)</label>
+        <input type="number" id="pollInput" min="5" step="1" value="60">
+      </div>
+      <div class="field">
+        <label for="claveComunInput">Shared key (optional)</label>
+        <div class="keyrow">
+          <input type="password" id="claveComunInput" placeholder="For stations without their own key" autocomplete="off" spellcheck="false">
+          <button type="button" class="eye" id="btnVerClave" aria-label="Show or hide the shared key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button>
+        </div>
+      </div>
+    </div>
+    <p class="cuota" id="cuotaLinea"></p>
+    <div class="guardar-fila">
+      <button type="button" class="btn btn-primary" id="btnGuardarCfg2"><svg class="i"><use href="#i-check"></use></svg>Save configuration</button>
+      <p class="msg-linea" id="cfgMsg2" role="status" aria-live="polite"></p>
+    </div>
+    <details class="acc" style="margin-top:14px">
+      <summary>Advanced settings<svg class="i chev"><use href="#i-down"></use></svg></summary>
+      <div class="inner">
+        <div class="grid2">
+          <div class="field"><label for="timeoutInput">Timeout of each request (s)</label><input type="number" id="timeoutInput" min="1" step="1" value="15"></div>
+          <div class="field"><label for="staleInput">Stale-data threshold (s)</label><input type="number" id="staleInput" min="10" step="1" value="120"><p class="help">If a station’s reading is older than this, its light turns amber.</p></div>
+          <div class="field"><label for="backoffBaseInput">Backoff: initial wait (s)</label><input type="number" id="backoffBaseInput" min="1" step="1" value="2"></div>
+          <div class="field"><label for="backoffMaxInput">Backoff: maximum wait (s)</label><input type="number" id="backoffMaxInput" min="1" step="1" value="300"></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ============ 02 · NOW ============ -->
+  <header class="sh" style="--c:#0E7C6B" id="secAhora"><div class="sh-ico"><svg class="i"><use href="#i-thermometer"></use></svg></div><div><p class="sh-step">02 · Right now</p><h2>Real-time readings</h2><p class="sh-lede">One card per station with its latest reading and trend. Click a card to see its detail further down.</p></div></header>
+
+  <p class="meta-linea" id="metaLinea" aria-live="polite">Monitor stopped.</p>
+  <div class="est-grid" id="estGrid"></div>
+
+  <div id="extremos" class="extremos"></div>
+
+  <div class="mapa-wrap" id="mapaWrap" style="display:none" data-titulo="Map of the stations">
+    <div class="mapa-ctl"><label><input type="checkbox" id="mapaFondo" checked> Background map (OpenStreetMap)</label></div>
+    <svg class="mapa" id="mapa" viewBox="0 0 640 340" role="img" aria-label="Position of the stations"></svg>
+    <p class="mapa-pie" id="mapaPie"></p>
+  </div>
+
+  <div class="card">
+    <h3>Comparison</h3>
+    <p class="sub">Latest reading of each station. The highest value of each row in red and the lowest in blue (when two or more stations have data).</p>
+    <div class="ctrl-fila">
+      <span class="etq">Differences from</span>
+      <select id="refSel" aria-label="Reference station"><option value="">— none —</option></select>
+    </div>
+    <div class="tbl-wrap amplia"><div id="tablaComp"></div></div>
+  </div>
+
+  <!-- ============ 03 · DETAIL ============ -->
+  <header class="sh" style="--c:#E4572E" id="secDetalle"><div class="sh-ico"><svg class="i"><use href="#i-gauge"></use></svg></div><div><p class="sh-step">03 · One station</p><h2>Station detail</h2><p class="sh-lede">All the variables of the chosen station, with their trend and the minimum, maximum and sparkline of the last 24 hours (from the stored history).</p></div></header>
+  <div class="ctrl-fila">
+    <span class="etq">Station</span>
+    <select id="detalleSel" aria-label="Station for the detail"></select>
+    <span class="msg-linea" id="detalleMeta" style="margin:0"></span>
+  </div>
+  <div class="datos-grid" id="detalleGrid" style="margin-bottom:28px"></div>
+
+  <!-- ============ 04 · EVOLUTION ============ -->
+  <header class="sh" style="--c:#6B4FD8" id="secEvol"><div class="sh-ico"><svg class="i"><use href="#i-activity"></use></svg></div><div><p class="sh-step">04 · What has been recorded</p><h2>Evolution charts</h2><p class="sh-lede">Built from the history stored in this browser (completed with the server history if available). Compare the same variable between stations or look at all the variables of a single station.</p></div></header>
+
+  <div class="card" id="cardEvol" data-titulo="Evolution charts">
+    <div class="ctrl-fila">
+      <span class="etq">Window</span>
+      <div class="evol-ventana" role="group" aria-label="Time window" id="evolVentana" style="margin:0">
+        <button type="button" data-h="12" aria-pressed="true">12 h</button><button type="button" data-h="24" aria-pressed="false">24 h</button><button type="button" data-h="168" aria-pressed="false">7 d</button>
+      </div>
+      <span class="etq" style="margin-left:6px">View</span>
+      <div class="segmentado" role="group" aria-label="View type">
+        <button type="button" id="modoComparar" aria-pressed="true">Compare stations</button>
+        <button type="button" id="modoEstacion" aria-pressed="false">One station</button>
+      </div>
+    </div>
+    <div class="ctrl-fila" id="filaChipsEst"><span class="etq">Stations</span><div class="chips" id="chipsEst"></div></div>
+    <div class="ctrl-fila" id="filaChipsVar"><span class="etq">Variables</span><div class="chips" id="chipsVar"></div></div>
+    <div class="ctrl-fila" id="filaEstSel" style="display:none"><span class="etq">Station</span><select id="estSelEvol" aria-label="Station"></select></div>
+    <p class="evol-nota" id="evolNota"></p>
+    <p class="evol-nota" id="autoEstado" role="status" aria-live="polite" style="display:none;margin-top:-8px"></p>
+    <div id="charts"><p class="evol-vacio">Add stations and start the monitor to see the charts.</p></div>
+  </div>
+
+  <!-- ============ 05 · 7 DAYS ============ -->
+  <header class="sh" style="--c:#C98200" id="secSemana"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">05 · The week</p><h2>Summary of the last 7 days</h2><p class="sh-lede">One value per day and per station, from the stored history. The highest of each day in red and the lowest in blue.</p></div></header>
+  <div class="card" data-titulo="Weekly summary">
+    <div class="ctrl-fila">
+      <span class="etq">Show</span>
+      <div class="segmentado" role="group" aria-label="Summary quantity" id="segResumen">
+        <button type="button" data-m="tmax" aria-pressed="true">Max. temp.</button>
+        <button type="button" data-m="tmin" aria-pressed="false">Min. temp.</button>
+        <button type="button" data-m="tmed" aria-pressed="false">Avg. temp.</button>
+        <button type="button" data-m="lluvia" aria-pressed="false">Rain</button>
+        <button type="button" data-m="racha" aria-pressed="false">Max. gust</button>
+      </div>
+    </div>
+    <div class="tbl-wrap amplia"><div id="tablaSemana"><p class="evol-vacio">No data yet.</p></div></div>
+    <div class="actions" style="margin-top:12px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnSemana7"><svg class="i"><use href="#i-refresh"></use></svg>Complete 7 days from the API</button>
+    </div>
+    <p class="evol-nota" id="semanaEstado" role="status" aria-live="polite" style="display:none;margin:8px 0 0"></p>
+  </div>
+
+  <!-- ============ 06 · SINGLE DAY ============ -->
+  <header class="sh" style="--c:#4F772D" id="secDia"><div class="sh-ico"><svg class="i"><use href="#i-archive"></use></svg></div><div><p class="sh-step">06 · The past</p><h2>Look up a specific day</h2><p class="sh-lede">Pick any date: what is stored in this browser is used and, if coverage is missing, it is completed with the API history (one request per station and day). It uses the stations and variables chosen in the charts.</p></div></header>
+  <div class="card" data-titulo="Single-day lookup">
+    <div class="grid2" style="align-items:end">
+      <div class="field"><label for="diaInput">Date</label><input type="date" id="diaInput"></div>
+      <div class="field"><button type="button" class="btn btn-dark" id="btnConsultarDia" style="width:100%"><svg class="i"><use href="#i-activity"></use></svg>Look up</button></div>
+    </div>
+    <p class="msg-linea" id="diaEstado" style="display:none"></p>
+    <div id="diaResumen"></div>
+    <div id="chartsDia"><p class="evol-vacio">Pick a date and press “Look up”.</p></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSVDia" disabled><svg class="i"><use href="#i-download"></use></svg>Download that day (CSV)</button>
+    </div>
+  </div>
+
+  <!-- ============ 07 · DATA AND SERVER ============ -->
+  <header class="sh" style="--c:#2E4B6B" id="secDatos"><div class="sh-ico"><svg class="i"><use href="#i-server"></use></svg></div><div><p class="sh-step">07 · Maintenance</p><h2>Data and server</h2><p class="sh-lede">Synchronisation with TeleMet Collector, what is stored in this browser, and export.</p></div></header>
+
+  <div class="card">
+    <h3>Server history (TeleMet Collector)</h3>
+    <p class="sub">If the collector runs on the same server, this app reads, for each station, its file <code>history_&lt;ID&gt;.json</code> (or <code>historial_&lt;ID&gt;.json</code>) and, if it does not exist, the single <code>history.json</code> / <code>historial.json</code> when its <code>stationId</code> matches. It only <strong>adds</strong> missing readings: it never deletes or modifies local data. If there is no collector, it is simply ignored. It synchronises on its own when the page opens and every 2 minutes; these tables update automatically.</p>
+    <div class="grid2" style="align-items:end">
+      <div class="field"><label for="servBaseInput">Folder of the JSON files (relative to this page)</label><input type="text" id="servBaseInput" value="data/" spellcheck="false" autocomplete="off"><p class="help">Default <code>data/</code>. If there is no file there, the app also tries the usual TeleMet History/Historial folders (<code>../telemethistory/data/</code>, <code>../telemethistorial/datos/</code>, <code>../history/data/</code> and <code>../historial/datos/</code>). For any other location, type it here.</p></div>
+      <div class="field"><button type="button" class="btn btn-dark" id="btnSyncServidor" style="width:100%"><svg class="i"><use href="#i-refresh"></use></svg>Synchronise now</button></div>
+    </div>
+    <div class="tbl-wrap"><div id="servEstado"></div></div>
+  </div>
+
+  <div class="card">
+    <h3>History stored in this browser</h3>
+    <p class="sub">9 days are kept per station (IndexedDB). “Fill” asks the API for the days with gaps in the last 7 (<strong>one request per station and incomplete day</strong>, which counts towards your key’s limit).</p>
+    <div class="tbl-wrap"><div id="datosTabla"></div></div>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnBackfill"><svg class="i"><use href="#i-refresh"></use></svg>Fill gaps from the API</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSV24"><svg class="i"><use href="#i-download"></use></svg>CSV · 24 h</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSV7"><svg class="i"><use href="#i-download"></use></svg>CSV · 7 days</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnCSVTodo"><svg class="i"><use href="#i-download"></use></svg>CSV · all</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnBorrarTodo"><svg class="i"><use href="#i-trash"></use></svg>Delete everything stored</button>
+    </div>
+    <p class="msg-linea" id="datosMsg" role="status" aria-live="polite"></p>
+  </div>
+
+  <details class="acc-evol" id="accRegistro">
+    <summary><svg class="i"><use href="#i-activity"></use></svg>Activity log (this session)<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <div class="tbl-wrap"><div id="registro"><p class="evol-vacio">No activity yet.</p></div></div>
+    </div>
+  </details>
+
+</main>
+
+<footer class="app-footer">
+  <hr>
+  <p>TeleMet MultiStation. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 7 November 2026, 19:17</p>
+</footer>
+
+<div class="bottomnav">
+  <div class="bn-in">
+    <div class="light" id="luzEstadoBar" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoBar">Monitor stopped</span></div>
+    <button type="button" class="btn btn-ok btn-sm" id="btnIniciarBar" disabled><svg class="i"><use href="#i-play"></use></svg><span class="lbl">Start</span></button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnDetenerBar" disabled><svg class="i"><use href="#i-pause"></use></svg><span class="lbl">Stop</span></button>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnSondeoBar" disabled title="Poll all now"><svg class="i"><use href="#i-refresh"></use></svg><span class="lbl">Poll</span></button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><svg class="i"><use href="#i-check"></use></svg><span id="toastTxt"></span></div>
+
+<div class="modal" id="modalGlosario">
+  <div class="modal-box">
+    <div class="modal-head"><svg class="i"><use href="#i-help"></use></svg><h2>Glossary</h2><button type="button" id="modalCerrar" aria-label="Close"><svg class="i"><use href="#i-x"></use></svg></button></div>
+    <div class="modal-body">
+      <div class="glos">
+        <div><b>Station ID / API Key</b><span>Identifier of each station on wunderground.com (My Profile → My Devices) and the API key. Each station can use its own; if empty, the “shared key” is used.</span></div>
+        <div><b>Independent polling</b><span>Each station has its own cycle, its own retry counter and its own state: a wrong key (401) or a non-existent Station ID (404) stops only that station.</span></div>
+        <div><b>Backoff</b><span>Growing wait between retries after a transient error (network, timeout, 5xx): it doubles each time, up to a configurable maximum.</span></div>
+        <div><b>Call limit</b><span>Weather Underground keys have a daily request limit (usually 1,500 a day on personal accounts; check it in your account). With several stations sharing a key, the calls add up: the app warns you if the chosen interval exceeds it.</span></div>
+        <div><b>Status light</b><span>Green: recent reading. Amber: the reading is older than the “stale data” threshold. Red: error or station stopped. Grey: not polling.</span></div>
+        <div><b>Trend (▲ ▼ —)</b><span>Compares the station’s latest temperature with the previous one.</span></div>
+        <div><b>Comparison and differences</b><span>With a reference station, each cell also shows the difference from it (Δ). Useful to see gradients between areas or to check one sensor against another.</span></div>
+        <div><b>Feels-like temperature</b><span>Heat index at ≥ 27 °C, wind chill at ≤ 10 °C with some wind; otherwise, the air temperature. Computed in the browser.</span></div>
+        <div><b>Dew point</b><span>Temperature at which the air would become saturated with moisture. The closer it is to the air temperature, the more humid it feels.</span></div>
+        <div><b>Accumulated rain</b><span>Total the station itself has accumulated, normally since local midnight; it resets by itself every day in the hardware.</span></div>
+        <div><b>Overlaid charts</b><span>Each line is a station. To save points, data is grouped into 3 min (12 h), 5 min (24 h) or 30 min (7 d) intervals and their average is shown. Long gaps without data are not joined with a straight line.</span></div>
+        <div><b>Browser history</b><span>Every reading is stored in IndexedDB (9 days per station). It persists between sessions in this same browser and device.</span></div>
+        <div><b>TeleMet Collector</b><span>Python program on the server that reads the stations even when nobody has the app open and publishes one JSON per station. This app reads them and adds the readings it is missing.</span></div>
+        <div><b>Schematic map</b><span>Position of the stations according to the coordinates they report, over an OpenStreetMap background (it can be turned off; without a connection it works without the background). North is up.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     EDITABLE CONSTANTS
+     ============================================================ */
+  const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
+  const HISTORY_URL = 'https://api.weather.com/v2/pws/history/all';
+  const HORARIO7_URL = 'https://api.weather.com/v2/pws/observations/hourly/7day';
+
+  const LS = { ests: 'telemetmultistation_stations', cfg: 'telemetmultistation_settings', ui: 'telemetmultistation_ui' };
+  // TelemetriaWU family keys: if you already configured a station in another app, it is offered as the first one.
+  const LS_WU_STATION = 'wu_station_id', LS_WU_KEY = 'wu_api_key';
+
+  const MAX_EST = 12;
+  const PALETA = ['#E4572E', '#1F6FB2', '#0E7C6B', '#6B4FD8', '#C98200', '#D94F70', '#4F772D', '#00A0B8', '#8E5A2B', '#7A7F8C', '#B5179E', '#2D6A4F'];
+
+  const DEF = { pollS: 60, timeoutS: 15, backoffBaseS: 2, backoffMaxS: 300, staleS: 120, claveComun: '', servBase: 'data/' };
+  const LIMITE_LLAMADAS_DIA = 1500;      // usual limit of personal keys (approximate)
+
+  const DB_NAME = 'telemetmultistation_db', DB_VERSION = 1, DB_STORE = 'readings';
+  const RETENCION_DIAS = 9, DIAS_SEMANA = 7;
+  const SERV_SYNC_CADA_MIN = 2, SERV_TOL_MS = 30 * 1000, SERV_AVISO_MIN = 15;
+  const MERGE_TOL_MS = 90 * 1000;
+  const HUECO_MAX_MS = 90 * 60 * 1000, HUECO_MIN_MS = 15 * 60 * 1000;
+  const UMBRAL_TENDENCIA = 0.05;
+  const MAX_REGISTRO = 120;
+
+  const SANITY_CHECK = {
+    temp_c: { min: -60, max: 60 }, heat_index_c: { min: -60, max: 70 }, dewpoint_c: { min: -60, max: 60 },
+    humidity_pct: { min: 0, max: 100 }, pressure_hpa: { min: 850, max: 1085 }, wind_kmh: { min: 0, max: 250 },
+    gust_kmh: { min: 0, max: 300 }, wind_dir_deg: { min: 0, max: 360 }, rainrate_mmh: { min: 0, max: 500 },
+    rain_total_mm: { min: 0, max: 1000 }, solarradiation_wm2: { min: 0, max: 1500 }, uv_index: { min: 0, max: 20 }
+  };
+
+  // Variable, icon, colour (var(--c-xxx)) and decimals with which it is shown.
+  const GRAFICABLES = [
+    { key: 'temp_c', etiqueta: 'Temperature', unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)', dec: 1 },
+    { key: 'heat_index_c', etiqueta: 'Feels-like temperature', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)', dec: 1 },
+    { key: 'dewpoint_c', etiqueta: 'Dew point', unidad: '°C', icono: 'droplet', color: 'var(--c-dew)', dec: 1 },
+    { key: 'humidity_pct', etiqueta: 'Humidity', unidad: '%', icono: 'droplet', color: 'var(--c-hum)', dec: 0 },
+    { key: 'pressure_hpa', etiqueta: 'Pressure', unidad: 'hPa', icono: 'gauge', color: 'var(--c-pres)', dec: 1 },
+    { key: 'wind_kmh', etiqueta: 'Wind', unidad: 'km/h', icono: 'wind', color: 'var(--c-wind)', dec: 1 },
+    { key: 'gust_kmh', etiqueta: 'Gust', unidad: 'km/h', icono: 'wind', color: 'var(--c-gust)', dec: 1 },
+    { key: 'wind_dir_deg', etiqueta: 'Wind direction', unidad: '°', icono: 'wind', color: 'var(--c-dir)', dec: 0 },
+    { key: 'rainrate_mmh', etiqueta: 'Rain', unidad: 'mm/h', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'rain_total_mm', etiqueta: 'Accumulated rain', unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'solarradiation_wm2', etiqueta: 'Solar radiation', unidad: 'W/m²', icono: 'sun', color: 'var(--c-solar)', dec: 0 },
+    { key: 'uv_index', etiqueta: 'UV index', unidad: '', icono: 'sun', color: 'var(--c-uv)', dec: 1 }
+  ];
+  const DEF_VAR = k => GRAFICABLES.find(m => m.key === k);
+  const VARS_COMPARABLES = GRAFICABLES.filter(m => m.key !== 'wind_dir_deg');
+
+  // “One station” view: same groupings as TeleMet History (with a double Y axis for rain and solar+UV).
+  const GRUPOS_ESTACION = [
+    { titulo: 'Temperature, feels-like and dew point', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Humidity', unidad: '%', claves: ['humidity_pct'] },
+    { titulo: 'Pressure', unidad: 'hPa', claves: ['pressure_hpa'] },
+    { titulo: 'Wind and gust', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
+    { titulo: 'Rain rate and accumulated rain', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
+    { titulo: 'Solar radiation and UV index', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
+  ];
+
+  // Chart windows: number of intervals into which the data is grouped.
+  const VENTANAS = { 12: { buckets: 240, ticks: 4 }, 24: { buckets: 288, ticks: 6 }, 168: { buckets: 336, ticks: 7 } };
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  let ests = [];                   // [{ id, nombre, stationId, apiKey, color, activa, meta }]
+  let cfg = Object.assign({}, DEF);
+  let running = false;
+  const rts = new Map();           // station id -> runtime state
+  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax', mapaFondo: true };
+  const registro = [];
+  let timerSync = null, timerTick = null;
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    estList: $('estList'), cfgMsg: $('cfgMsg'), cfgMsg2: $('cfgMsg2'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
+    mapaWrap: $('mapaWrap'), mapaFondo: $('mapaFondo'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
+    detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
+    chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
+    evolNota: $('evolNota'), autoEstado: $('autoEstado'), semanaEstado: $('semanaEstado'), charts: $('charts'), tablaSemana: $('tablaSemana'),
+    diaInput: $('diaInput'), diaEstado: $('diaEstado'), diaResumen: $('diaResumen'), chartsDia: $('chartsDia'), btnCSVDia: $('btnCSVDia'),
+    servBase: $('servBaseInput'), servEstado: $('servEstado'), datosTabla: $('datosTabla'), datosMsg: $('datosMsg'), registro: $('registro'),
+    cuota: $('cuotaLinea'),
+    poll: $('pollInput'), clave: $('claveComunInput'), timeout: $('timeoutInput'), stale: $('staleInput'), bb: $('backoffBaseInput'), bm: $('backoffMaxInput'),
+    luzTop: $('luzEstadoTop'), luzTopTxt: $('luzTextoTop'), luzBar: $('luzEstadoBar'), luzBarTxt: $('luzTextoBar'),
+    btnIniciar: $('btnIniciarBar'), btnDetener: $('btnDetenerBar'), btnSondeo: $('btnSondeoBar')
+  };
+
+  /* ============================================================
+     UTILITIES
+     ============================================================ */
+  function escHTML(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function fmtHoraMs(ms){ const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+  function fmtHM(ms){ const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function fmtFechaHM(ms){ const d = new Date(ms); return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ' ' + fmtHM(ms); }
+  function fechaYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+  function esNum(v){ return v !== null && v !== undefined && typeof v === 'number' && Number.isFinite(v); }
+  function fmtN(v, dec){ return esNum(v) ? v.toLocaleString('en-GB', { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: false }) : '—'; }
+  function fmtVar(key, v){ const m = DEF_VAR(key); return fmtN(v, m ? m.dec : 1); }
+  function fmtDif(key, d){ const m = DEF_VAR(key); const dec = m ? m.dec : 1; const s = fmtN(Math.abs(d), dec); return (d > 0 ? '+' : (d < 0 ? '−' : '±')) + s; }
+  function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
+  function firstDefined(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v !== undefined && v !== null) return v; } return null; }
+  function edadTxt(ms){
+    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (s < 90) return s + ' s';
+    if (s < 5400) return Math.round(s / 60) + ' min';
+    if (s < 172800) return Math.round(s / 3600) + ' h';
+    return Math.round(s / 86400) + ' d';
+  }
+  function guardarLS(clave, valor){ try { localStorage.setItem(clave, JSON.stringify(valor)); return true; } catch (e) { return false; /* storage not available */ } }
+  function leerLS(clave, porDefecto){ try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); } catch (e) { return porDefecto; } }
+  function nuevoId(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  const kEst = e => (e.stationId || '').trim().toUpperCase();
+  const nombreEst = e => e.nombre || (e.meta && e.meta.neighborhood) || e.stationId || 'Station';
+  const claveEf = e => (e.apiKey || '').trim() || (cfg.claveComun || '').trim();
+  const nombreArchivoSeguro = s => String(s).replace(/[^A-Za-z0-9._-]/g, '_');
+  const estsActivas = () => ests.filter(e => e.activa && kEst(e));
+  const estsVisibles = () => estsActivas().filter(e => ui.ocultas.indexOf(e.id) < 0);
+  function rt(e){
+    let r = rts.get(e.id);
+    if (!r){ r = { last: null, prev: null, obsMs: null, estado: 'off', msg: '', reint: 0, timer: null, proxMs: 0, enVuelo: false, fatal: false, lecturas: 0, spark: [], plausible: true, ultimoGuardadoMs: 0, serv: null }; rts.set(e.id, r); }
+    return r;
+  }
+
+  function log(tipo, e, msg){
+    registro.unshift({ t: Date.now(), tipo: tipo, est: e ? nombreEst(e) : '—', msg: msg });
+    if (registro.length > MAX_REGISTRO) registro.length = MAX_REGISTRO;
+    renderRegistro();
+  }
+
+  async function fetchConTimeout(url, timeoutMs){
+    const ctrl = new AbortController();
+    const tm = setTimeout(() => ctrl.abort(), timeoutMs);
+    try { return await fetch(url, { signal: ctrl.signal, cache: 'no-store' }); }
+    finally { clearTimeout(tm); }
+  }
+
+  function descargar(nombre, texto, mime){
+    const blob = new Blob(['﻿' + texto], { type: mime || 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     FEELS-LIKE TEMPERATURE AND VALUE EXTRACTION (same logic as TeleMet History)
+     ============================================================ */
+  function indiceCalorC(tC, rh){
+    const tF = tC * 9 / 5 + 32;
+    if (tF < 80 || rh === null || !Number.isFinite(rh)) return tC;
+    let hi = -42.379 + 2.04901523 * tF + 10.14333127 * rh - 0.22475541 * tF * rh
+      - 0.00683783 * tF * tF - 0.05481717 * rh * rh + 0.00122874 * tF * tF * rh
+      + 0.00085282 * tF * rh * rh - 0.00000199 * tF * tF * rh * rh;
+    if (rh < 13 && tF >= 80 && tF <= 112) hi -= ((13 - rh) / 4) * Math.sqrt((17 - Math.abs(tF - 95)) / 17);
+    else if (rh > 85 && tF >= 80 && tF <= 87) hi += ((rh - 85) / 10) * ((87 - tF) / 5);
+    return Math.max((hi - 32) * 5 / 9, tC);
+  }
+  function sensacionFrioC(tC, vientoKmh){
+    if (vientoKmh === null || !Number.isFinite(vientoKmh) || vientoKmh <= 4.8) return tC;
+    const v = Math.pow(vientoKmh, 0.16);
+    return Math.min(13.12 + 0.6215 * tC - 11.37 * v + 0.3965 * tC * v, tC);
+  }
+  function sensacionTermicaC(tC, rh, vientoKmh){
+    if (tC === null || !Number.isFinite(tC)) return null;
+    if (tC >= 26.7) return indiceCalorC(tC, rh);
+    if (tC <= 10) return sensacionFrioC(tC, vientoKmh);
+    return tC;
+  }
+  function esPlausible(t){
+    for (const campo of Object.keys(SANITY_CHECK)){
+      const valor = t[campo];
+      if (valor === null || valor === undefined) continue;
+      if (valor < SANITY_CHECK[campo].min || valor > SANITY_CHECK[campo].max) return false;
+    }
+    return true;
+  }
+  const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+  function gradosACompass(deg){
+    if (!esNum(deg)) return null;
+    return COMPASS[(Math.round((deg % 360) / 22.5) % 16 + 16) % 16];
+  }
+
+  // The “current” endpoint and the history one (“history/all”) use different field names
+  // (spot value versus period average/max/min): both are accepted.
+  function extraerValores(obs){
+    const metric = obs.metric || {};
+    const tempC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
+    const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
+    const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
+    const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
+      ? (metric.pressureMax + metric.pressureMin) / 2 : firstDefined(metric.pressureMax, metric.pressureMin);
+    return {
+      temp_c: tempC,
+      heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewptAvg, metric.dewpoint)),
+      humidity_pct: humPct,
+      pressure_hpa: numOrNull(firstDefined(metric.pressure, presionHist)),
+      wind_kmh: windKmh,
+      gust_kmh: numOrNull(firstDefined(metric.windGust, metric.windgustAvg)),
+      wind_dir_deg: numOrNull(firstDefined(obs.winddir, obs.windDir, obs.winddirAvg)),
+      rainrate_mmh: numOrNull(metric.precipRate),
+      rain_total_mm: numOrNull(metric.precipTotal),
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh)),
+      uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
+      quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
+    };
+  }
+
+  function construirURL(stationId, apiKey){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm' });
+    if (apiKey) params.set('apiKey', apiKey);   // always in the URL: a custom header would require a CORS preflight
+    return BASE_URL + '?' + params.toString();
+  }
+  function construirURLHorario7(stationId, apiKey){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm' });
+    if (apiKey) params.set('apiKey', apiKey);
+    return HORARIO7_URL + '?' + params.toString();
+  }
+  function construirURLHistorico(stationId, apiKey, fechaYmd){
+    const params = new URLSearchParams({ stationId: stationId, format: 'json', numericPrecision: 'decimal', units: 'm', date: fechaYmd });
+    if (apiKey) params.set('apiKey', apiKey);
+    return HISTORY_URL + '?' + params.toString();
+  }
+
+  /* ============================================================
+     LOCAL PERSISTENCE (IndexedDB): one history per station
+     ============================================================ */
+  let dbPromise = null, ultimoErrorDB = null;
+  function abrirDB(){
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB){ dbPromise = Promise.reject(new Error('IndexedDB is not available in this browser')); return dbPromise; }
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(DB_STORE)){
+          const store = db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('por_estacion', 'stationId', { unique: false });
+          store.createIndex('por_t', ['stationId', 'epochMs'], { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+  function txPromesa(tx){ return new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+
+  // The “Data and server” tables update by themselves when the stored data changes (with a short
+  // delay to group consecutive readings) and every 30 s for the collector’s status and age.
+  let tmRefrescoTablas = null;
+  function programarRefrescoTablas(){
+    if (tmRefrescoTablas) return;
+    tmRefrescoTablas = setTimeout(() => {
+      tmRefrescoTablas = null;
+      if (document.hidden) return;
+      try { renderDatos(); renderServidor(); } catch (_) {}
+    }, 1500);
+  }
+  async function guardarLote(key, filas){
+    if (!filas.length) return;
+    try {
+      const db = await abrirDB();
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const st = tx.objectStore(DB_STORE);
+      filas.forEach(f => st.add({ stationId: key, epochMs: f.epochMs, vals: f.vals }));
+      await txPromesa(tx);
+      programarRefrescoTablas();
+    } catch (err) { ultimoErrorDB = err; }
+  }
+  async function consultarRango(key, desde, hasta){
+    try {
+      const db = await abrirDB();
+      const out = await new Promise((resolve, reject) => {
+        const idx = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_t');
+        const res = [];
+        const rq = idx.openCursor(IDBKeyRange.bound([key, desde], [key, hasta]));
+        rq.onsuccess = () => { const c = rq.result; if (!c){ resolve(res); return; } res.push(c.value); c.continue(); };
+        rq.onerror = () => reject(rq.error);
+      });
+      ultimoErrorDB = null;
+      return out;
+    } catch (err) { ultimoErrorDB = err; return []; }
+  }
+  async function borrarEstacionDB(key, antesDe){
+    try {
+      const db = await abrirDB();
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const idx = tx.objectStore(DB_STORE).index('por_t');
+      const rq = idx.openCursor(IDBKeyRange.bound([key, -Infinity], [key, antesDe === undefined ? Infinity : antesDe], false, antesDe !== undefined));
+      rq.onsuccess = () => { const c = rq.result; if (c){ c.delete(); c.continue(); } };
+      await txPromesa(tx);
+    } catch (err) { ultimoErrorDB = err; }
+  }
+  async function purgarAntiguos(){
+    const limite = Date.now() - RETENCION_DIAS * 86400000;
+    const claves = await clavesEnDB();
+    for (const k of claves) await borrarEstacionDB(k, limite);
+  }
+  async function clavesEnDB(){
+    try {
+      const db = await abrirDB();
+      return await new Promise((resolve, reject) => {
+        const idx = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_estacion');
+        const out = [];
+        const rq = idx.openKeyCursor(null, 'nextunique');
+        rq.onsuccess = () => { const c = rq.result; if (!c){ resolve(out); return; } out.push(c.key); c.continue(); };
+        rq.onerror = () => reject(rq.error);
+      });
+    } catch (err) { ultimoErrorDB = err; return []; }
+  }
+  async function resumenAlmacen(){
+    const res = [];
+    try {
+      const db = await abrirDB();
+      for (const k of await clavesEnDB()){
+        const st = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE);
+        const n = await new Promise(r => { const q = st.index('por_estacion').count(IDBKeyRange.only(k)); q.onsuccess = () => r(q.result); q.onerror = () => r(0); });
+        const extremo = dir => new Promise(r => {
+          const q = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).index('por_t').openCursor(IDBKeyRange.bound([k, -Infinity], [k, Infinity]), dir);
+          q.onsuccess = () => r(q.result ? q.result.value.epochMs : null); q.onerror = () => r(null);
+        });
+        res.push({ key: k, n: n, min: await extremo('next'), max: await extremo('prev') });
+      }
+    } catch (err) { ultimoErrorDB = err; }
+    return res;
+  }
+
+  // A day is considered incomplete (and can be requested from the API) if no row has a temperature
+  // or if there is a gap longer than HUECO_MAX_MS at the start, at the end or between two readings.
+  function diaIncompleto(filas, inicioMs, finMs){
+    const validas = filas.filter(f => f.vals && f.vals.temp_c !== null && f.vals.temp_c !== undefined).sort((a, b) => a.epochMs - b.epochMs);
+    if (validas.length === 0) return true;
+    if (validas[0].epochMs - inicioMs > HUECO_MAX_MS) return true;
+    if (finMs - validas[validas.length - 1].epochMs > HUECO_MAX_MS) return true;
+    for (let i = 1; i < validas.length; i++) if (validas[i].epochMs - validas[i - 1].epochMs > HUECO_MAX_MS) return true;
+    return false;
+  }
+  const inicioDia = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+
+  // Completes a day with the API history WITHOUT deleting anything (it only adds missing readings).
+  async function completarDia(e, fecha, forzar){
+    const key = kEst(e), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+    const existentes = await consultarRango(key, ini, fin);
+    if (!forzar && existentes.length > 0 && !diaIncompleto(existentes, ini, Math.min(fin, Date.now()))) return { estado: 'cubierto', anadidas: 0 };
+    try {
+      const resp = await fetchConTimeout(construirURLHistorico(key, claveEf(e), fechaYYYYMMDD(fecha)), 15000);
+      if (!resp.ok) return { estado: 'error', anadidas: 0, http: resp.status };
+      const data = resp.status === 204 ? {} : await resp.json();
+      const obsArr = data.observations || [];
+      const epochs = existentes.map(f => f.epochMs).sort((a, b) => a - b);
+      const nuevas = [];
+      for (const obs of obsArr){
+        if (!obs.epoch) continue;
+        const t = obs.epoch * 1000;
+        if (hayCercano(epochs, t, MERGE_TOL_MS)) continue;
+        nuevas.push({ epochMs: t, vals: extraerValores(obs) });
+        insertarOrdenado(epochs, t);
+      }
+      await guardarLote(key, nuevas);
+      return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length };
+    } catch (err) { return { estado: 'error', anadidas: 0 }; }
+  }
+  // When opening the app, when pressing Start and when choosing “7 d”: joins the history stored in the
+  // browser (and the collector’s) with the first live reading and completes the last 7 days.
+  // If a day has gaps (today/yesterday: more than 15 min; earlier: more than 90 min) the API is asked for
+  // that day’s history and only what is missing is added.
+  // The Weather Underground API limits requests per minute (about 30 per key), so
+  // they are spaced out (2.5 s between requests), the chart is redrawn after each day and, if it answers 429
+  // (too many requests) or the network fails, it is retried later without marking the day as done.
+  const PAUSA_API_MS = 2500;
+  let autoRellenando = false, autoReintento = null;
+  function estadoAuto(txt){
+    [el.autoEstado, el.semanaEstado].forEach(n => { if (!n) return; n.textContent = txt || ''; n.style.display = txt ? '' : 'none'; });
+  }
+  // Fallback: the hourly history of the last 7 days arrives in ONE request per station.
+  // Only readings from days (YYYYMMDD dates) that still have no data are added.
+  async function completarConHorario(e, dias){
+    const key = kEst(e);
+    try {
+      const resp = await fetchConTimeout(construirURLHorario7(key, claveEf(e)), 15000);
+      if (!resp.ok) return { estado: 'error', anadidas: 0, http: resp.status };
+      const data = resp.status === 204 ? {} : await resp.json();
+      const obsArr = data.observations || [];
+      const epochs = (await consultarRango(key, Date.now() - 9 * 86400000, Date.now())).map(f => f.epochMs).sort((a, b) => a - b);
+      const nuevas = [], porDia = {};
+      for (const obs of obsArr){
+        if (!obs.epoch) continue;
+        const t = obs.epoch * 1000, dia = fechaYYYYMMDD(new Date(t));
+        if (!dias.has(dia) || hayCercano(epochs, t, MERGE_TOL_MS)) continue;
+        const vals = extraerValores(obs);
+        if (!esNum(vals.temp_c)) continue;
+        nuevas.push({ epochMs: t, vals: vals });
+        insertarOrdenado(epochs, t);
+        porDia[dia] = (porDia[dia] || 0) + 1;
+      }
+      await guardarLote(key, nuevas);
+      return { estado: nuevas.length ? 'ok' : 'vacio', anadidas: nuevas.length, porDia: porDia, recibidas: obsArr.length };
+    } catch (err) { return { estado: 'error', anadidas: 0 }; }
+  }
+  const dmCorto = ymd => ymd.slice(6, 8) + '/' + ymd.slice(4, 6);
+  async function rellenarHuecosAuto(manual){
+    if (autoRellenando){ if (manual === true) estadoAuto('The history is already being completed; wait for it to finish…'); return; }
+    autoRellenando = true;
+    clearTimeout(autoReintento);
+    let total = 0, reintentar = 0, fallos = 0, pet = 0;
+    const informe = new Map();   // station id -> { e, ok: [], vacio: [], error: [], horario: n }
+    try {
+      let marcas = {};
+      if (manual !== true){ try { marcas = JSON.parse(localStorage.getItem('telemetmultistation_autofill2') || '{}') || {}; } catch (_) { marcas = {}; } }
+      // Each mark: { t: when, e: 'ok' | 'vacio' | 'error' } (the old ones were just the time).
+      const mt = m => (typeof m === 'number' ? m : (m && m.t) || 0), me = m => (m && m.e) || 'ok';
+      const guardarMarcas = () => { try { localStorage.setItem('telemetmultistation_autofill2', JSON.stringify(Object.fromEntries(Object.entries(marcas).filter(kv => Date.now() - mt(kv[1]) < 86400000)))); } catch (_) {} };
+      const inf = e => { if (!informe.has(e.id)) informe.set(e.id, { e: e, ok: [], vacio: [], error: [], horario: 0, horDias: [], vacioCache: [], errHor: null }); return informe.get(e.id); };
+      // 1) List of days with gaps (without touching the network).
+      const tareas = [];
+      for (const e of estsActivas()){
+        const key = kEst(e), rte = rt(e);
+        if (!key || !claveEf(e) || rte.fatal) continue;
+        const ahora = Date.now();
+        for (let i = 0; i < DIAS_SEMANA; i++){
+          const fecha = new Date(ahora - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+          const hasta = Math.min(fin, ahora);
+          if (hasta <= ini) continue;
+          const umbral = i < 2 ? HUECO_MIN_MS : HUECO_MAX_MS;
+          const desdeV = i < 2 ? Math.max(ini, ahora - 24 * 3600000) : ini;
+          const filas = (await consultarRango(key, desdeV, hasta)).filter(f => f.vals && esNum(f.vals.temp_c)).sort((a, b) => a.epochMs - b.epochMs);
+          let hueco = filas.length === 0;
+          if (!hueco){
+            if (filas[0].epochMs - desdeV > umbral && (i >= 2 || desdeV > ini)) hueco = true;
+            if (hasta - filas[filas.length - 1].epochMs > umbral) hueco = true;
+            for (let k = 1; !hueco && k < filas.length; k++) if (filas[k].epochMs - filas[k - 1].epochMs > umbral) hueco = true;
+          }
+          if (!hueco) continue;
+          const mk = key + '|' + fechaYYYYMMDD(fecha), mc = marcas[mk];
+          // A day already queried is not repeated for a while, unless it had been completed before and is now
+          // empty (for example, after deleting the station’s history).
+          if (mc && ahora - mt(mc) < (i < 2 ? 20 * 60000 : 12 * 3600000) && !(filas.length === 0 && me(mc) === 'ok')){
+            if (me(mc) === 'vacio') inf(e).vacioCache.push(fechaYYYYMMDD(fecha));
+            continue;
+          }
+          tareas.push({ e: e, fecha: fecha, mk: mk, clave: claveEf(e), i: i });
+        }
+      }
+      // 2) Spaced-out requests, from the most recent to the oldest; redraw after each day.
+      const bloqueadas = new Set();   // API keys that have already answered 429 in this pass
+      for (let n = 0; n < tareas.length; n++){
+        const t = tareas[n];
+        if (bloqueadas.has(t.clave)){ reintentar++; continue; }
+        if (pet > 0) await new Promise(res => setTimeout(res, PAUSA_API_MS));
+        estadoAuto('Completing the 7-day history from the API… ' + (n + 1) + '/' + tareas.length + ' · ' + nombreEst(t.e));
+        pet++;
+        const r = await completarDia(t.e, t.fecha, true);
+        const dia = fechaYYYYMMDD(t.fecha), I = inf(t.e);
+        if (r.estado === 'ok'){
+          marcas[t.mk] = { t: Date.now(), e: 'ok' }; total += r.anadidas; I.ok.push(dia);
+          log('info', t.e, 'API history (' + dia + '): +' + r.anadidas + ' readings.');
+          renderEvol(); renderSemana(); renderDatos();
+        } else if (r.estado === 'vacio' || r.estado === 'cubierto'){
+          marcas[t.mk] = { t: Date.now(), e: r.estado === 'vacio' ? 'vacio' : 'ok' }; if (r.estado === 'vacio') I.vacio.push(dia);
+          log('info', t.e, 'The API has no new readings for ' + dia + '.');
+        } else {
+          marcas[t.mk] = { t: Date.now() - 11.5 * 3600000, e: 'error' };   // it can be retried in a few minutes
+          fallos++; I.error.push(dia + (r.http ? ' (HTTP ' + r.http + ')' : ''));
+          if (r.http === 429){ bloqueadas.add(t.clave); reintentar++; log('warn', t.e, 'The API replied “too many requests” (HTTP 429); it will be retried in 1 minute.'); }
+          else log('warn', t.e, 'Could not complete the history for ' + dia + (r.http ? ' (HTTP ' + r.http + ')' : ' (no response from the API)') + '.');
+        }
+        guardarMarcas();
+      }
+      // 3) Hourly fallback: for the days without data after the per-day query (one request per station).
+      for (const I of informe.values()){
+        const faltan = new Set();
+        I.vacio.forEach(d => faltan.add(d));
+        I.error.forEach(d => { if (!/HTTP 429/.test(d)) faltan.add(d.slice(0, 8)); });
+        if (!faltan.size || bloqueadas.has(claveEf(I.e))) continue;
+        // Only the days that truly still have no temperature.
+        const key = kEst(I.e), sinDatos = new Set();
+        for (const d of faltan){
+          const ini = new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)).getTime();
+          const f = (await consultarRango(key, ini, ini + 86400000 - 1)).filter(x => x.vals && esNum(x.vals.temp_c));
+          if (f.length === 0) sinDatos.add(d);
+        }
+        if (!sinDatos.size) continue;
+        await new Promise(res => setTimeout(res, PAUSA_API_MS));
+        estadoAuto('Trying the 7-day hourly history… · ' + nombreEst(I.e));
+        const r = await completarConHorario(I.e, sinDatos);
+        if (r.estado === 'ok'){
+          I.horario = r.anadidas; I.horDias = Object.keys(r.porDia); total += r.anadidas;
+          log('info', I.e, 'Hourly history (7 days): +' + r.anadidas + ' readings (' + Object.keys(r.porDia).map(d => dmCorto(d) + ': ' + r.porDia[d]).join(', ') + ').');
+          renderEvol(); renderSemana(); renderDatos();
+        } else if (r.estado === 'vacio'){
+          log('info', I.e, 'The 7-day hourly history has no readings for the missing days (' + r.recibidas + ' received in total).');
+        } else {
+          I.errHor = r.http ? 'HTTP ' + r.http : 'no response';
+          log('warn', I.e, 'Could not get the 7-day hourly history (' + I.errHor + ').');
+        }
+      }
+      guardarMarcas();
+    } finally { autoRellenando = false; }
+    if (total > 0){ renderEvol(); renderDetalle(); renderSemana(); renderDatos(); }
+    // Visible report: what the API answered for each station.
+    const partes = [];
+    for (const I of informe.values()){
+      const sin = I.vacio.concat(I.vacioCache).filter((d, k, a) => a.indexOf(d) === k && I.horDias.indexOf(d) < 0).sort().map(dmCorto);
+      let t = nombreEst(I.e) + ': ';
+      if (I.ok.length || I.horario) t += 'completed ' + (I.ok.length ? I.ok.length + ' day(s) with the API' : '') + (I.horario ? (I.ok.length ? ' y ' : '') + I.horario + ' hourly readings' : '') + '. ';
+      if (sin.length) t += 'the API has no data for ' + sin.join(', ') + '. ';
+      if (I.error.length) t += 'error on ' + I.error.map(d => dmCorto(d.slice(0, 8)) + d.slice(8)).join(', ') + '. ';
+      if (I.errHor) t += 'the hourly history failed (' + I.errHor + '). ';
+      if (I.ok.length || I.horario || sin.length || I.error.length || I.errHor) partes.push(t.trim());
+    }
+    if (reintentar > 0){
+      estadoAuto('7-day history incomplete: the API has limited the requests (HTTP 429). It will be retried in 1 minute…');
+      autoReintento = setTimeout(() => { rellenarHuecosAuto(); }, 62000);
+    } else if (partes.length && (fallos > 0 || manual === true || partes.some(x => /has no data|error|failed/.test(x)))){
+      estadoAuto('7-day history · ' + partes.join(' · '));
+    } else if (manual === true){
+      estadoAuto('The last 7 days are already complete.');
+    } else {
+      estadoAuto('');
+    }
+  }
+  function hayCercano(sorted, t, tol){
+    let lo = 0, hi = sorted.length;
+    while (lo < hi){ const m = (lo + hi) >> 1; if (sorted[m] < t) lo = m + 1; else hi = m; }
+    return (lo < sorted.length && sorted[lo] - t < tol) || (lo > 0 && t - sorted[lo - 1] < tol);
+  }
+  function insertarOrdenado(sorted, t){
+    let lo = 0, hi = sorted.length;
+    while (lo < hi){ const m = (lo + hi) >> 1; if (sorted[m] < t) lo = m + 1; else hi = m; }
+    sorted.splice(lo, 0, t);
+  }
+
+  /* ============================================================
+     CONFIGURATION (stations and settings) in localStorage
+     ============================================================ */
+  function colorLibre(){
+    const usados = ests.map(e => e.color);
+    return PALETA.find(c => usados.indexOf(c) < 0) || PALETA[ests.length % PALETA.length];
+  }
+  function cargarTodo(){
+    const guardadas = leerLS(LS.ests, null);
+    if (Array.isArray(guardadas)){
+      ests = guardadas.filter(e => e && typeof e === 'object').slice(0, MAX_EST).map(e => ({
+        id: e.id || nuevoId(), nombre: e.nombre || '', stationId: e.stationId || '', apiKey: e.apiKey || '',
+        color: e.color || PALETA[0], activa: e.activa !== false, meta: e.meta || {}
+      }));
+    } else {
+      // First time: if a station is already configured in another app of the family, it is offered.
+      let wuId = '', wuKey = '';
+      try { wuId = localStorage.getItem(LS_WU_STATION) || ''; wuKey = localStorage.getItem(LS_WU_KEY) || ''; } catch (err) { /* no access */ }
+      ests = wuId ? [{ id: nuevoId(), nombre: '', stationId: wuId, apiKey: wuKey, color: PALETA[0], activa: true, meta: {} }] : [];
+    }
+    const c = leerLS(LS.cfg, {});
+    cfg = Object.assign({}, DEF, c);
+    const u = leerLS(LS.ui, {});
+    if (u && typeof u === 'object'){
+      if ([12, 24, 168].indexOf(u.ventanaH) >= 0) ui.ventanaH = u.ventanaH;
+      if (u.modo === 'comparar' || u.modo === 'estacion') ui.modo = u.modo;
+      if (Array.isArray(u.vars)) ui.vars = u.vars.filter(k => VARS_COMPARABLES.some(m => m.key === k));
+      if (Array.isArray(u.ocultas)) ui.ocultas = u.ocultas;
+      if (['tmax', 'tmin', 'tmed', 'lluvia', 'racha'].indexOf(u.resumen) >= 0) ui.resumen = u.resumen;
+      if (typeof u.ref === 'string') ui.ref = u.ref;
+      if (typeof u.detalle === 'string') ui.detalle = u.detalle;
+      if (typeof u.mapaFondo === 'boolean') ui.mapaFondo = u.mapaFondo;
+      if (typeof u.estEvol === 'string') ui.estEvol = u.estEvol;
+    }
+  }
+  function guardarEsts(){ return guardarLS(LS.ests, ests); }
+  function guardarCfg(){ return guardarLS(LS.cfg, cfg); }
+  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol, mapaFondo: ui.mapaFondo }); }
+
+  function leerNumero(input, porDefecto, min){
+    const v = parseFloat(String(input.value).replace(',', '.'));
+    return (Number.isFinite(v) && v >= min) ? v : porDefecto;
+  }
+  function volcarAjustesEnFormulario(){
+    el.poll.value = cfg.pollS; el.clave.value = cfg.claveComun; el.timeout.value = cfg.timeoutS; el.stale.value = cfg.staleS;
+    el.bb.value = cfg.backoffBaseS; el.bm.value = cfg.backoffMaxS; el.servBase.value = cfg.servBase;
+  }
+  function leerAjustesDeFormulario(guardar){
+    cfg.pollS = leerNumero(el.poll, DEF.pollS, 5);
+    cfg.claveComun = el.clave.value.trim();
+    cfg.timeoutS = leerNumero(el.timeout, DEF.timeoutS, 1);
+    cfg.staleS = leerNumero(el.stale, DEF.staleS, 10);
+    cfg.backoffBaseS = leerNumero(el.bb, DEF.backoffBaseS, 1);
+    cfg.backoffMaxS = Math.max(cfg.backoffBaseS, leerNumero(el.bm, DEF.backoffMaxS, 1));
+    cfg.servBase = el.servBase.value.trim();
+    if (guardar !== false) guardarCfg();
+    actualizarCuota();
+    actualizarBotones();
+  }
+
+  /* ---- Explicitly save the configuration (stations + polling) ---- */
+  let firmaGuardada = '';
+  function firmaConfig(){
+    return JSON.stringify({
+      e: ests.map(x => [x.nombre, x.stationId, x.apiKey, x.color, !!x.activa]),
+      c: [cfg.pollS, cfg.claveComun, cfg.timeoutS, cfg.staleS, cfg.backoffBaseS, cfg.backoffMaxS]
+    });
+  }
+  const hayCambiosCfg = () => firmaConfig() !== firmaGuardada;
+  function msgCfg(txt, clase){
+    [el.cfgMsg, el.cfgMsg2].forEach(n => { if (!n) return; n.textContent = txt || ''; n.className = 'msg-linea' + (clase ? ' ' + clase : ''); });
+  }
+  let tmToast = null;
+  function mostrarToast(txt){
+    const t = $('toast'); if (!t) return;
+    $('toastTxt').textContent = txt;
+    t.classList.add('ver');
+    clearTimeout(tmToast);
+    tmToast = setTimeout(() => t.classList.remove('ver'), 4000);
+  }
+  // Marks “unsaved changes” (or clears the notice if what is typed matches what is saved).
+  function marcarCambiosCfg(){
+    if (running) return;
+    const sucio = hayCambiosCfg();
+    [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.toggle('pendiente', sucio); });
+    if (sucio) msgCfg('There are unsaved changes. Press “Save configuration”.', 'pend');
+    else if (el.cfgMsg.classList.contains('pend')) msgCfg('');
+  }
+  function guardarConfiguracion(motivo){
+    leerAjustesDeFormulario(false);
+    const avisos = [];
+    ests.forEach((e, i) => {
+      const n = nombreEst(e) || ('station ' + (i + 1));
+      if (!e.stationId) avisos.push('“' + n + '” has no Station ID');
+      else if (!claveEf(e)) avisos.push('“' + n + '” has no API Key and there is no shared key');
+    });
+    const dup = new Set(), vistos = new Set();
+    ests.forEach(e => { if (e.stationId){ if (vistos.has(e.stationId)) dup.add(e.stationId); vistos.add(e.stationId); } });
+    dup.forEach(id => avisos.push('Station ID ' + id + ' is repeated'));
+    const okE = guardarEsts(), okC = guardarCfg();
+    if (!okE || !okC){
+      msgCfg('Could not save: the browser does not allow storing data (private mode or blocked storage?).', 'err');
+      return false;
+    }
+    firmaGuardada = firmaConfig();
+    [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.remove('pendiente'); });
+    refrescarListas(true);
+    const hora = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const act = estsActivas().length;
+    let txt = '✓ Configuration saved' + (motivo ? ' ' + motivo : '') + ' at ' + hora + ': ' + ests.length + ' station(s), ' + act + ' active, polling every ' + cfg.pollS + ' s.';
+    if (avisos.length) txt += ' Note: ' + avisos.join('; ') + '.';
+    msgCfg(txt, avisos.length ? '' : 'ok');
+    mostrarToast('Configuration saved (' + ests.length + ' station' + (ests.length === 1 ? '' : 's') + ')');
+    log('info', null, 'Configuration saved: ' + ests.length + ' station(s).');
+    return true;
+  }
+
+  function renderEstList(){
+    if (ests.length === 0){
+      el.estList.innerHTML = '<p class="est-vacio">There are no stations yet. Press “Add station” and enter its Station ID.</p>';
+      return;
+    }
+    el.estList.innerHTML = ests.map((e, i) =>
+      '<div class="est-edit" data-id="' + e.id + '">' +
+        '<div class="field"><label for="c-' + e.id + '">Color</label><input type="color" id="c-' + e.id + '" data-f="color" value="' + escHTML(e.color) + '"></div>' +
+        '<div class="field"><label for="n-' + e.id + '">Name (optional)</label><input type="text" id="n-' + e.id + '" data-f="nombre" value="' + escHTML(e.nombre) + '" placeholder="' + escHTML((e.meta && e.meta.neighborhood) || 'Station ' + (i + 1)) + '" autocomplete="off"></div>' +
+        '<div class="field"><label for="s-' + e.id + '">Station ID</label><input type="text" id="s-' + e.id + '" data-f="stationId" value="' + escHTML(e.stationId) + '" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></div>' +
+        '<div class="field"><label for="k-' + e.id + '">API Key (optional)</label><div class="keyrow"><input type="password" id="k-' + e.id + '" data-f="apiKey" value="' + escHTML(e.apiKey) + '" placeholder="Empty = shared key" autocomplete="off" spellcheck="false"><button type="button" class="eye" data-acc="ver" aria-label="Show or hide the API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button></div></div>' +
+        '<div class="est-opts"><label class="chk"><input type="checkbox" data-f="activa"' + (e.activa ? ' checked' : '') + '> Active</label>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-acc="borrar" aria-label="Remove station ' + escHTML(nombreEst(e)) + '"><svg class="i"><use href="#i-trash"></use></svg></button></div>' +
+      '</div>').join('');
+    bloquearConfig(running);
+  }
+  function bloquearConfig(bloq){
+    document.querySelectorAll('#estList input, #estList button, #btnAddEst, #btnImportar, #pollInput, #claveComunInput, #btnVerClave, #timeoutInput, #staleInput, #backoffBaseInput, #backoffMaxInput, #btnGuardarCfg, #btnGuardarCfg2')
+      .forEach(x => { x.disabled = !!bloq; });
+    msgCfg(bloq ? 'Stop the monitor to edit the stations and polling.' : '');
+  }
+
+  let tmGuardar = null;
+  function alEditarEstacion(ev){
+    const fila = ev.target.closest('.est-edit');
+    if (!fila || !ev.target.dataset.f) return;
+    const e = ests.find(x => x.id === fila.dataset.id);
+    if (!e) return;
+    const f = ev.target.dataset.f;
+    if (f === 'activa') e.activa = ev.target.checked;
+    else if (f === 'color') e.color = ev.target.value;
+    else if (f === 'stationId'){ e.stationId = ev.target.value.trim().toUpperCase(); e.meta = {}; rts.delete(e.id); }
+    else e[f] = ev.target.value.trim();
+    clearTimeout(tmGuardar);
+    tmGuardar = setTimeout(() => { refrescarListas(false); marcarCambiosCfg(); }, 250);
+  }
+  function alClicEstacion(ev){
+    const b = ev.target.closest('button[data-acc]');
+    if (!b) return;
+    const fila = b.closest('.est-edit');
+    const e = ests.find(x => x.id === fila.dataset.id);
+    if (b.dataset.acc === 'ver'){
+      const inp = fila.querySelector('input[data-f="apiKey"]');
+      const ver = inp.type === 'password';
+      inp.type = ver ? 'text' : 'password';
+      b.setAttribute('aria-pressed', String(ver));
+      b.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
+    } else if (b.dataset.acc === 'borrar' && e){
+      if (!window.confirm('Remove “' + nombreEst(e) + '” from the list? Its history stored in this browser is kept (you can delete it in “Data and server”).')) return;
+      ests = ests.filter(x => x.id !== e.id);
+      rts.delete(e.id);
+      renderEstList();
+      refrescarListas(true);
+      marcarCambiosCfg();
+    }
+  }
+  function anadirEstacion(){
+    if (ests.length >= MAX_EST){ msgCfg('Maximum ' + MAX_EST + ' stations.', 'err'); return; }
+    ests.push({ id: nuevoId(), nombre: '', stationId: '', apiKey: '', color: colorLibre(), activa: true, meta: {} });
+    renderEstList();
+    refrescarListas(true);
+    marcarCambiosCfg();
+    const ult = el.estList.querySelector('.est-edit:last-child input[data-f="stationId"]');
+    if (ult) ult.focus();
+  }
+
+  function exportarConfig(){
+    const conClaves = $('chkExportarClaves').checked;
+    const obj = {
+      app: 'telemetmultistation', version: 1,
+      ajustes: { pollS: cfg.pollS, timeoutS: cfg.timeoutS, backoffBaseS: cfg.backoffBaseS, backoffMaxS: cfg.backoffMaxS, staleS: cfg.staleS, servBase: cfg.servBase },
+      estaciones: ests.map(e => ({ nombre: e.nombre, stationId: e.stationId, color: e.color, activa: e.activa, apiKey: conClaves ? e.apiKey : undefined }))
+    };
+    if (conClaves) obj.ajustes.claveComun = cfg.claveComun;
+    descargar('telemetmultistation-config.json', JSON.stringify(obj, null, 2), 'application/json;charset=utf-8;');
+    msgCfg(conClaves ? 'Configuration exported WITH the API Keys: keep the file somewhere safe.' : 'Configuration exported (without API Keys).');
+  }
+  async function importarConfig(file){
+    try {
+      const obj = JSON.parse(await file.text());
+      if (!obj || obj.app !== 'telemetmultistation' || !Array.isArray(obj.estaciones)) throw new Error('is not a TeleMet MultiStation configuration file');
+      if (ests.length && !window.confirm('This replaces the current stations and settings with those in the file. Continue?')) return;
+      const antiguas = new Map(ests.map(e => [kEst(e), e]));
+      ests = obj.estaciones.slice(0, MAX_EST).map((x, i) => {
+        const previa = antiguas.get(String(x.stationId || '').trim().toUpperCase());
+        return {
+          id: nuevoId(), nombre: String(x.nombre || ''), stationId: String(x.stationId || '').trim().toUpperCase(),
+          apiKey: x.apiKey !== undefined ? String(x.apiKey) : (previa ? previa.apiKey : ''),
+          color: /^#[0-9a-fA-F]{6}$/.test(x.color || '') ? x.color : PALETA[i % PALETA.length], activa: x.activa !== false, meta: {}
+        };
+      });
+      const a = obj.ajustes || {};
+      ['pollS', 'timeoutS', 'backoffBaseS', 'backoffMaxS', 'staleS'].forEach(k => { if (Number.isFinite(a[k]) && a[k] > 0) cfg[k] = a[k]; });
+      if (typeof a.servBase === 'string') cfg.servBase = a.servBase;
+      if (typeof a.claveComun === 'string') cfg.claveComun = a.claveComun;
+      rts.clear();
+      volcarAjustesEnFormulario(); renderEstList(); refrescarListas(true);
+      guardarConfiguracion('(imported from file)');
+    } catch (err) {
+      msgCfg('Could not import: ' + (err && err.message ? err.message : 'invalid file') + '.', 'err');
+    }
+  }
+
+  // Estimate of daily calls per key (the quota is per key, not per station).
+  function actualizarCuota(){
+    const act = estsActivas();
+    if (act.length === 0){ el.cuota.textContent = ''; el.cuota.className = 'cuota'; return; }
+    const porClave = new Map();
+    act.forEach(e => { const k = claveEf(e) || '(no key)'; porClave.set(k, (porClave.get(k) || 0) + 1); });
+    const llamadasPor = n => Math.round(n * 86400 / Math.max(5, cfg.pollS));
+    let peor = 0;
+    porClave.forEach(n => { peor = Math.max(peor, n); });
+    const total = llamadasPor(act.length), peorLl = llamadasPor(peor);
+    let txt = act.length + ' active station(s) · ≈ ' + total.toLocaleString('en-GB') + ' calls/day in total';
+    if (porClave.size > 1) txt += ' · the busiest key (' + peor + ' stations) makes ≈ ' + peorLl.toLocaleString('en-GB') + '/day';
+    el.cuota.className = 'cuota';
+    if (peorLl > LIMITE_LLAMADAS_DIA){
+      const minimo = Math.ceil(86400 * peor / LIMITE_LLAMADAS_DIA);
+      txt += '. This exceeds the usual limit of ' + LIMITE_LLAMADAS_DIA.toLocaleString('en-GB') + ' calls/day per key (check it in your account): use an interval of ' + minimo + ' s or more, or different keys.';
+      el.cuota.classList.add('aviso-c');
+    } else txt += '. (Usual limit per key: ' + LIMITE_LLAMADAS_DIA.toLocaleString('en-GB') + '/day.)';
+    txt += ' If the collector or another app uses the same key, their calls add up (the collector with interval_s = 60 makes 1,440/day).';
+    el.cuota.textContent = txt;
+  }
+
+  /* ============================================================
+     POLLING: one independent cycle per station
+     ============================================================ */
+  function programar(e, ms){
+    const r = rt(e);
+    clearTimeout(r.timer);
+    r.proxMs = Date.now() + ms;
+    r.timer = setTimeout(() => ciclo(e), ms);
+  }
+  function reintentar(e, motivo, minS){
+    const r = rt(e);
+    r.reint += 1;
+    const esperaS = Math.max(minS || 0, Math.min(cfg.backoffBaseS * Math.pow(2, r.reint - 1), cfg.backoffMaxS));
+    r.estado = 'warn'; r.msg = motivo + ' · retry ' + r.reint + ' in ' + Math.round(esperaS) + ' s';
+    log('warn', e, r.msg);
+    programar(e, esperaS * 1000);
+    tras(e);
+  }
+  function fatal(e, motivo){
+    const r = rt(e);
+    r.fatal = true; r.estado = 'err'; r.msg = motivo; clearTimeout(r.timer);
+    log('err', e, motivo + ' (station stopped)');
+    tras(e);
+    if (running && estsActivas().every(x => rt(x).fatal)) pararMonitor('All stations have been stopped because of errors.');
+  }
+  function tras(e){ renderTarjeta(e); actualizarLuz(); renderEstadoMeta(); }
+
+  async function ciclo(e){
+    const r = rt(e);
+    if (!running || r.fatal || r.enVuelo) return;
+    r.enVuelo = true;
+    try {
+      const t0 = performance.now();
+      let resp;
+      try { resp = await fetchConTimeout(construirURL(kEst(e), claveEf(e)), cfg.timeoutS * 1000); }
+      catch (err) { if (running) reintentar(e, (err && err.name === 'AbortError') ? 'timeout' : 'network failure'); return; }
+      if (!running) return;
+      if (resp.status === 401 || resp.status === 403){ fatal(e, 'HTTP ' + resp.status + ': invalid API Key or no permission'); return; }
+      if (resp.status === 404){ fatal(e, '404: Station ID not found'); return; }
+      if (resp.status === 429){ reintentar(e, 'HTTP 429: the key’s call limit has been reached (is it shared with the collector or another app?)', Math.max(120, cfg.pollS)); return; }
+      if (!resp.ok){ reintentar(e, 'HTTP ' + resp.status); return; }
+      let data = {};
+      if (resp.status !== 204){
+        try { data = await resp.json(); } catch (err) { reintentar(e, 'invalid response'); return; }
+      }
+      if (!running) return;
+      const obs = (data.observations || [])[0];
+      r.reint = 0;
+      if (!obs){
+        r.estado = 'ok'; r.msg = 'no new data';
+        programar(e, cfg.pollS * 1000); tras(e); return;
+      }
+      const ahora = Date.now();
+      const obsMs = obs.epoch ? obs.epoch * 1000 : ahora;
+      const t = Object.assign(extraerValores(obs), { staleness_s: (ahora - obsMs) / 1000, latency_ms: performance.now() - t0 });
+      const nueva = obsMs !== r.ultimoGuardadoMs;
+      r.prev = nueva ? r.last : r.prev;
+      r.last = t; r.obsMs = obsMs; r.plausible = esPlausible(t); r.msg = '';
+      r.estado = t.staleness_s <= cfg.staleS ? 'ok' : 'warn';
+      if (nueva){
+        if (r.ultimoGuardadoMs){
+          const d = (obsMs - r.ultimoGuardadoMs) / 1000;
+          if (d > 0 && d < 3600){
+            (r.deltas = r.deltas || []).push(d); if (r.deltas.length > 12) r.deltas.shift();
+            if (r.deltas.length >= 4 && !r.avisoRitmo){
+              const ord = r.deltas.slice().sort((a, b) => a - b), med = ord[ord.length >> 1];
+              if (med > cfg.pollS * 1.5){ r.avisoRitmo = true; log('info', e, 'The station publishes a new reading every ≈ ' + Math.round(med) + ' s: polling more often (' + cfg.pollS + ' s) returns the same reading and wastes API calls.'); }
+            }
+          }
+        }
+        r.lecturas += 1; r.ultimoGuardadoMs = obsMs;
+        if (esNum(t.temp_c)){ r.spark.push({ t: obsMs, v: t.temp_c }); if (r.spark.length > 40) r.spark.shift(); }
+        guardarLote(kEst(e), [{ epochMs: obsMs, vals: t }]);
+      }
+      // Station metadata (neighbourhood name, coordinates) for the default name and the map.
+      const meta = { neighborhood: obs.neighborhood || '', lat: esNum(obs.lat) ? obs.lat : null, lon: esNum(obs.lon) ? obs.lon : null, country: obs.country || '', elev: esNum((obs.metric || {}).elev) ? obs.metric.elev : null };
+      if (JSON.stringify(meta) !== JSON.stringify(e.meta || {})){ e.meta = meta; guardarEsts(); refrescarListas(false); }
+      if (!r.plausible) log('warn', e, 'Reading outside the plausible range.');
+      programar(e, cfg.pollS * 1000);
+      tras(e);
+      renderComparativa(); renderExtremos(); renderMapa();
+      pedirRedibujo();
+    } finally { r.enVuelo = false; }
+  }
+
+  function iniciarMonitor(){
+    const act = estsActivas();
+    if (act.length === 0){ msgCfg('Add at least one active station with its Station ID.', 'err'); return; }
+    if (hayCambiosCfg()) guardarConfiguracion('when starting the monitor'); else leerAjustesDeFormulario();
+    running = true;
+    act.forEach((e, i) => {
+      const r = rt(e);
+      r.fatal = false; r.reint = 0; r.estado = 'off'; r.msg = 'connecting…';
+      programar(e, i * 1500);
+    });
+    log('info', null, 'Monitor started with ' + act.length + ' station(s), every ' + cfg.pollS + ' s.');
+    bloquearConfig(true);
+    ests.forEach(renderTarjeta);
+    actualizarLuz(); actualizarBotones(); renderEstadoMeta();
+    setTimeout(() => { Promise.resolve(sincronizarTodas(false)).catch(() => {}).then(() => rellenarHuecosAuto()); }, 2500);
+  }
+  function pararMonitor(motivo){
+    running = false;
+    ests.forEach(e => { const r = rt(e); clearTimeout(r.timer); r.enVuelo = false; r.estado = 'off'; r.msg = ''; });
+    log('info', null, motivo || 'Monitor stopped.');
+    bloquearConfig(false);
+    ests.forEach(renderTarjeta);
+    actualizarLuz(); actualizarBotones(); renderEstadoMeta();
+  }
+  function sondearTodas(){
+    if (!running) return;
+    estsActivas().filter(e => !rt(e).fatal).forEach((e, i) => programar(e, i * 400));
+  }
+
+  function actualizarBotones(){
+    const hay = estsActivas().length > 0;
+    el.btnIniciar.disabled = running || !hay;
+    el.btnDetener.disabled = !running;
+    el.btnSondeo.disabled = !running;
+  }
+  function actualizarLuz(){
+    let estado = 'off', txt = 'Monitor stopped';
+    if (running){
+      const act = estsActivas();
+      const n = k => act.filter(e => rt(e).estado === k).length;
+      const ok = n('ok'), warn = n('warn'), err = n('err');
+      if (err === act.length){ estado = 'err'; txt = 'All stations in error'; }
+      else if (err || warn){ estado = 'warn'; txt = ok + '/' + act.length + ' OK' + (err ? ' · ' + err + ' in error' : ''); }
+      else if (ok === act.length){ estado = 'ok'; txt = act.length + ' station(s) running'; }
+      else { estado = 'warn'; txt = 'Connecting…'; }
+    }
+    [[el.luzTop, el.luzTopTxt], [el.luzBar, el.luzBarTxt]].forEach(p => { p[0].dataset.s = estado; p[1].textContent = txt; });
+  }
+  function renderEstadoMeta(){
+    if (!running){ el.metaLinea.textContent = estsActivas().length ? 'Monitor stopped. Press “Start” to poll the stations.' : 'Add stations in section 01.'; return; }
+    const lect = estsActivas().reduce((s, e) => s + rt(e).lecturas, 0);
+    el.metaLinea.textContent = 'Polling ' + estsActivas().length + ' station(s) every ' + cfg.pollS + ' s · ' + lect + ' new reading(s) this session.';
+  }
+
+  /* ============================================================
+     LIVE CARDS
+     ============================================================ */
+  function iconoTendencia(clase){
+    const id = clase === 'subida' ? 'i-up' : (clase === 'bajada' ? 'i-down' : 'i-right');
+    return '<svg class="i"><use href="#' + id + '"></use></svg>';
+  }
+  function claseTendencia(nuevo, previo){
+    if (!esNum(nuevo) || !esNum(previo)) return 'estable';
+    const d = nuevo - previo;
+    return d > UMBRAL_TENDENCIA ? 'subida' : (d < -UMBRAL_TENDENCIA ? 'bajada' : 'estable');
+  }
+  // Mini-charts with a real time axis. pts = [{ t (ms), v }] sorted. If between two
+  // consecutive readings there is a gap (more than 3 times the usual spacing,
+  // with a minimum of minHuecoMs and a maximum of maxHuecoMs) they are NOT joined: each contiguous
+  // stretch is its own line and isolated points are marked as a dot.
+  // Returns the SVG content (polylines) inside a W x H viewBox.
+  function sparkSvg(pts, desdeMs, hastaMs, W, H, pad, minHuecoMs, maxHuecoMs){
+    if (!pts || pts.length === 0) return '';
+    const rango = Math.max(1, hastaMs - desdeMs);
+    let mn = Infinity, mx = -Infinity;
+    pts.forEach(p => { if (p.v < mn) mn = p.v; if (p.v > mx) mx = p.v; });
+    const rg = (mx - mn) || 1;
+    let umbral = maxHuecoMs;
+    if (pts.length > 2){
+      const sep = [];
+      for (let i = 1; i < pts.length; i++) sep.push(pts[i].t - pts[i - 1].t);
+      sep.sort((a, b) => a - b);
+      umbral = Math.min(maxHuecoMs, Math.max(minHuecoMs, 3 * sep[Math.floor(sep.length / 2)]));
+    }
+    const X = t => (pad + (t - desdeMs) / rango * (W - 2 * pad)).toFixed(1);
+    const Y = v => (H - pad - (v - mn) / rg * (H - 2 * pad)).toFixed(1);
+    const tramos = [[]];
+    pts.forEach((p, i) => {
+      if (i > 0 && p.t - pts[i - 1].t > umbral) tramos.push([]);
+      tramos[tramos.length - 1].push(p);
+    });
+    return tramos.map(tr => tr.length === 1
+      ? '<line x1="' + X(tr[0].t) + '" y1="' + Y(tr[0].v) + '" x2="' + (parseFloat(X(tr[0].t)) + 0.01).toFixed(2) + '" y2="' + Y(tr[0].v) + '"/>'
+      : '<polyline points="' + tr.map(p => X(p.t) + ',' + Y(p.v)).join(' ') + '"/>').join('');
+  }
+  function textoPie(e){
+    const r = rt(e);
+    if (r.estado === 'err') return r.msg;
+    if (r.estado === 'warn' && r.msg) return r.msg;
+    if (r.obsMs){
+      let s = edadTxt(r.obsMs) + ' ago';
+      if (running && r.proxMs && r.estado !== 'err') s += ' · next in ' + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
+      if (r.deltas && r.deltas.length >= 3){ const o = r.deltas.slice().sort((a, b) => a - b); s += ' · new reading every ≈ ' + (o[o.length >> 1] >= 90 ? Math.round(o[o.length >> 1] / 60) + ' min' : Math.round(o[o.length >> 1]) + ' s'); }
+      if (!r.plausible) s += ' · ⚠ out of range';
+      return s;
+    }
+    return running ? (r.msg || 'connecting…') : 'no data this session';
+  }
+  function crearTarjetas(){
+    el.estGrid.innerHTML = '';
+    if (ests.length === 0){ el.estGrid.innerHTML = '<p class="est-vacio">No stations.</p>'; return; }
+    ests.forEach(e => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'est-card'; b.dataset.id = e.id;
+      b.addEventListener('click', () => { ui.detalle = e.id; guardarUI(); el.detalleSel.value = e.id; renderTarjetasSel(); renderDetalle(); $('secDetalle').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      el.estGrid.appendChild(b);
+      renderTarjeta(e);
+    });
+  }
+  function renderTarjetasSel(){ el.estGrid.querySelectorAll('.est-card').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === ui.detalle))); }
+  function renderTarjeta(e){
+    const b = el.estGrid.querySelector('.est-card[data-id="' + e.id + '"]');
+    if (!b) return;
+    const r = rt(e), t = r.last;
+    b.style.setProperty('--c', e.color);
+    b.classList.toggle('apagada', !e.activa);
+    b.setAttribute('aria-pressed', String(e.id === ui.detalle));
+    const viento = t && esNum(t.wind_kmh) ? fmtN(t.wind_kmh, 1) + ' km/h' + (gradosACompass(t.wind_dir_deg) ? ' ' + gradosACompass(t.wind_dir_deg) : '') : '—';
+    const tend = claseTendencia(t && t.temp_c, r.prev && r.prev.temp_c);
+    const estadoLuz = e.activa ? r.estado : 'off';
+    b.innerHTML =
+      '<div class="ec-cab"><span class="ec-nom">' + escHTML(nombreEst(e)) + '</span><span class="ec-bulbo" data-s="' + estadoLuz + '" title="' + (estadoLuz === 'ok' ? 'OK' : estadoLuz === 'warn' ? 'Stale data or retrying' : estadoLuz === 'err' ? 'Error' : 'Not polling') + '"></span></div>' +
+      '<div class="ec-id">' + escHTML(e.stationId || 'no Station ID') + (e.nombre && e.meta && e.meta.neighborhood ? ' · ' + escHTML(e.meta.neighborhood) : '') + '</div>' +
+      '<div class="ec-temp"><span>' + (t ? fmtN(t.temp_c, 1) : '—') + '</span><small>°C</small><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
+      '<svg class="ec-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">' + sparkSvg(r.spark, r.spark.length ? r.spark[0].t : 0, r.spark.length ? r.spark[r.spark.length - 1].t : 1, 100, 20, 2, 10 * 60000, 90 * 60000) + '</svg>' +
+      '<div class="ec-met">' +
+        '<span>Humidity</span><b>' + (t ? fmtN(t.humidity_pct, 0) + ' %' : '—') + '</b>' +
+        '<span>Wind</span><b>' + viento + '</b>' +
+        '<span>Pressure</span><b>' + (t ? fmtN(t.pressure_hpa, 1) + ' hPa' : '—') + '</b>' +
+        '<span>Rain today</span><b>' + (t ? fmtN(t.rain_total_mm, 1) + ' mm' : '—') + '</b>' +
+        '<span>Radiation</span><b>' + (t ? fmtN(t.solarradiation_wm2, 0) + ' W/m²' : '—') + '</b>' +
+        '<span>UV index</span><b>' + (t ? fmtN(t.uv_index, 1) : '—') + '</b>' +
+      '</div>' +
+      '<div class="ec-pie' + (r.estado === 'err' ? ' err' : '') + '">' + escHTML(textoPie(e)) + '</div>';
+  }
+  function actualizarPies(){
+    el.estGrid.querySelectorAll('.est-card').forEach(b => {
+      const e = ests.find(x => x.id === b.dataset.id); if (!e) return;
+      const p = b.querySelector('.ec-pie'); if (p) p.textContent = textoPie(e);
+    });
+  }
+
+  /* ============================================================
+     COMPARISON, EXTREMES AND MAP
+     ============================================================ */
+  const conDato = () => estsActivas().filter(e => rt(e).last);
+
+  function renderComparativa(){
+    const act = estsActivas();
+    if (act.length === 0){ el.tablaComp.innerHTML = '<p class="evol-vacio">No active stations.</p>'; return; }
+    const ref = act.find(e => e.id === ui.ref) || null;
+    const lastDe = e => rt(e).last;
+    let h = '<table class="t"><thead><tr><th>Variable</th>';
+    act.forEach(e => { h += '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>'; });
+    if (act.length > 1) h += '<th class="num">Average</th>';
+    h += '</tr></thead><tbody>';
+    GRAFICABLES.forEach(m => {
+      const vals = act.map(e => { const t = lastDe(e); return t && esNum(t[m.key]) ? t[m.key] : null; });
+      const validos = vals.filter(v => v !== null);
+      const usarExt = m.key !== 'wind_dir_deg' && validos.length >= 2;
+      const mx = usarExt ? Math.max.apply(null, validos) : null, mn = usarExt ? Math.min.apply(null, validos) : null;
+      const valRef = ref ? (lastDe(ref) && esNum(lastDe(ref)[m.key]) ? lastDe(ref)[m.key] : null) : null;
+      h += '<tr><td>' + escHTML(m.etiqueta) + (m.unidad ? ' <span style="color:var(--muted)">(' + m.unidad + ')</span>' : '') + '</td>';
+      act.forEach((e, i) => {
+        const v = vals[i];
+        let cls = 'num';
+        if (usarExt && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        if (ref && e.id === ref.id) cls += ' ref';
+        let txt = fmtVar(m.key, v);
+        if (m.key === 'wind_dir_deg' && v !== null) txt += ' ' + gradosACompass(v);
+        if (ref && e.id !== ref.id && v !== null && valRef !== null && m.key !== 'wind_dir_deg') txt += '<span class="dif">' + fmtDif(m.key, v - valRef) + '</span>';
+        else if (ref && e.id === ref.id) txt += '<span class="dif">ref.</span>';
+        h += '<td class="' + cls + '">' + txt + '</td>';
+      });
+      if (act.length > 1){
+        h += '<td class="num">' + (m.key !== 'wind_dir_deg' && validos.length >= 2 ? fmtVar(m.key, validos.reduce((a, b) => a + b, 0) / validos.length) : '—') + '</td>';
+      }
+      h += '</tr>';
+    });
+    h += '<tr><td>Latest reading</td>' + act.map(e => '<td class="num">' + (rt(e).obsMs ? fmtHoraMs(rt(e).obsMs) : '—') + '</td>').join('') + (act.length > 1 ? '<td></td>' : '') + '</tr>';
+    h += '</tbody></table>';
+    el.tablaComp.innerHTML = h;
+  }
+
+  function renderExtremos(){
+    const act = conDato();
+    if (act.length < 2){ el.extremos.innerHTML = ''; return; }
+    const defs = [
+      ['Warmest', 'temp_c', 'max'], ['Coldest', 'temp_c', 'min'], ['Most humid', 'humidity_pct', 'max'], ['Driest', 'humidity_pct', 'min'],
+      ['Windiest', 'wind_kmh', 'max'], ['Strongest gust', 'gust_kmh', 'max'], ['Highest pressure', 'pressure_hpa', 'max'], ['Most rain today', 'rain_total_mm', 'max'], ['Most radiation', 'solarradiation_wm2', 'max']
+    ];
+    el.extremos.innerHTML = defs.map(d => {
+      const cand = act.filter(e => esNum(rt(e).last[d[1]]));
+      if (cand.length < 2) return '';
+      let mejor = cand[0];
+      cand.forEach(e => { const v = rt(e).last[d[1]], b = rt(mejor).last[d[1]]; if (d[2] === 'max' ? v > b : v < b) mejor = e; });
+      const v = rt(mejor).last[d[1]];
+      if (d[1] === 'rain_total_mm' && !(v > 0)) return '';
+      const m = DEF_VAR(d[1]);
+      return '<div class="extremo" style="--c:' + mejor.color + '"><div class="e-etq">' + d[0] + '</div><div class="e-val">' + fmtVar(d[1], v) + ' ' + m.unidad + '</div><div class="e-est">' + escHTML(nombreEst(mejor)) + '</div></div>';
+    }).join('');
+  }
+
+  function renderMapa(){
+    const con = ests.filter(e => e.activa && e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
+    if (con.length < 2){ el.mapaWrap.style.display = 'none'; return; }
+    el.mapaWrap.style.display = '';
+    const W = 640, H = 340, P = 60;
+    const lats = con.map(e => e.meta.lat), lons = con.map(e => e.meta.lon);
+    const latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats), lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
+    // Web Mercator projection (the one used by OpenStreetMap maps): z = zoom level, 256 px per tile.
+    const mx = (lon, z) => 256 * Math.pow(2, z) * (lon + 180) / 360;
+    const my = (lat, z) => { const r = lat * Math.PI / 180; return 256 * Math.pow(2, z) * (0.5 - Math.log(Math.tan(Math.PI / 4 + r / 2)) / (2 * Math.PI)); };
+    let z = 17;
+    while (z > 2){
+      const w = mx(lonMax, z) - mx(lonMin, z), h = my(latMin, z) - my(latMax, z);
+      if (w <= W - 2 * P && h <= H - 2 * P) break;
+      z--;
+    }
+    const cx = (mx(lonMin, z) + mx(lonMax, z)) / 2, cy = (my(latMin, z) + my(latMax, z)) / 2;
+    const ox = cx - W / 2, oy = cy - H / 2;
+    // Base background (soft grid): visible if there is no background map or if the tiles fail to load.
+    let g = '<defs><linearGradient id="mpFondo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3F8"/><stop offset="1" stop-color="#E0E9F1"/></linearGradient></defs>' +
+      '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#mpFondo)"></rect>';
+    for (let gx = 0; gx <= W; gx += 64) g += '<line class="mp-grid" x1="' + gx + '" y1="0" x2="' + gx + '" y2="' + H + '"></line>';
+    for (let gy = 0; gy <= H; gy += 68) g += '<line class="mp-grid" x1="0" y1="' + gy + '" x2="' + W + '" y2="' + gy + '"></line>';
+    if (ui.mapaFondo){
+      const tx0 = Math.floor(ox / 256), tx1 = Math.floor((ox + W) / 256), ty0 = Math.max(0, Math.floor(oy / 256)), ty1 = Math.min(Math.pow(2, z) - 1, Math.floor((oy + H) / 256));
+      const n = Math.pow(2, z);
+      for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++){
+        const txw = ((tx % n) + n) % n;
+        g += '<image href="https://tile.openstreetmap.org/' + z + '/' + txw + '/' + ty + '.png" x="' + (tx * 256 - ox).toFixed(1) + '" y="' + (ty * 256 - oy).toFixed(1) + '" width="256" height="256" preserveAspectRatio="none"></image>';
+      }
+    }
+    // Scale: the “round” length closest to 110 px.
+    const latC = (latMin + latMax) / 2, mPorPx = 156543.03392 * Math.cos(latC * Math.PI / 180) / Math.pow(2, z);
+    const bonitos = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
+    let metros = bonitos[0];
+    bonitos.forEach(b => { if (Math.abs(b / mPorPx - 110) < Math.abs(metros / mPorPx - 110)) metros = b; });
+    const lenPx = metros / mPorPx;
+    g += '<path class="mp-escala" d="M16 ' + (H - 26) + 'v6h' + lenPx.toFixed(1) + 'v-6"></path><text class="mp-escala-t" x="16" y="' + (H - 30) + '">' + (metros >= 1000 ? (metros / 1000) + ' km' : metros + ' m') + '</text>';
+    g += '<text class="mp-norte" x="' + (W - 22) + '" y="22" text-anchor="middle">N</text><path d="M' + (W - 22) + ' 27l-6 14h12z" fill="#1b2a3a" stroke="#fff" stroke-width="2"></path>';
+    if (ui.mapaFondo) g += '<text class="mp-attr" x="' + (W - 6) + '" y="' + (H - 6) + '" text-anchor="end">© OpenStreetMap contributors</text>';
+    con.forEach((e, i) => {
+      const x = mx(e.meta.lon, z) - ox, y = my(e.meta.lat, z) - oy;
+      const t = rt(e).last;
+      g += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="9" fill="' + e.color + '" stroke="#fff" stroke-width="3"></circle>' +
+        '<text x="' + x.toFixed(1) + '" y="' + (y - 15).toFixed(1) + '" text-anchor="middle">' + escHTML(nombreEst(e)) + (t && esNum(t.temp_c) ? ' · ' + fmtN(t.temp_c, 1) + ' °C' : '') + '</text>';
+    });
+    el.mapa.innerHTML = g;
+    el.mapaFondo.checked = ui.mapaFondo;
+    // Maximum distance between stations (haversine), as context.
+    let dmax = 0;
+    for (let i = 0; i < con.length; i++) for (let j = i + 1; j < con.length; j++){
+      const a = con[i].meta, b = con[j].meta, R = 6371;
+      const dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lon - a.lon) * Math.PI / 180;
+      const q = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      dmax = Math.max(dmax, 2 * R * Math.asin(Math.sqrt(q)));
+    }
+    el.mapaPie.innerHTML = (ui.mapaFondo ? 'Background map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors; north is up. ' : 'Relative position (no background map; north is up). ') + 'Maximum separation between stations: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
+      '<a href="#" data-mapa="">Open interactive map with all the stations</a> · Centre on: ' +
+      con.map(e => '<a href="#" data-mapa="' + e.id + '">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
+  }
+
+  /* ============================================================
+     DETAIL OF ONE STATION
+     ============================================================ */
+  let detalleToken = 0;
+  async function renderDetalle(){
+    const e = ests.find(x => x.id === ui.detalle) || estsActivas()[0] || ests[0];
+    if (!e){ el.detalleGrid.innerHTML = '<p class="evol-vacio">No stations.</p>'; el.detalleMeta.textContent = ''; return; }
+    if (ui.detalle !== e.id){ ui.detalle = e.id; el.detalleSel.value = e.id; }
+    const tk = ++detalleToken;
+    const hasta = Date.now(), desde = hasta - 24 * 3600000;
+    const filas = (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs);
+    if (tk !== detalleToken) return;
+    const r = rt(e);
+    const ultimaFila = filas.length ? filas[filas.length - 1] : null;
+    const t = r.last || (ultimaFila ? ultimaFila.vals : null);
+    const prev = r.prev || (filas.length > 1 ? filas[filas.length - 2].vals : null);
+    const m = e.meta || {};
+    el.detalleMeta.innerHTML = escHTML(e.stationId) + (m.neighborhood ? ' · ' + escHTML(m.neighborhood) : '') + (esNum(m.elev) ? ' · ' + fmtN(m.elev, 0) + ' m' : '') +
+      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="#" data-mapa="' + e.id + '">view on map</a>' : '');
+    el.detalleGrid.innerHTML = GRAFICABLES.map(g => {
+      const serie = filas.map(f => f.vals[g.key]).filter(esNum);
+      const v = t ? t[g.key] : null;
+      const tend = claseTendencia(v, prev ? prev[g.key] : null);
+      const mn = serie.length ? Math.min.apply(null, serie) : null, mx = serie.length ? Math.max.apply(null, serie) : null;
+      const conT = filas.filter(f => esNum(f.vals[g.key])).map(f => ({ t: f.epochMs, v: f.vals[g.key] }));
+      const paso = Math.max(1, Math.floor(conT.length / 120));
+      const pts = conT.filter((_, i) => i % paso === 0 || i === conT.length - 1);
+      let valTxt = fmtVar(g.key, v);
+      if (g.key === 'wind_dir_deg' && esNum(v)) valTxt += ' ' + gradosACompass(v);
+      return '<div class="feat" style="--c:' + g.color + '"><div class="fi"><svg class="i"><use href="#i-' + g.icono + '"></use></svg></div>' +
+        '<div class="etiqueta">' + g.etiqueta + '</div>' +
+        '<div class="valor"><span>' + valTxt + '</span><span class="unidad">' + g.unidad + '</span><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
+        '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">' + sparkSvg(pts, desde, hasta, 100, 30, 3, 15 * 60000, 90 * 60000) + '</svg>' +
+        '<div class="rango-minmax">24 h: min ' + fmtVar(g.key, mn) + ' · max ' + fmtVar(g.key, mx) + '</div></div>';
+    }).join('');
+  }
+
+  /* ============================================================
+     CHART DRAWING (the same one used by TeleMet History)
+     ============================================================ */
+  function construirTarjetaGrafico(titulo, unidad){
+    const el = document.createElement('div');
+    el.className = 'chart-card';
+    el.innerHTML =
+      '<div class="chart-head"><h4>' + escHTML(titulo) + (unidad ? ' (' + escHTML(unidad) + ')' : '') + '</h4><div class="chart-leyenda"></div></div>' +
+      '<div class="chart-plot">' +
+        '<svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="none"></svg>' +
+        '<div class="chart-tooltip" role="status" aria-live="polite"></div>' +
+      '</div>';
+    return {
+      el: el,
+      leyenda: el.querySelector('.chart-leyenda'),
+      svg: el.querySelector('.chart-svg'),
+      tooltip: el.querySelector('.chart-tooltip')
+    };
+  }
+
+  // Rounds to a “nice number” (1, 2, 5, 10, 20, 50...) so that the
+  // Y-axis values are easy to read instead of loose decimals.
+  function numeroBonito(x, redondear){
+    if (x === 0) return 0;
+    const exp = Math.floor(Math.log10(Math.abs(x)));
+    const f = Math.abs(x) / Math.pow(10, exp);
+    let nf;
+    if (redondear){
+      if (f < 1.5) nf = 1;
+      else if (f < 3) nf = 2;
+      else if (f < 7) nf = 5;
+      else nf = 10;
+    } else {
+      if (f <= 1) nf = 1;
+      else if (f <= 2) nf = 2;
+      else if (f <= 5) nf = 5;
+      else nf = 10;
+    }
+    return (x < 0 ? -1 : 1) * nf * Math.pow(10, exp);
+  }
+
+  // Computes a range and a series of “nice” ticks for the Y axis, instead
+  // of interpolating linearly between the exact minimum and maximum of the
+  // data (which gives numbers like 23.7 / 15.2 / 6.8, hard to read).
+  function escalaBonitaEje(min, max, nMarcasAprox){
+    if (min === max){ min -= 1; max += 1; }
+    let paso = numeroBonito((max - min) / Math.max(1, nMarcasAprox - 1), true);
+    // For high-magnitude values (pressure ~1000 hPa, humidity/wind in
+    // the tens...) a step smaller than 1 adds a decimal to a number that already
+    // has several digits (“1013.2”), too wide for the axis margin
+    // and it gets cut off. At that magnitude, the decimal detail adds
+    // nothing that the exact value (available in the tooltip) does not already say.
+    const magnitud = Math.max(Math.abs(min), Math.abs(max));
+    if (magnitud >= 50) paso = Math.max(paso, 1);
+    const minBonito = Math.floor(min / paso) * paso;
+    const maxBonito = Math.ceil(max / paso) * paso;
+    const marcas = [];
+    for (let v = minBonito; v <= maxBonito + paso * 0.5; v += paso) marcas.push(Math.round(v / paso) * paso);
+    return { min: minBonito, max: maxBonito, paso: paso, marcas: marcas };
+  }
+
+  // Formats an axis value with just enough decimals for its step
+  // (none if the step is an integer, 1 or 2 if it is finer), with a decimal point
+  // (en-GB) and no thousands separator (avoids confusing “1.013” with a thousand).
+  function formatearNumeroEje(v, paso){
+    const decimales = paso >= 1 ? 0 : (paso >= 0.1 ? 1 : 2);
+    return v.toLocaleString('en-GB', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
+  }
+
+  // Value of the pop-up card of the charts: with one decimal (en-GB
+  // format), regardless of the axis step. Rain
+  // (mm and mm/h) carries two decimals because its values are very small.
+  function formatearNumeroTooltip(v, unidad){
+    const d = /^mm(\/h)?$/.test(unidad || '') ? 2 : 1;
+    return v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
+  }
+
+  // “Aligned” scale for a right axis that must share the grid lines of
+  // the left one: same number of intervals (nInt), base at 0 and a
+  // “nice” step such that step*nInt covers the maximum of the data.
+  function escalaAlineadaEje(max, nInt){
+    const base = [1, 2, 2.5, 3, 4, 5, 6, 8];
+    let e = Math.floor(Math.log10(Math.max(max, 1e-9) / nInt)) - 1;
+    for (let k = 0; k < 60; k++, e += (k % base.length === 0 ? 1 : 0)){
+      const paso = base[(k) % base.length] * Math.pow(10, e);
+      if (paso * nInt >= max - 1e-9){
+        const marcas = [];
+        for (let i = 0; i <= nInt; i++) marcas.push(Math.round(i * paso * 1e6) / 1e6);
+        return { min: 0, max: marcas[nInt], paso: paso, marcas: marcas };
+      }
+    }
+    return escalaBonitaEje(0, max, nInt + 1);
+  }
+
+  // Draws (or redraws) a simple line chart inside an <svg> already
+  // inserted in the DOM, with an interaction layer (reference line +
+  // tooltip on hover, also with the keyboard via focus). “series”
+  // is [{ etiqueta, color, puntos:[{x,y}] }] with x already normalised to 0..1;
+  // Each series also accepts { eje:'der' (own scale on the right), unidad,
+  // cero (includes 0 in the scale), trazo (stroke-dasharray) };
+  // “xTicks” are the visible X-axis marks ([{ frac, etiqueta }]);
+  // “puntosX” are ALL the real sample positions the cursor can
+  // “snap” to (one per reading in 12h, one per day in 7d) —
+  // usually a finer list than xTicks.
+  function dibujarGraficoSVG(svg, leyendaEl, tooltipEl, series, xTicks, puntosX, umbralGapFrac){
+    const W = 600, H = 230;
+    // Right axis only if there are series with eje:'der' AND series on the left.
+    const hayDer = series.some(s => s.eje === 'der' && s.puntos.length > 0) && series.some(s => s.eje !== 'der' && s.puntos.length > 0);
+    const esDer = s => hayDer && s.eje === 'der';
+    const M = { l: 46, r: hayDer ? 46 : 14, t: 14, b: 28 };
+    const pw = W - M.l - M.r, ph = H - M.t - M.b;
+
+    leyendaEl.innerHTML = '';
+    const conPuntos = series.filter(s => s.puntos.length > 0);
+    if (conPuntos.length === 0){
+      svg.innerHTML = '<text class="grafico-etiqueta" x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle">No data in this period</text>';
+      return;
+    }
+
+    // Data range of each axis (the left one groups everything if there is no double axis).
+    const rangoEje = der => {
+      let mn = Infinity, mx = -Infinity, cero = false;
+      conPuntos.forEach(s => {
+        if (esDer(s) !== der) return;
+        if (s.cero) cero = true;
+        s.puntos.forEach(p => { if (p.y < mn) mn = p.y; if (p.y > mx) mx = p.y; });
+      });
+      if (cero){ if (mn > 0) mn = 0; if (mx <= 0) mx = 1; }
+      return { mn: mn, mx: mx, cero: cero };
+    };
+    const rI = rangoEje(false);
+    const escala = escalaBonitaEje(rI.mn, rI.mx, 4);
+    let escalaD = null;
+    if (hayDer){
+      const rD = rangoEje(true);
+      escalaD = (rI.cero && rD.cero && escala.min === 0)
+        ? escalaAlineadaEje(rD.mx, escala.marcas.length - 1)
+        : escalaBonitaEje(rD.mn, rD.mx, 4);
+    }
+    const escDe = s => esDer(s) ? escalaD : escala;
+
+    const xPix = f => M.l + f * pw;
+    const yPix = (v, s) => { const e = (s && esDer(s)) ? escalaD : escala; return M.t + (1 - (v - e.min) / ((e.max - e.min) || 1)) * ph; };
+
+    let svgInner = '';
+    escala.marcas.forEach(val => {
+      const y = yPix(val);
+      svgInner += '<line class="grafico-rejilla" x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
+      const colI = hayDer ? ' style="fill:' + conPuntos.filter(s => !esDer(s))[0].color + '"' : '';
+      svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (M.l - 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end"' + colI + '>' + formatearNumeroEje(val, escala.paso) + '</text>';
+    });
+    if (hayDer){
+      const serD = conPuntos.filter(esDer)[0];
+      escalaD.marcas.forEach(val => {
+        const y = yPix(val, serD);
+        svgInner += '<text class="grafico-etiqueta grafico-etiqueta-eje" x="' + (W - M.r + 7) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="start" style="fill:' + serD.color + '">' + formatearNumeroEje(val, escalaD.paso) + '</text>';
+      });
+    }
+    const ultimoTick = (xTicks || []).length - 1;
+    (xTicks || []).forEach((tk, i) => {
+      // The marks at the ends are anchored inwards (start/end) instead
+      // of being centred, so that they are not cut off against the edge.
+      const anchor = i === 0 ? 'start' : (i === ultimoTick ? 'end' : 'middle');
+      svgInner += '<text class="grafico-etiqueta" x="' + xPix(tk.frac).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + escHTML(tk.etiqueta) + '</text>';
+    });
+
+    conPuntos.forEach(s => {
+      const pts = s.puntos.slice().sort((a, b) => a.x - b.x);
+      s._ptsOrdenados = pts; // reused by the interaction layer, further down
+
+      // If there is a real gap (no reading at all, neither local nor from the API) of
+      // more than umbralGapFrac between two consecutive readings, NO joining
+      // line is drawn between them: a single straight line from one end of the
+      // gap to the other would suggest a gradual, continuous change that was
+      // never actually observed (see the note next to UMBRAL_GAP_12H_FRAC
+      // / UMBRAL_GAP_7D_FRAC). One stroke is drawn for each contiguous stretch.
+      //
+      // The threshold is ADAPTIVE per series: umbralGapFrac is the maximum
+      // (HUECO_MAX_MS) and the real threshold is 3 times the usual spacing
+      // (median) between readings of that series, with a minimum of
+      // HUECO_MIN_MS. So, where there are readings every few minutes, a
+      // stretch with readings much further apart (e.g. every 40 min) is not
+      // joined with long straight lines: it is shown as loose points.
+      let umbralSerie = umbralGapFrac;
+      if (umbralGapFrac && pts.length > 2){
+        const sep = [];
+        for (let i = 1; i < pts.length; i++) sep.push(pts[i].x - pts[i - 1].x);
+        sep.sort((a, b) => a - b);
+        const mediana = sep[Math.floor(sep.length / 2)];
+        const minFrac = umbralGapFrac * (HUECO_MIN_MS / HUECO_MAX_MS);
+        umbralSerie = Math.min(umbralGapFrac, Math.max(minFrac, 3 * mediana));
+      }
+      const tramos = [[]];
+      pts.forEach((p, i) => {
+        if (i > 0 && umbralSerie && (p.x - pts[i - 1].x) > umbralSerie) tramos.push([]);
+        tramos[tramos.length - 1].push(p);
+      });
+      tramos.forEach(tramo => {
+        if (tramo.length === 0) return;
+        if (tramo.length === 1){
+          // An isolated point between two gaps cannot be joined to anything:
+          // it is marked with a small circle so that it does not simply disappear.
+          svgInner += '<circle class="grafico-punto" cx="' + xPix(tramo[0].x).toFixed(1) + '" cy="' + yPix(tramo[0].y, s).toFixed(1) + '" r="2.5" style="fill:' + s.color + '"></circle>';
+        } else {
+          const puntosSVG = tramo.map(p => xPix(p.x).toFixed(1) + ',' + yPix(p.y, s).toFixed(1)).join(' ');
+          svgInner += '<polyline class="grafico-linea" points="' + puntosSVG + '" style="stroke:' + s.color + (s.trazo ? ';stroke-dasharray:' + s.trazo : '') + '"></polyline>';
+        }
+      });
+
+      const ultimo = pts[pts.length - 1];
+      const ux = xPix(ultimo.x), uy = yPix(ultimo.y, s);
+      svgInner += '<circle class="grafico-punto" cx="' + ux.toFixed(1) + '" cy="' + uy.toFixed(1) + '" r="3" style="fill:' + s.color + '"></circle>';
+    });
+    svg.innerHTML = svgInner;
+
+    // Interaction layer: reference line + highlighted point per series +
+    // tooltip, snapped to the sample point closest to the cursor (never
+    // to an exact pixel). The value shown always matches a real one;
+    // nothing the tooltip shows is missing from the axis or the
+    // legend.
+    if (tooltipEl && puntosX && puntosX.length > 0){
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const crosshair = document.createElementNS(SVGNS, 'line');
+      crosshair.setAttribute('class', 'grafico-crosshair');
+      crosshair.setAttribute('y1', M.t); crosshair.setAttribute('y2', H - M.b);
+      svg.appendChild(crosshair);
+      const puntosHover = conPuntos.map(s => {
+        const c = document.createElementNS(SVGNS, 'circle');
+        c.setAttribute('class', 'grafico-punto-hover');
+        c.setAttribute('r', '4');
+        c.setAttribute('style', 'fill:' + s.color);
+        svg.appendChild(c);
+        return c;
+      });
+
+      const pasoMedio = puntosX.length > 1 ? 1 / (puntosX.length - 1) : 1;
+      const toleranciaX = Math.max(pasoMedio * 0.75, 0.01);
+
+      function alMover(e){
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const svgX = (e.clientX - rect.left) * (W / rect.width);
+        const frac = Math.max(0, Math.min(1, (svgX - M.l) / pw));
+
+        let masCercano = puntosX[0], dist = Infinity;
+        puntosX.forEach(p => { const d = Math.abs(p.frac - frac); if (d < dist){ dist = d; masCercano = p; } });
+
+        const xCross = xPix(masCercano.frac).toFixed(1);
+        crosshair.setAttribute('x1', xCross); crosshair.setAttribute('x2', xCross);
+        crosshair.style.opacity = '1';
+
+        tooltipEl.textContent = '';
+        const cab = document.createElement('div');
+        cab.className = 'tt-cab';
+        cab.textContent = masCercano.etiqueta;
+        tooltipEl.appendChild(cab);
+
+        conPuntos.forEach((s, i) => {
+          let pCercano = null, dMin = Infinity;
+          s._ptsOrdenados.forEach(p => { const d = Math.abs(p.x - masCercano.frac); if (d < dMin){ dMin = d; pCercano = p; } });
+          const dot = puntosHover[i];
+          if (pCercano && dMin <= toleranciaX){
+            dot.setAttribute('cx', xPix(pCercano.x).toFixed(1));
+            dot.setAttribute('cy', yPix(pCercano.y, s).toFixed(1));
+            dot.style.opacity = '1';
+            const fila = document.createElement('div');
+            fila.className = 'tt-fila';
+            const key = document.createElement('span');
+            key.className = 'leyenda-linea';
+            key.style.background = s.color;
+            const val = document.createElement('span');
+            val.className = 'tt-val';
+            val.textContent = formatearNumeroTooltip(pCercano.y, s.unidad) + (hayDer && s.unidad ? ' ' + s.unidad : '');
+            fila.appendChild(key);
+            fila.appendChild(val);
+            if (conPuntos.length > 1){
+              const nom = document.createElement('span');
+              nom.className = 'tt-nombre';
+              nom.textContent = s.etiqueta;
+              fila.appendChild(nom);
+            }
+            tooltipEl.appendChild(fila);
+          } else {
+            dot.style.opacity = '0';
+          }
+        });
+        tooltipEl.style.opacity = '1';
+
+        const wrapRect = svg.parentElement.getBoundingClientRect();
+        let left = (e.clientX - wrapRect.left) + 14;
+        let top = (e.clientY - wrapRect.top) - 10;
+        const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+        if (left + tw > wrapRect.width - 4) left = (e.clientX - wrapRect.left) - tw - 14;
+        left = Math.max(4, left);
+        top = Math.max(4, Math.min(top, wrapRect.height - th - 4));
+        tooltipEl.style.left = left.toFixed(0) + 'px';
+        tooltipEl.style.top = top.toFixed(0) + 'px';
+      }
+      function alSalir(){
+        crosshair.style.opacity = '0';
+        puntosHover.forEach(d => { d.style.opacity = '0'; });
+        tooltipEl.style.opacity = '0';
+      }
+      svg.onpointermove = alMover;
+      svg.onpointerleave = alSalir;
+      svg.onpointercancel = alSalir;
+    }
+
+    if (series.length > 1){
+      series.forEach(s => {
+        const item = document.createElement('span');
+        item.className = 'leyenda-item';
+        const fondo = s.trazo ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
+        const detalle = hayDer ? ' (' + [s.unidad, esDer(s) ? 'right axis' : 'left axis'].filter(Boolean).join(', ') + ')' : '';
+        item.innerHTML = '<span class="leyenda-linea" style="background:' + fondo + '"></span>' + escHTML(s.etiqueta + detalle);
+        leyendaEl.appendChild(item);
+      });
+    }
+  }
+
+
+  /* ============================================================
+     CHARTS: grouping into intervals and drawing (compare stations / one station)
+     ============================================================ */
+  function ticksTiempo(desdeMs, hastaMs, horas){
+    const ticks = [];
+    if (horas <= 24){
+      const n = VENTANAS[horas] ? VENTANAS[horas].ticks : 4;
+      for (let i = 0; i <= n; i++){ const f = i / n; ticks.push({ frac: f, etiqueta: fmtHM(desdeMs + f * (hastaMs - desdeMs)) }); }
+      return ticks;
+    }
+    // 7 days: one mark per midnight (the empty first element anchors the next label properly).
+    ticks.push({ frac: 0, etiqueta: '' });
+    const d0 = new Date(desdeMs);
+    for (let k = 1; k <= 8; k++){
+      const t = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k, 0, 0, 0, 0).getTime(); // calendar arithmetic: robust against clock changes
+      if (t >= hastaMs) break;
+      ticks.push({ frac: (t - desdeMs) / (hastaMs - desdeMs), etiqueta: new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }).replace('.', '') });
+    }
+    return ticks;
+  }
+  function agruparTramos(filas, key, desde, ventana, nB){
+    const suma = new Float64Array(nB), cnt = new Uint16Array(nB);
+    for (const f of filas){
+      const v = f.vals ? f.vals[key] : null;
+      if (!esNum(v)) continue;
+      const i = Math.floor((f.epochMs - desde) / ventana * nB);
+      if (i < 0 || i >= nB) continue;
+      suma[i] += v; cnt[i]++;
+    }
+    const out = [];
+    for (let i = 0; i < nB; i++) if (cnt[i]) out.push({ x: (i + 0.5) / nB, y: suma[i] / cnt[i] });
+    return out;
+  }
+  function puntosEngancheX(desde, ventana, nB, conFecha){
+    const out = [];
+    for (let i = 0; i < nB; i++){
+      const ms = desde + (i + 0.5) / nB * ventana;
+      out.push({ frac: (i + 0.5) / nB, etiqueta: conFecha ? fmtFechaHM(ms) : fmtHM(ms) });
+    }
+    return out;
+  }
+  async function cargarFilas(lista, desde, hasta){
+    const m = new Map();
+    for (const e of lista) m.set(e.id, (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs));
+    return m;
+  }
+
+  // One chart per variable, with one line per station.
+  function pintarComparar(cont, filasPorEst, lista, vars, desde, ventana, nB, ticks, conFecha){
+    cont.innerHTML = '';
+    const puntosX = puntosEngancheX(desde, ventana, nB, conFecha);
+    let alguna = false;
+    vars.forEach(key => {
+      const def = DEF_VAR(key);
+      if (!def) return;
+      const card = construirTarjetaGrafico(def.etiqueta, def.unidad);
+      cont.appendChild(card.el);
+      const series = lista.map(e => ({
+        etiqueta: nombreEst(e), color: e.color, unidad: def.unidad,
+        puntos: agruparTramos(filasPorEst.get(e.id) || [], key, desde, ventana, nB)
+      })).filter(s => s.puntos.length > 0);
+      if (series.length) alguna = true;
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, ticks, puntosX, HUECO_MAX_MS / ventana);
+    });
+    return alguna;
+  }
+  // All the variables of ONE station, with the groupings of TeleMet History (double Y axis included).
+  function pintarEstacion(cont, filas, e, desde, ventana, nB, ticks, conFecha){
+    cont.innerHTML = '';
+    const puntosX = puntosEngancheX(desde, ventana, nB, conFecha);
+    GRUPOS_ESTACION.forEach(g => {
+      const card = construirTarjetaGrafico(g.titulo, g.unidad);
+      cont.appendChild(card.el);
+      const series = g.claves.map(k => {
+        const def = DEF_VAR(k);
+        return {
+          etiqueta: def.etiqueta, unidad: def.unidad,
+          color: (g.colores && g.colores[k]) || def.color,
+          puntos: agruparTramos(filas, k, desde, ventana, nB),
+          eje: (g.ejeDer || []).indexOf(k) >= 0 ? 'der' : 'izq', cero: !!g.cero, trazo: (g.trazos && g.trazos[k]) || ''
+        };
+      });
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, ticks, puntosX, HUECO_MAX_MS / ventana);
+    });
+  }
+  function msgVacio(txt){
+    if (ultimoErrorDB) return '<p class="evol-vacio">Could not read the history stored in this browser (' + escHTML(ultimoErrorDB.message || ultimoErrorDB.name || 'unknown reason') + '). It may be blocked by private mode or by the site’s cookie and data settings.</p>';
+    return '<p class="evol-vacio">' + txt + '</p>';
+  }
+
+  /* ============================================================
+     EVOLUTION (12 h / 24 h / 7 days)
+     ============================================================ */
+  let evolToken = 0;
+  async function renderEvol(){
+    const tk = ++evolToken;
+    const act = estsActivas();
+    if (act.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Add stations and start the monitor to see the charts.</p>'; el.evolNota.textContent = ''; return; }
+    const horas = ui.ventanaH, v = VENTANAS[horas];
+    const hasta = Date.now(), ventana = horas * 3600000, desde = hasta - ventana;
+    const ticks = ticksTiempo(desde, hasta, horas), conFecha = horas > 24;
+    if (ui.modo === 'comparar'){
+      const lista = estsVisibles();
+      if (lista.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Turn on at least one station with the buttons above.</p>'; return; }
+      if (ui.vars.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Choose at least one variable.</p>'; return; }
+      const filas = await cargarFilas(lista, desde, hasta);
+      if (tk !== evolToken) return;
+      const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
+      if (total === 0){ el.charts.innerHTML = msgVacio('There is no data for this period in this browser yet. Start the monitor, synchronise with the server or fill from the API (section “Data and server”).'); el.evolNota.textContent = ''; return; }
+      pintarComparar(el.charts, filas, lista, ui.vars, desde, ventana, v.buckets, ticks, conFecha);
+      el.evolNota.textContent = lista.length + ' station(s) · ' + total.toLocaleString('en-GB') + ' readings · intervals of ' + Math.round(ventana / v.buckets / 60000) + ' min (their average is shown).';
+    } else {
+      const e = act.find(x => x.id === ui.estEvol) || act[0];
+      if (ui.estEvol !== e.id){ ui.estEvol = e.id; el.estSelEvol.value = e.id; }
+      const filas = (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs);
+      if (tk !== evolToken) return;
+      if (filas.length === 0){ el.charts.innerHTML = msgVacio('There is no data for “' + escHTML(nombreEst(e)) + '” in this period yet.'); el.evolNota.textContent = ''; return; }
+      pintarEstacion(el.charts, filas, e, desde, ventana, v.buckets, ticks, conFecha);
+      el.evolNota.textContent = nombreEst(e) + ' · ' + filas.length.toLocaleString('en-GB') + ' readings · intervals of ' + Math.round(ventana / v.buckets / 60000) + ' min.';
+    }
+  }
+
+  // Deferred redraw: with several stations many consecutive readings arrive.
+  let tmRedibujo = null, ultimoRedibujo = 0;
+  function pedirRedibujo(){
+    if (tmRedibujo) return;
+    const espera = Math.max(1500, 20000 - (Date.now() - ultimoRedibujo));
+    tmRedibujo = setTimeout(() => {
+      tmRedibujo = null; ultimoRedibujo = Date.now();
+      if (document.hidden) return;
+      renderEvol(); renderDetalle();
+    }, espera);
+  }
+
+  /* ============================================================
+     7-DAY SUMMARY
+     ============================================================ */
+  function resumenDia(filas){
+    let tmax = null, tmin = null, suma = 0, n = 0, lluvia = null, racha = null;
+    filas.forEach(f => {
+      const v = f.vals || {};
+      if (esNum(v.temp_c)){ if (tmax === null || v.temp_c > tmax) tmax = v.temp_c; if (tmin === null || v.temp_c < tmin) tmin = v.temp_c; suma += v.temp_c; n++; }
+      if (esNum(v.rain_total_mm) && (lluvia === null || v.rain_total_mm > lluvia)) lluvia = v.rain_total_mm;
+      if (esNum(v.gust_kmh) && (racha === null || v.gust_kmh > racha)) racha = v.gust_kmh;
+    });
+    return { tmax: tmax, tmin: tmin, tmed: n ? suma / n : null, lluvia: lluvia, racha: racha, n: filas.length };
+  }
+  let semanaToken = 0, ultimaSemana = 0;
+  async function renderSemana(){
+    const tk = ++semanaToken;
+    const act = estsActivas();
+    if (act.length === 0){ el.tablaSemana.innerHTML = '<p class="evol-vacio">No active stations.</p>'; return; }
+    const hoy = new Date();
+    const dias = [];
+    for (let i = DIAS_SEMANA - 1; i >= 0; i--) dias.push(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i, 0, 0, 0, 0));
+    const datos = new Map(); // id -> [summary per day]
+    for (const e of act){
+      const arr = [];
+      for (const d of dias){ const ini = d.getTime(); arr.push(resumenDia(await consultarRango(kEst(e), ini, ini + 86400000 - 1))); }
+      datos.set(e.id, arr);
+    }
+    if (tk !== semanaToken) return;
+    ultimaSemana = Date.now();
+    const campo = ui.resumen, dec = campo === 'lluvia' ? 1 : 1;
+    let h = '<table class="t"><thead><tr><th>Day</th>' + act.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
+    dias.forEach((d, i) => {
+      const vals = act.map(e => datos.get(e.id)[i][campo]);
+      const validos = vals.filter(v => v !== null);
+      const mx = validos.length >= 2 ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 ? Math.min.apply(null, validos) : null;
+      const etq = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + (i === dias.length - 1 ? ' (today)' : '');
+      h += '<tr><td>' + escHTML(etq) + '</td>' + vals.map(v => {
+        let cls = 'num';
+        if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        return '<td class="' + cls + '">' + fmtN(v, dec) + '</td>';
+      }).join('') + '</tr>';
+    });
+    const unidad = campo === 'lluvia' ? 'mm' : (campo === 'racha' ? 'km/h' : '°C');
+    h += '<tr><td>Readings (7 d)</td>' + act.map(e => '<td class="num">' + datos.get(e.id).reduce((s, r) => s + r.n, 0).toLocaleString('en-GB') + '</td>').join('') + '</tr>';
+    h += '</tbody></table><p class="evol-nota" style="margin-top:8px">Values in ' + unidad + '. ' + (campo === 'lluvia' ? 'Rain: the highest accumulated total recorded that day. ' : '') + 'A “—” means there are no readings stored for that day.</p>';
+    el.tablaSemana.innerHTML = h;
+  }
+
+  /* ============================================================
+     SINGLE DAY
+     ============================================================ */
+  let diaUltimo = null;   // { fecha, filasPorEst, lista }
+  async function consultarDia(){
+    const val = el.diaInput.value;
+    if (!val){ mostrarDiaEstado('Choose a date.', true); return; }
+    const p = val.split('-').map(Number);
+    const fecha = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+    if (fecha.getTime() > Date.now()){ mostrarDiaEstado('That date is in the future.', true); return; }
+    const lista = estsVisibles();
+    if (lista.length === 0){ mostrarDiaEstado('Turn on at least one station in the charts.', true); return; }
+    $('btnConsultarDia').disabled = true;
+    const ini = fecha.getTime(), fin = ini + 86400000;
+    const notas = [];
+    for (let i = 0; i < lista.length; i++){
+      const e = lista[i];
+      mostrarDiaEstado('Looking up ' + nombreEst(e) + ' (' + (i + 1) + '/' + lista.length + ')…', false);
+      const r = await completarDia(e, fecha);
+      if (r.estado === 'ok') notas.push(nombreEst(e) + ': +' + r.anadidas + ' from the API');
+      else if (r.estado === 'error') notas.push(nombreEst(e) + ': the API did not respond' + (r.http ? ' (HTTP ' + r.http + ')' : ''));
+      else if (r.estado === 'vacio') notas.push(nombreEst(e) + ': the API has no more data for that day');
+    }
+    if (notas.some(n => /\+[1-9]/.test(n))){ try { renderDatos(); renderSemana(); } catch(_){} }
+    const filas = await cargarFilas(lista, ini, fin - 1);
+    diaUltimo = { fecha: fecha, filasPorEst: filas, lista: lista };
+    const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
+    $('btnConsultarDia').disabled = false;
+    if (total === 0){
+      el.diaResumen.innerHTML = ''; el.chartsDia.innerHTML = '<p class="evol-vacio">There is no data for that day for the chosen stations.</p>';
+      el.btnCSVDia.disabled = true; mostrarDiaEstado(notas.join(' · ') || 'No data.', true); return;
+    }
+    mostrarDiaEstado(notas.length ? notas.join(' · ') : 'The whole day was already stored in this browser.', false);
+    el.btnCSVDia.disabled = false;
+    // Table of the day's statistics per station.
+    const cab = fecha.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const filasTabla = [
+      ['Max. temp. (°C)', f => estadDia(f, 'temp_c', 'max'), 'temp_c'], ['Min. temp. (°C)', f => estadDia(f, 'temp_c', 'min'), 'temp_c'],
+      ['Avg. temp. (°C)', f => estadDia(f, 'temp_c', 'avg'), 'temp_c'], ['Avg. humidity (%)', f => estadDia(f, 'humidity_pct', 'avg'), 'humidity_pct'],
+      ['Avg. pressure (hPa)', f => estadDia(f, 'pressure_hpa', 'avg'), 'pressure_hpa'], ['Max. gust (km/h)', f => estadDia(f, 'gust_kmh', 'max'), 'gust_kmh'],
+      ['Total rain (mm)', f => estadDia(f, 'rain_total_mm', 'max'), 'rain_total_mm'], ['Max. radiation (W/m²)', f => estadDia(f, 'solarradiation_wm2', 'max'), 'solarradiation_wm2'],
+      ['Max. UV', f => estadDia(f, 'uv_index', 'max'), 'uv_index'], ['Readings', f => f.length, null]
+    ];
+    let h = '<h3 style="font:700 16px var(--display);margin:6px 0 8px;text-transform:capitalize">' + escHTML(cab) + '</h3><div class="tbl-wrap amplia"><table class="t"><thead><tr><th>Summary</th>' +
+      lista.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
+    filasTabla.forEach(ft => {
+      const vals = lista.map(e => ft[1](filas.get(e.id) || []));
+      const validos = vals.filter(esNum);
+      const mx = validos.length >= 2 && ft[2] ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 && ft[2] ? Math.min.apply(null, validos) : null;
+      h += '<tr><td>' + ft[0] + '</td>' + vals.map(v => {
+        let cls = 'num'; if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
+        return '<td class="' + cls + '">' + (ft[2] ? fmtVar(ft[2], v) : (v || 0).toLocaleString('en-GB')) + '</td>';
+      }).join('') + '</tr>';
+    });
+    el.diaResumen.innerHTML = h + '</tbody></table></div>';
+    const v = VENTANAS[24];
+    if (ui.modo === 'estacion' && lista.length === 1) pintarEstacion(el.chartsDia, filas.get(lista[0].id), lista[0], ini, 86400000, v.buckets, ticksTiempo(ini, fin, 24), false);
+    else pintarComparar(el.chartsDia, filas, lista, ui.vars.length ? ui.vars : ['temp_c'], ini, 86400000, v.buckets, ticksTiempo(ini, fin, 24), false);
+  }
+  function estadDia(filas, key, modo){
+    const v = filas.map(f => f.vals && f.vals[key]).filter(esNum);
+    if (!v.length) return null;
+    if (modo === 'max') return Math.max.apply(null, v);
+    if (modo === 'min') return Math.min.apply(null, v);
+    return v.reduce((a, b) => a + b, 0) / v.length;
+  }
+  function mostrarDiaEstado(txt, err){ el.diaEstado.style.display = txt ? '' : 'none'; el.diaEstado.textContent = txt; el.diaEstado.className = 'msg-linea' + (err ? ' err' : ''); }
+
+  /* ============================================================
+     CSV
+     ============================================================ */
+  const COLUMNAS_CSV = ['temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code'];
+  const csvCelda = v => { if (v === null || v === undefined) return ''; const s = String(v); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  function csvFilas(lista, filasPorEst){
+    const out = [['station', 'station_id', 'local_datetime', 'epoch_ms'].concat(COLUMNAS_CSV).join(',')];
+    lista.forEach(e => {
+      (filasPorEst.get(e.id) || []).forEach(f => {
+        const d = new Date(f.epochMs);
+        const hora = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+        out.push([csvCelda(nombreEst(e)), csvCelda(kEst(e)), hora, f.epochMs].concat(COLUMNAS_CSV.map(c => csvCelda(f.vals ? f.vals[c] : null))).join(','));
+      });
+    });
+    return out;
+  }
+  async function exportarCSV(horas){
+    const lista = estsActivas();
+    if (lista.length === 0){ el.datosMsg.textContent = 'There are no active stations.'; return; }
+    const hasta = Date.now(), desde = horas ? hasta - horas * 3600000 : 0;
+    const filas = await cargarFilas(lista, desde, hasta);
+    const lineas = csvFilas(lista, filas);
+    if (lineas.length < 2){ el.datosMsg.textContent = 'There are no readings to export in that period.'; return; }
+    descargar('telemetmultistation-' + (horas ? horas + 'h' : 'todo') + '-' + new Date().toISOString().slice(0, 10) + '.csv', lineas.join('\n'));
+    el.datosMsg.textContent = (lineas.length - 1).toLocaleString('en-GB') + ' readings exported.';
+  }
+  function exportarCSVDia(){
+    if (!diaUltimo) return;
+    const lineas = csvFilas(diaUltimo.lista, diaUltimo.filasPorEst);
+    if (lineas.length < 2) return;
+    descargar('telemetmultistation-day-' + el.diaInput.value + '.csv', lineas.join('\n'));
+  }
+
+  /* ============================================================
+     SERVER (TeleMet Collector): one JSON per station
+     ============================================================ */
+  function normalizarBase(b){ b = (b || '').trim(); return b && !/\/$/.test(b) ? b + '/' : b; }
+  const SERV_BASES_ALT = ['../telemethistory/data/', '../telemethistorial/datos/', '../history/data/', '../historial/datos/'];
+  async function sincronizarEstacion(e){
+    const r = rt(e), key = kEst(e), seg = nombreArchivoSeguro(key);
+    // Folder given by the user and, if there is no file there, the usual
+    // TeleMet History/Historial folders next to this app (siblings).
+    const bases = [normalizarBase(cfg.servBase)];
+    SERV_BASES_ALT.forEach(x => { if (bases.indexOf(x) < 0) bases.push(x); });
+    const cands = [];
+    bases.forEach(base => { cands.push(base + 'history_' + seg + '.json', base + 'historial_' + seg + '.json', base + 'history.json', base + 'historial.json'); });
+    let otra = null, formato = false;
+    for (const url of cands){
+      let data;
+      try {
+        const resp = await fetchConTimeout(url + '?t=' + Date.now(), 15000);
+        if (!resp.ok) continue;
+        data = await resp.json();
+      } catch (err) { continue; }
+      const lecturas = data && (data.lecturas || data.readings);
+      if (!data || !(data.formato === 1 || data.format === 1) || !Array.isArray(lecturas)){ formato = true; continue; }
+      if (String(data.stationId || '').toLowerCase() !== key.toLowerCase()){ otra = data.stationId; continue; }
+      const filas = [];
+      lecturas.forEach(l => { if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v }); });
+      const ultima = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
+      if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS };
+      const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
+      const locales = (await consultarRango(key, minMs - SERV_TOL_MS, ultima + SERV_TOL_MS)).map(f => f.epochMs).sort((a, b) => a - b);
+      if (ultimoErrorDB) return { estado: 'error', url: url };
+      // It is only compared with what was ALREADY local (not with what is being added).
+      const nuevas = filas.filter(f => !hayCercano(locales, f.epochMs, SERV_TOL_MS));
+      await guardarLote(key, nuevas);
+      return { estado: 'ok', url: url, recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultima, intervaloS: data.intervaloS };
+    }
+    if (otra !== null) return { estado: 'otra-estacion', otra: otra };
+    if (formato) return { estado: 'formato' };
+    return { estado: 'no-disponible', probadas: cands.slice(0, 4).concat(cands.length > 4 ? ['…'] : []) };
+  }
+  let sincronizando = false;
+  async function sincronizarTodas(manual){
+    if (sincronizando) return;
+    sincronizando = true;
+    const btn = $('btnSyncServidor'); btn.disabled = true;
+    let anadidas = 0;
+    try {
+      for (const e of estsActivas()){
+        const res = await sincronizarEstacion(e);
+        rt(e).serv = res; rt(e).servMs = Date.now();
+        if (res.estado === 'ok' && res.anadidas > 0){ anadidas += res.anadidas; log('info', e, 'Servidor: +' + res.anadidas + ' readings.'); }
+        renderServidor();
+      }
+    } finally { sincronizando = false; btn.disabled = false; }
+    if (anadidas > 0){ pedirRedibujo(); renderDetalle(); renderSemana(); renderDatos(); }
+  }
+  function renderServidor(){
+    const act = estsActivas();
+    if (act.length === 0){ el.servEstado.innerHTML = ''; return; }
+    let h = '<table class="t t-compacta"><thead><tr><th>Station</th><th>Status</th><th class="num">Received</th><th class="num">Added</th><th class="ocupa">Latest reading</th></tr></thead><tbody>';
+    act.forEach(e => {
+      const s = rt(e).serv;
+      let est = '<span class="tag">pending</span>', rec = '—', add = '—', ult = '—';
+      if (s){
+        if (s.estado === 'ok'){
+          est = '<span class="tag ok" title="' + escHTML(String(s.url || '')) + '">synchronised</span>'; rec = s.recibidas; add = s.anadidas;
+          if (s.ultimaMs){
+            const edadMin = (Date.now() - s.ultimaMs) / 60000, lim = Math.max(SERV_AVISO_MIN, 3 * (s.intervaloS || 0) / 60);
+            ult = fmtFechaHM(s.ultimaMs) + (edadMin > lim ? ' <span class="tag warn">collector stopped?</span>' : '');
+          }
+        }
+        else if (s.estado === 'no-disponible') est = '<span class="tag" title="Could not find history_' + escHTML(String(e.stationId || '')) + '.json in the given folder or in ../telemethistory/data/, ../telemethistorial/datos/, ../history/data/ or ../historial/datos/">no file</span>';
+        else if (s.estado === 'otra-estacion') est = '<span class="tag warn" title="history_' + escHTML(String(e.stationId || '')) + '.json does not exist. The folder only has a history.json, which belongs to station ' + escHTML(String(s.otra)) + '. The collector must also have this station configured ([station:' + escHTML(String(e.stationId || '')) + '] in its config.ini) to generate its own file.">no own file · the JSON belongs to ' + escHTML(String(s.otra)) + '</span>';
+        else if (s.estado === 'formato') est = '<span class="tag err">invalid format</span>';
+        else est = '<span class="tag err">local error</span>';
+      }
+      h += '<tr><td><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></td><td>' + est + '</td><td class="num">' + rec + '</td><td class="num">' + add + '</td><td>' + ult + '</td></tr>';
+    });
+    el.servEstado.innerHTML = h + '</tbody></table>';
+  }
+
+  /* ============================================================
+     STORED DATA, FILL FROM THE API AND DELETION
+     ============================================================ */
+  let datosToken = 0;
+  async function renderDatos(){
+    const tk = ++datosToken;
+    const res = await resumenAlmacen();
+    if (tk !== datosToken) return;
+    if (res.length === 0){ el.datosTabla.innerHTML = msgVacio('There is nothing stored in this browser yet.'); return; }
+    let h = '<table class="t t-compacta"><thead><tr><th>Station</th><th class="num">Readings</th><th>From</th><th class="ocupa">To</th><th></th></tr></thead><tbody>';
+    res.forEach(r => {
+      const e = ests.find(x => kEst(x) === r.key);
+      h += '<tr><td>' + (e ? '<span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span>' : escHTML(r.key) + ' <span class="tag">not configured</span>') +
+        '</td><td class="num">' + r.n.toLocaleString('en-GB') + '</td><td>' + (r.min ? fmtFechaHM(r.min) : '—') + '</td><td>' + (r.max ? fmtFechaHM(r.max) : '—') +
+        '</td><td><button type="button" class="btn btn-ghost btn-sm mini-btn" data-borrar="' + escHTML(r.key) + '" aria-label="Delete the history of ' + escHTML(r.key) + '"><svg class="i"><use href="#i-trash"></use></svg></button></td></tr>';
+    });
+    el.datosTabla.innerHTML = h + '</tbody></table>';
+  }
+  async function rellenarDesdeAPI(){
+    const act = estsActivas();
+    if (act.length === 0){ el.datosMsg.textContent = 'There are no active stations.'; return; }
+    // First, the days that need data are counted, to warn how many requests will be made.
+    const pendientes = [];
+    for (const e of act){
+      for (let i = 0; i < DIAS_SEMANA; i++){
+        const fecha = new Date(Date.now() - i * 86400000), ini = inicioDia(fecha), fin = ini + 86400000 - 1;
+        const ex = await consultarRango(kEst(e), ini, fin);
+        if (ex.length === 0 || diaIncompleto(ex, ini, Math.min(fin, Date.now()))) pendientes.push({ e: e, fecha: fecha });
+      }
+    }
+    if (pendientes.length === 0){ el.datosMsg.textContent = 'The last 7 days are already covered for all the stations.'; return; }
+    if (!window.confirm('Up to ' + pendientes.length + ' requests will be made to the API (one per station and day with gaps). Continue?')) return;
+    $('btnBackfill').disabled = true;
+    let anadidas = 0, errores = 0;
+    for (let i = 0; i < pendientes.length; i++){
+      el.datosMsg.textContent = 'Filling ' + (i + 1) + '/' + pendientes.length + ' · ' + nombreEst(pendientes[i].e) + '…';
+      const r = await completarDia(pendientes[i].e, pendientes[i].fecha);
+      anadidas += r.anadidas; if (r.estado === 'error') errores++;
+      await new Promise(res => setTimeout(res, 300));
+    }
+    $('btnBackfill').disabled = false;
+    el.datosMsg.textContent = 'Done: ' + anadidas.toLocaleString('en-GB') + ' readings added' + (errores ? ' · ' + errores + ' request(s) without a response (the API may have no history for your account)' : '') + '.';
+    log('info', null, 'Fill from the API: +' + anadidas + ' readings, ' + errores + ' errors.');
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+  async function borrarDatos(key){
+    const txt = key ? 'the stored history of ' + key : 'ALL the history stored in this browser';
+    if (!window.confirm('Delete ' + txt + '? This cannot be undone.')) return;
+    if (key){ try { const m = JSON.parse(localStorage.getItem('telemetmultistation_autofill2') || '{}') || {}; Object.keys(m).forEach(k => { if (k.indexOf(key + '|') === 0) delete m[k]; }); localStorage.setItem('telemetmultistation_autofill2', JSON.stringify(m)); } catch (_) {} }
+    if (key) await borrarEstacionDB(key);
+    else { try { localStorage.removeItem('telemetmultistation_autofill2'); } catch (_) {} for (const k of await clavesEnDB()) await borrarEstacionDB(k); }
+    el.datosMsg.textContent = 'History deleted.';
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+
+  function renderRegistro(){
+    if (!registro.length){ el.registro.innerHTML = '<p class="evol-vacio">No activity yet.</p>'; return; }
+    el.registro.innerHTML = '<table class="t"><thead><tr><th>Time</th><th>Station</th><th>Event</th></tr></thead><tbody>' +
+      registro.map(r => '<tr><td>' + fmtHoraMs(r.t) + '</td><td>' + escHTML(r.est) + '</td><td><span class="tag ' + (r.tipo === 'err' ? 'err' : (r.tipo === 'warn' ? 'warn' : '')) + '">' + r.tipo + '</span> ' + escHTML(r.msg) + '</td></tr>').join('') + '</tbody></table>';
+  }
+
+  /* ============================================================
+     LISTS, CHIPS AND CONTROLS
+     ============================================================ */
+  function opcionesEst(lista, vacio){ return (vacio ? '<option value="">' + vacio + '</option>' : '') + lista.map(e => '<option value="' + e.id + '">' + escHTML(nombreEst(e)) + (e.stationId ? ' · ' + escHTML(e.stationId) : '') + '</option>').join(''); }
+  function refrescarListas(rehacerTarjetas){
+    const act = estsActivas();
+    if (!act.find(e => e.id === ui.ref)) ui.ref = '';
+    el.refSel.innerHTML = opcionesEst(act, '— none —'); el.refSel.value = ui.ref;
+    const todas = ests.filter(e => kEst(e));
+    if (!todas.find(e => e.id === ui.detalle)) ui.detalle = todas.length ? todas[0].id : '';
+    el.detalleSel.innerHTML = opcionesEst(todas); el.detalleSel.value = ui.detalle;
+    if (!act.find(e => e.id === ui.estEvol)) ui.estEvol = act.length ? act[0].id : '';
+    el.estSelEvol.innerHTML = opcionesEst(act); el.estSelEvol.value = ui.estEvol;
+    ui.ocultas = ui.ocultas.filter(id => act.some(e => e.id === id));
+    el.chipsEst.innerHTML = act.map(e => '<button type="button" class="chip" data-id="' + e.id + '" style="--c:' + e.color + '" aria-pressed="' + (ui.ocultas.indexOf(e.id) < 0) + '"><i></i>' + escHTML(nombreEst(e)) + '</button>').join('') || '<span class="est-vacio">—</span>';
+    el.chipsVar.innerHTML = VARS_COMPARABLES.map(m => '<button type="button" class="chip" data-k="' + m.key + '" style="--c:' + (m.key === 'temp_c' ? '#E4572E' : 'var(--steel)') + '" aria-pressed="' + (ui.vars.indexOf(m.key) >= 0) + '">' + m.etiqueta + '</button>').join('');
+    if (rehacerTarjetas || el.estGrid.children.length !== ests.length) crearTarjetas();
+    else ests.forEach(renderTarjeta);
+    guardarUI();
+    actualizarCuota(); actualizarBotones(); renderEstadoMeta(); actualizarLuz();
+    renderMapa(); renderComparativa(); renderExtremos(); renderServidor();
+    renderTarjetasSel();
+    renderEvol(); renderDetalle(); renderSemana(); renderDatos();
+  }
+  function aplicarModoUI(){
+    const comparar = ui.modo === 'comparar';
+    $('modoComparar').setAttribute('aria-pressed', String(comparar));
+    $('modoEstacion').setAttribute('aria-pressed', String(!comparar));
+    $('filaChipsEst').style.display = comparar ? '' : 'none';
+    el.filaChipsVar.style.display = comparar ? '' : 'none';
+    el.filaEstSel.style.display = comparar ? 'none' : '';
+    document.querySelectorAll('#evolVentana button').forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === ui.ventanaH)));
+    document.querySelectorAll('#segResumen button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === ui.resumen)));
+  }
+
+  /* ============================================================
+     STARTUP AND EVENTS
+     ============================================================ */
+  function conectarEventos(){
+    el.estList.addEventListener('input', alEditarEstacion);
+    el.estList.addEventListener('change', alEditarEstacion);
+    el.estList.addEventListener('click', alClicEstacion);
+    $('btnAddEst').addEventListener('click', anadirEstacion);
+    $('btnExportar').addEventListener('click', exportarConfig);
+    $('btnImportar').addEventListener('click', () => $('fileImport').click());
+    $('fileImport').addEventListener('change', ev => { const f = ev.target.files[0]; if (f) importarConfig(f); ev.target.value = ''; });
+    const alEditarAjuste = () => { leerAjustesDeFormulario(false); marcarCambiosCfg(); };
+    [el.poll, el.clave, el.timeout, el.stale, el.bb, el.bm].forEach(i => { i.addEventListener('change', alEditarAjuste); i.addEventListener('input', alEditarAjuste); });
+    el.servBase.addEventListener('change', () => { cfg.servBase = el.servBase.value.trim(); guardarCfg(); });
+    document.addEventListener('click', ev => {
+      const a = ev.target.closest('a[data-mapa]');
+      if (!a) return;
+      ev.preventDefault();
+      abrirMapaEstaciones(a.dataset.mapa);
+    });
+    $('btnGuardarCfg').addEventListener('click', () => guardarConfiguracion());
+    $('btnGuardarCfg2').addEventListener('click', () => guardarConfiguracion());
+    window.addEventListener('beforeunload', ev => { if (!running && hayCambiosCfg()){ ev.preventDefault(); ev.returnValue = ''; } });
+    $('btnVerClave').addEventListener('click', ev => {
+      const ver = el.clave.type === 'password'; el.clave.type = ver ? 'text' : 'password';
+      ev.currentTarget.setAttribute('aria-pressed', String(ver)); ev.currentTarget.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
+    });
+
+    el.btnIniciar.addEventListener('click', iniciarMonitor);
+    el.btnDetener.addEventListener('click', () => pararMonitor('Monitor stopped.'));
+    el.btnSondeo.addEventListener('click', sondearTodas);
+
+    el.refSel.addEventListener('change', () => { ui.ref = el.refSel.value; guardarUI(); renderComparativa(); });
+    el.detalleSel.addEventListener('change', () => { ui.detalle = el.detalleSel.value; guardarUI(); renderTarjetasSel(); renderDetalle(); });
+    el.estSelEvol.addEventListener('change', () => { ui.estEvol = el.estSelEvol.value; guardarUI(); renderEvol(); });
+    document.querySelectorAll('#evolVentana button').forEach(b => b.addEventListener('click', () => { ui.ventanaH = parseInt(b.dataset.h, 10); guardarUI(); aplicarModoUI(); renderEvol(); if (ui.ventanaH === 168) rellenarHuecosAuto(); }));
+    $('modoComparar').addEventListener('click', () => { ui.modo = 'comparar'; guardarUI(); aplicarModoUI(); renderEvol(); });
+    $('modoEstacion').addEventListener('click', () => { ui.modo = 'estacion'; guardarUI(); aplicarModoUI(); renderEvol(); });
+    el.chipsEst.addEventListener('click', ev => {
+      const b = ev.target.closest('.chip'); if (!b) return;
+      const i = ui.ocultas.indexOf(b.dataset.id);
+      if (i >= 0) ui.ocultas.splice(i, 1); else ui.ocultas.push(b.dataset.id);
+      b.setAttribute('aria-pressed', String(ui.ocultas.indexOf(b.dataset.id) < 0)); guardarUI(); renderEvol();
+    });
+    el.chipsVar.addEventListener('click', ev => {
+      const b = ev.target.closest('.chip'); if (!b) return;
+      const i = ui.vars.indexOf(b.dataset.k);
+      if (i >= 0) ui.vars.splice(i, 1); else ui.vars.push(b.dataset.k);
+      ui.vars.sort((a, c) => VARS_COMPARABLES.findIndex(m => m.key === a) - VARS_COMPARABLES.findIndex(m => m.key === c));
+      b.setAttribute('aria-pressed', String(ui.vars.indexOf(b.dataset.k) >= 0)); guardarUI(); renderEvol();
+    });
+    document.querySelectorAll('#segResumen button').forEach(b => b.addEventListener('click', () => { ui.resumen = b.dataset.m; guardarUI(); aplicarModoUI(); renderSemana(); }));
+    $('btnConsultarDia').addEventListener('click', consultarDia);
+    el.btnCSVDia.addEventListener('click', exportarCSVDia);
+    $('btnSyncServidor').addEventListener('click', () => { cfg.servBase = el.servBase.value.trim(); guardarCfg(); sincronizarTodas(true); });
+    $('btnBackfill').addEventListener('click', rellenarDesdeAPI);
+    $('btnSemana7').addEventListener('click', () => rellenarHuecosAuto(true));
+    $('btnCSV24').addEventListener('click', () => exportarCSV(24));
+    el.mapaFondo.addEventListener('change', () => { ui.mapaFondo = el.mapaFondo.checked; guardarUI(); renderMapa(); });
+    $('btnCSV7').addEventListener('click', () => exportarCSV(168));
+    $('btnCSVTodo').addEventListener('click', () => exportarCSV(0));
+    $('btnBorrarTodo').addEventListener('click', () => borrarDatos(null));
+    el.datosTabla.addEventListener('click', ev => { const b = ev.target.closest('button[data-borrar]'); if (b) borrarDatos(b.dataset.borrar); });
+
+    const modal = $('modalGlosario');
+    const abrir = () => modal.classList.add('on'), cerrar = () => modal.classList.remove('on');
+    $('btnHelp').addEventListener('click', abrir); $('btnHelp2').addEventListener('click', abrir); $('modalCerrar').addEventListener('click', cerrar);
+    modal.addEventListener('click', ev => { if (ev.target === modal) cerrar(); });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrar(); });
+    $('goHome').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    $('btnIrConfig').addEventListener('click', () => { $('secEstaciones').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden){ actualizarPies(); pedirRedibujo(); } });
+  }
+
+  /* ============================================================
+     COLLAPSIBLE CARDS AND SECTIONS (the state is remembered in this browser)
+     ============================================================ */
+  const LS_PLEG = 'telemetmultistation_folded';
+  let plegadas = leerLS(LS_PLEG, {}) || {};
+  const slug = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const CHEV = '<svg class="i chev" aria-hidden="true"><use href="#i-down"></use></svg>';
+  function fijarPlegado(clave, cuerpo, boton, caja, plegar){
+    cuerpo.hidden = plegar;
+    boton.setAttribute('aria-expanded', String(!plegar));
+    if (caja) caja.classList.toggle('plegada', plegar);
+    if (plegar) plegadas[clave] = 1; else delete plegadas[clave];
+  }
+  function iniciarPlegables(){
+    const main = document.querySelector('main');
+    // 1) Sections: everything between one header and the next.
+    const cabs = Array.from(main.querySelectorAll(':scope > header.sh'));
+    cabs.forEach((h, i) => {
+      const cuerpo = document.createElement('div');
+      cuerpo.className = 'sec-cuerpo'; cuerpo.id = 'cuerpo-' + h.id;
+      let n = h.nextSibling;
+      while (n && !(n.nodeType === 1 && n.matches('header.sh'))){ const sig = n.nextSibling; cuerpo.appendChild(n); n = sig; }
+      h.after(cuerpo);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sh-plegar'; b.setAttribute('aria-controls', cuerpo.id);
+      b.innerHTML = '<span class="lbl"></span>' + CHEV;
+      h.appendChild(b);
+      const poner = plegar => {
+        fijarPlegado('sec:' + h.id, cuerpo, b, null, plegar);
+        b.querySelector('.lbl').textContent = plegar ? 'Show' : 'Hide';
+        b.title = (plegar ? 'Show' : 'Hide') + ' the section “' + (h.querySelector('h2') || {}).textContent + '”';
+      };
+      poner(!!plegadas['sec:' + h.id]);
+      b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
+      h._poner = poner; h._cuerpo = cuerpo;
+    });
+    // 2) Cards: each card (.card) and the map, collapsible from their title.
+    main.querySelectorAll('.card, .mapa-wrap').forEach((c, k) => {
+      let tit = c.querySelector(':scope > h3');
+      const nombre = tit ? tit.textContent.trim() : (c.dataset.titulo || ('Card ' + (k + 1)));
+      if (!tit){ tit = document.createElement('h3'); c.insertBefore(tit, c.firstChild); }
+      const cuerpo = document.createElement('div');
+      cuerpo.className = 'card-cuerpo'; cuerpo.id = 'ficha-' + slug(nombre);
+      while (tit.nextSibling) cuerpo.appendChild(tit.nextSibling);
+      c.appendChild(cuerpo);
+      tit.className = 'card-cab';
+      tit.innerHTML = '';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'plegar'; b.setAttribute('aria-controls', cuerpo.id);
+      b.innerHTML = '<span></span>' + CHEV; b.firstChild.textContent = nombre;
+      tit.appendChild(b);
+      const clave = 'ficha:' + slug(nombre);
+      const poner = plegar => { fijarPlegado(clave, cuerpo, b, c, plegar); b.title = (plegar ? 'Show “' : 'Hide “') + nombre + '”'; };
+      poner(!!plegadas[clave]);
+      b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
+    });
+    // 3) Menu links expand the target section if it was hidden.
+    const abrirDestino = id => {
+      const h = cabs.find(x => x.id === id);
+      if (h && h._cuerpo.hidden){ h._poner(false); guardarLS(LS_PLEG, plegadas); }
+    };
+    document.querySelectorAll('.nav-secc a[href^="#"]').forEach(a => a.addEventListener('click', () => abrirDestino(a.getAttribute('href').slice(1))));
+    window.addEventListener('hashchange', () => abrirDestino(location.hash.slice(1)));
+    const ir = $('btnIrConfig'); if (ir) ir.addEventListener('click', () => abrirDestino('secEstaciones'));
+  }
+
+  /* ============================================================
+     INTERACTIVE MAP WITH ALL THE STATIONS (new window, Leaflet + OpenStreetMap)
+     ============================================================ */
+  function abrirMapaEstaciones(idDestacada){
+    const con = estsActivas().filter(e => e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
+    if (con.length === 0){ mostrarToast('There are no coordinates yet: start the monitor so each station reports its position.'); return; }
+    const datos = con.map(e => {
+      const l = rt(e).last || {}, m = e.meta;
+      return { id: e.id, nombre: nombreEst(e), sid: e.stationId, color: e.color, lat: m.lat, lon: m.lon,
+        barrio: m.neighborhood || '', elev: esNum(m.elev) ? Math.round(m.elev) : null,
+        temp: esNum(l.temp_c) ? Math.round(l.temp_c * 10) / 10 : null, hum: esNum(l.humidity_pct) ? Math.round(l.humidity_pct) : null };
+    });
+    const json = JSON.stringify({ est: datos, dest: idDestacada || '' }).replace(/</g, '\\u003c');
+    const html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>TeleMet MultiStation · Map of the stations</title>' +
+      '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="">' +
+      '<style>html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif}#m{height:100%}' +
+      '.leyenda{position:absolute;z-index:1000;top:10px;right:10px;background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 4px 18px rgba(0,0,0,.28);font-size:13px;max-width:60vw}' +
+      '.leyenda b{display:block;margin-bottom:6px}.leyenda button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:4px 2px;font:inherit;cursor:pointer;text-align:left}' +
+      '.leyenda button:hover{background:#f0f3f7}.leyenda i{width:12px;height:12px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px #0004}' +
+      '.etq-est{font-weight:700;font-size:12.5px;background:#fff;border:1px solid #0003;border-radius:6px;padding:2px 6px}</style></head><body>' +
+      '<div id="m"></div><div class="leyenda" id="ley"><b>Stations</b></div>' +
+      '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin=""><\/script>' +
+      '<script>(function(){var D=' + json + ';' +
+      'var esc=function(t){return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",\'"\':"&quot;"}[c]})};' +
+      'var map=L.map("m",{zoomControl:true});' +
+      'L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\\u00a9 <a href=\\"https://www.openstreetmap.org/copyright\\">OpenStreetMap</a> contributors"}).addTo(map);' +
+      'var ms={},pts=[],ley=document.getElementById("ley");' +
+      'D.est.forEach(function(e){var dest=e.id===D.dest;' +
+      'var mk=L.circleMarker([e.lat,e.lon],{radius:dest?13:10,color:"#fff",weight:3,fillColor:e.color,fillOpacity:1}).addTo(map);' +
+      'var t=(e.temp!==null?e.temp.toString()+" \\u00b0C":"");' +
+      'mk.bindTooltip(esc(e.nombre)+(t?" \\u00b7 "+t:""),{permanent:true,direction:"top",offset:[0,-10],className:"etq-est"});' +
+      'mk.bindPopup("<b>"+esc(e.nombre)+"</b><br>"+esc(e.sid)+(e.barrio?"<br>"+esc(e.barrio):"")+(e.elev!==null?"<br>"+e.elev+" m":"")+(t?"<br>Temperature: "+t:"")+(e.hum!==null?"<br>Humidity: "+e.hum+" %":""));' +
+      'ms[e.id]=mk;pts.push([e.lat,e.lon]);' +
+      'var b=document.createElement("button");b.innerHTML=\'<i style="background:\'+esc(e.color)+\'"></i>\'+esc(e.nombre);b.onclick=function(){map.setView([e.lat,e.lon],Math.max(map.getZoom(),14));mk.openPopup()};ley.appendChild(b);});' +
+      'if(pts.length>1)map.fitBounds(pts,{padding:[70,70],maxZoom:15});else map.setView(pts[0],14);' +
+      'if(D.dest&&ms[D.dest])ms[D.dest].openPopup();' +
+      '})();<\/script></body></html>';
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    const w = window.open(url, '_blank');
+    if (!w) mostrarToast('The browser has blocked the map window: allow pop-ups for this page.');
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  }
+
+  function iniciarApp(){
+    cargarTodo();
+    iniciarPlegables();
+    conectarEventos();
+    volcarAjustesEnFormulario();
+    firmaGuardada = firmaConfig();
+    const hoy = new Date();
+    el.diaInput.max = hoy.getFullYear() + '-' + pad2(hoy.getMonth() + 1) + '-' + pad2(hoy.getDate());
+    el.diaInput.value = (function(){ const a = new Date(Date.now() - 86400000); return a.getFullYear() + '-' + pad2(a.getMonth() + 1) + '-' + pad2(a.getDate()); })();
+    renderEstList();
+    aplicarModoUI();
+    refrescarListas(true);
+    renderRegistro();
+    purgarAntiguos().then(renderDatos);
+    // Synchronises with the collector on opening and every SERV_SYNC_CADA_MIN minutes (even if the monitor is stopped).
+    if (estsActivas().length) setTimeout(() => { Promise.resolve(sincronizarTodas(false)).catch(() => {}).then(() => rellenarHuecosAuto()); }, 800);
+    timerSync = setInterval(() => { if (!document.hidden && estsActivas().length) sincronizarTodas(false); }, SERV_SYNC_CADA_MIN * 60000);
+    timerTick = setInterval(() => { if (!document.hidden) actualizarPies(); }, 1000);
+    setInterval(() => { if (!document.hidden) { try { renderServidor(); renderDatos(); } catch (_) {} } }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden){ try { renderServidor(); renderDatos(); renderEvol(); } catch (_) {} } });
+    setInterval(() => { if (!document.hidden && Date.now() - ultimaSemana > 300000) renderSemana(); }, 60000);
+  }
+
+  iniciarApp();
+})();
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 Manual for the installation, use, configuration and internals of **TeleMet Collector**, the Python program that keeps a history of the last 24 hours (configurable) of your weather station on the Linux server and makes it available to the **TeleMet History** app.
 
 - **Code:** `RafaUMH2110/apps` → `telemetria/telemetcollector/`
-- **Companion apps:** `telemetria/telemet/history/index.html` (TeleMet History, one station) and `telemetria/telemet/multi/index.html` (TeleMet Multi, several stations; its interface is in Spanish)
+- **Companion apps:** `telemetria/telemet/history/index.html` (TeleMet History, one station) and `telemetria/telemet/multistation/index.html` (TeleMet MultiStation, several stations; the Spanish version is `telemetria/telemet/multi/`)
 - **Program version:** 1.1 · **JSON format:** 1
 
 ---
@@ -46,7 +46,7 @@ TeleMet Collector solves that with a process that **never stops** on the server:
 
 Everything is configurable from a single `config.ini` file.
 
-**One or several stations.** With one station everything works as described above (`history.json`). With several, the same program starts one thread per station, each with its own API Key, its own database and its own `history_<ID>.json` (see [9.1.1](#911-several-stations-stationid) and [19.6](#196-two-stations-each-with-its-own-key)). **TeleMet History** reads the JSON of its station and **TeleMet Multi** reads all of them at once. Where installation or testing changes with several stations, this manual says so under the label **“Several stations”**.
+**One or several stations.** With one station everything works as described above (`history.json`). With several, the same program starts one thread per station, each with its own API Key, its own database and its own `history_<ID>.json` (see [9.1.1](#911-several-stations-stationid) and [19.6](#196-two-stations-each-with-its-own-key)). **TeleMet History** reads the JSON of its station and **TeleMet MultiStation** reads all of them at once. Where installation or testing changes with several stations, this manual says so under the label **“Several stations”**.
 
 ---
 
@@ -122,8 +122,8 @@ Plus the apps that consume the data:
 telemetria/telemet/history/
 ├── index.html                   ← TeleMet History, one station (already reads the JSON)
 └── apple-touch-icon.png
-telemetria/telemet/multi/
-├── index.html                   ← TeleMet Multi, several stations (reads one JSON per station; Spanish UI)
+telemetria/telemet/multistation/
+├── index.html                   ← TeleMet MultiStation, several stations (reads one JSON per station)
 ├── README.md
 └── apple-touch-icon.png
 ```
@@ -361,7 +361,7 @@ Environment variables **take priority** over the values in `config.ini`. With se
 
 ---
 
-## 8. Installing and connecting the TeleMet History app (and TeleMet Multi)
+## 8. Installing and connecting the TeleMet History app (and TeleMet MultiStation)
 
 ### 8.1. Copy the app
 
@@ -414,17 +414,17 @@ Enabling compression of the JSON (`mod_deflate`, type `application/json`) reduce
 - **Opening `index.html` straight from disk (`file://`):** the browser blocks reading the JSON; the app ignores it and works only with its local database.
 - **SELinux (RHEL/Rocky/Alma):** if Apache cannot read the JSON, label the folder, e.g. `sudo chcon -R -t httpd_sys_content_t /var/www/.../data`.
 
-### 8.5. TeleMet Multi (several stations)
+### 8.5. TeleMet MultiStation (several stations)
 
-TeleMet Multi follows the same mechanism, but for all the stations at once: for each station registered it reads `<folder>/history_<ID>.json` (or `historial_<ID>.json`) and, if it does not exist, `history.json` / `historial.json` when its `stationId` matches. It only adds the readings that are missing; it never deletes anything local. Its interface is in Spanish.
+TeleMet MultiStation follows the same mechanism, but for all the stations at once: for each station registered it reads `<folder>/history_<ID>.json` (or `historial_<ID>.json`) and, if it does not exist, `history.json` / `historial.json` when its `stationId` matches. It only adds the readings that are missing; it never deletes anything local. (The Spanish version, TeleMet Multi, works the same way.)
 
-1. Copy the app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmulti && sudo cp telemetria/telemet/multi/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmulti/`.
+1. Copy the app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmultistation && sudo cp telemetria/telemet/multistation/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmultistation/`.
 2. Tell the app where the JSON files are. Two options:
-   - **Option A (simplest, one data folder):** keep the collector writing to `/var/www/htdocs/rafa/telemethistory/data/` and, in the app, section **“07 · Datos y servidor”** (Data and server), set the folder to `../telemethistory/data/`.
-   - **Option B:** set `json_path` to `…/telemetmulti/data/history.json` (the collector adds the ID to each name) and set the folder in the app to `data/` (its default is `datos/`).
-3. In the app, register each station with its Station ID (the API Key is the one the browser uses for live reading; the collector uses its own) and press **“Sincronizar ahora”** (Sync now). The sync table shows, per station, `sincronizado` (with readings received and added) or `sin archivo` (no file).
+   - **Option A (simplest, one data folder):** keep the collector writing to `/var/www/htdocs/rafa/telemethistory/data/` and, in the app, section **“07 · Data and server”**, set the folder to `../telemethistory/data/`.
+   - **Option B:** set `json_path` to `…/telemetmultistation/data/history.json` (the collector adds the ID to each name) and set the folder in the app to `data/` (its default).
+3. In the app, register each station with its Station ID (the API Key is the one the browser uses for live reading; the collector uses its own) and press **“Synchronise now”**. The sync table shows, per station, `synchronised` (with readings received and added) or `no file`.
 
-With TeleMet History a single copy of the app serves all the stations (it reads the JSON of its Station ID); TeleMet Multi shows them together in charts, a comparison table and a map.
+With TeleMet History a single copy of the app serves all the stations (it reads the JSON of its Station ID); TeleMet MultiStation shows them together in charts, a comparison table and a map.
 
 ### 8.6. Check that the app uses it
 

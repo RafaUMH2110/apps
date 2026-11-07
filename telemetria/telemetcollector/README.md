@@ -5,7 +5,7 @@ A **Python** program (standard library only, no `pip install`) that runs continu
 1. Reads your weather station every 5 minutes (configurable) through Weather Underground / Earth Network. It can read **several stations**, each with its own API Key (see “Several stations”).
 2. Stores the readings in a SQLite database.
 3. Keeps only the last **24 hours** (sliding mode, the default; adjustable with `duration_hours`, `--hours` or `TELEMET_HOURS`); it can also wipe everything and start again once those hours are up (`mode = reset`).
-4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h and 24 h evolution charts (even if the browser has been closed). With several stations, the **TeleMet Multi** app reads the JSON of each one and shows them together (its interface is in Spanish).
+4. After every reading it exports the history to a static JSON next to the **TeleMet History** app, which reads it when it opens and uses it to fill the gaps in its 12 h and 24 h evolution charts (even if the browser has been closed). With several stations, the **TeleMet MultiStation** app reads the JSON of each one and shows them together (the Spanish version is TeleMet Multi).
 
 ```
 station ──► Weather Underground API ──► telemet_collector.py ──► SQLite (data/telemet.sqlite)
@@ -100,7 +100,7 @@ sudo systemctl restart telemet-collector
 journalctl -u telemet-collector -f                      # every line carries the station [ID]
 ```
 
-**Which app to use.** *TeleMet History* (one station): open `…/telemethistory/`; it reads `data/history_<ITS_ID>.json`. *TeleMet Multi* (several): copy `telemetria/telemet/multi/{index.html,apple-touch-icon.png}` to `/var/www/htdocs/rafa/telemetmulti/`, register the stations and, in “07 · Datos y servidor”, set the folder to `../telemethistory/data/` (or the one you use) and press “Sincronizar ahora”. More detail in the [MANUAL](MANUAL.md#85-telemet-multi-several-stations).
+**Which app to use.** *TeleMet History* (one station): open `…/telemethistory/`; it reads `data/history_<ITS_ID>.json`. *TeleMet MultiStation* (several): copy `telemetria/telemet/multistation/{index.html,apple-touch-icon.png}` to `/var/www/htdocs/rafa/telemetmultistation/`, register the stations and, in “07 · Data and server”, set the folder to `../telemethistory/data/` (or the one you use) and press “Synchronise now”. (The Spanish version, TeleMet Multi, lives in `telemetria/telemet/multi/`.) More detail in the [MANUAL](MANUAL.md#85-telemet-multistation-several-stations).
 
 ## Installing the TeleMet History app on the same server
 

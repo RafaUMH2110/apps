@@ -705,7 +705,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet MultiStation. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 7 November 2026, 19:28</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 7 November 2026, 22:43</p>
 </footer>
 
 <div class="bottomnav">
@@ -1712,7 +1712,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (r.estado === 'err') return r.msg;
     if (r.estado === 'warn' && r.msg) return r.msg;
     if (r.obsMs){
-      let s = edadTxt(r.obsMs) + ' ago';
+      const dObs = new Date(r.obsMs);
+      const horaObs = fmtHoraMs(r.obsMs) + (dObs.toDateString() === new Date().toDateString() ? '' : ' (' + pad2(dObs.getDate()) + '/' + pad2(dObs.getMonth() + 1) + ')');
+      let s = 'Last reading: ' + horaObs + ' \u00b7 ' + edadTxt(r.obsMs) + ' ago';
       if (running && r.proxMs && r.estado !== 'err') s += ' · next in ' + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
       if (r.deltas && r.deltas.length >= 3){ const o = r.deltas.slice().sort((a, b) => a - b); s += ' · new reading every ≈ ' + (o[o.length >> 1] >= 90 ? Math.round(o[o.length >> 1] / 60) + ' min' : Math.round(o[o.length >> 1]) + ' s'); }
       if (!r.plausible) s += ' · ⚠ out of range';

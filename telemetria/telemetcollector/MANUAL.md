@@ -17,7 +17,7 @@ Manual for the installation, use, configuration and internals of **TeleMet Colle
 5. [Step-by-step installation](#5-step-by-step-installation)
 6. [First run and tests](#6-first-run-and-tests)
 7. [Running as a service (systemd)](#7-running-as-a-service-systemd)
-8. [Installing and connecting the TeleMet History app](#8-installing-and-connecting-the-telemet-history-app)
+8. [Installing and connecting the TeleMet History app](#8-installing-and-connecting-the-telemet-history-app-and-telemet-multistation)
 9. [Configuration reference (`config.ini`)](#9-configuration-reference-configini)
 10. [Command-line reference](#10-command-line-reference)
 11. [How it works inside](#11-how-it-works-inside)
@@ -262,7 +262,7 @@ From any computer:
 curl -s https://YOUR-SERVER/PATH/telemethistory/data/history.json | head -c 400
 ```
 
-(or open it in the browser; with several stations, the `history_<ID>.json` of each one). If you get a 404, the published path does not match `json_path` (see [section 8](#8-installing-and-connecting-the-telemet-history-app)).
+(or open it in the browser; with several stations, the `history_<ID>.json` of each one). If you get a 404, the published path does not match `json_path` (see [section 8](#8-installing-and-connecting-the-telemet-history-app-and-telemet-multistation)).
 
 ### 6.4. Running in the foreground (optional)
 

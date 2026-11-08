@@ -44,42 +44,48 @@ persona que la usa.
 | [TeleMet Multi](https://rafaumh2110.github.io/apps/telemetria/telemet/multi/) | Basada en TeleMet Historial pero para **varias estaciones a la vez**, cada una con su Station ID, su API Key, su nombre y su color: sondeo independiente por estación (un fallo en una no detiene las demás), tarjetas de condiciones actuales, tabla comparativa con máximos/mínimos y diferencias respecto a una estación de referencia, extremos entre estaciones, mapa esquemático, gráficas de 12 h / 24 h / 7 días con todas las estaciones superpuestas (o todas las variables de una sola estación), resumen de 7 días, consulta de un día concreto, histórico persistente por estación en IndexedDB, sincronización con los JSON de TeleMet Colector multiestación, estimación de cuota por clave, importación/exportación de la configuración y CSV. |
 | [TeleMet MultiStation](https://rafaumh2110.github.io/apps/telemetria/telemet/multistation/) | Versión en inglés de TeleMet Multi: misma app para seguir **varias estaciones a la vez** (sondeo independiente, tarjetas, comparativa, gráficas superpuestas, resumen de 7 días, día concreto, mapa y sincronización con TeleMet Collector), con interfaz, mensajes y comentarios en inglés, almacenamiento propio (`telemetmultistation_*`) y lectura de `history_<ID>.json` (acepta también los nombres `historial_*`). |
 
-**Gráficas combinadas de doble eje (5 nov 2026).** En todas las apps de `telemetria/` que muestran estas variables (TeleMet Pro, Historial, Cal, Cal Vivo y la versión inglesa History; TeleMet Mobile/iPad y sus variantes Pro y Cal; TelemetriaWU Móvil e iPad), la radiación solar y el índice UV comparten gráfica (UV en el eje derecho), igual que la tasa de lluvia y la lluvia acumulada (acumulada en trazo discontinuo y eje derecho). Ambos ejes comparten rejilla, la leyenda indica unidades y eje de cada serie y el tooltip muestra los dos valores con su unidad. En las apps de la familia TeleMet Pro/Historial/Cal/Cal Vivo/History las mismas dos gráficas combinadas aparecen también en las de 7 días (y en la consulta de un día concreto de Historial). Las gráficas de 7 días de las apps móviles/iPad y las apps sin estas variables (TeleMet, versiones Lite, TelemetriaWU/Monitor/Histórico/MQTT/Gráficos) no cambian.
-
-**Ventana de 12 h / 24 h (5 nov 2026).** TeleMet Historial y su versión inglesa TeleMet History incorporan, en el panel de evolución de horas, un selector 12 h / 24 h que cambia la ventana de todas las gráficas (eje X, umbral de huecos y mensajes se adaptan) y se recuerda en el navegador. Las 24 h se construyen con el histórico local (retención de 9 días) y con el JSON del colector, que ahora guarda 24 h por defecto (configurable con `duracion_horas`, `--horas` o `TELEMET_HORAS`).
-
-**TeleMet Multi (6 nov 2026).** Nueva app `telemetria/telemet/multi/` para seguir varias estaciones a la vez. Lee el histórico de cada una desde `historial_<ID>.json` (TeleMet Colector multiestación), de modo que apuntando su carpeta de datos a `../historial/datos/` se completan las gráficas sin esperar a acumular lecturas en el navegador.
-
-**TeleMet MultiStation (7 nov 2026).** Nueva app `telemetria/telemet/multistation/`: versión en inglés de TeleMet Multi (misma funcionalidad, interfaz y comentarios en inglés, formato de fechas y números en-GB). Usa su propio almacenamiento (`telemetmultistation_*`, IndexedDB `telemetmultistation_db`) para convivir con la versión española, y busca primero los archivos del colector en inglés (`data/history_<ID>.json`, `../telemethistory/data/`) y después los españoles. La documentación de TeleMet Collector apunta ahora a esta versión.
-
 ## Estructura del repositorio
 
 ```
 apps/
-├── appindex/          ← portal con el catálogo (GenImOd, GenPatMod, SearchLogMod...)
-│   ├── index.html         portal general (todas las apps de la tabla de arriba)
-│   └── moda/index.html     portal específico de moda (GenImOda, GenPatModa, GenOutFitS)
-├── <nombre-app>/      ← una carpeta por app, cada una con su index.html
-│   └── index.html
-└── .github/workflows/ ← despliegue a GitHub Pages y regeneración del portal
+├── appindex/      portal con el catálogo (index.html, temas/, moda/) e iconos
+├── consultar/     ConSultar
+├── pdfs/          DetectIApdf y variantes
+├── moda/          GenImOd, GenOutFit, GenPatMod, SearchLogMod y sus versiones
+│   └── <app>/pro/    versión Pro de cada app
+├── telemetria/    TelemetriaWU, TeleMet y los colectores (telemetcolector / telemetcollector)
+└── .github/       workflow de portal + despliegue y scripts que generan el portal
 ```
 
-Cada app vive en su propia carpeta en la raíz del repo, por lo que su
-URL en GitHub Pages queda limpia:
-`https://rafaumh2110.github.io/apps/<nombre-app>/`.
+Cada app vive en su propia carpeta y su URL en GitHub Pages es
+`https://rafaumh2110.github.io/apps/<familia>/<app>/`. Esas URLs están
+publicadas y enlazadas desde el portal, los manuales y los instaladores:
+**no se renombran ni se mueven carpetas de apps**. Las parejas
+español/inglés llevan nombres distintos (`historial`/`history`,
+`multi`/`multistation`, `telemetcolector`/`telemetcollector`).
+
+Los cambios de calendario (qué se añadió y cuándo) están en
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## Despliegue automático
 
-- **GitHub Pages** (`deploy-artifacts-pages.yml`): cada `push` a `main`
-  publica todo el repositorio en https://rafaumh2110.github.io/apps/.
-- **Portal** (`sync-appindex-portal.yml`): cada `push` que modifique una
-  carpeta de app regenera `appindex/index.html` (versión principal) y
-  `appindex/temas/index.html` (versión alternativa, agrupada por tema) a
-  partir de los metadatos (`data-app-title`, `data-app-description`,
-  `data-categories`, `data-tags`) declarados en la etiqueta `<body>` de
-  cada app, y hace commit del resultado automáticamente. No requiere
-  ningún secreto:
-  todo ocurre dentro de este mismo repositorio.
+Un único workflow, `.github/workflows/portal-y-pages.yml`, se ejecuta en
+cada `push` a `main` (o a mano desde la pestaña *Actions*) en dos pasos
+encadenados:
+
+1. **Portal** (`sync-portal`): regenera `appindex/index.html` (versión
+   principal) y `appindex/temas/index.html` (agrupada por tema) a partir
+   de los metadatos (`data-app-title`, `data-app-description`,
+   `data-categories`, `data-tags`) declarados en la etiqueta `<body>` de
+   cada app. Si hay cambios, hace commit del resultado. No requiere
+   ningún secreto.
+2. **Pages** (`deploy`): publica en
+   https://rafaumh2110.github.io/apps/ el árbol ya con el portal
+   regenerado, sin `.github/`, sin `.git` y sin ficheros `.zip`.
+
+El portal se mantiene versionado porque los instaladores
+(`instalar-todo*.sh`) copian el repositorio clonado a Apache y necesitan
+`appindex/` tal cual.
 
 ## Componentes de servidor
 
@@ -90,10 +96,11 @@ URL en GitHub Pages queda limpia:
 
 ## Despliegue en un servidor propio (Apache)
 
-Existe un paquete de scripts para instalar el portal `appindex/moda` y
-las apps que enlaza en un servidor Linux (Debian) propio con Apache,
-como alternativa o complemento a GitHub Pages. Pide ese paquete si lo
-necesitas.
+Los scripts `instalar-todo*.sh` del repositorio
+[`code`](https://github.com/RafaUMH2110/code/tree/main/scripts)
+(carpeta `scripts/`) clonan este repositorio, despliegan las apps en un
+servidor Linux (Debian) propio con Apache y pueden instalar el colector
+como servicio. Son una alternativa o complemento a GitHub Pages.
 
 ## Autor
 

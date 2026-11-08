@@ -1,1 +1,28 @@
+# Python
 __pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+
+# Secretos y configuración local (nunca se versionan)
+.env
+.env.*
+*.pem
+*.key
+config.ini
+*_K.txt
+
+# Datos y registros generados
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.log
+
+# Resultado local del build de Pages
+_site/

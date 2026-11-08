@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
+<script>try{var _t=localStorage.getItem("telemetmulti_tema");if(_t==="claro"||_t==="oscuro")document.documentElement.setAttribute("data-tema",_t);}catch(e){}</script>
 <title>TeleMet Multi · Varias estaciones meteorológicas a la vez</title>
 <meta name="description" content="Monitoriza varias estaciones meteorológicas personales de Weather Underground / Earth Network a la vez, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto y sincronización con TeleMet Colector.">
 <meta name="author" content="Rafael Puerto">
@@ -37,8 +38,23 @@
   --sombra:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
   --sombra-alta:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
 }
+:root[data-tema="claro"]{ color-scheme: light; }
+:root[data-tema="oscuro"]{
+  color-scheme: dark;
+    --ink:#EAF1F7; --muted:#92ACC4;
+    --page-bg:#0B1420; --card-bg:#121C2B;
+    --line:#223247; --line-2:#1A2638;
+    --steel:#9CB7D6; --steel-soft:#51708F;
+    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
+    --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
+    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
+    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
+    --forjado:#1FBE9F;
+    --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
+    --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
+}
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-tema]){
     --ink:#EAF1F7; --muted:#92ACC4;
     --page-bg:#0B1420; --card-bg:#121C2B;
     --line:#223247; --line-2:#1A2638;
@@ -70,6 +86,15 @@ code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1p
 .tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
 .tb-btn:hover{border-color:var(--brasa);color:var(--on-dark)}
 @media(max-width:560px){.tb-btn .lbl{display:none}}
+/* Selectores de aspecto (tema) e idioma */
+.tb-seg{display:inline-flex;border:1px solid var(--panel-line);border-radius:9px;overflow:hidden;flex:none}
+.tb-seg button{background:transparent;border:0;color:var(--on-dark-muted);padding:6px 9px;min-height:34px;font:700 12.5px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
+.tb-seg button+button{border-left:1px solid var(--panel-line)}
+.tb-seg button:hover{color:var(--on-dark)}
+.tb-seg button[aria-pressed="true"]{background:var(--brasa);color:#fff}
+.tb-seg .lbl{display:none}
+@media(min-width:900px){.tb-seg.tema .lbl{display:inline}}
+@media(max-width:560px){.tb-in{flex-wrap:wrap;row-gap:8px}.tb-right{flex-wrap:wrap;justify-content:flex-end}}
 
 /* Luz de estado (semáforo del monitor) */
 .light{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
@@ -444,6 +469,16 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   - IndexedDB telemetmulti_db / lecturas: una fila por lectura y estación
     (índices por estación y por [estación, instante]); se conservan 9 días.
 
+  IDIOMA Y TEMA
+  La barra superior tiene un selector de aspecto (Sistema / Claro / Oscuro) y otro
+  de idioma (Es / En). Se guardan en localStorage (telemetmulti_tema y
+  telemetmulti_idioma); sin elección previa, el idioma sale del navegador y el
+  aspecto sigue al sistema. El texto original está en español: el diccionario EN
+  (buscar «const EN =» en el script final) lo traduce en vivo, sin recargar,
+  con T() para los textos generados por código y traducirDOM() para los de la
+  página. Para añadir un texto nuevo, escríbelo en español y añade su par en EN.
+  El mapa (mapa.html) recibe el idioma en el hash de la URL.
+
   QUÉ CONSTANTES EDITAR (buscar en el script final)
   MAX_EST, PALETA, DEF (sondeo por defecto), LIMITE_LLAMADAS_DIA (aviso de
   cuota), RETENCION_DIAS, VENTANAS (nº de tramos de cada gráfica) y
@@ -467,6 +502,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 11.59A2 2 0 1 0 14 15H2M17.59 16.59A2 2 0 1 1 19 20H2"></path></symbol>
   <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><path d="M16 13v8M8 13v8M12 15v8"></path></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"></path></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4"></path></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></symbol>
@@ -489,6 +526,15 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Multi</em></span></button>
     <div class="tb-right">
       <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
+      <div class="tb-seg tema" id="segTema" role="group" aria-label="Aspecto de la página">
+        <button type="button" data-tema="sistema" aria-pressed="true" title="Aspecto: igual que el sistema"><svg class="i"><use href="#i-monitor"></use></svg><span class="lbl">Sistema</span></button>
+        <button type="button" data-tema="claro" aria-pressed="false" title="Aspecto: claro"><svg class="i"><use href="#i-sun"></use></svg><span class="lbl">Claro</span></button>
+        <button type="button" data-tema="oscuro" aria-pressed="false" title="Aspecto: oscuro"><svg class="i"><use href="#i-moon"></use></svg><span class="lbl">Oscuro</span></button>
+      </div>
+      <div class="tb-seg" id="segIdioma" role="group" aria-label="Idioma de la página">
+        <button type="button" data-idioma="es" aria-pressed="true" lang="es" title="Español">Es</button>
+        <button type="button" data-idioma="en" aria-pressed="false" lang="en" title="English">En</button>
+      </div>
       <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
     </div>
   </div>
@@ -705,7 +751,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 7 de noviembre de 2026, 23:07</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 8 de noviembre de 2026, 19:02</p>
 </footer>
 
 <div class="bottomnav">
@@ -748,6 +794,530 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   "use strict";
 
   /* ============================================================
+     IDIOMA Y TEMA (se eligen en la barra superior y se recuerdan en este navegador)
+     El texto original está en español; EN contiene su traducción al inglés, que T() y
+     traducirDOM() aplican en vivo. Los textos que se generan por código pasan por T();
+     los de la página, por traducirDOM() (que recuerda el original para poder volver).
+     ============================================================ */
+  const LS_IDIOMA = 'telemetmulti_idioma', LS_TEMA = 'telemetmulti_tema';
+  const EN = {
+"TeleMet Multi · Varias estaciones meteorológicas a la vez": "TeleMet Multi · Several weather stations at once",
+"Monitoriza varias estaciones meteorológicas personales de Weather Underground / Earth Network a la vez, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto y sincronización con TeleMet Colector.": "Monitor several personal Weather Underground / Earth Network weather stations at once, each with its own Station ID and API Key: live cards, comparison table, overlaid 12 h, 24 h and 7-day charts, weekly summary, single-day lookup and synchronisation with TeleMet Collector.",
+"data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->": "data: URI, which iOS Safari does not always respect when creating the app icon. -->",
+"pero como su propio bloque con fondo de tarjeta (no anidado en una). */": "but as its own block with a card background (not nested in one). */",
+"TeleMet Multi — Notas de diseño y configuración": "TeleMet Multi — Design and configuration notes",
+"QUÉ ES": "WHAT IT IS",
+"Variante de TeleMet Historial (apps/telemetria/telemet/historial) pensada": "A variant of TeleMet History (apps/telemetria/telemet/history) designed to",
+"para ver VARIAS estaciones a la vez. Reutiliza su motor de lectura, su": "view SEVERAL stations at once. It reuses its reading engine, its value",
+"extracción de valores, su histórico local (IndexedDB), su relleno desde la": "extraction, its local history (IndexedDB), its fill from the API and its",
+"API y su trazado de gráficas, y añade: lista de estaciones con su propia API": "chart drawing, and adds: a list of stations, each with its own API Key and",
+"Key y color, sondeo independiente por estación, tarjetas y tabla comparativa": "colour, independent polling per station, cards and a comparison table",
+"(con diferencias respecto a una referencia), extremos, mapa esquemático,": "(with differences from a reference), extremes, a schematic map, overlaid",
+"gráficas superpuestas (una línea por estación) o por estación, resumen de": "charts (one line per station) or per-station charts, a 7-day summary,",
+"7 días, consulta de un día concreto, sincronización con los JSON por": "single-day lookup, synchronisation with the per-station JSON files of",
+"estación de TeleMet Colector y exportación/importación de la configuración.": "TeleMet Collector and export/import of the configuration.",
+"DÓNDE ESTÁN LOS DATOS": "WHERE THE DATA LIVES",
+"- localStorage: telemetmulti_estaciones (estaciones y claves),": "- localStorage: telemetmultistation_stations (stations and keys),",
+"telemetmulti_ajustes (sondeo, clave común, carpeta de JSON) y": "telemetmultistation_settings (polling, shared key, JSON folder) and",
+"telemetmulti_ui (vista de las gráficas). Si no hay estaciones guardadas y": "telemetmultistation_ui (chart view). If there are no saved stations and",
+"existe wu_station_id / wu_api_key (resto de la familia), se propone como": "wu_station_id / wu_api_key exist (rest of the family), they are offered",
+"primera estación.": "as the first station.",
+"- IndexedDB telemetmulti_db / lecturas: una fila por lectura y estación": "- IndexedDB telemetmultistation_db / readings: one row per reading and",
+"(índices por estación y por [estación, instante]); se conservan 9 días.": "station (indexes by station and by [station, instant]); 9 days are kept.",
+"QUÉ CONSTANTES EDITAR (buscar en el script final)": "WHICH CONSTANTS TO EDIT (search in the final script)",
+"MAX_EST, PALETA, DEF (sondeo por defecto), LIMITE_LLAMADAS_DIA (aviso de": "MAX_EST, PALETA, DEF (default polling), LIMITE_LLAMADAS_DIA (quota",
+"cuota), RETENCION_DIAS, VENTANAS (nº de tramos de cada gráfica) y": "warning), RETENCION_DIAS, VENTANAS (number of intervals of each chart) and",
+"SERV_SYNC_CADA_MIN / SERV_AVISO_MIN (colector).": "SERV_SYNC_CADA_MIN / SERV_AVISO_MIN (collector).",
+"y el favicon): simplificado a bandera + punto de base para que se lea": "and the favicon): simplified to a flag + base dot so it reads",
+"bien al tamaño diminuto del logo de la cabecera. -->": "well at the tiny size of the header logo. -->",
+"Ir al inicio": "Go to the top",
+"Multi": "Multi",
+"Detenido": "Stopped",
+"Glosario": "Glossary",
+"VARIAS ESTACIONES · WEATHER UNDERGROUND / EARTH NETWORK": "SEVERAL STATIONS · WEATHER UNDERGROUND / EARTH NETWORK",
+"Tus estaciones,": "Your stations,",
+"una al lado de otra": "side by side",
+"Monitoriza a la vez varias estaciones meteorológicas personales, cada una con su Station ID y su API Key: tarjetas en vivo, tabla comparativa con máximos y mínimos, gráficas superpuestas de 12 h, 24 h y 7 días, resumen semanal, consulta de un día concreto y sincronización con el histórico que guarda el servidor (TeleMet Colector).": "Monitor several personal weather stations at once, each with its own Station ID and API Key: live cards, comparison table with highs and lows, overlaid 12 h, 24 h and 7-day charts, weekly summary, single-day lookup and synchronisation with TeleMet Collector.",
+"Configurar mis estaciones": "Set up my stations",
+"¿Qué significa cada término?": "What does each term mean?",
+"Aviso:": "Note:",
+"el sondeo solo funciona mientras esta pestaña permanece abierta. Para tener el histórico completo aunque la cierres, instala TeleMet Colector en el servidor (sección «Datos y servidor»).": "polling only works while this tab stays open. To keep the full history even if you close it, install TeleMet Collector on the server (section “Data and server”).",
+"Secciones": "Sections",
+"Estaciones": "Stations",
+"Ahora": "Now",
+"Detalle": "Detail",
+"Gráficas": "Charts",
+"7 días": "7 days",
+"Día concreto": "Single day",
+"Datos y servidor": "Data and server",
+"01 · Antes de empezar": "01 · Before you start",
+"Añade hasta 12 estaciones. Los datos (Station ID y API Key) se guardan solo en este navegador. Los campos se bloquean mientras el monitor está en marcha.": "Add up to 12 stations. The data (Station ID and API Key) is stored only in this browser. The fields are locked while the monitor is running.",
+"Mis estaciones": "My stations",
+"Cada estación puede tener su propia API Key; si dejas la de una estación vacía se usa la «clave común» de más abajo. El nombre es opcional (si lo dejas vacío se usa el que informe la estación).": "Each station can have its own API Key; if you leave a station’s key empty, the “shared key” below is used. The name is optional (if left empty, the name reported by the station is used).",
+"Añadir estación": "Add station",
+"Importar configuración": "Import configuration",
+"Exportar configuración": "Export configuration",
+"incluir las API Key en el archivo": "include the API Keys in the file",
+"Guardar configuración": "Save configuration",
+"Sondeo": "Polling",
+"Cada estación se consulta por separado, a su ritmo y con sus propios reintentos: si una falla, las demás siguen. Los arranques se escalonan unos segundos para no lanzar todas las peticiones a la vez.": "Each station is queried separately, at its own pace and with its own retries: if one fails, the others carry on. Start-ups are staggered by a few seconds so that not all requests go out at once.",
+"Intervalo de sondeo por estación (s)": "Polling interval per station (s)",
+"Clave común (opcional)": "Shared key (optional)",
+"Para las estaciones sin clave propia": "For stations without their own key",
+"Mostrar u ocultar la clave común": "Show or hide the shared key",
+"Ajustes avanzados": "Advanced settings",
+"Tiempo límite de cada petición (s)": "Timeout of each request (s)",
+"Umbral de dato obsoleto (s)": "Stale-data threshold (s)",
+"Si la lectura de una estación es más antigua, su luz pasa a ámbar.": "If a station’s reading is older than this, its light turns amber.",
+"Backoff: espera inicial (s)": "Backoff: initial wait (s)",
+"Backoff: espera máxima (s)": "Backoff: maximum wait (s)",
+"02 · Ahora mismo": "02 · Right now",
+"Lecturas en tiempo real": "Real-time readings",
+"Una tarjeta por estación con su última lectura y su tendencia. Pulsa una tarjeta para ver su detalle más abajo.": "One card per station with its latest reading and trend. Click a card to see its detail further down.",
+"Monitor detenido.": "Monitor stopped.",
+"Mapa de fondo (OpenStreetMap)": "Background map (OpenStreetMap)",
+"Posición de las estaciones": "Position of the stations",
+"Comparativa": "Comparison",
+"Última lectura de cada estación. En rojo el valor más alto de cada fila y en azul el más bajo (cuando hay dos o más estaciones con dato).": "Latest reading of each station. The highest value of each row in red and the lowest in blue (when two or more stations have data).",
+"Diferencias respecto a": "Differences from",
+"Estación de referencia": "Reference station",
+"— ninguna —": "— none —",
+"03 · Una estación": "03 · One station",
+"Detalle de la estación": "Station detail",
+"Todas las variables de la estación elegida, con su tendencia y el mínimo, máximo y minigráfico de las últimas 24 horas (a partir del histórico guardado).": "All the variables of the chosen station, with their trend and the minimum, maximum and sparkline of the last 24 hours (from the stored history).",
+"Estación": "Station",
+"Estación para el detalle": "Station for the detail",
+"04 · Lo registrado": "04 · What has been recorded",
+"Gráficas de evolución": "Evolution charts",
+"Se construyen con el histórico guardado en este navegador (completado con el del servidor si está disponible). Compara una misma variable entre estaciones o mira todas las variables de una sola estación.": "Built from the history stored in this browser (completed with the server history if available). Compare the same variable between stations or look at all the variables of a single station.",
+"Ventana": "Window",
+"Ventana de tiempo": "Time window",
+"Vista": "View",
+"Tipo de vista": "View type",
+"Comparar estaciones": "Compare stations",
+"Una estación": "One station",
+"Añade estaciones e inicia el monitor para ver las gráficas.": "Add stations and start the monitor to see the charts.",
+"05 · La semana": "05 · The week",
+"Resumen de los últimos 7 días": "Summary of the last 7 days",
+"Un valor por día y por estación, a partir del histórico guardado. En rojo el más alto de cada día y en azul el más bajo.": "One value per day and per station, from the stored history. The highest of each day in red and the lowest in blue.",
+"Mostrar": "Show",
+"Magnitud del resumen": "Summary quantity",
+"T. máxima": "Max. temp.",
+"T. mínima": "Min. temp.",
+"T. media": "Avg. temp.",
+"Lluvia": "Rain",
+"Racha máx.": "Max. gust",
+"Todavía no hay datos.": "No data yet.",
+"Completar 7 días con la API": "Complete 7 days from the API",
+"06 · El pasado": "06 · The past",
+"Consultar un día en concreto": "Look up a specific day",
+"Elige cualquier fecha: se usa lo guardado en este navegador y, si falta cobertura, se completa con el histórico de la API (una petición por estación y día). Usa las estaciones y variables elegidas en las gráficas.": "Pick any date: what is stored in this browser is used and, if coverage is missing, it is completed with the API history (one request per station and day). It uses the stations and variables chosen in the charts.",
+"Fecha": "Date",
+"Consultar": "Look up",
+"Elige una fecha y pulsa «Consultar».": "Pick a date and press “Look up”.",
+"Descargar ese día (CSV)": "Download that day (CSV)",
+"07 · Mantenimiento": "07 · Maintenance",
+"Sincronización con TeleMet Colector, lo guardado en este navegador y exportación.": "Synchronisation with TeleMet Collector, what is stored in this browser, and export.",
+"Histórico del servidor (TeleMet Colector)": "Server history (TeleMet Collector)",
+"Si el colector corre en el mismo servidor, esta app lee para cada estación su archivo": "If the collector runs on the same server, this app reads, for each station, its file",
+"historial_<ID>.json": "history_<ID>.json",
+"(o": "(or",
+"history_<ID>.json": "historial_<ID>.json",
+") y, si no existe, el único": ") and, if it does not exist, the single",
+"historial.json": "history.json",
+"history.json": "historial.json",
+"cuando su": "when its",
+"coincide. Solo": "matches. It only",
+"añade": "adds",
+"lecturas que faltan: nunca borra ni modifica lo local. Si no hay colector, simplemente se ignora. Se sincroniza solo al abrir la página y cada 2 minutos; estas tablas se actualizan automáticamente.": "missing readings: it never deletes or modifies local data. If there is no collector, it is simply ignored. It synchronises on its own when the page opens and every 2 minutes; these tables update automatically.",
+"Carpeta de los JSON (relativa a esta página)": "Folder of the JSON files (relative to this page)",
+"Por defecto": "Default",
+"datos/": "data/",
+". Si ahí no hay archivo, la app prueba también las carpetas habituales de TeleMet Historial/History (": ". If there is no file there, the app also tries the usual TeleMet History/Historial folders (",
+"../telemethistorial/datos/": "../telemethistory/data/",
+"../telemethistory/data/": "../telemethistorial/datos/",
+"../historial/datos/": "../history/data/",
+"y": "and",
+"../history/data/": "../historial/datos/",
+"). Para cualquier otra ubicación, escríbela aquí.": "). For any other location, type it here.",
+"Sincronizar ahora": "Synchronise now",
+"Histórico guardado en este navegador": "History stored in this browser",
+"Se conservan 9 días por estación (IndexedDB). «Rellenar» pide a la API los días con huecos de los últimos 7 (": "9 days are kept per station (IndexedDB). “Fill” asks the API for the days with gaps in the last 7 (",
+"una petición por estación y día incompleto": "one request per station and incomplete day",
+", que cuenta para el límite de tu clave).": ", which counts towards your key’s limit).",
+"Rellenar huecos desde la API": "Fill gaps from the API",
+"CSV · 7 días": "CSV · 7 days",
+"CSV · todo": "CSV · all",
+"Borrar todo lo guardado": "Delete everything stored",
+"Registro de actividad (esta sesión)": "Activity log (this session)",
+"Sin actividad todavía.": "No activity yet.",
+"TeleMet Multi. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.": "TeleMet Multi. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.",
+"Monitor detenido": "Monitor stopped",
+"Iniciar": "Start",
+"Detener": "Stop",
+"Sondear todas ahora": "Poll all now",
+"Sondear": "Poll",
+"Cerrar": "Close",
+"Identificador de cada estación en wunderground.com (My Profile → My Devices) y la clave de la API. Cada estación puede llevar la suya; si está vacía se usa la «clave común».": "Identifier of each station on wunderground.com (My Profile → My Devices) and the API key. Each station can use its own; if empty, the “shared key” is used.",
+"Sondeo independiente": "Independent polling",
+"Cada estación tiene su propio ciclo, su propio contador de reintentos y su propio estado: una clave errónea (401) o un Station ID inexistente (404) detiene solo esa estación.": "Each station has its own cycle, its own retry counter and its own state: a wrong key (401) or a non-existent Station ID (404) stops only that station.",
+"Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.": "Growing wait between retries after a transient error (network, timeout, 5xx): it doubles each time, up to a configurable maximum.",
+"Límite de llamadas": "Call limit",
+"Las claves de Weather Underground tienen un límite diario de peticiones (habitualmente 1.500 al día en las cuentas personales; compruébalo en tu cuenta). Con varias estaciones que comparten clave, las llamadas se suman: la app te avisa si el intervalo elegido lo supera.": "Weather Underground keys have a daily request limit (usually 1,500 a day on personal accounts; check it in your account). With several stations sharing a key, the calls add up: the app warns you if the chosen interval exceeds it.",
+"Luz de estado": "Status light",
+"Verde: lectura reciente. Ámbar: la lectura es más antigua que el umbral de «dato obsoleto». Roja: error o estación detenida. Gris: sin sondear.": "Green: recent reading. Amber: the reading is older than the “stale data” threshold. Red: error or station stopped. Grey: not polling.",
+"Tendencia (▲ ▼ —)": "Trend (▲ ▼ —)",
+"Compara la última temperatura de la estación con la anterior.": "Compares the station’s latest temperature with the previous one.",
+"Comparativa y diferencias": "Comparison and differences",
+"Con una estación de referencia, cada celda muestra además la diferencia respecto a ella (Δ). Útil para ver gradientes entre zonas o comprobar un sensor frente a otro.": "With a reference station, each cell also shows the difference from it (Δ). Useful to see gradients between areas or to check one sensor against another.",
+"Sensación térmica": "Feels-like temperature",
+"Índice de calor con ≥ 27 °C, sensación de frío por viento con ≤ 10 °C y algo de viento; en el resto, la temperatura del aire. Se calcula en el navegador.": "Heat index at ≥ 27 °C, wind chill at ≤ 10 °C with some wind; otherwise, the air temperature. Computed in the browser.",
+"Punto de rocío": "Dew point",
+"Temperatura a la que el aire se saturaría de humedad. Cuanto más cerca de la temperatura del aire, más húmedo se percibe el ambiente.": "Temperature at which the air would become saturated with moisture. The closer it is to the air temperature, the more humid it feels.",
+"Lluvia acumulada": "Accumulated rain",
+"Total que la propia estación lleva acumulado, normalmente desde la medianoche local; se reinicia sola cada día en el hardware.": "Total the station itself has accumulated, normally since local midnight; it resets by itself every day in the hardware.",
+"Gráficas superpuestas": "Overlaid charts",
+"Cada línea es una estación. Para ahorrar puntos, los datos se agrupan en tramos de 3 min (12 h), 5 min (24 h) o 30 min (7 d) y se muestra su media. Los huecos largos sin datos no se unen con una recta.": "Each line is a station. To save points, data is grouped into 3 min (12 h), 5 min (24 h) or 30 min (7 d) intervals and their average is shown. Long gaps without data are not joined with a straight line.",
+"Histórico del navegador": "Browser history",
+"Cada lectura se guarda en IndexedDB (9 días por estación). Persiste entre sesiones en este mismo navegador y dispositivo.": "Every reading is stored in IndexedDB (9 days per station). It persists between sessions in this same browser and device.",
+"TeleMet Colector": "TeleMet Collector",
+"Programa Python del servidor que lee las estaciones aunque nadie tenga la app abierta y publica un JSON por estación. Esta app los lee y añade las lecturas que le faltan.": "Python program on the server that reads the stations even when nobody has the app open and publishes one JSON per station. This app reads them and adds the readings it is missing.",
+"Mapa esquemático": "Schematic map",
+"Posición de las estaciones según las coordenadas que informan, sobre un mapa de fondo de OpenStreetMap (se puede desactivar; sin conexión funciona sin conexión). El norte está arriba.": "Position of the stations according to the coordinates they report, over an OpenStreetMap background (it can be turned off; without a connection it works without the background). North is up.",
+"Temperatura": "Temperature",
+"Humedad": "Humidity",
+"Presión": "Pressure",
+"Viento": "Wind",
+"Racha": "Gust",
+"Dirección del viento": "Wind direction",
+"Radiación solar": "Solar radiation",
+"Índice UV": "UV index",
+"Temperatura, sensación térmica y punto de rocío": "Temperature, feels-like and dew point",
+"Viento y racha": "Wind and gust",
+"Tasa de lluvia y lluvia acumulada": "Rain rate and accumulated rain",
+"Radiación solar e índice UV": "Solar radiation and UV index",
+"IndexedDB no disponible en este navegador": "IndexedDB is not available in this browser",
+"Ya se está completando el histórico; espera a que termine…": "The history is already being completed; wait for it to finish…",
+"Completando el histórico de 7 días con la API… ": "Completing the 7-day history from the API… ",
+"Histórico de la API (": "API history (",
+" lecturas.": " readings.",
+"La API no tiene lecturas nuevas para ": "The API has no new readings for ",
+"La API responde «demasiadas peticiones» (HTTP 429); se reintentará en 1 minuto.": "The API replied “too many requests” (HTTP 429); it will be retried in 1 minute.",
+"No se pudo completar el histórico de ": "Could not complete the history for ",
+" (sin respuesta de la API)": " (no response from the API)",
+"Probando el histórico por horas de 7 días… · ": "Trying the 7-day hourly history… · ",
+"Histórico por horas (7 días): +": "Hourly history (7 days): +",
+" lecturas (": " readings (",
+"El histórico por horas de 7 días no trae lecturas de los días que faltan (": "The 7-day hourly history has no readings for the missing days (",
+" recibidas en total).": " received in total).",
+"sin respuesta": "no response",
+"No se pudo obtener el histórico por horas de 7 días (": "Could not get the 7-day hourly history (",
+"completado ": "completed ",
+" día(s) con la API": " day(s) with the API",
+" y ": " and ",
+" lecturas horarias": " hourly readings",
+"la API no tiene datos de ": "the API has no data for ",
+"error en ": "error on ",
+"el histórico por horas falló (": "the hourly history failed (",
+"Histórico de 7 días incompleto: la API ha limitado las peticiones (HTTP 429). Se reintentará en 1 minuto…": "7-day history incomplete: the API has limited the requests (HTTP 429). It will be retried in 1 minute…",
+"Histórico de 7 días · ": "7-day history · ",
+"Los últimos 7 días ya están completos.": "The last 7 days are already complete.",
+"Hay cambios sin guardar. Pulsa «Guardar configuración».": "There are unsaved changes. Press “Save configuration”.",
+"estación ": "station ",
+"«": "“",
+"» no tiene Station ID": "” has no Station ID",
+"» no tiene API Key ni hay clave común": "” has no API Key and there is no shared key",
+"el Station ID ": "Station ID ",
+" está repetido": " is repeated",
+"No se pudo guardar: el navegador no permite almacenar datos (¿modo privado o almacenamiento bloqueado?).": "Could not save: the browser does not allow storing data (private mode or blocked storage?).",
+"✓ Configuración guardada": "✓ Configuration saved",
+" a las ": " at ",
+" estación(es), ": " station(s), ",
+" activa(s), sondeo cada ": " active, polling every ",
+" Aviso: ": " Note: ",
+"Configuración guardada (": "Configuration saved (",
+" estación": " station",
+"es": "s",
+"Configuración guardada: ": "Configuration saved: ",
+" estación(es).": " station(s).",
+"<p class=\"est-vacio\">Todavía no hay ninguna estación. Pulsa «Añadir estación» e introduce su Station ID.</p>": "<p class=\"est-vacio\">There are no stations yet. Press “Add station” and enter its Station ID.</p>",
+"\">Nombre (opcional)</label><input type=\"text\" id=\"n-": "\">Name (optional)</label><input type=\"text\" id=\"n-",
+"Estación ": "Station ",
+"\">API Key (opcional)</label><div class=\"keyrow\"><input type=\"password\" id=\"k-": "\">API Key (optional)</label><div class=\"keyrow\"><input type=\"password\" id=\"k-",
+"\" placeholder=\"Vacía = clave común\" autocomplete=\"off\" spellcheck=\"false\"><button type=\"button\" class=\"eye\" data-acc=\"ver\" aria-label=\"Mostrar u ocultar la API Key\" aria-pressed=\"false\"><svg class=\"i\"><use href=\"#i-eye\"></use></svg></button></div></div>": "\" placeholder=\"Empty = shared key\" autocomplete=\"off\" spellcheck=\"false\"><button type=\"button\" class=\"eye\" data-acc=\"ver\" aria-label=\"Show or hide the API Key\" aria-pressed=\"false\"><svg class=\"i\"><use href=\"#i-eye\"></use></svg></button></div></div>",
+"> Activa</label>": "> Active</label>",
+"<button type=\"button\" class=\"btn btn-ghost btn-sm\" data-acc=\"borrar\" aria-label=\"Quitar la estación ": "<button type=\"button\" class=\"btn btn-ghost btn-sm\" data-acc=\"borrar\" aria-label=\"Remove station ",
+"Detén el monitor para editar las estaciones y el sondeo.": "Stop the monitor to edit the stations and polling.",
+"¿Quitar «": "Remove “",
+"» de la lista? Su histórico guardado en este navegador se conserva (puedes borrarlo en «Datos y servidor»).": "” from the list? Its history stored in this browser is kept (you can delete it in “Data and server”).",
+"Máximo ": "Maximum ",
+" estaciones.": " stations.",
+"Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.": "Configuration exported WITH the API Keys: keep the file somewhere safe.",
+"Configuración exportada (sin API Key).": "Configuration exported (without API Keys).",
+"no es un archivo de configuración de TeleMet Multi": "is not a TeleMet Multi configuration file",
+"Esto sustituye las estaciones y ajustes actuales por los del archivo. ¿Continuar?": "This replaces the current stations and settings with those in the file. Continue?",
+"(importada del archivo)": "(imported from file)",
+"No se pudo importar: ": "Could not import: ",
+"archivo no válido": "invalid file",
+"(sin clave)": "(no key)",
+" estación(es) activa(s) · ≈ ": " active station(s) · ≈ ",
+" llamadas/día en total": " calls/day in total",
+" · la clave más cargada (": " · the busiest key (",
+" estaciones) hace ≈ ": " stations) makes ≈ ",
+"/día": "/day",
+". Supera el límite habitual de ": ". This exceeds the usual limit of ",
+" llamadas/día por clave (compruébalo en tu cuenta): usa un intervalo de ": " calls/day per key (check it in your account): use an interval of ",
+" s o más, o claves distintas.": " s or more, or different keys.",
+". (Límite habitual por clave: ": ". (Usual limit per key: ",
+"/día.)": "/day.)",
+" Si el colector u otra app usa la misma clave, suma sus llamadas (el colector con intervalo_s = 60 hace 1.440/día).": " If the collector or another app uses the same key, their calls add up (the collector with interval_s = 60 makes 1,440/day).",
+" · reintento ": " · retry ",
+" en ": " in ",
+" (estación detenida)": " (station stopped)",
+"Todas las estaciones se han detenido por error.": "All stations have been stopped because of errors.",
+"tiempo límite agotado": "timeout",
+"fallo de red": "network failure",
+": API Key inválida o sin permiso": ": invalid API Key or no permission",
+"404: Station ID no encontrado": "404: Station ID not found",
+"HTTP 429: límite de llamadas de la clave alcanzado (¿la comparte con el colector u otra app?)": "HTTP 429: the key’s call limit has been reached (is it shared with the collector or another app?)",
+"respuesta no válida": "invalid response",
+"sin datos nuevos": "no new data",
+"La estación publica un dato nuevo cada ≈ ": "The station publishes a new reading every ≈ ",
+" s: sondear más a menudo (": " s: polling more often (",
+" s) devuelve la misma lectura y gasta llamadas de la API.": " s) returns the same reading and wastes API calls.",
+"Lectura fuera de rango plausible.": "Reading outside the plausible range.",
+"Añade al menos una estación activa con su Station ID.": "Add at least one active station with its Station ID.",
+"al iniciar el monitor": "when starting the monitor",
+"conectando…": "connecting…",
+"Monitor iniciado con ": "Monitor started with ",
+" estación(es), cada ": " station(s), every ",
+"Todas con error": "All stations in error",
+" en orden": " OK",
+" con error": " in error",
+" estación(es) en marcha": " station(s) running",
+"Conectando…": "Connecting…",
+"Monitor detenido. Pulsa «Iniciar» para sondear las estaciones.": "Monitor stopped. Press “Start” to poll the stations.",
+"Añade estaciones en la sección 01.": "Add stations in section 01.",
+"Sondeando ": "Polling ",
+" estación(es) cada ": " station(s) every ",
+" lectura(s) nuevas en esta sesión.": " new reading(s) this session.",
+" · próxima en ": " · next in ",
+" · dato nuevo cada ≈ ": " · new reading every ≈ ",
+" · ⚠ fuera de rango": " · ⚠ out of range",
+"sin datos en esta sesión": "no data this session",
+"<p class=\"est-vacio\">Sin estaciones.</p>": "<p class=\"est-vacio\">No stations.</p>",
+"En orden": "OK",
+"Dato obsoleto o reintentando": "Stale data or retrying",
+"Sin sondear": "Not polling",
+"sin Station ID": "no Station ID",
+"<span>Humedad</span><b>": "<span>Humidity</span><b>",
+"<span>Viento</span><b>": "<span>Wind</span><b>",
+"<span>Presión</span><b>": "<span>Pressure</span><b>",
+"<span>Lluvia hoy</span><b>": "<span>Rain today</span><b>",
+"<span>Radiación</span><b>": "<span>Radiation</span><b>",
+"<span>Índice UV</span><b>": "<span>UV index</span><b>",
+"<p class=\"evol-vacio\">Sin estaciones activas.</p>": "<p class=\"evol-vacio\">No active stations.</p>",
+"<th class=\"num\">Media</th>": "<th class=\"num\">Average</th>",
+"<tr><td>Última lectura</td>": "<tr><td>Latest reading</td>",
+"Más cálida": "Warmest",
+"Más fría": "Coldest",
+"Más húmeda": "Most humid",
+"Más seca": "Driest",
+"Más viento": "Windiest",
+"Mayor racha": "Strongest gust",
+"Mayor presión": "Highest pressure",
+"Más lluvia hoy": "Most rain today",
+"Más radiación": "Most radiation",
+"\" text-anchor=\"end\">© colaboradores de OpenStreetMap</text>": "\" text-anchor=\"end\">© OpenStreetMap contributors</text>",
+"Mapa de fondo © colaboradores de <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>; norte arriba. ": "Background map © <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a> contributors; north is up. ",
+"Posición relativa (sin mapa de fondo; norte arriba). ": "Relative position (no background map; north is up). ",
+"Separación máxima entre estaciones: <strong>": "Maximum separation between stations: <strong>",
+"<a href=\"#\" data-mapa=\"\">Abrir mapa interactivo con todas las estaciones</a> · Centrar en: ": "<a href=\"#\" data-mapa=\"\">Open interactive map with all the stations</a> · Centre on: ",
+"<p class=\"evol-vacio\">Sin estaciones.</p>": "<p class=\"evol-vacio\">No stations.</p>",
+"\">ver en el mapa</a>": "\">view on map</a>",
+"<div class=\"rango-minmax\">24 h: mín ": "<div class=\"rango-minmax\">24 h: min ",
+" · máx ": " · max ",
+"\" text-anchor=\"middle\">Sin datos en este periodo</text>": "\" text-anchor=\"middle\">No data in this period</text>",
+"eje der.": "right axis",
+"eje izq.": "left axis",
+"<p class=\"evol-vacio\">No se ha podido leer el histórico guardado en este navegador (": "<p class=\"evol-vacio\">Could not read the history stored in this browser (",
+"motivo desconocido": "unknown reason",
+"). Puede estar bloqueado por el modo privado o por los ajustes de cookies y datos del sitio.</p>": "). It may be blocked by private mode or by the site’s cookie and data settings.</p>",
+"<p class=\"evol-vacio\">Añade estaciones e inicia el monitor para ver las gráficas.</p>": "<p class=\"evol-vacio\">Add stations and start the monitor to see the charts.</p>",
+"<p class=\"evol-vacio\">Activa al menos una estación en los botones de arriba.</p>": "<p class=\"evol-vacio\">Turn on at least one station with the buttons above.</p>",
+"<p class=\"evol-vacio\">Elige al menos una variable.</p>": "<p class=\"evol-vacio\">Choose at least one variable.</p>",
+"Todavía no hay datos de este periodo en este navegador. Inicia el monitor, sincroniza con el servidor o rellena desde la API (sección «Datos y servidor»).": "There is no data for this period in this browser yet. Start the monitor, synchronise with the server or fill from the API (section “Data and server”).",
+" estación(es) · ": " station(s) · ",
+" lecturas · tramos de ": " readings · intervals of ",
+" min (se muestra su media).": " min (their average is shown).",
+"Todavía no hay datos de «": "There is no data for “",
+"» en este periodo.": "” in this period yet.",
+"<table class=\"t\"><thead><tr><th>Día</th>": "<table class=\"t\"><thead><tr><th>Day</th>",
+" (hoy)": " (today)",
+"<tr><td>Lecturas (7 d)</td>": "<tr><td>Readings (7 d)</td>",
+"</tbody></table><p class=\"evol-nota\" style=\"margin-top:8px\">Valores en ": "</tbody></table><p class=\"evol-nota\" style=\"margin-top:8px\">Values in ",
+"Lluvia: el acumulado más alto registrado ese día. ": "Rain: the highest accumulated total recorded that day. ",
+"Un «—» significa que no hay lecturas guardadas ese día.</p>": "A “—” means there are no readings stored for that day.</p>",
+"Elige una fecha.": "Choose a date.",
+"Esa fecha es futura.": "That date is in the future.",
+"Activa al menos una estación en las gráficas.": "Turn on at least one station in the charts.",
+"Consultando ": "Looking up ",
+" de la API": " from the API",
+": la API no respondió": ": the API did not respond",
+": la API no tiene más datos de ese día": ": the API has no more data for that day",
+"<p class=\"evol-vacio\">No hay datos de ese día para las estaciones elegidas.</p>": "<p class=\"evol-vacio\">There is no data for that day for the chosen stations.</p>",
+"Sin datos.": "No data.",
+"Todo el día estaba ya guardado en este navegador.": "The whole day was already stored in this browser.",
+"Temp. máxima (°C)": "Max. temp. (°C)",
+"Temp. mínima (°C)": "Min. temp. (°C)",
+"Temp. media (°C)": "Avg. temp. (°C)",
+"Humedad media (%)": "Avg. humidity (%)",
+"Presión media (hPa)": "Avg. pressure (hPa)",
+"Racha máxima (km/h)": "Max. gust (km/h)",
+"Lluvia total (mm)": "Total rain (mm)",
+"Radiación máx. (W/m²)": "Max. radiation (W/m²)",
+"UV máximo": "Max. UV",
+"Lecturas": "Readings",
+"</h3><div class=\"tbl-wrap amplia\"><table class=\"t\"><thead><tr><th>Resumen</th>": "</h3><div class=\"tbl-wrap amplia\"><table class=\"t\"><thead><tr><th>Summary</th>",
+"estacion": "station",
+"fecha_hora_local": "local_datetime",
+"No hay estaciones activas.": "There are no active stations.",
+"No hay lecturas que exportar en ese periodo.": "There are no readings to export in that period.",
+" lecturas exportadas.": " readings exported.",
+"<table class=\"t t-compacta\"><thead><tr><th>Estación</th><th>Estado</th><th class=\"num\">Recibidas</th><th class=\"num\">Añadidas</th><th class=\"ocupa\">Última lectura</th></tr></thead><tbody>": "<table class=\"t t-compacta\"><thead><tr><th>Station</th><th>Status</th><th class=\"num\">Received</th><th class=\"num\">Added</th><th class=\"ocupa\">Latest reading</th></tr></thead><tbody>",
+"<span class=\"tag\">pendiente</span>": "<span class=\"tag\">pending</span>",
+"\">sincronizado</span>": "\">synchronised</span>",
+" <span class=\"tag warn\">¿colector parado?</span>": " <span class=\"tag warn\">collector stopped?</span>",
+"<span class=\"tag\" title=\"No se ha encontrado historial_": "<span class=\"tag\" title=\"Could not find history_",
+".json en la carpeta indicada ni en ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ o ../history/data/\">sin archivo</span>": ".json in the given folder or in ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ or ../history/data/\">no file</span>",
+"<span class=\"tag warn\" title=\"No existe historial_": "<span class=\"tag warn\" title=\"history_",
+".json. En la carpeta solo hay un historial.json, que es de la estación ": ".json does not exist. The folder only has a history.json, which belongs to station ",
+". El colector debe tener configurada también esta estación ([estacion:": ". The collector must also have this station configured ([station:",
+"] en su config.ini) para generar su propio archivo.\">sin archivo propio · el JSON es de ": "] in its config.ini) to generate its own file.\">no own file · the JSON belongs to ",
+"<span class=\"tag err\">formato no válido</span>": "<span class=\"tag err\">invalid format</span>",
+"<span class=\"tag err\">error local</span>": "<span class=\"tag err\">local error</span>",
+"Todavía no hay nada guardado en este navegador.": "There is nothing stored in this browser yet.",
+"<table class=\"t t-compacta\"><thead><tr><th>Estación</th><th class=\"num\">Lecturas</th><th>Desde</th><th class=\"ocupa\">Hasta</th><th></th></tr></thead><tbody>": "<table class=\"t t-compacta\"><thead><tr><th>Station</th><th class=\"num\">Readings</th><th>From</th><th class=\"ocupa\">To</th><th></th></tr></thead><tbody>",
+" <span class=\"tag\">no configurada</span>": " <span class=\"tag\">not configured</span>",
+"\" aria-label=\"Borrar el histórico de ": "\" aria-label=\"Delete the history of ",
+"Los últimos 7 días ya están cubiertos para todas las estaciones.": "The last 7 days are already covered for all the stations.",
+"Se harán hasta ": "Up to ",
+" peticiones a la API (una por estación y día con huecos). ¿Continuar?": " requests will be made to the API (one per station and day with gaps). Continue?",
+"Rellenando ": "Filling ",
+"Listo: ": "Done: ",
+" lecturas añadidas": " readings added",
+" petición(es) sin respuesta (la API puede no tener histórico para tu cuenta)": " request(s) without a response (the API may have no history for your account)",
+"Relleno desde la API: +": "Fill from the API: +",
+" lecturas, ": " readings, ",
+" errores.": " errors.",
+"el histórico guardado de ": "the stored history of ",
+"TODO el histórico guardado en este navegador": "ALL the history stored in this browser",
+"¿Borrar ": "Delete ",
+"? No se puede deshacer.": "? This cannot be undone.",
+"Histórico borrado.": "History deleted.",
+"<p class=\"evol-vacio\">Sin actividad todavía.</p>": "<p class=\"evol-vacio\">No activity yet.</p>",
+"<table class=\"t\"><thead><tr><th>Hora</th><th>Estación</th><th>Evento</th></tr></thead><tbody>": "<table class=\"t\"><thead><tr><th>Time</th><th>Station</th><th>Event</th></tr></thead><tbody>",
+"Ocultar": "Hide",
+" la sección «": " the section “",
+"»": "”",
+"Ficha ": "Card ",
+"Mostrar «": "Show “",
+"Ocultar «": "Hide “",
+"Aún no hay coordenadas: inicia el monitor para que cada estación informe de su posición.": "There are no coordinates yet: start the monitor so each station reports its position.",
+"mapa.html#": "map.html#",
+"El navegador ha bloqueado la ventana del mapa: permite las ventanas emergentes para esta página.": "The browser has blocked the map window: allow pop-ups for this page.",
+"Mapa de las estaciones": "Map of the stations",
+"Resumen semanal": "Weekly summary",
+"Consulta de un día": "Single-day lookup",
+"Tema": "Theme",
+"Idioma": "Language",
+"Sistema": "System",
+"Claro": "Light",
+"Oscuro": "Dark",
+"Aspecto: igual que el sistema": "Appearance: same as the system",
+"Aspecto: claro": "Appearance: light",
+"Aspecto: oscuro": "Appearance: dark",
+"Aspecto de la página": "Page appearance",
+"Idioma de la página": "Page language",
+") · Última modificación: 8 de noviembre de 2026, 19:02": ") · Last modified: 8 November 2026, 19:02"
+};
+  let LANG = (function(){
+    try { const v = localStorage.getItem(LS_IDIOMA); if (v === 'es' || v === 'en') return v; } catch (_) {}
+    return /^es/i.test(navigator.language || 'es') ? 'es' : 'en';
+  })();
+  let LOC = LANG === 'en' ? 'en-GB' : 'es-ES';
+  const normTxt = s => String(s).replace(/\s+/g, ' ').trim();
+  function T(s){ if (LANG !== 'en') return s; const v = EN[s]; return v !== undefined ? v : s; }
+  function Tn(s){ if (LANG !== 'en') return s; const v = EN[s] !== undefined ? EN[s] : EN[normTxt(s)]; return v !== undefined ? v : s; }
+
+  const REG_TXT = new WeakMap(), REG_ATTR = new WeakMap();
+  const ATRIB_TRAD = ['title', 'aria-label', 'placeholder', 'alt'];
+  function traducirDOM(){
+    const en = LANG === 'en';
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: n =>
+      (n.parentNode && /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+    const nodos = []; while (w.nextNode()) nodos.push(w.currentNode);
+    nodos.forEach(n => {
+      const rec = REG_TXT.get(n);
+      if (!en){ if (rec && n.data === rec.en) n.data = rec.es; return; }
+      if (rec && n.data === rec.en) return;
+      const k = normTxt(n.data); if (!k) return;
+      const v = EN[k]; if (v === undefined) return;
+      const ini = n.data.match(/^\s*/)[0], fin = n.data.match(/\s*$/)[0];
+      REG_TXT.set(n, { es: n.data, en: ini + v + fin }); n.data = ini + v + fin;
+    });
+    const sel = ATRIB_TRAD.map(a => '[' + a + ']').join(',');
+    document.querySelectorAll(sel).forEach(x => {
+      let r = REG_ATTR.get(x); if (!r){ r = {}; REG_ATTR.set(x, r); }
+      ATRIB_TRAD.forEach(a => {
+        if (!x.hasAttribute(a)) return;
+        const cur = x.getAttribute(a), rec = r[a];
+        if (!en){ if (rec && cur === rec.en) x.setAttribute(a, rec.es); return; }
+        if (rec && cur === rec.en) return;
+        const v = EN[normTxt(cur)]; if (v === undefined) return;
+        r[a] = { es: cur, en: v }; x.setAttribute(a, v);
+      });
+    });
+    // título de la pestaña y descripción
+    if (!document.documentElement._tit) document.documentElement._tit = document.title;
+    document.title = en ? (EN[normTxt(document.documentElement._tit)] || document.documentElement._tit) : document.documentElement._tit;
+    const md = document.querySelector('meta[name="description"]');
+    if (md){ if (!md._es) md._es = md.getAttribute('content'); md.setAttribute('content', en ? (EN[normTxt(md._es)] || md._es) : md._es); }
+  }
+  function marcarSelectores(){
+    document.querySelectorAll('#segIdioma button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.idioma === LANG)));
+    const t = document.documentElement.getAttribute('data-tema') || 'sistema';
+    document.querySelectorAll('#segTema button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tema === t)));
+  }
+  function aplicarTema(t, guardar){
+    if (t === 'claro' || t === 'oscuro') document.documentElement.setAttribute('data-tema', t);
+    else document.documentElement.removeAttribute('data-tema');
+    if (guardar){ try { if (t === 'claro' || t === 'oscuro') localStorage.setItem(LS_TEMA, t); else localStorage.removeItem(LS_TEMA); } catch (_) {} }
+    marcarSelectores();
+    // las gráficas usan variables CSS: se redibujan por si algún trazo conservara colores ya resueltos
+    if (guardar){ try { renderEvol(); renderSemana(); } catch (_) {} }
+  }
+  function fijarIdioma(l, inicial){
+    LANG = l === 'en' ? 'en' : 'es'; LOC = LANG === 'en' ? 'en-GB' : 'es-ES';
+    document.documentElement.lang = LANG;
+    if (!inicial){ try { localStorage.setItem(LS_IDIOMA, LANG); } catch (_) {} }
+    traducirDOM(); marcarSelectores();
+    if (!inicial){ refrescarPlegables(); refrescarVista(); }
+  }
+  function refrescarPlegables(){
+    document.querySelectorAll('main > header.sh').forEach(hd => { if (hd._poner) hd._poner(!hd._cuerpo.hidden); });
+    document.querySelectorAll('main .card, main .mapa-wrap').forEach(c => { if (c._poner) c._poner(!c._cuerpo.hidden); });
+  }
+  function refrescarVista(){
+    try { renderEstList(); aplicarModoUI(); refrescarListas(true); renderRegistro(); renderDatos(); } catch (err) { /* sin datos aún */ }
+    try { traducirDOM(); } catch (_) {}
+  }
+  function conectarSelectoresVista(){
+    document.querySelectorAll('#segTema button').forEach(b => b.addEventListener('click', () => aplicarTema(b.dataset.tema, true)));
+    document.querySelectorAll('#segIdioma button').forEach(b => b.addEventListener('click', () => { if (b.dataset.idioma !== LANG) fijarIdioma(b.dataset.idioma, false); }));
+  }
+
+  /* ============================================================
      CONSTANTES EDITABLES
      ============================================================ */
   const BASE_URL = 'https://api.weather.com/v2/pws/observations/current';
@@ -781,30 +1351,30 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   // Variable, icono, color (var(--c-xxx)) y decimales con que se muestra.
   const GRAFICABLES = [
-    { key: 'temp_c', etiqueta: 'Temperatura', unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)', dec: 1 },
-    { key: 'heat_index_c', etiqueta: 'Sensación térmica', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)', dec: 1 },
-    { key: 'dewpoint_c', etiqueta: 'Punto de rocío', unidad: '°C', icono: 'droplet', color: 'var(--c-dew)', dec: 1 },
-    { key: 'humidity_pct', etiqueta: 'Humedad', unidad: '%', icono: 'droplet', color: 'var(--c-hum)', dec: 0 },
-    { key: 'pressure_hpa', etiqueta: 'Presión', unidad: 'hPa', icono: 'gauge', color: 'var(--c-pres)', dec: 1 },
-    { key: 'wind_kmh', etiqueta: 'Viento', unidad: 'km/h', icono: 'wind', color: 'var(--c-wind)', dec: 1 },
-    { key: 'gust_kmh', etiqueta: 'Racha', unidad: 'km/h', icono: 'wind', color: 'var(--c-gust)', dec: 1 },
-    { key: 'wind_dir_deg', etiqueta: 'Dirección del viento', unidad: '°', icono: 'wind', color: 'var(--c-dir)', dec: 0 },
-    { key: 'rainrate_mmh', etiqueta: 'Lluvia', unidad: 'mm/h', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
-    { key: 'rain_total_mm', etiqueta: 'Lluvia acumulada', unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
-    { key: 'solarradiation_wm2', etiqueta: 'Radiación solar', unidad: 'W/m²', icono: 'sun', color: 'var(--c-solar)', dec: 0 },
-    { key: 'uv_index', etiqueta: 'Índice UV', unidad: '', icono: 'sun', color: 'var(--c-uv)', dec: 1 }
+    { key: 'temp_c', get etiqueta(){ return T('Temperatura'); }, unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)', dec: 1 },
+    { key: 'heat_index_c', get etiqueta(){ return T('Sensación térmica'); }, unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)', dec: 1 },
+    { key: 'dewpoint_c', get etiqueta(){ return T('Punto de rocío'); }, unidad: '°C', icono: 'droplet', color: 'var(--c-dew)', dec: 1 },
+    { key: 'humidity_pct', get etiqueta(){ return T('Humedad'); }, unidad: '%', icono: 'droplet', color: 'var(--c-hum)', dec: 0 },
+    { key: 'pressure_hpa', get etiqueta(){ return T('Presión'); }, unidad: 'hPa', icono: 'gauge', color: 'var(--c-pres)', dec: 1 },
+    { key: 'wind_kmh', get etiqueta(){ return T('Viento'); }, unidad: 'km/h', icono: 'wind', color: 'var(--c-wind)', dec: 1 },
+    { key: 'gust_kmh', get etiqueta(){ return T('Racha'); }, unidad: 'km/h', icono: 'wind', color: 'var(--c-gust)', dec: 1 },
+    { key: 'wind_dir_deg', get etiqueta(){ return T('Dirección del viento'); }, unidad: '°', icono: 'wind', color: 'var(--c-dir)', dec: 0 },
+    { key: 'rainrate_mmh', get etiqueta(){ return T('Lluvia'); }, unidad: 'mm/h', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'rain_total_mm', get etiqueta(){ return T('Lluvia acumulada'); }, unidad: 'mm', icono: 'cloud-rain', color: 'var(--c-rain)', dec: 1 },
+    { key: 'solarradiation_wm2', get etiqueta(){ return T('Radiación solar'); }, unidad: 'W/m²', icono: 'sun', color: 'var(--c-solar)', dec: 0 },
+    { key: 'uv_index', get etiqueta(){ return T('Índice UV'); }, unidad: '', icono: 'sun', color: 'var(--c-uv)', dec: 1 }
   ];
   const DEF_VAR = k => GRAFICABLES.find(m => m.key === k);
   const VARS_COMPARABLES = GRAFICABLES.filter(m => m.key !== 'wind_dir_deg');
 
   // Vista «Una estación»: mismas agrupaciones que TeleMet Historial (con doble eje Y en lluvia y solar+UV).
   const GRUPOS_ESTACION = [
-    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
-    { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
-    { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
-    { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
-    { titulo: 'Tasa de lluvia y lluvia acumulada', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
-    { titulo: 'Radiación solar e índice UV', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
+    { get titulo(){ return T('Temperatura, sensación térmica y punto de rocío'); }, unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { get titulo(){ return T('Humedad'); }, unidad: '%', claves: ['humidity_pct'] },
+    { get titulo(){ return T('Presión'); }, unidad: 'hPa', claves: ['pressure_hpa'] },
+    { get titulo(){ return T('Viento y racha'); }, unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
+    { get titulo(){ return T('Tasa de lluvia y lluvia acumulada'); }, unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
+    { get titulo(){ return T('Radiación solar e índice UV'); }, unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
   ];
 
   // Ventanas de las gráficas: nº de tramos en que se agrupan los datos.
@@ -846,7 +1416,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function fmtFechaHM(ms){ const d = new Date(ms); return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ' ' + fmtHM(ms); }
   function fechaYYYYMMDD(d){ return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
   function esNum(v){ return v !== null && v !== undefined && typeof v === 'number' && Number.isFinite(v); }
-  function fmtN(v, dec){ return esNum(v) ? v.toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: false }) : '—'; }
+  function fmtN(v, dec){ return esNum(v) ? v.toLocaleString(LOC, { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: false }) : '—'; }
   function fmtVar(key, v){ const m = DEF_VAR(key); return fmtN(v, m ? m.dec : 1); }
   function fmtDif(key, d){ const m = DEF_VAR(key); const dec = m ? m.dec : 1; const s = fmtN(Math.abs(d), dec); return (d > 0 ? '+' : (d < 0 ? '−' : '±')) + s; }
   function numOrNull(v){ return (v === undefined || v === null) ? null : v; }
@@ -863,7 +1433,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function nuevoId(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
   const kEst = e => (e.stationId || '').trim().toUpperCase();
-  const nombreEst = e => e.nombre || (e.meta && e.meta.neighborhood) || e.stationId || 'Estación';
+  const nombreEst = e => e.nombre || (e.meta && e.meta.neighborhood) || e.stationId || T('Estación');
   const claveEf = e => (e.apiKey || '').trim() || (cfg.claveComun || '').trim();
   const nombreArchivoSeguro = s => String(s).replace(/[^A-Za-z0-9._-]/g, '_');
   const estsActivas = () => ests.filter(e => e.activa && kEst(e));
@@ -982,7 +1552,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   let dbPromise = null, ultimoErrorDB = null;
   function abrirDB(){
     if (dbPromise) return dbPromise;
-    if (!window.indexedDB){ dbPromise = Promise.reject(new Error('IndexedDB no disponible en este navegador')); return dbPromise; }
+    if (!window.indexedDB){ dbPromise = Promise.reject(new Error(T('IndexedDB no disponible en este navegador'))); return dbPromise; }
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
@@ -1154,7 +1724,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   }
   const dmCorto = ymd => ymd.slice(6, 8) + '/' + ymd.slice(4, 6);
   async function rellenarHuecosAuto(manual){
-    if (autoRellenando){ if (manual === true) estadoAuto('Ya se está completando el histórico; espera a que termine…'); return; }
+    if (autoRellenando){ if (manual === true) estadoAuto(T('Ya se está completando el histórico; espera a que termine…')); return; }
     autoRellenando = true;
     clearTimeout(autoReintento);
     let total = 0, reintentar = 0, fallos = 0, pet = 0;
@@ -1202,22 +1772,22 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         const t = tareas[n];
         if (bloqueadas.has(t.clave)){ reintentar++; continue; }
         if (pet > 0) await new Promise(res => setTimeout(res, PAUSA_API_MS));
-        estadoAuto('Completando el histórico de 7 días con la API… ' + (n + 1) + '/' + tareas.length + ' · ' + nombreEst(t.e));
+        estadoAuto(T('Completando el histórico de 7 días con la API… ') + (n + 1) + '/' + tareas.length + ' · ' + nombreEst(t.e));
         pet++;
         const r = await completarDia(t.e, t.fecha, true);
         const dia = fechaYYYYMMDD(t.fecha), I = inf(t.e);
         if (r.estado === 'ok'){
           marcas[t.mk] = { t: Date.now(), e: 'ok' }; total += r.anadidas; I.ok.push(dia);
-          log('info', t.e, 'Histórico de la API (' + dia + '): +' + r.anadidas + ' lecturas.');
+          log('info', t.e, T('Histórico de la API (') + dia + '): +' + r.anadidas + T(' lecturas.'));
           renderEvol(); renderSemana(); renderDatos();
         } else if (r.estado === 'vacio' || r.estado === 'cubierto'){
           marcas[t.mk] = { t: Date.now(), e: r.estado === 'vacio' ? 'vacio' : 'ok' }; if (r.estado === 'vacio') I.vacio.push(dia);
-          log('info', t.e, 'La API no tiene lecturas nuevas para ' + dia + '.');
+          log('info', t.e, T('La API no tiene lecturas nuevas para ') + dia + '.');
         } else {
           marcas[t.mk] = { t: Date.now() - 11.5 * 3600000, e: 'error' };   // se podrá reintentar en unos minutos
           fallos++; I.error.push(dia + (r.http ? ' (HTTP ' + r.http + ')' : ''));
-          if (r.http === 429){ bloqueadas.add(t.clave); reintentar++; log('warn', t.e, 'La API responde «demasiadas peticiones» (HTTP 429); se reintentará en 1 minuto.'); }
-          else log('warn', t.e, 'No se pudo completar el histórico de ' + dia + (r.http ? ' (HTTP ' + r.http + ')' : ' (sin respuesta de la API)') + '.');
+          if (r.http === 429){ bloqueadas.add(t.clave); reintentar++; log('warn', t.e, T('La API responde «demasiadas peticiones» (HTTP 429); se reintentará en 1 minuto.')); }
+          else log('warn', t.e, T('No se pudo completar el histórico de ') + dia + (r.http ? ' (HTTP ' + r.http + ')' : T(' (sin respuesta de la API)')) + '.');
         }
         guardarMarcas();
       }
@@ -1236,17 +1806,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         }
         if (!sinDatos.size) continue;
         await new Promise(res => setTimeout(res, PAUSA_API_MS));
-        estadoAuto('Probando el histórico por horas de 7 días… · ' + nombreEst(I.e));
+        estadoAuto(T('Probando el histórico por horas de 7 días… · ') + nombreEst(I.e));
         const r = await completarConHorario(I.e, sinDatos);
         if (r.estado === 'ok'){
           I.horario = r.anadidas; I.horDias = Object.keys(r.porDia); total += r.anadidas;
-          log('info', I.e, 'Histórico por horas (7 días): +' + r.anadidas + ' lecturas (' + Object.keys(r.porDia).map(d => dmCorto(d) + ': ' + r.porDia[d]).join(', ') + ').');
+          log('info', I.e, T('Histórico por horas (7 días): +') + r.anadidas + T(' lecturas (') + Object.keys(r.porDia).map(d => dmCorto(d) + ': ' + r.porDia[d]).join(', ') + ').');
           renderEvol(); renderSemana(); renderDatos();
         } else if (r.estado === 'vacio'){
-          log('info', I.e, 'El histórico por horas de 7 días no trae lecturas de los días que faltan (' + r.recibidas + ' recibidas en total).');
+          log('info', I.e, T('El histórico por horas de 7 días no trae lecturas de los días que faltan (') + r.recibidas + T(' recibidas en total).'));
         } else {
-          I.errHor = r.http ? 'HTTP ' + r.http : 'sin respuesta';
-          log('warn', I.e, 'No se pudo obtener el histórico por horas de 7 días (' + I.errHor + ').');
+          I.errHor = r.http ? 'HTTP ' + r.http : T('sin respuesta');
+          log('warn', I.e, T('No se pudo obtener el histórico por horas de 7 días (') + I.errHor + ').');
         }
       }
       guardarMarcas();
@@ -1257,19 +1827,19 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     for (const I of informe.values()){
       const sin = I.vacio.concat(I.vacioCache).filter((d, k, a) => a.indexOf(d) === k && I.horDias.indexOf(d) < 0).sort().map(dmCorto);
       let t = nombreEst(I.e) + ': ';
-      if (I.ok.length || I.horario) t += 'completado ' + (I.ok.length ? I.ok.length + ' día(s) con la API' : '') + (I.horario ? (I.ok.length ? ' y ' : '') + I.horario + ' lecturas horarias' : '') + '. ';
-      if (sin.length) t += 'la API no tiene datos de ' + sin.join(', ') + '. ';
-      if (I.error.length) t += 'error en ' + I.error.map(d => dmCorto(d.slice(0, 8)) + d.slice(8)).join(', ') + '. ';
-      if (I.errHor) t += 'el histórico por horas falló (' + I.errHor + '). ';
+      if (I.ok.length || I.horario) t += T('completado ') + (I.ok.length ? I.ok.length + T(' día(s) con la API') : '') + (I.horario ? (I.ok.length ? T(' y ') : '') + I.horario + T(' lecturas horarias') : '') + '. ';
+      if (sin.length) t += T('la API no tiene datos de ') + sin.join(', ') + '. ';
+      if (I.error.length) t += T('error en ') + I.error.map(d => dmCorto(d.slice(0, 8)) + d.slice(8)).join(', ') + '. ';
+      if (I.errHor) t += T('el histórico por horas falló (') + I.errHor + '). ';
       if (I.ok.length || I.horario || sin.length || I.error.length || I.errHor) partes.push(t.trim());
     }
     if (reintentar > 0){
-      estadoAuto('Histórico de 7 días incompleto: la API ha limitado las peticiones (HTTP 429). Se reintentará en 1 minuto…');
+      estadoAuto(T('Histórico de 7 días incompleto: la API ha limitado las peticiones (HTTP 429). Se reintentará en 1 minuto…'));
       autoReintento = setTimeout(() => { rellenarHuecosAuto(); }, 62000);
-    } else if (partes.length && (fallos > 0 || manual === true || partes.some(x => /no tiene datos|error|falló/.test(x)))){
-      estadoAuto('Histórico de 7 días · ' + partes.join(' · '));
+    } else if (partes.length && (fallos > 0 || manual === true || partes.some(x => /no tiene datos|has no data|error|falló|failed/.test(x)))){
+      estadoAuto(T('Histórico de 7 días · ') + partes.join(' · '));
     } else if (manual === true){
-      estadoAuto('Los últimos 7 días ya están completos.');
+      estadoAuto(T('Los últimos 7 días ya están completos.'));
     } else {
       estadoAuto('');
     }
@@ -1370,58 +1940,58 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (running) return;
     const sucio = hayCambiosCfg();
     [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.toggle('pendiente', sucio); });
-    if (sucio) msgCfg('Hay cambios sin guardar. Pulsa «Guardar configuración».', 'pend');
+    if (sucio) msgCfg(T('Hay cambios sin guardar. Pulsa «Guardar configuración».'), 'pend');
     else if (el.cfgMsg.classList.contains('pend')) msgCfg('');
   }
   function guardarConfiguracion(motivo){
     leerAjustesDeFormulario(false);
     const avisos = [];
     ests.forEach((e, i) => {
-      const n = nombreEst(e) || ('estación ' + (i + 1));
-      if (!e.stationId) avisos.push('«' + n + '» no tiene Station ID');
-      else if (!claveEf(e)) avisos.push('«' + n + '» no tiene API Key ni hay clave común');
+      const n = nombreEst(e) || (T('estación ') + (i + 1));
+      if (!e.stationId) avisos.push(T('«') + n + T('» no tiene Station ID'));
+      else if (!claveEf(e)) avisos.push(T('«') + n + T('» no tiene API Key ni hay clave común'));
     });
     const dup = new Set(), vistos = new Set();
     ests.forEach(e => { if (e.stationId){ if (vistos.has(e.stationId)) dup.add(e.stationId); vistos.add(e.stationId); } });
-    dup.forEach(id => avisos.push('el Station ID ' + id + ' está repetido'));
+    dup.forEach(id => avisos.push(T('el Station ID ') + id + T(' está repetido')));
     const okE = guardarEsts(), okC = guardarCfg();
     if (!okE || !okC){
-      msgCfg('No se pudo guardar: el navegador no permite almacenar datos (¿modo privado o almacenamiento bloqueado?).', 'err');
+      msgCfg(T('No se pudo guardar: el navegador no permite almacenar datos (¿modo privado o almacenamiento bloqueado?).'), 'err');
       return false;
     }
     firmaGuardada = firmaConfig();
     [$('btnGuardarCfg'), $('btnGuardarCfg2')].forEach(b => { if (b) b.classList.remove('pendiente'); });
     refrescarListas(true);
-    const hora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const hora = new Date().toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const act = estsActivas().length;
-    let txt = '✓ Configuración guardada' + (motivo ? ' ' + motivo : '') + ' a las ' + hora + ': ' + ests.length + ' estación(es), ' + act + ' activa(s), sondeo cada ' + cfg.pollS + ' s.';
-    if (avisos.length) txt += ' Aviso: ' + avisos.join('; ') + '.';
+    let txt = T('✓ Configuración guardada') + (motivo ? ' ' + motivo : '') + T(' a las ') + hora + ': ' + ests.length + T(' estación(es), ') + act + T(' activa(s), sondeo cada ') + cfg.pollS + ' s.';
+    if (avisos.length) txt += T(' Aviso: ') + avisos.join('; ') + '.';
     msgCfg(txt, avisos.length ? '' : 'ok');
-    mostrarToast('Configuración guardada (' + ests.length + ' estación' + (ests.length === 1 ? '' : 'es') + ')');
-    log('info', null, 'Configuración guardada: ' + ests.length + ' estación(es).');
+    mostrarToast(T('Configuración guardada (') + ests.length + T(' estación') + (ests.length === 1 ? '' : T('es')) + ')');
+    log('info', null, T('Configuración guardada: ') + ests.length + T(' estación(es).'));
     return true;
   }
 
   function renderEstList(){
     if (ests.length === 0){
-      el.estList.innerHTML = '<p class="est-vacio">Todavía no hay ninguna estación. Pulsa «Añadir estación» e introduce su Station ID.</p>';
+      el.estList.innerHTML = T('<p class="est-vacio">Todavía no hay ninguna estación. Pulsa «Añadir estación» e introduce su Station ID.</p>');
       return;
     }
     el.estList.innerHTML = ests.map((e, i) =>
       '<div class="est-edit" data-id="' + e.id + '">' +
         '<div class="field"><label for="c-' + e.id + '">Color</label><input type="color" id="c-' + e.id + '" data-f="color" value="' + escHTML(e.color) + '"></div>' +
-        '<div class="field"><label for="n-' + e.id + '">Nombre (opcional)</label><input type="text" id="n-' + e.id + '" data-f="nombre" value="' + escHTML(e.nombre) + '" placeholder="' + escHTML((e.meta && e.meta.neighborhood) || 'Estación ' + (i + 1)) + '" autocomplete="off"></div>' +
+        '<div class="field"><label for="n-' + e.id + T('">Nombre (opcional)</label><input type="text" id="n-') + e.id + '" data-f="nombre" value="' + escHTML(e.nombre) + '" placeholder="' + escHTML((e.meta && e.meta.neighborhood) || T('Estación ') + (i + 1)) + '" autocomplete="off"></div>' +
         '<div class="field"><label for="s-' + e.id + '">Station ID</label><input type="text" id="s-' + e.id + '" data-f="stationId" value="' + escHTML(e.stationId) + '" placeholder="IXXXXXXX" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></div>' +
-        '<div class="field"><label for="k-' + e.id + '">API Key (opcional)</label><div class="keyrow"><input type="password" id="k-' + e.id + '" data-f="apiKey" value="' + escHTML(e.apiKey) + '" placeholder="Vacía = clave común" autocomplete="off" spellcheck="false"><button type="button" class="eye" data-acc="ver" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button></div></div>' +
-        '<div class="est-opts"><label class="chk"><input type="checkbox" data-f="activa"' + (e.activa ? ' checked' : '') + '> Activa</label>' +
-          '<button type="button" class="btn btn-ghost btn-sm" data-acc="borrar" aria-label="Quitar la estación ' + escHTML(nombreEst(e)) + '"><svg class="i"><use href="#i-trash"></use></svg></button></div>' +
+        '<div class="field"><label for="k-' + e.id + T('">API Key (opcional)</label><div class="keyrow"><input type="password" id="k-') + e.id + '" data-f="apiKey" value="' + escHTML(e.apiKey) + T('" placeholder="Vacía = clave común" autocomplete="off" spellcheck="false"><button type="button" class="eye" data-acc="ver" aria-label="Mostrar u ocultar la API Key" aria-pressed="false"><svg class="i"><use href="#i-eye"></use></svg></button></div></div>') +
+        '<div class="est-opts"><label class="chk"><input type="checkbox" data-f="activa"' + (e.activa ? ' checked' : '') + T('> Activa</label>') +
+          T('<button type="button" class="btn btn-ghost btn-sm" data-acc="borrar" aria-label="Quitar la estación ') + escHTML(nombreEst(e)) + '"><svg class="i"><use href="#i-trash"></use></svg></button></div>' +
       '</div>').join('');
     bloquearConfig(running);
   }
   function bloquearConfig(bloq){
     document.querySelectorAll('#estList input, #estList button, #btnAddEst, #btnImportar, #pollInput, #claveComunInput, #btnVerClave, #timeoutInput, #staleInput, #backoffBaseInput, #backoffMaxInput, #btnGuardarCfg, #btnGuardarCfg2')
       .forEach(x => { x.disabled = !!bloq; });
-    msgCfg(bloq ? 'Detén el monitor para editar las estaciones y el sondeo.' : '');
+    msgCfg(bloq ? T('Detén el monitor para editar las estaciones y el sondeo.') : '');
   }
 
   let tmGuardar = null;
@@ -1450,7 +2020,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       b.setAttribute('aria-pressed', String(ver));
       b.innerHTML = '<svg class="i"><use href="#i-' + (ver ? 'eye-off' : 'eye') + '"></use></svg>';
     } else if (b.dataset.acc === 'borrar' && e){
-      if (!window.confirm('¿Quitar «' + nombreEst(e) + '» de la lista? Su histórico guardado en este navegador se conserva (puedes borrarlo en «Datos y servidor»).')) return;
+      if (!window.confirm(T('¿Quitar «') + nombreEst(e) + T('» de la lista? Su histórico guardado en este navegador se conserva (puedes borrarlo en «Datos y servidor»).'))) return;
       ests = ests.filter(x => x.id !== e.id);
       rts.delete(e.id);
       renderEstList();
@@ -1459,7 +2029,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     }
   }
   function anadirEstacion(){
-    if (ests.length >= MAX_EST){ msgCfg('Máximo ' + MAX_EST + ' estaciones.', 'err'); return; }
+    if (ests.length >= MAX_EST){ msgCfg(T('Máximo ') + MAX_EST + T(' estaciones.'), 'err'); return; }
     ests.push({ id: nuevoId(), nombre: '', stationId: '', apiKey: '', color: colorLibre(), activa: true, meta: {} });
     renderEstList();
     refrescarListas(true);
@@ -1477,13 +2047,13 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     };
     if (conClaves) obj.ajustes.claveComun = cfg.claveComun;
     descargar('telemetmulti-config.json', JSON.stringify(obj, null, 2), 'application/json;charset=utf-8;');
-    msgCfg(conClaves ? 'Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.' : 'Configuración exportada (sin API Key).');
+    msgCfg(conClaves ? T('Configuración exportada CON las API Key: guarda el archivo en un lugar seguro.') : T('Configuración exportada (sin API Key).'));
   }
   async function importarConfig(file){
     try {
       const obj = JSON.parse(await file.text());
-      if (!obj || obj.app !== 'telemetmulti' || !Array.isArray(obj.estaciones)) throw new Error('no es un archivo de configuración de TeleMet Multi');
-      if (ests.length && !window.confirm('Esto sustituye las estaciones y ajustes actuales por los del archivo. ¿Continuar?')) return;
+      if (!obj || obj.app !== 'telemetmulti' || !Array.isArray(obj.estaciones)) throw new Error(T('no es un archivo de configuración de TeleMet Multi'));
+      if (ests.length && !window.confirm(T('Esto sustituye las estaciones y ajustes actuales por los del archivo. ¿Continuar?'))) return;
       const antiguas = new Map(ests.map(e => [kEst(e), e]));
       ests = obj.estaciones.slice(0, MAX_EST).map((x, i) => {
         const previa = antiguas.get(String(x.stationId || '').trim().toUpperCase());
@@ -1499,9 +2069,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (typeof a.claveComun === 'string') cfg.claveComun = a.claveComun;
       rts.clear();
       volcarAjustesEnFormulario(); renderEstList(); refrescarListas(true);
-      guardarConfiguracion('(importada del archivo)');
+      guardarConfiguracion(T('(importada del archivo)'));
     } catch (err) {
-      msgCfg('No se pudo importar: ' + (err && err.message ? err.message : 'archivo no válido') + '.', 'err');
+      msgCfg(T('No se pudo importar: ') + (err && err.message ? err.message : T('archivo no válido')) + '.', 'err');
     }
   }
 
@@ -1510,20 +2080,20 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const act = estsActivas();
     if (act.length === 0){ el.cuota.textContent = ''; el.cuota.className = 'cuota'; return; }
     const porClave = new Map();
-    act.forEach(e => { const k = claveEf(e) || '(sin clave)'; porClave.set(k, (porClave.get(k) || 0) + 1); });
+    act.forEach(e => { const k = claveEf(e) || T('(sin clave)'); porClave.set(k, (porClave.get(k) || 0) + 1); });
     const llamadasPor = n => Math.round(n * 86400 / Math.max(5, cfg.pollS));
     let peor = 0;
     porClave.forEach(n => { peor = Math.max(peor, n); });
     const total = llamadasPor(act.length), peorLl = llamadasPor(peor);
-    let txt = act.length + ' estación(es) activa(s) · ≈ ' + total.toLocaleString('es-ES') + ' llamadas/día en total';
-    if (porClave.size > 1) txt += ' · la clave más cargada (' + peor + ' estaciones) hace ≈ ' + peorLl.toLocaleString('es-ES') + '/día';
+    let txt = act.length + T(' estación(es) activa(s) · ≈ ') + total.toLocaleString(LOC) + T(' llamadas/día en total');
+    if (porClave.size > 1) txt += T(' · la clave más cargada (') + peor + T(' estaciones) hace ≈ ') + peorLl.toLocaleString(LOC) + T('/día');
     el.cuota.className = 'cuota';
     if (peorLl > LIMITE_LLAMADAS_DIA){
       const minimo = Math.ceil(86400 * peor / LIMITE_LLAMADAS_DIA);
-      txt += '. Supera el límite habitual de ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + ' llamadas/día por clave (compruébalo en tu cuenta): usa un intervalo de ' + minimo + ' s o más, o claves distintas.';
+      txt += T('. Supera el límite habitual de ') + LIMITE_LLAMADAS_DIA.toLocaleString(LOC) + T(' llamadas/día por clave (compruébalo en tu cuenta): usa un intervalo de ') + minimo + T(' s o más, o claves distintas.');
       el.cuota.classList.add('aviso-c');
-    } else txt += '. (Límite habitual por clave: ' + LIMITE_LLAMADAS_DIA.toLocaleString('es-ES') + '/día.)';
-    txt += ' Si el colector u otra app usa la misma clave, suma sus llamadas (el colector con intervalo_s = 60 hace 1.440/día).';
+    } else txt += T('. (Límite habitual por clave: ') + LIMITE_LLAMADAS_DIA.toLocaleString(LOC) + T('/día.)');
+    txt += T(' Si el colector u otra app usa la misma clave, suma sus llamadas (el colector con intervalo_s = 60 hace 1.440/día).');
     el.cuota.textContent = txt;
   }
 
@@ -1540,7 +2110,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const r = rt(e);
     r.reint += 1;
     const esperaS = Math.max(minS || 0, Math.min(cfg.backoffBaseS * Math.pow(2, r.reint - 1), cfg.backoffMaxS));
-    r.estado = 'warn'; r.msg = motivo + ' · reintento ' + r.reint + ' en ' + Math.round(esperaS) + ' s';
+    r.estado = 'warn'; r.msg = motivo + T(' · reintento ') + r.reint + T(' en ') + Math.round(esperaS) + ' s';
     log('warn', e, r.msg);
     programar(e, esperaS * 1000);
     tras(e);
@@ -1548,9 +2118,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function fatal(e, motivo){
     const r = rt(e);
     r.fatal = true; r.estado = 'err'; r.msg = motivo; clearTimeout(r.timer);
-    log('err', e, motivo + ' (estación detenida)');
+    log('err', e, motivo + T(' (estación detenida)'));
     tras(e);
-    if (running && estsActivas().every(x => rt(x).fatal)) pararMonitor('Todas las estaciones se han detenido por error.');
+    if (running && estsActivas().every(x => rt(x).fatal)) pararMonitor(T('Todas las estaciones se han detenido por error.'));
   }
   function tras(e){ renderTarjeta(e); actualizarLuz(); renderEstadoMeta(); }
 
@@ -1562,21 +2132,21 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const t0 = performance.now();
       let resp;
       try { resp = await fetchConTimeout(construirURL(kEst(e), claveEf(e)), cfg.timeoutS * 1000); }
-      catch (err) { if (running) reintentar(e, (err && err.name === 'AbortError') ? 'tiempo límite agotado' : 'fallo de red'); return; }
+      catch (err) { if (running) reintentar(e, (err && err.name === 'AbortError') ? T('tiempo límite agotado') : T('fallo de red')); return; }
       if (!running) return;
-      if (resp.status === 401 || resp.status === 403){ fatal(e, 'HTTP ' + resp.status + ': API Key inválida o sin permiso'); return; }
-      if (resp.status === 404){ fatal(e, '404: Station ID no encontrado'); return; }
-      if (resp.status === 429){ reintentar(e, 'HTTP 429: límite de llamadas de la clave alcanzado (¿la comparte con el colector u otra app?)', Math.max(120, cfg.pollS)); return; }
+      if (resp.status === 401 || resp.status === 403){ fatal(e, 'HTTP ' + resp.status + T(': API Key inválida o sin permiso')); return; }
+      if (resp.status === 404){ fatal(e, T('404: Station ID no encontrado')); return; }
+      if (resp.status === 429){ reintentar(e, T('HTTP 429: límite de llamadas de la clave alcanzado (¿la comparte con el colector u otra app?)'), Math.max(120, cfg.pollS)); return; }
       if (!resp.ok){ reintentar(e, 'HTTP ' + resp.status); return; }
       let data = {};
       if (resp.status !== 204){
-        try { data = await resp.json(); } catch (err) { reintentar(e, 'respuesta no válida'); return; }
+        try { data = await resp.json(); } catch (err) { reintentar(e, T('respuesta no válida')); return; }
       }
       if (!running) return;
       const obs = (data.observations || [])[0];
       r.reint = 0;
       if (!obs){
-        r.estado = 'ok'; r.msg = 'sin datos nuevos';
+        r.estado = 'ok'; r.msg = T('sin datos nuevos');
         programar(e, cfg.pollS * 1000); tras(e); return;
       }
       const ahora = Date.now();
@@ -1593,7 +2163,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
             (r.deltas = r.deltas || []).push(d); if (r.deltas.length > 12) r.deltas.shift();
             if (r.deltas.length >= 4 && !r.avisoRitmo){
               const ord = r.deltas.slice().sort((a, b) => a - b), med = ord[ord.length >> 1];
-              if (med > cfg.pollS * 1.5){ r.avisoRitmo = true; log('info', e, 'La estación publica un dato nuevo cada ≈ ' + Math.round(med) + ' s: sondear más a menudo (' + cfg.pollS + ' s) devuelve la misma lectura y gasta llamadas de la API.'); }
+              if (med > cfg.pollS * 1.5){ r.avisoRitmo = true; log('info', e, T('La estación publica un dato nuevo cada ≈ ') + Math.round(med) + T(' s: sondear más a menudo (') + cfg.pollS + T(' s) devuelve la misma lectura y gasta llamadas de la API.')); }
             }
           }
         }
@@ -1604,7 +2174,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       // Metadatos de la estación (nombre del barrio, coordenadas) para el nombre por defecto y el mapa.
       const meta = { neighborhood: obs.neighborhood || '', lat: esNum(obs.lat) ? obs.lat : null, lon: esNum(obs.lon) ? obs.lon : null, country: obs.country || '', elev: esNum((obs.metric || {}).elev) ? obs.metric.elev : null };
       if (JSON.stringify(meta) !== JSON.stringify(e.meta || {})){ e.meta = meta; guardarEsts(); refrescarListas(false); }
-      if (!r.plausible) log('warn', e, 'Lectura fuera de rango plausible.');
+      if (!r.plausible) log('warn', e, T('Lectura fuera de rango plausible.'));
       programar(e, cfg.pollS * 1000);
       tras(e);
       renderComparativa(); renderExtremos(); renderMapa();
@@ -1614,15 +2184,15 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   function iniciarMonitor(){
     const act = estsActivas();
-    if (act.length === 0){ msgCfg('Añade al menos una estación activa con su Station ID.', 'err'); return; }
-    if (hayCambiosCfg()) guardarConfiguracion('al iniciar el monitor'); else leerAjustesDeFormulario();
+    if (act.length === 0){ msgCfg(T('Añade al menos una estación activa con su Station ID.'), 'err'); return; }
+    if (hayCambiosCfg()) guardarConfiguracion(T('al iniciar el monitor')); else leerAjustesDeFormulario();
     running = true;
     act.forEach((e, i) => {
       const r = rt(e);
-      r.fatal = false; r.reint = 0; r.estado = 'off'; r.msg = 'conectando…';
+      r.fatal = false; r.reint = 0; r.estado = 'off'; r.msg = T('conectando…');
       programar(e, i * 1500);
     });
-    log('info', null, 'Monitor iniciado con ' + act.length + ' estación(es), cada ' + cfg.pollS + ' s.');
+    log('info', null, T('Monitor iniciado con ') + act.length + T(' estación(es), cada ') + cfg.pollS + ' s.');
     bloquearConfig(true);
     ests.forEach(renderTarjeta);
     actualizarLuz(); actualizarBotones(); renderEstadoMeta();
@@ -1631,7 +2201,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function pararMonitor(motivo){
     running = false;
     ests.forEach(e => { const r = rt(e); clearTimeout(r.timer); r.enVuelo = false; r.estado = 'off'; r.msg = ''; });
-    log('info', null, motivo || 'Monitor detenido.');
+    log('info', null, motivo || T('Monitor detenido.'));
     bloquearConfig(false);
     ests.forEach(renderTarjeta);
     actualizarLuz(); actualizarBotones(); renderEstadoMeta();
@@ -1648,22 +2218,22 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     el.btnSondeo.disabled = !running;
   }
   function actualizarLuz(){
-    let estado = 'off', txt = 'Monitor detenido';
+    let estado = 'off', txt = T('Monitor detenido');
     if (running){
       const act = estsActivas();
       const n = k => act.filter(e => rt(e).estado === k).length;
       const ok = n('ok'), warn = n('warn'), err = n('err');
-      if (err === act.length){ estado = 'err'; txt = 'Todas con error'; }
-      else if (err || warn){ estado = 'warn'; txt = ok + '/' + act.length + ' en orden' + (err ? ' · ' + err + ' con error' : ''); }
-      else if (ok === act.length){ estado = 'ok'; txt = act.length + ' estación(es) en marcha'; }
-      else { estado = 'warn'; txt = 'Conectando…'; }
+      if (err === act.length){ estado = 'err'; txt = T('Todas con error'); }
+      else if (err || warn){ estado = 'warn'; txt = ok + '/' + act.length + T(' en orden') + (err ? ' · ' + err + T(' con error') : ''); }
+      else if (ok === act.length){ estado = 'ok'; txt = act.length + T(' estación(es) en marcha'); }
+      else { estado = 'warn'; txt = T('Conectando…'); }
     }
     [[el.luzTop, el.luzTopTxt], [el.luzBar, el.luzBarTxt]].forEach(p => { p[0].dataset.s = estado; p[1].textContent = txt; });
   }
   function renderEstadoMeta(){
-    if (!running){ el.metaLinea.textContent = estsActivas().length ? 'Monitor detenido. Pulsa «Iniciar» para sondear las estaciones.' : 'Añade estaciones en la sección 01.'; return; }
+    if (!running){ el.metaLinea.textContent = estsActivas().length ? T('Monitor detenido. Pulsa «Iniciar» para sondear las estaciones.') : T('Añade estaciones en la sección 01.'); return; }
     const lect = estsActivas().reduce((s, e) => s + rt(e).lecturas, 0);
-    el.metaLinea.textContent = 'Sondeando ' + estsActivas().length + ' estación(es) cada ' + cfg.pollS + ' s · ' + lect + ' lectura(s) nuevas en esta sesión.';
+    el.metaLinea.textContent = T('Sondeando ') + estsActivas().length + T(' estación(es) cada ') + cfg.pollS + ' s · ' + lect + T(' lectura(s) nuevas en esta sesión.');
   }
 
   /* ============================================================
@@ -1714,17 +2284,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (r.obsMs){
       const dObs = new Date(r.obsMs);
       const horaObs = fmtHoraMs(r.obsMs) + (dObs.toDateString() === new Date().toDateString() ? '' : ' (' + pad2(dObs.getDate()) + '/' + pad2(dObs.getMonth() + 1) + ')');
-      let s = 'Última lectura: ' + horaObs + ' · hace ' + edadTxt(r.obsMs);
-      if (running && r.proxMs && r.estado !== 'err') s += ' · próxima en ' + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
-      if (r.deltas && r.deltas.length >= 3){ const o = r.deltas.slice().sort((a, b) => a - b); s += ' · dato nuevo cada ≈ ' + (o[o.length >> 1] >= 90 ? Math.round(o[o.length >> 1] / 60) + ' min' : Math.round(o[o.length >> 1]) + ' s'); }
-      if (!r.plausible) s += ' · ⚠ fuera de rango';
+      let s = LANG === 'en' ? 'Last reading: ' + horaObs + ' \u00b7 ' + edadTxt(r.obsMs) + ' ago' : 'Última lectura: ' + horaObs + ' · hace ' + edadTxt(r.obsMs);
+      if (running && r.proxMs && r.estado !== 'err') s += T(' · próxima en ') + Math.max(0, Math.round((r.proxMs - Date.now()) / 1000)) + ' s';
+      if (r.deltas && r.deltas.length >= 3){ const o = r.deltas.slice().sort((a, b) => a - b); s += T(' · dato nuevo cada ≈ ') + (o[o.length >> 1] >= 90 ? Math.round(o[o.length >> 1] / 60) + ' min' : Math.round(o[o.length >> 1]) + ' s'); }
+      if (!r.plausible) s += T(' · ⚠ fuera de rango');
       return s;
     }
-    return running ? (r.msg || 'conectando…') : 'sin datos en esta sesión';
+    return running ? (r.msg || T('conectando…')) : T('sin datos en esta sesión');
   }
   function crearTarjetas(){
     el.estGrid.innerHTML = '';
-    if (ests.length === 0){ el.estGrid.innerHTML = '<p class="est-vacio">Sin estaciones.</p>'; return; }
+    if (ests.length === 0){ el.estGrid.innerHTML = T('<p class="est-vacio">Sin estaciones.</p>'); return; }
     ests.forEach(e => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'est-card'; b.dataset.id = e.id;
@@ -1745,17 +2315,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const tend = claseTendencia(t && t.temp_c, r.prev && r.prev.temp_c);
     const estadoLuz = e.activa ? r.estado : 'off';
     b.innerHTML =
-      '<div class="ec-cab"><span class="ec-nom">' + escHTML(nombreEst(e)) + '</span><span class="ec-bulbo" data-s="' + estadoLuz + '" title="' + (estadoLuz === 'ok' ? 'En orden' : estadoLuz === 'warn' ? 'Dato obsoleto o reintentando' : estadoLuz === 'err' ? 'Error' : 'Sin sondear') + '"></span></div>' +
-      '<div class="ec-id">' + escHTML(e.stationId || 'sin Station ID') + (e.nombre && e.meta && e.meta.neighborhood ? ' · ' + escHTML(e.meta.neighborhood) : '') + '</div>' +
+      '<div class="ec-cab"><span class="ec-nom">' + escHTML(nombreEst(e)) + '</span><span class="ec-bulbo" data-s="' + estadoLuz + '" title="' + (estadoLuz === 'ok' ? T('En orden') : estadoLuz === 'warn' ? T('Dato obsoleto o reintentando') : estadoLuz === 'err' ? 'Error' : T('Sin sondear')) + '"></span></div>' +
+      '<div class="ec-id">' + escHTML(e.stationId || T('sin Station ID')) + (e.nombre && e.meta && e.meta.neighborhood ? ' · ' + escHTML(e.meta.neighborhood) : '') + '</div>' +
       '<div class="ec-temp"><span>' + (t ? fmtN(t.temp_c, 1) : '—') + '</span><small>°C</small><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
       '<svg class="ec-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">' + sparkSvg(r.spark, r.spark.length ? r.spark[0].t : 0, r.spark.length ? r.spark[r.spark.length - 1].t : 1, 100, 20, 2, 10 * 60000, 90 * 60000) + '</svg>' +
       '<div class="ec-met">' +
-        '<span>Humedad</span><b>' + (t ? fmtN(t.humidity_pct, 0) + ' %' : '—') + '</b>' +
-        '<span>Viento</span><b>' + viento + '</b>' +
-        '<span>Presión</span><b>' + (t ? fmtN(t.pressure_hpa, 1) + ' hPa' : '—') + '</b>' +
-        '<span>Lluvia hoy</span><b>' + (t ? fmtN(t.rain_total_mm, 1) + ' mm' : '—') + '</b>' +
-        '<span>Radiación</span><b>' + (t ? fmtN(t.solarradiation_wm2, 0) + ' W/m²' : '—') + '</b>' +
-        '<span>Índice UV</span><b>' + (t ? fmtN(t.uv_index, 1) : '—') + '</b>' +
+        T('<span>Humedad</span><b>') + (t ? fmtN(t.humidity_pct, 0) + ' %' : '—') + '</b>' +
+        T('<span>Viento</span><b>') + viento + '</b>' +
+        T('<span>Presión</span><b>') + (t ? fmtN(t.pressure_hpa, 1) + ' hPa' : '—') + '</b>' +
+        T('<span>Lluvia hoy</span><b>') + (t ? fmtN(t.rain_total_mm, 1) + ' mm' : '—') + '</b>' +
+        T('<span>Radiación</span><b>') + (t ? fmtN(t.solarradiation_wm2, 0) + ' W/m²' : '—') + '</b>' +
+        T('<span>Índice UV</span><b>') + (t ? fmtN(t.uv_index, 1) : '—') + '</b>' +
       '</div>' +
       '<div class="ec-pie' + (r.estado === 'err' ? ' err' : '') + '">' + escHTML(textoPie(e)) + '</div>';
   }
@@ -1773,12 +2343,12 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   function renderComparativa(){
     const act = estsActivas();
-    if (act.length === 0){ el.tablaComp.innerHTML = '<p class="evol-vacio">Sin estaciones activas.</p>'; return; }
+    if (act.length === 0){ el.tablaComp.innerHTML = T('<p class="evol-vacio">Sin estaciones activas.</p>'); return; }
     const ref = act.find(e => e.id === ui.ref) || null;
     const lastDe = e => rt(e).last;
     let h = '<table class="t"><thead><tr><th>Variable</th>';
     act.forEach(e => { h += '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>'; });
-    if (act.length > 1) h += '<th class="num">Media</th>';
+    if (act.length > 1) h += T('<th class="num">Media</th>');
     h += '</tr></thead><tbody>';
     GRAFICABLES.forEach(m => {
       const vals = act.map(e => { const t = lastDe(e); return t && esNum(t[m.key]) ? t[m.key] : null; });
@@ -1803,7 +2373,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       }
       h += '</tr>';
     });
-    h += '<tr><td>Última lectura</td>' + act.map(e => '<td class="num">' + (rt(e).obsMs ? fmtHoraMs(rt(e).obsMs) : '—') + '</td>').join('') + (act.length > 1 ? '<td></td>' : '') + '</tr>';
+    h += T('<tr><td>Última lectura</td>') + act.map(e => '<td class="num">' + (rt(e).obsMs ? fmtHoraMs(rt(e).obsMs) : '—') + '</td>').join('') + (act.length > 1 ? '<td></td>' : '') + '</tr>';
     h += '</tbody></table>';
     el.tablaComp.innerHTML = h;
   }
@@ -1812,8 +2382,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const act = conDato();
     if (act.length < 2){ el.extremos.innerHTML = ''; return; }
     const defs = [
-      ['Más cálida', 'temp_c', 'max'], ['Más fría', 'temp_c', 'min'], ['Más húmeda', 'humidity_pct', 'max'], ['Más seca', 'humidity_pct', 'min'],
-      ['Más viento', 'wind_kmh', 'max'], ['Mayor racha', 'gust_kmh', 'max'], ['Mayor presión', 'pressure_hpa', 'max'], ['Más lluvia hoy', 'rain_total_mm', 'max'], ['Más radiación', 'solarradiation_wm2', 'max']
+      [T('Más cálida'), 'temp_c', 'max'], [T('Más fría'), 'temp_c', 'min'], [T('Más húmeda'), 'humidity_pct', 'max'], [T('Más seca'), 'humidity_pct', 'min'],
+      [T('Más viento'), 'wind_kmh', 'max'], [T('Mayor racha'), 'gust_kmh', 'max'], [T('Mayor presión'), 'pressure_hpa', 'max'], [T('Más lluvia hoy'), 'rain_total_mm', 'max'], [T('Más radiación'), 'solarradiation_wm2', 'max']
     ];
     el.extremos.innerHTML = defs.map(d => {
       const cand = act.filter(e => esNum(rt(e).last[d[1]]));
@@ -1866,7 +2436,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const lenPx = metros / mPorPx;
     g += '<path class="mp-escala" d="M16 ' + (H - 26) + 'v6h' + lenPx.toFixed(1) + 'v-6"></path><text class="mp-escala-t" x="16" y="' + (H - 30) + '">' + (metros >= 1000 ? (metros / 1000) + ' km' : metros + ' m') + '</text>';
     g += '<text class="mp-norte" x="' + (W - 22) + '" y="22" text-anchor="middle">N</text><path d="M' + (W - 22) + ' 27l-6 14h12z" fill="#1b2a3a" stroke="#fff" stroke-width="2"></path>';
-    if (ui.mapaFondo) g += '<text class="mp-attr" x="' + (W - 6) + '" y="' + (H - 6) + '" text-anchor="end">© colaboradores de OpenStreetMap</text>';
+    if (ui.mapaFondo) g += '<text class="mp-attr" x="' + (W - 6) + '" y="' + (H - 6) + T('" text-anchor="end">© colaboradores de OpenStreetMap</text>');
     con.forEach((e, i) => {
       const x = mx(e.meta.lon, z) - ox, y = my(e.meta.lat, z) - oy;
       const t = rt(e).last;
@@ -1883,8 +2453,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const q = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
       dmax = Math.max(dmax, 2 * R * Math.asin(Math.sqrt(q)));
     }
-    el.mapaPie.innerHTML = (ui.mapaFondo ? 'Mapa de fondo © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>; norte arriba. ' : 'Posición relativa (sin mapa de fondo; norte arriba). ') + 'Separación máxima entre estaciones: <strong>' + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
-      '<a href="#" data-mapa="">Abrir mapa interactivo con todas las estaciones</a> · Centrar en: ' +
+    el.mapaPie.innerHTML = (ui.mapaFondo ? T('Mapa de fondo © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>; norte arriba. ') : T('Posición relativa (sin mapa de fondo; norte arriba). ')) + T('Separación máxima entre estaciones: <strong>') + fmtN(dmax, dmax < 10 ? 1 : 0) + ' km</strong>. ' +
+      T('<a href="#" data-mapa="">Abrir mapa interactivo con todas las estaciones</a> · Centrar en: ') +
       con.map(e => '<a href="#" data-mapa="' + e.id + '">' + escHTML(nombreEst(e)) + '</a>').join(' · ');
   }
 
@@ -1894,7 +2464,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   let detalleToken = 0;
   async function renderDetalle(){
     const e = ests.find(x => x.id === ui.detalle) || estsActivas()[0] || ests[0];
-    if (!e){ el.detalleGrid.innerHTML = '<p class="evol-vacio">Sin estaciones.</p>'; el.detalleMeta.textContent = ''; return; }
+    if (!e){ el.detalleGrid.innerHTML = T('<p class="evol-vacio">Sin estaciones.</p>'); el.detalleMeta.textContent = ''; return; }
     if (ui.detalle !== e.id){ ui.detalle = e.id; el.detalleSel.value = e.id; }
     const tk = ++detalleToken;
     const hasta = Date.now(), desde = hasta - 24 * 3600000;
@@ -1906,7 +2476,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const prev = r.prev || (filas.length > 1 ? filas[filas.length - 2].vals : null);
     const m = e.meta || {};
     el.detalleMeta.innerHTML = escHTML(e.stationId) + (m.neighborhood ? ' · ' + escHTML(m.neighborhood) : '') + (esNum(m.elev) ? ' · ' + fmtN(m.elev, 0) + ' m' : '') +
-      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="#" data-mapa="' + e.id + '">ver en el mapa</a>' : '');
+      (esNum(m.lat) && esNum(m.lon) ? ' · <a href="#" data-mapa="' + e.id + T('">ver en el mapa</a>') : '');
     el.detalleGrid.innerHTML = GRAFICABLES.map(g => {
       const serie = filas.map(f => f.vals[g.key]).filter(esNum);
       const v = t ? t[g.key] : null;
@@ -1921,7 +2491,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         '<div class="etiqueta">' + g.etiqueta + '</div>' +
         '<div class="valor"><span>' + valTxt + '</span><span class="unidad">' + g.unidad + '</span><span class="tendencia ' + tend + '" aria-hidden="true">' + iconoTendencia(tend) + '</span></div>' +
         '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">' + sparkSvg(pts, desde, hasta, 100, 30, 3, 15 * 60000, 90 * 60000) + '</svg>' +
-        '<div class="rango-minmax">24 h: mín ' + fmtVar(g.key, mn) + ' · máx ' + fmtVar(g.key, mx) + '</div></div>';
+        T('<div class="rango-minmax">24 h: mín ') + fmtVar(g.key, mn) + T(' · máx ') + fmtVar(g.key, mx) + '</div></div>';
     }).join('');
   }
 
@@ -1991,7 +2561,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   // decimal (es-ES) y sin separador de miles (evita confundir "1.013" con mil).
   function formatearNumeroEje(v, paso){
     const decimales = paso >= 1 ? 0 : (paso >= 0.1 ? 1 : 2);
-    return v.toLocaleString('es-ES', { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
+    return v.toLocaleString(LOC, { minimumFractionDigits: decimales, maximumFractionDigits: decimales, useGrouping: false });
   }
 
   // Valor de la ficha emergente de las gráficas: con un decimal (formato
@@ -1999,7 +2569,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   // (mm y mm/h) lleva dos decimales porque sus valores son muy pequeños.
   function formatearNumeroTooltip(v, unidad){
     const d = /^mm(\/h)?$/.test(unidad || '') ? 2 : 1;
-    return v.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
+    return v.toLocaleString(LOC, { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
   }
 
   // Escala "alineada" para un eje derecho que debe compartir las líneas de
@@ -2040,7 +2610,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     leyendaEl.innerHTML = '';
     const conPuntos = series.filter(s => s.puntos.length > 0);
     if (conPuntos.length === 0){
-      svg.innerHTML = '<text class="grafico-etiqueta" x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle">Sin datos en este periodo</text>';
+      svg.innerHTML = '<text class="grafico-etiqueta" x="' + (W / 2) + '" y="' + (H / 2) + T('" text-anchor="middle">Sin datos en este periodo</text>');
       return;
     }
 
@@ -2238,7 +2808,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         const item = document.createElement('span');
         item.className = 'leyenda-item';
         const fondo = s.trazo ? 'repeating-linear-gradient(90deg,' + s.color + ' 0 4px,transparent 4px 7px)' : s.color;
-        const detalle = hayDer ? ' (' + [s.unidad, esDer(s) ? 'eje der.' : 'eje izq.'].filter(Boolean).join(', ') + ')' : '';
+        const detalle = hayDer ? ' (' + [s.unidad, esDer(s) ? T('eje der.') : T('eje izq.')].filter(Boolean).join(', ') + ')' : '';
         item.innerHTML = '<span class="leyenda-linea" style="background:' + fondo + '"></span>' + escHTML(s.etiqueta + detalle);
         leyendaEl.appendChild(item);
       });
@@ -2262,7 +2832,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     for (let k = 1; k <= 8; k++){
       const t = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k, 0, 0, 0, 0).getTime(); // aritmética de calendario: robusta ante cambios de hora
       if (t >= hastaMs) break;
-      ticks.push({ frac: (t - desdeMs) / (hastaMs - desdeMs), etiqueta: new Date(t).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }).replace('.', '') });
+      ticks.push({ frac: (t - desdeMs) / (hastaMs - desdeMs), etiqueta: new Date(t).toLocaleDateString(LOC, { weekday: 'short', day: 'numeric' }).replace('.', '') });
     }
     return ticks;
   }
@@ -2332,7 +2902,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     });
   }
   function msgVacio(txt){
-    if (ultimoErrorDB) return '<p class="evol-vacio">No se ha podido leer el histórico guardado en este navegador (' + escHTML(ultimoErrorDB.message || ultimoErrorDB.name || 'motivo desconocido') + '). Puede estar bloqueado por el modo privado o por los ajustes de cookies y datos del sitio.</p>';
+    if (ultimoErrorDB) return T('<p class="evol-vacio">No se ha podido leer el histórico guardado en este navegador (') + escHTML(ultimoErrorDB.message || ultimoErrorDB.name || T('motivo desconocido')) + T('). Puede estar bloqueado por el modo privado o por los ajustes de cookies y datos del sitio.</p>');
     return '<p class="evol-vacio">' + txt + '</p>';
   }
 
@@ -2343,28 +2913,28 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   async function renderEvol(){
     const tk = ++evolToken;
     const act = estsActivas();
-    if (act.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Añade estaciones e inicia el monitor para ver las gráficas.</p>'; el.evolNota.textContent = ''; return; }
+    if (act.length === 0){ el.charts.innerHTML = T('<p class="evol-vacio">Añade estaciones e inicia el monitor para ver las gráficas.</p>'); el.evolNota.textContent = ''; return; }
     const horas = ui.ventanaH, v = VENTANAS[horas];
     const hasta = Date.now(), ventana = horas * 3600000, desde = hasta - ventana;
     const ticks = ticksTiempo(desde, hasta, horas), conFecha = horas > 24;
     if (ui.modo === 'comparar'){
       const lista = estsVisibles();
-      if (lista.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Activa al menos una estación en los botones de arriba.</p>'; return; }
-      if (ui.vars.length === 0){ el.charts.innerHTML = '<p class="evol-vacio">Elige al menos una variable.</p>'; return; }
+      if (lista.length === 0){ el.charts.innerHTML = T('<p class="evol-vacio">Activa al menos una estación en los botones de arriba.</p>'); return; }
+      if (ui.vars.length === 0){ el.charts.innerHTML = T('<p class="evol-vacio">Elige al menos una variable.</p>'); return; }
       const filas = await cargarFilas(lista, desde, hasta);
       if (tk !== evolToken) return;
       const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
-      if (total === 0){ el.charts.innerHTML = msgVacio('Todavía no hay datos de este periodo en este navegador. Inicia el monitor, sincroniza con el servidor o rellena desde la API (sección «Datos y servidor»).'); el.evolNota.textContent = ''; return; }
+      if (total === 0){ el.charts.innerHTML = msgVacio(T('Todavía no hay datos de este periodo en este navegador. Inicia el monitor, sincroniza con el servidor o rellena desde la API (sección «Datos y servidor»).')); el.evolNota.textContent = ''; return; }
       pintarComparar(el.charts, filas, lista, ui.vars, desde, ventana, v.buckets, ticks, conFecha);
-      el.evolNota.textContent = lista.length + ' estación(es) · ' + total.toLocaleString('es-ES') + ' lecturas · tramos de ' + Math.round(ventana / v.buckets / 60000) + ' min (se muestra su media).';
+      el.evolNota.textContent = lista.length + T(' estación(es) · ') + total.toLocaleString(LOC) + T(' lecturas · tramos de ') + Math.round(ventana / v.buckets / 60000) + T(' min (se muestra su media).');
     } else {
       const e = act.find(x => x.id === ui.estEvol) || act[0];
       if (ui.estEvol !== e.id){ ui.estEvol = e.id; el.estSelEvol.value = e.id; }
       const filas = (await consultarRango(kEst(e), desde, hasta)).sort((a, b) => a.epochMs - b.epochMs);
       if (tk !== evolToken) return;
-      if (filas.length === 0){ el.charts.innerHTML = msgVacio('Todavía no hay datos de «' + escHTML(nombreEst(e)) + '» en este periodo.'); el.evolNota.textContent = ''; return; }
+      if (filas.length === 0){ el.charts.innerHTML = msgVacio(T('Todavía no hay datos de «') + escHTML(nombreEst(e)) + T('» en este periodo.')); el.evolNota.textContent = ''; return; }
       pintarEstacion(el.charts, filas, e, desde, ventana, v.buckets, ticks, conFecha);
-      el.evolNota.textContent = nombreEst(e) + ' · ' + filas.length.toLocaleString('es-ES') + ' lecturas · tramos de ' + Math.round(ventana / v.buckets / 60000) + ' min.';
+      el.evolNota.textContent = nombreEst(e) + ' · ' + filas.length.toLocaleString(LOC) + T(' lecturas · tramos de ') + Math.round(ventana / v.buckets / 60000) + ' min.';
     }
   }
 
@@ -2397,7 +2967,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   async function renderSemana(){
     const tk = ++semanaToken;
     const act = estsActivas();
-    if (act.length === 0){ el.tablaSemana.innerHTML = '<p class="evol-vacio">Sin estaciones activas.</p>'; return; }
+    if (act.length === 0){ el.tablaSemana.innerHTML = T('<p class="evol-vacio">Sin estaciones activas.</p>'); return; }
     const hoy = new Date();
     const dias = [];
     for (let i = DIAS_SEMANA - 1; i >= 0; i--) dias.push(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i, 0, 0, 0, 0));
@@ -2410,12 +2980,12 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     if (tk !== semanaToken) return;
     ultimaSemana = Date.now();
     const campo = ui.resumen, dec = campo === 'lluvia' ? 1 : 1;
-    let h = '<table class="t"><thead><tr><th>Día</th>' + act.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
+    let h = T('<table class="t"><thead><tr><th>Día</th>') + act.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
     dias.forEach((d, i) => {
       const vals = act.map(e => datos.get(e.id)[i][campo]);
       const validos = vals.filter(v => v !== null);
       const mx = validos.length >= 2 ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 ? Math.min.apply(null, validos) : null;
-      const etq = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) + (i === dias.length - 1 ? ' (hoy)' : '');
+      const etq = d.toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' }) + (i === dias.length - 1 ? T(' (hoy)') : '');
       h += '<tr><td>' + escHTML(etq) + '</td>' + vals.map(v => {
         let cls = 'num';
         if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
@@ -2423,8 +2993,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       }).join('') + '</tr>';
     });
     const unidad = campo === 'lluvia' ? 'mm' : (campo === 'racha' ? 'km/h' : '°C');
-    h += '<tr><td>Lecturas (7 d)</td>' + act.map(e => '<td class="num">' + datos.get(e.id).reduce((s, r) => s + r.n, 0).toLocaleString('es-ES') + '</td>').join('') + '</tr>';
-    h += '</tbody></table><p class="evol-nota" style="margin-top:8px">Valores en ' + unidad + '. ' + (campo === 'lluvia' ? 'Lluvia: el acumulado más alto registrado ese día. ' : '') + 'Un «—» significa que no hay lecturas guardadas ese día.</p>';
+    h += T('<tr><td>Lecturas (7 d)</td>') + act.map(e => '<td class="num">' + datos.get(e.id).reduce((s, r) => s + r.n, 0).toLocaleString(LOC) + '</td>').join('') + '</tr>';
+    h += T('</tbody></table><p class="evol-nota" style="margin-top:8px">Valores en ') + unidad + '. ' + (campo === 'lluvia' ? T('Lluvia: el acumulado más alto registrado ese día. ') : '') + T('Un «—» significa que no hay lecturas guardadas ese día.</p>');
     el.tablaSemana.innerHTML = h;
   }
 
@@ -2434,22 +3004,22 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   let diaUltimo = null;   // { fecha, filasPorEst, lista }
   async function consultarDia(){
     const val = el.diaInput.value;
-    if (!val){ mostrarDiaEstado('Elige una fecha.', true); return; }
+    if (!val){ mostrarDiaEstado(T('Elige una fecha.'), true); return; }
     const p = val.split('-').map(Number);
     const fecha = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
-    if (fecha.getTime() > Date.now()){ mostrarDiaEstado('Esa fecha es futura.', true); return; }
+    if (fecha.getTime() > Date.now()){ mostrarDiaEstado(T('Esa fecha es futura.'), true); return; }
     const lista = estsVisibles();
-    if (lista.length === 0){ mostrarDiaEstado('Activa al menos una estación en las gráficas.', true); return; }
+    if (lista.length === 0){ mostrarDiaEstado(T('Activa al menos una estación en las gráficas.'), true); return; }
     $('btnConsultarDia').disabled = true;
     const ini = fecha.getTime(), fin = ini + 86400000;
     const notas = [];
     for (let i = 0; i < lista.length; i++){
       const e = lista[i];
-      mostrarDiaEstado('Consultando ' + nombreEst(e) + ' (' + (i + 1) + '/' + lista.length + ')…', false);
+      mostrarDiaEstado(T('Consultando ') + nombreEst(e) + ' (' + (i + 1) + '/' + lista.length + ')…', false);
       const r = await completarDia(e, fecha);
-      if (r.estado === 'ok') notas.push(nombreEst(e) + ': +' + r.anadidas + ' de la API');
-      else if (r.estado === 'error') notas.push(nombreEst(e) + ': la API no respondió' + (r.http ? ' (HTTP ' + r.http + ')' : ''));
-      else if (r.estado === 'vacio') notas.push(nombreEst(e) + ': la API no tiene más datos de ese día');
+      if (r.estado === 'ok') notas.push(nombreEst(e) + ': +' + r.anadidas + T(' de la API'));
+      else if (r.estado === 'error') notas.push(nombreEst(e) + T(': la API no respondió') + (r.http ? ' (HTTP ' + r.http + ')' : ''));
+      else if (r.estado === 'vacio') notas.push(nombreEst(e) + T(': la API no tiene más datos de ese día'));
     }
     if (notas.some(n => /\+[1-9]/.test(n))){ try { renderDatos(); renderSemana(); } catch(_){} }
     const filas = await cargarFilas(lista, ini, fin - 1);
@@ -2457,21 +3027,21 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const total = Array.from(filas.values()).reduce((s, a) => s + a.length, 0);
     $('btnConsultarDia').disabled = false;
     if (total === 0){
-      el.diaResumen.innerHTML = ''; el.chartsDia.innerHTML = '<p class="evol-vacio">No hay datos de ese día para las estaciones elegidas.</p>';
-      el.btnCSVDia.disabled = true; mostrarDiaEstado(notas.join(' · ') || 'Sin datos.', true); return;
+      el.diaResumen.innerHTML = ''; el.chartsDia.innerHTML = T('<p class="evol-vacio">No hay datos de ese día para las estaciones elegidas.</p>');
+      el.btnCSVDia.disabled = true; mostrarDiaEstado(notas.join(' · ') || T('Sin datos.'), true); return;
     }
-    mostrarDiaEstado(notas.length ? notas.join(' · ') : 'Todo el día estaba ya guardado en este navegador.', false);
+    mostrarDiaEstado(notas.length ? notas.join(' · ') : T('Todo el día estaba ya guardado en este navegador.'), false);
     el.btnCSVDia.disabled = false;
     // Tabla de estadísticas del día por estación.
-    const cab = fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const cab = fecha.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const filasTabla = [
-      ['Temp. máxima (°C)', f => estadDia(f, 'temp_c', 'max'), 'temp_c'], ['Temp. mínima (°C)', f => estadDia(f, 'temp_c', 'min'), 'temp_c'],
-      ['Temp. media (°C)', f => estadDia(f, 'temp_c', 'avg'), 'temp_c'], ['Humedad media (%)', f => estadDia(f, 'humidity_pct', 'avg'), 'humidity_pct'],
-      ['Presión media (hPa)', f => estadDia(f, 'pressure_hpa', 'avg'), 'pressure_hpa'], ['Racha máxima (km/h)', f => estadDia(f, 'gust_kmh', 'max'), 'gust_kmh'],
-      ['Lluvia total (mm)', f => estadDia(f, 'rain_total_mm', 'max'), 'rain_total_mm'], ['Radiación máx. (W/m²)', f => estadDia(f, 'solarradiation_wm2', 'max'), 'solarradiation_wm2'],
-      ['UV máximo', f => estadDia(f, 'uv_index', 'max'), 'uv_index'], ['Lecturas', f => f.length, null]
+      [T('Temp. máxima (°C)'), f => estadDia(f, 'temp_c', 'max'), 'temp_c'], [T('Temp. mínima (°C)'), f => estadDia(f, 'temp_c', 'min'), 'temp_c'],
+      [T('Temp. media (°C)'), f => estadDia(f, 'temp_c', 'avg'), 'temp_c'], [T('Humedad media (%)'), f => estadDia(f, 'humidity_pct', 'avg'), 'humidity_pct'],
+      [T('Presión media (hPa)'), f => estadDia(f, 'pressure_hpa', 'avg'), 'pressure_hpa'], [T('Racha máxima (km/h)'), f => estadDia(f, 'gust_kmh', 'max'), 'gust_kmh'],
+      [T('Lluvia total (mm)'), f => estadDia(f, 'rain_total_mm', 'max'), 'rain_total_mm'], [T('Radiación máx. (W/m²)'), f => estadDia(f, 'solarradiation_wm2', 'max'), 'solarradiation_wm2'],
+      [T('UV máximo'), f => estadDia(f, 'uv_index', 'max'), 'uv_index'], [T('Lecturas'), f => f.length, null]
     ];
-    let h = '<h3 style="font:700 16px var(--display);margin:6px 0 8px;text-transform:capitalize">' + escHTML(cab) + '</h3><div class="tbl-wrap amplia"><table class="t"><thead><tr><th>Resumen</th>' +
+    let h = '<h3 style="font:700 16px var(--display);margin:6px 0 8px;text-transform:capitalize">' + escHTML(cab) + T('</h3><div class="tbl-wrap amplia"><table class="t"><thead><tr><th>Resumen</th>') +
       lista.map(e => '<th class="num"><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></th>').join('') + '</tr></thead><tbody>';
     filasTabla.forEach(ft => {
       const vals = lista.map(e => ft[1](filas.get(e.id) || []));
@@ -2479,7 +3049,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const mx = validos.length >= 2 && ft[2] ? Math.max.apply(null, validos) : null, mn = validos.length >= 2 && ft[2] ? Math.min.apply(null, validos) : null;
       h += '<tr><td>' + ft[0] + '</td>' + vals.map(v => {
         let cls = 'num'; if (mx !== null && mx !== mn){ if (v === mx) cls += ' max'; else if (v === mn) cls += ' min'; }
-        return '<td class="' + cls + '">' + (ft[2] ? fmtVar(ft[2], v) : (v || 0).toLocaleString('es-ES')) + '</td>';
+        return '<td class="' + cls + '">' + (ft[2] ? fmtVar(ft[2], v) : (v || 0).toLocaleString(LOC)) + '</td>';
       }).join('') + '</tr>';
     });
     el.diaResumen.innerHTML = h + '</tbody></table></div>';
@@ -2502,7 +3072,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   const COLUMNAS_CSV = ['temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code'];
   const csvCelda = v => { if (v === null || v === undefined) return ''; const s = String(v); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   function csvFilas(lista, filasPorEst){
-    const out = [['estacion', 'station_id', 'fecha_hora_local', 'epoch_ms'].concat(COLUMNAS_CSV).join(',')];
+    const out = [[T('estacion'), 'station_id', T('fecha_hora_local'), 'epoch_ms'].concat(COLUMNAS_CSV).join(',')];
     lista.forEach(e => {
       (filasPorEst.get(e.id) || []).forEach(f => {
         const d = new Date(f.epochMs);
@@ -2514,13 +3084,13 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   }
   async function exportarCSV(horas){
     const lista = estsActivas();
-    if (lista.length === 0){ el.datosMsg.textContent = 'No hay estaciones activas.'; return; }
+    if (lista.length === 0){ el.datosMsg.textContent = T('No hay estaciones activas.'); return; }
     const hasta = Date.now(), desde = horas ? hasta - horas * 3600000 : 0;
     const filas = await cargarFilas(lista, desde, hasta);
     const lineas = csvFilas(lista, filas);
-    if (lineas.length < 2){ el.datosMsg.textContent = 'No hay lecturas que exportar en ese periodo.'; return; }
+    if (lineas.length < 2){ el.datosMsg.textContent = T('No hay lecturas que exportar en ese periodo.'); return; }
     descargar('telemetmulti-' + (horas ? horas + 'h' : 'todo') + '-' + new Date().toISOString().slice(0, 10) + '.csv', lineas.join('\n'));
-    el.datosMsg.textContent = (lineas.length - 1).toLocaleString('es-ES') + ' lecturas exportadas.';
+    el.datosMsg.textContent = (lineas.length - 1).toLocaleString(LOC) + T(' lecturas exportadas.');
   }
   function exportarCSVDia(){
     if (!diaUltimo) return;
@@ -2541,7 +3111,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const bases = [normalizarBase(cfg.servBase)];
     SERV_BASES_ALT.forEach(x => { if (bases.indexOf(x) < 0) bases.push(x); });
     const cands = [];
-    bases.forEach(base => { cands.push(base + 'historial_' + seg + '.json', base + 'history_' + seg + '.json', base + 'historial.json', base + 'history.json'); });
+    bases.forEach(base => { cands.push(base + 'historial_' + seg + '.json', base + 'history_' + seg + '.json', base + T('historial.json'), base + T('history.json')); });
     let otra = null, formato = false;
     for (const url of cands){
       let data;
@@ -2579,7 +3149,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       for (const e of estsActivas()){
         const res = await sincronizarEstacion(e);
         rt(e).serv = res; rt(e).servMs = Date.now();
-        if (res.estado === 'ok' && res.anadidas > 0){ anadidas += res.anadidas; log('info', e, 'Servidor: +' + res.anadidas + ' lecturas.'); }
+        if (res.estado === 'ok' && res.anadidas > 0){ anadidas += res.anadidas; log('info', e, 'Servidor: +' + res.anadidas + T(' lecturas.')); }
         renderServidor();
       }
     } finally { sincronizando = false; btn.disabled = false; }
@@ -2588,22 +3158,22 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function renderServidor(){
     const act = estsActivas();
     if (act.length === 0){ el.servEstado.innerHTML = ''; return; }
-    let h = '<table class="t t-compacta"><thead><tr><th>Estación</th><th>Estado</th><th class="num">Recibidas</th><th class="num">Añadidas</th><th class="ocupa">Última lectura</th></tr></thead><tbody>';
+    let h = T('<table class="t t-compacta"><thead><tr><th>Estación</th><th>Estado</th><th class="num">Recibidas</th><th class="num">Añadidas</th><th class="ocupa">Última lectura</th></tr></thead><tbody>');
     act.forEach(e => {
       const s = rt(e).serv;
-      let est = '<span class="tag">pendiente</span>', rec = '—', add = '—', ult = '—';
+      let est = T('<span class="tag">pendiente</span>'), rec = '—', add = '—', ult = '—';
       if (s){
         if (s.estado === 'ok'){
-          est = '<span class="tag ok" title="' + escHTML(String(s.url || '')) + '">sincronizado</span>'; rec = s.recibidas; add = s.anadidas;
+          est = '<span class="tag ok" title="' + escHTML(String(s.url || '')) + T('">sincronizado</span>'); rec = s.recibidas; add = s.anadidas;
           if (s.ultimaMs){
             const edadMin = (Date.now() - s.ultimaMs) / 60000, lim = Math.max(SERV_AVISO_MIN, 3 * (s.intervaloS || 0) / 60);
-            ult = fmtFechaHM(s.ultimaMs) + (edadMin > lim ? ' <span class="tag warn">¿colector parado?</span>' : '');
+            ult = fmtFechaHM(s.ultimaMs) + (edadMin > lim ? T(' <span class="tag warn">¿colector parado?</span>') : '');
           }
         }
-        else if (s.estado === 'no-disponible') est = '<span class="tag" title="No se ha encontrado historial_' + escHTML(String(e.stationId || '')) + '.json en la carpeta indicada ni en ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ o ../history/data/">sin archivo</span>';
-        else if (s.estado === 'otra-estacion') est = '<span class="tag warn" title="No existe historial_' + escHTML(String(e.stationId || '')) + '.json. En la carpeta solo hay un historial.json, que es de la estación ' + escHTML(String(s.otra)) + '. El colector debe tener configurada también esta estación ([estacion:' + escHTML(String(e.stationId || '')) + '] en su config.ini) para generar su propio archivo.">sin archivo propio · el JSON es de ' + escHTML(String(s.otra)) + '</span>';
-        else if (s.estado === 'formato') est = '<span class="tag err">formato no válido</span>';
-        else est = '<span class="tag err">error local</span>';
+        else if (s.estado === 'no-disponible') est = T('<span class="tag" title="No se ha encontrado historial_') + escHTML(String(e.stationId || '')) + T('.json en la carpeta indicada ni en ../telemethistorial/datos/, ../telemethistory/data/, ../historial/datos/ o ../history/data/">sin archivo</span>');
+        else if (s.estado === 'otra-estacion') est = T('<span class="tag warn" title="No existe historial_') + escHTML(String(e.stationId || '')) + T('.json. En la carpeta solo hay un historial.json, que es de la estación ') + escHTML(String(s.otra)) + T('. El colector debe tener configurada también esta estación ([estacion:') + escHTML(String(e.stationId || '')) + T('] en su config.ini) para generar su propio archivo.">sin archivo propio · el JSON es de ') + escHTML(String(s.otra)) + '</span>';
+        else if (s.estado === 'formato') est = T('<span class="tag err">formato no válido</span>');
+        else est = T('<span class="tag err">error local</span>');
       }
       h += '<tr><td><span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span></td><td>' + est + '</td><td class="num">' + rec + '</td><td class="num">' + add + '</td><td>' + ult + '</td></tr>';
     });
@@ -2618,19 +3188,19 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     const tk = ++datosToken;
     const res = await resumenAlmacen();
     if (tk !== datosToken) return;
-    if (res.length === 0){ el.datosTabla.innerHTML = msgVacio('Todavía no hay nada guardado en este navegador.'); return; }
-    let h = '<table class="t t-compacta"><thead><tr><th>Estación</th><th class="num">Lecturas</th><th>Desde</th><th class="ocupa">Hasta</th><th></th></tr></thead><tbody>';
+    if (res.length === 0){ el.datosTabla.innerHTML = msgVacio(T('Todavía no hay nada guardado en este navegador.')); return; }
+    let h = T('<table class="t t-compacta"><thead><tr><th>Estación</th><th class="num">Lecturas</th><th>Desde</th><th class="ocupa">Hasta</th><th></th></tr></thead><tbody>');
     res.forEach(r => {
       const e = ests.find(x => kEst(x) === r.key);
-      h += '<tr><td>' + (e ? '<span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span>' : escHTML(r.key) + ' <span class="tag">no configurada</span>') +
-        '</td><td class="num">' + r.n.toLocaleString('es-ES') + '</td><td>' + (r.min ? fmtFechaHM(r.min) : '—') + '</td><td>' + (r.max ? fmtFechaHM(r.max) : '—') +
-        '</td><td><button type="button" class="btn btn-ghost btn-sm mini-btn" data-borrar="' + escHTML(r.key) + '" aria-label="Borrar el histórico de ' + escHTML(r.key) + '"><svg class="i"><use href="#i-trash"></use></svg></button></td></tr>';
+      h += '<tr><td>' + (e ? '<span class="cab-est" style="--c:' + e.color + '"><i></i>' + escHTML(nombreEst(e)) + '</span>' : escHTML(r.key) + T(' <span class="tag">no configurada</span>')) +
+        '</td><td class="num">' + r.n.toLocaleString(LOC) + '</td><td>' + (r.min ? fmtFechaHM(r.min) : '—') + '</td><td>' + (r.max ? fmtFechaHM(r.max) : '—') +
+        '</td><td><button type="button" class="btn btn-ghost btn-sm mini-btn" data-borrar="' + escHTML(r.key) + T('" aria-label="Borrar el histórico de ') + escHTML(r.key) + '"><svg class="i"><use href="#i-trash"></use></svg></button></td></tr>';
     });
     el.datosTabla.innerHTML = h + '</tbody></table>';
   }
   async function rellenarDesdeAPI(){
     const act = estsActivas();
-    if (act.length === 0){ el.datosMsg.textContent = 'No hay estaciones activas.'; return; }
+    if (act.length === 0){ el.datosMsg.textContent = T('No hay estaciones activas.'); return; }
     // Primero se cuenta cuántos días necesitan datos, para avisar de cuántas peticiones se harán.
     const pendientes = [];
     for (const e of act){
@@ -2640,34 +3210,34 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         if (ex.length === 0 || diaIncompleto(ex, ini, Math.min(fin, Date.now()))) pendientes.push({ e: e, fecha: fecha });
       }
     }
-    if (pendientes.length === 0){ el.datosMsg.textContent = 'Los últimos 7 días ya están cubiertos para todas las estaciones.'; return; }
-    if (!window.confirm('Se harán hasta ' + pendientes.length + ' peticiones a la API (una por estación y día con huecos). ¿Continuar?')) return;
+    if (pendientes.length === 0){ el.datosMsg.textContent = T('Los últimos 7 días ya están cubiertos para todas las estaciones.'); return; }
+    if (!window.confirm(T('Se harán hasta ') + pendientes.length + T(' peticiones a la API (una por estación y día con huecos). ¿Continuar?'))) return;
     $('btnBackfill').disabled = true;
     let anadidas = 0, errores = 0;
     for (let i = 0; i < pendientes.length; i++){
-      el.datosMsg.textContent = 'Rellenando ' + (i + 1) + '/' + pendientes.length + ' · ' + nombreEst(pendientes[i].e) + '…';
+      el.datosMsg.textContent = T('Rellenando ') + (i + 1) + '/' + pendientes.length + ' · ' + nombreEst(pendientes[i].e) + '…';
       const r = await completarDia(pendientes[i].e, pendientes[i].fecha);
       anadidas += r.anadidas; if (r.estado === 'error') errores++;
       await new Promise(res => setTimeout(res, 300));
     }
     $('btnBackfill').disabled = false;
-    el.datosMsg.textContent = 'Listo: ' + anadidas.toLocaleString('es-ES') + ' lecturas añadidas' + (errores ? ' · ' + errores + ' petición(es) sin respuesta (la API puede no tener histórico para tu cuenta)' : '') + '.';
-    log('info', null, 'Relleno desde la API: +' + anadidas + ' lecturas, ' + errores + ' errores.');
+    el.datosMsg.textContent = T('Listo: ') + anadidas.toLocaleString(LOC) + T(' lecturas añadidas') + (errores ? ' · ' + errores + T(' petición(es) sin respuesta (la API puede no tener histórico para tu cuenta)') : '') + '.';
+    log('info', null, T('Relleno desde la API: +') + anadidas + T(' lecturas, ') + errores + T(' errores.'));
     renderEvol(); renderDetalle(); renderSemana(); renderDatos();
   }
   async function borrarDatos(key){
-    const txt = key ? 'el histórico guardado de ' + key : 'TODO el histórico guardado en este navegador';
-    if (!window.confirm('¿Borrar ' + txt + '? No se puede deshacer.')) return;
+    const txt = key ? T('el histórico guardado de ') + key : T('TODO el histórico guardado en este navegador');
+    if (!window.confirm(T('¿Borrar ') + txt + T('? No se puede deshacer.'))) return;
     if (key){ try { const m = JSON.parse(localStorage.getItem('telemetmulti_autorell2') || '{}') || {}; Object.keys(m).forEach(k => { if (k.indexOf(key + '|') === 0) delete m[k]; }); localStorage.setItem('telemetmulti_autorell2', JSON.stringify(m)); } catch (_) {} }
     if (key) await borrarEstacionDB(key);
     else { try { localStorage.removeItem('telemetmulti_autorell2'); } catch (_) {} for (const k of await clavesEnDB()) await borrarEstacionDB(k); }
-    el.datosMsg.textContent = 'Histórico borrado.';
+    el.datosMsg.textContent = T('Histórico borrado.');
     renderEvol(); renderDetalle(); renderSemana(); renderDatos();
   }
 
   function renderRegistro(){
-    if (!registro.length){ el.registro.innerHTML = '<p class="evol-vacio">Sin actividad todavía.</p>'; return; }
-    el.registro.innerHTML = '<table class="t"><thead><tr><th>Hora</th><th>Estación</th><th>Evento</th></tr></thead><tbody>' +
+    if (!registro.length){ el.registro.innerHTML = T('<p class="evol-vacio">Sin actividad todavía.</p>'); return; }
+    el.registro.innerHTML = T('<table class="t"><thead><tr><th>Hora</th><th>Estación</th><th>Evento</th></tr></thead><tbody>') +
       registro.map(r => '<tr><td>' + fmtHoraMs(r.t) + '</td><td>' + escHTML(r.est) + '</td><td><span class="tag ' + (r.tipo === 'err' ? 'err' : (r.tipo === 'warn' ? 'warn' : '')) + '">' + r.tipo + '</span> ' + escHTML(r.msg) + '</td></tr>').join('') + '</tbody></table>';
   }
 
@@ -2678,7 +3248,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   function refrescarListas(rehacerTarjetas){
     const act = estsActivas();
     if (!act.find(e => e.id === ui.ref)) ui.ref = '';
-    el.refSel.innerHTML = opcionesEst(act, '— ninguna —'); el.refSel.value = ui.ref;
+    el.refSel.innerHTML = opcionesEst(act, T('— ninguna —')); el.refSel.value = ui.ref;
     const todas = ests.filter(e => kEst(e));
     if (!todas.find(e => e.id === ui.detalle)) ui.detalle = todas.length ? todas[0].id : '';
     el.detalleSel.innerHTML = opcionesEst(todas); el.detalleSel.value = ui.detalle;
@@ -2735,7 +3305,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     });
 
     el.btnIniciar.addEventListener('click', iniciarMonitor);
-    el.btnDetener.addEventListener('click', () => pararMonitor('Monitor detenido.'));
+    el.btnDetener.addEventListener('click', () => pararMonitor(T('Monitor detenido.')));
     el.btnSondeo.addEventListener('click', sondearTodas);
 
     el.refSel.addEventListener('change', () => { ui.ref = el.refSel.value; guardarUI(); renderComparativa(); });
@@ -2809,8 +3379,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       h.appendChild(b);
       const poner = plegar => {
         fijarPlegado('sec:' + h.id, cuerpo, b, null, plegar);
-        b.querySelector('.lbl').textContent = plegar ? 'Mostrar' : 'Ocultar';
-        b.title = (plegar ? 'Mostrar' : 'Ocultar') + ' la sección «' + (h.querySelector('h2') || {}).textContent + '»';
+        b.querySelector('.lbl').textContent = plegar ? T('Mostrar') : T('Ocultar');
+        b.title = (plegar ? T('Mostrar') : T('Ocultar')) + T(' la sección «') + (h.querySelector('h2') || {}).textContent + T('»');
       };
       poner(!!plegadas['sec:' + h.id]);
       b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
@@ -2819,7 +3389,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     // 2) Fichas: cada tarjeta (.card) y el mapa, plegables desde su título.
     main.querySelectorAll('.card, .mapa-wrap').forEach((c, k) => {
       let tit = c.querySelector(':scope > h3');
-      const nombre = tit ? tit.textContent.trim() : (c.dataset.titulo || ('Ficha ' + (k + 1)));
+      const nombre = tit ? tit.textContent.trim() : (c.dataset.titulo || (T('Ficha ') + (k + 1)));
       if (!tit){ tit = document.createElement('h3'); c.insertBefore(tit, c.firstChild); }
       const cuerpo = document.createElement('div');
       cuerpo.className = 'card-cuerpo'; cuerpo.id = 'ficha-' + slug(nombre);
@@ -2832,7 +3402,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       b.innerHTML = '<span></span>' + CHEV; b.firstChild.textContent = nombre;
       tit.appendChild(b);
       const clave = 'ficha:' + slug(nombre);
-      const poner = plegar => { fijarPlegado(clave, cuerpo, b, c, plegar); b.title = (plegar ? 'Mostrar «' : 'Ocultar «') + nombre + '»'; };
+      const poner = plegar => { fijarPlegado(clave, cuerpo, b, c, plegar); b.title = (plegar ? T('Mostrar «') : T('Ocultar «')) + Tn(nombre) + T('»'); };
+      c._poner = poner; c._cuerpo = cuerpo;
       poner(!!plegadas[clave]);
       b.addEventListener('click', () => { poner(!cuerpo.hidden); guardarLS(LS_PLEG, plegadas); });
     });
@@ -2851,7 +3422,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
      ============================================================ */
   function abrirMapaEstaciones(idDestacada){
     const con = estsActivas().filter(e => e.meta && esNum(e.meta.lat) && esNum(e.meta.lon));
-    if (con.length === 0){ mostrarToast('Aún no hay coordenadas: inicia el monitor para que cada estación informe de su posición.'); return; }
+    if (con.length === 0){ mostrarToast(T('Aún no hay coordenadas: inicia el monitor para que cada estación informe de su posición.')); return; }
     const datos = con.map(e => {
       const l = rt(e).last || {}, m = e.meta;
       return { id: e.id, nombre: nombreEst(e), sid: e.stationId, color: e.color, lat: m.lat, lon: m.lon,
@@ -2859,14 +3430,17 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
         temp: esNum(l.temp_c) ? Math.round(l.temp_c * 10) / 10 : null, hum: esNum(l.humidity_pct) ? Math.round(l.humidity_pct) : null };
     });
     // Página real (no una URL blob:): una página blob no envía Referer y los servidores de teselas de OpenStreetMap bloquean esas peticiones.
-    const json = JSON.stringify({ est: datos, dest: idDestacada || '' });
-    const w = window.open('mapa.html#' + encodeURIComponent(json), '_blank');
-    if (!w) mostrarToast('El navegador ha bloqueado la ventana del mapa: permite las ventanas emergentes para esta página.');
+    const json = JSON.stringify({ est: datos, dest: idDestacada || '', lang: LANG });
+    const w = window.open(T('mapa.html#') + encodeURIComponent(json), '_blank');
+    if (!w) mostrarToast(T('El navegador ha bloqueado la ventana del mapa: permite las ventanas emergentes para esta página.'));
   }
 
   function iniciarApp(){
     cargarTodo();
     iniciarPlegables();
+    fijarIdioma(LANG, true);
+    aplicarTema(document.documentElement.getAttribute('data-tema') || 'sistema', false);
+    conectarSelectoresVista();
     conectarEventos();
     volcarAjustesEnFormulario();
     firmaGuardada = firmaConfig();

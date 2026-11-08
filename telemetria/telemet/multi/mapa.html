@@ -27,17 +27,24 @@ html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif}
 (function(){
   var D = null;
   try { D = JSON.parse(decodeURIComponent(location.hash.slice(1))); } catch (e) {}
-  if (!D || !D.est || !D.est.length){ document.getElementById('m').innerHTML = '<p class="vacio">Sin datos de estaciones. Abre este mapa desde TeleMet Multi («ver en el mapa»).</p>'; return; }
+  // Idioma: lo elige la página principal (index.html) y llega en el hash; por defecto, español.
+  var EN = !!(D && D.lang === 'en');
+  if (EN){
+    document.documentElement.lang = 'en';
+    document.title = 'TeleMet Multi \u00b7 Map of the stations';
+    document.getElementById('ley').innerHTML = '<b>Stations</b>';
+  }
+  if (!D || !D.est || !D.est.length){ document.getElementById('m').innerHTML = EN ? '<p class="vacio">No station data. Open this map from TeleMet Multi (\u201cview on map\u201d).</p>' : '<p class="vacio">Sin datos de estaciones. Abre este mapa desde TeleMet Multi («ver en el mapa»).</p>'; return; }
   var esc = function(t){ return String(t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   var map = L.map('m', { zoomControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '\u00a9 colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: EN ? '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' : '\u00a9 colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
   var ms = {}, pts = [], ley = document.getElementById('ley');
   D.est.forEach(function(e){
     var dest = e.id === D.dest;
     var mk = L.circleMarker([e.lat, e.lon], { radius: dest ? 13 : 10, color: '#fff', weight: 3, fillColor: e.color, fillOpacity: 1 }).addTo(map);
-    var t = (e.temp !== null ? e.temp.toString().replace(".", ",") + ' \u00b0C' : '');
+    var t = (e.temp !== null ? (EN ? e.temp.toString() : e.temp.toString().replace(".", ",")) + ' \u00b0C' : '');
     mk.bindTooltip(esc(e.nombre) + (t ? ' \u00b7 ' + t : ''), { permanent: true, direction: 'top', offset: [0, -10], className: 'etq-est' });
-    mk.bindPopup('<b>' + esc(e.nombre) + '</b><br>' + esc(e.sid) + (e.barrio ? '<br>' + esc(e.barrio) : '') + (e.elev !== null ? '<br>' + e.elev + ' m' : '') + (t ? '<br>Temperatura: ' + t : '') + (e.hum !== null ? '<br>Humedad: ' + e.hum + ' %' : ''));
+    mk.bindPopup('<b>' + esc(e.nombre) + '</b><br>' + esc(e.sid) + (e.barrio ? '<br>' + esc(e.barrio) : '') + (e.elev !== null ? '<br>' + e.elev + ' m' : '') + (t ? '<br>' + (EN ? 'Temperature: ' : 'Temperatura: ') + t : '') + (e.hum !== null ? '<br>' + (EN ? 'Humidity: ' : 'Humedad: ') + e.hum + ' %' : ''));
     ms[e.id] = mk; pts.push([e.lat, e.lon]);
     var b = document.createElement('button');
     b.innerHTML = '<i style="background:' + esc(e.color) + '"></i>' + esc(e.nombre);

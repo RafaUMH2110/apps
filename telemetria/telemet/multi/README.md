@@ -4,6 +4,7 @@ App web de un solo archivo (`index.html`) para seguir **varias estaciones meteor
 
 ## Qué hace
 - **Estaciones**: alta, baja, activación, nombre y color de cada una; clave API propia o común. Importar/exportar la configuración en JSON. Los cambios se guardan con el botón **Guardar configuración** (confirma con un mensaje; mientras haya cambios sin guardar se avisa, y se guardan solos al pulsar Iniciar).
+- **Aspecto e idioma**: en la barra superior, selector de aspecto (**Sistema** / **Claro** / **Oscuro**) y de idioma (**Es** / **En**). El cambio es inmediato (sin recargar, el monitor sigue en marcha) y se recuerda en el navegador. Sin elección previa, el aspecto sigue al sistema y el idioma al del navegador. También se traducen el mapa interactivo y los números/fechas (coma o punto decimal).
 - **Fichas plegables**: cada ficha y cada sección (botón «Ocultar/Mostrar») se puede plegar; el estado se recuerda en el navegador.
 - **Sondeo independiente** por estación con backoff propio; un error 401/403/404 solo detiene a esa estación. Estimación de cuota por clave (orientativa).
 - **Ahora**: tarjeta por estación, tabla comparativa (máximo/mínimo resaltados y diferencia respecto a una referencia), extremos entre estaciones y mapa con fondo de OpenStreetMap (proyección Mercator, escala y norte).
@@ -27,6 +28,9 @@ El mapa de la pestaña *Ahora* dibuja las estaciones sobre teselas de OpenStreet
 
 ## Mapa interactivo con todas las estaciones
 «Ver en el mapa» (Detalle) y los enlaces bajo el mapa de «Ahora» abren una ventana nueva (`mapa.html`, una página real para que el navegador envíe el Referer y los servidores de teselas de OpenStreetMap acepten las peticiones) con un mapa de OpenStreetMap (Leaflet) en el que aparecen **todas las estaciones** con su color, nombre y temperatura; la estación elegida se resalta y su ficha se abre. La vista se ajusta para que se vean todas, y la leyenda permite centrarse en cada una. Esa ventana carga Leaflet desde unpkg.com (con comprobación de integridad) y las teselas desde tile.openstreetmap.org. Las estaciones aparecen cuando ya han informado de su posición (tras el primer sondeo).
+
+## Idioma: cómo añadir o corregir un texto
+El texto original de `index.html` está en español y el diccionario `EN` (buscar `const EN =` en el script) contiene su traducción al inglés. Los textos generados por código pasan por `T('texto')` y los de la página los traduce `traducirDOM()`. Para un texto nuevo, escríbelo en español y añade el par en `EN`. La versión **TeleMet MultiStation** (`../multistation/`) sigue siendo una copia solo en inglés.
 
 ## Uso
 Abrir `index.html` (o la versión publicada en GitHub Pages), añadir cada estación (Station ID y API Key) y pulsar **Iniciar**. Los datos y las claves se guardan solo en el navegador.

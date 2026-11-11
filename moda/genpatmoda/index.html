@@ -367,7 +367,7 @@
 
 <footer>
   GenPatModa &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 11/11/2026 23:48
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 00:30
 </footer>
 
 
@@ -703,6 +703,13 @@ ajustarLimiteTokens();
 let controladorCancelacion = null;
 class OperacionCancelada extends Error {}
 
+// Las llamadas de generación no usan streaming: la API no devuelve nada
+// hasta tener la respuesta completa, y generar el SVG de una pieza (miles de
+// tokens de salida) tarda más de 60 s. Por eso tienen su propio tiempo
+// máximo, más amplio; el de 60 s se mantiene para llamadas cortas (conteo
+// de tokens).
+const TIMEOUT_GENERACION_MS = 300000;
+
 async function fetchConTimeout(url, opciones, timeoutMs = 60000){
   const controlador = new AbortController();
   const id = setTimeout(() => controlador.abort(), timeoutMs);
@@ -713,7 +720,7 @@ async function fetchConTimeout(url, opciones, timeoutMs = 60000){
     return await fetch(url, {...opciones, signal: controlador.signal});
   } catch(e){
     if (senalCancelacion && senalCancelacion.aborted) throw new OperacionCancelada("Generación detenida por el usuario.");
-    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (60 s). Inténtalo de nuevo.");
+    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (" + Math.round(timeoutMs / 1000) + " s). Inténtalo de nuevo.");
     throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
   } finally {
     clearTimeout(id);
@@ -767,13 +774,13 @@ async function llamarIA(systemPrompt, userPrompt, opts){
     throw new Error("Proveedor desconocido: " + proveedor);
   }
 
-  let resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  let resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)}, TIMEOUT_GENERACION_MS);
   let data;
   try { data = await resp.json(); } catch(e){ data = {}; }
   if (!resp.ok && proveedor === "openai" && requiereMaxCompletionTokens(data)){
     const { max_tokens, ...bodySinMaxTokens } = body;
     const bodyAlt = { ...bodySinMaxTokens, max_completion_tokens: max_tokens };
-    resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(bodyAlt)});
+    resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(bodyAlt)}, TIMEOUT_GENERACION_MS);
     try { data = await resp.json(); } catch(e){ data = {}; }
   }
 

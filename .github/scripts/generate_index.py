@@ -23,6 +23,14 @@ EYEBROW = "RafaUMH2110 · UMH"
 CONTACT_NAME = "Rafael Puerto"
 CONTACT_EMAIL = "r.puerto@umh.es"
 
+# Categorías que se añaden automáticamente (al final de la lista, para no
+# cambiar la categoría principal de cada app) a todas las apps de una
+# carpeta de nivel superior, sin tener que editar el data-categories de
+# cada app: carpeta -> categorías.
+AUTO_CATEGORIES_BY_GROUP = {
+    "moda": ["moda"],
+}
+
 
 def list_local_apps(root):
     """Recorre cada carpeta de app en la raíz (salvo las excluidas)
@@ -46,6 +54,9 @@ def list_local_apps(root):
                 if meta is None:
                     continue
                 meta["group"] = rel.split("/")[0]
+                for slug in AUTO_CATEGORIES_BY_GROUP.get(meta["group"], []):
+                    if slug not in meta["categories"]:
+                        meta["categories"].append(slug)
                 apps.append((rel, meta))
     return apps
 

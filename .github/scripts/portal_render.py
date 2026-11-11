@@ -117,6 +117,7 @@ CATEGORY_INFO = {
     "programacion": {"label": "Programación", "icon": "code"},
     "productividad": {"label": "Productividad", "icon": "wrench"},
     "telemetria": {"label": "Telemetría", "icon": "radio-tower"},
+    "moda": {"label": "Moda", "icon": "shirt"},
 }
 
 
@@ -614,6 +615,7 @@ CATEGORY_INFO_TEMAS = {
     "programacion": {"label": "Programación", "icon": "code"},
     "productividad": {"label": "Productividad", "icon": "wrench"},
     "telemetria": {"label": "Telemetría", "icon": "radio"},
+    "moda": {"label": "Moda", "icon": "shirt"},
 }
 
 

@@ -40,16 +40,16 @@
   body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.55; }
   .wrap { max-width: 1160px; margin: 0 auto; padding: 0 1.25rem 3rem; }
 
-  header.hero { padding: 1.6rem 0 .9rem; }
-  header.hero h1 { font-family: 'Fraunces', Georgia, "Times New Roman", serif; font-size: clamp(1.9rem, 4vw, 2.6rem); margin: 0; letter-spacing: -0.02em; color: var(--blue-700); font-weight: 700; }
-  header.hero p.sub { margin: .2rem 0 .8rem; font-size: 1.05rem; color: var(--muted); }
+  header.hero { padding: 2.5rem 0 1.5rem; }
+  header.hero h1 { font-family: 'Fraunces', Georgia, "Times New Roman", serif; font-size: clamp(2.2rem, 5vw, 3.2rem); margin: 0; letter-spacing: -0.02em; color: var(--blue-700); font-weight: 700; }
+  header.hero p.sub { margin: .25rem 0 1rem; font-size: 1.15rem; color: var(--muted); }
   .badge-pro {
     display: inline-block; vertical-align: middle; font-family: 'JetBrains Mono', monospace;
     font-size: .42em; font-weight: 700; letter-spacing: .09em; color: #fff; background: var(--gold);
     border-radius: 6px; padding: .22em .55em; margin-left: .5em; transform: translateY(-0.35em);
   }
   .pro-strip {
-    margin: 0 0 1rem; display: flex; gap: .5rem; flex-wrap: wrap;
+    margin: 0 0 1.25rem; display: flex; gap: .6rem; flex-wrap: wrap;
     font-family: 'JetBrains Mono', monospace; font-size: .76rem; color: var(--muted);
   }
   .pro-strip span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: .3rem .7rem; }
@@ -79,7 +79,6 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
   .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
   .field { margin-bottom: 1rem; }
-  .field-narrow { max-width: 32rem; }
   .row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
   .key-row { display: flex; gap: .5rem; flex-wrap: wrap; }
   .key-row input { flex: 1 1 200px; }
@@ -196,61 +195,7 @@
 
   .hidden { display: none !important; }
 
-  kbd {
-    font-family: 'JetBrains Mono', monospace; font-size: .8em; background: var(--blue-50);
-    border: 1px solid var(--blue-100); border-bottom-width: 2px; border-radius: 5px; padding: .05em .4em;
-  }
-
-  /* Aviso de seguridad: importante, pero plegado para no ocupar media pantalla. */
-  details.notice-d { background: var(--warn-bg); border-color: var(--warn-border); box-shadow: none; padding: .8rem 1.1rem; }
-  details.notice-d > summary { cursor: pointer; font-weight: 700; font-size: .95rem; color: var(--gold-ink); }
-  details.notice-d p { margin: .6rem 0 0; font-size: .9rem; }
-
-  /* Configuraci&#243;n plegable: se ajusta una vez y deja libre la zona de trabajo. */
-  details.setup { padding: 0; }
-  details.setup > summary {
-    list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline;
-    gap: .25rem .8rem; padding: .95rem 1.4rem; font-size: 1.1rem; font-weight: 700; color: var(--blue-700);
-  }
-  details.setup > summary::-webkit-details-marker { display: none; }
-  details.setup > summary::before { content: "\25B8"; color: var(--blue-500); font-size: .85em; }
-  details.setup[open] > summary::before { content: "\25BE"; }
-  details.setup > summary:hover { background: var(--blue-50); }
-  details.setup[open] > summary { border-bottom: 1px solid var(--border); }
-  .setup-sum { font-family: 'JetBrains Mono', monospace; font-size: .76rem; font-weight: 500; color: var(--muted); }
-  .setup-body { padding: 1.3rem 1.4rem 1.4rem; display: grid; gap: 1.3rem; }
-  .setup-block > h3 { margin: 0 0 .8rem; font-size: 1rem; color: var(--blue-700); }
-  .setup-block + .setup-block { border-top: 1px dashed var(--border); padding-top: 1.3rem; }
-  .setup-block .card:last-child, .setup-block .field:last-child, .setup-block > :last-child { margin-bottom: 0; }
-
-  /* Zona de trabajo: en pantallas anchas, entrada a la izquierda y resultado
-     a la derecha, fijo mientras se desplaza el resto de la p&#225;gina. */
-  .workspace { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
-  .workspace > .card { margin-bottom: 0; display: flex; flex-direction: column; }
-  .card h2 { scroll-margin-top: 1rem; }
-  @media (min-width: 1100px) {
-    /* Ret&#237;cula de 2x2: las dos fichas de cada fila comparten altura, as&#237; que
-       sus bordes superior e inferior quedan alineados entre columnas. */
-    .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
-    .card-idea    { grid-column: 1; grid-row: 1; }
-    .card-generar { grid-column: 2; grid-row: 1; }
-    .card-prompt  { grid-column: 1; grid-row: 2; }
-    .card-imagen  { grid-column: 2; grid-row: 2; }
-    /* El espacio sobrante de cada fila lo absorbe el &#225;rea de texto, en lugar
-       de dejar un hueco en blanco al final de la ficha m&#225;s corta. */
-    .card-prompt > textarea { min-height: 150px; flex: 1 1 auto; }
-    .card-idea #zona-idea-individual, .card-idea #zona-ideas-lote { display: flex; flex-direction: column; flex: 1 1 auto; }
-    .card-idea #zona-idea-individual > textarea, .card-idea #zona-ideas-lote > textarea { flex: 1 1 auto; }
-    .card-imagen .image-box img { max-height: 65vh; }
-    .card-prompt .row button, .card-imagen .row button { padding: .4rem .75rem; font-size: .94rem; }
-  }
-
-  @media (max-width: 800px) {
-    .grid2, .grid3 { grid-template-columns: 1fr; }
-    .card { padding: 1.1rem; }
-    .setup-body { padding: 1.1rem; }
-    details.setup > summary { padding: .85rem 1.1rem; }
-  }
+  @media (max-width: 800px) { .grid2, .grid3 { grid-template-columns: 1fr; } .card { padding: 1.1rem; } }
 </style>
 </head>
 <body
@@ -275,28 +220,22 @@
   </header>
   <p class="pro-strip"><span>⚡ <b>Caché de resultados</b> activable (idea e imagen por separado)</span><span>🗂 <b>Caché de prompts</b> Anthropic</span><span>📦 <b>Modo por lotes</b> — varias ideas de una vez</span><span>🧠 Catálogo de modelos ampliado</span></p>
 
-  <details class="card notice-d" role="note">
-    <summary>Aviso de seguridad sobre las API keys</summary>
-    <p>esta aplicaci&#243;n funciona directamente desde el navegador. Las API keys se almacenan localmente en este dispositivo y se env&#237;an &#250;nicamente al proveedor correspondiente para realizar las solicitudes. Almacenar una API key en <code>localStorage</code> es c&#243;modo, pero no equivale a guardar un secreto en un servidor. No se recomienda este mecanismo para secretos institucionales ni para aplicaciones p&#250;blicas de producci&#243;n; para esos entornos se recomienda utilizar un backend o proxy seguro.</p>
-  </details>
+  <div class="notice" role="note">
+    <strong>Aviso de seguridad:</strong> esta aplicaci&#243;n funciona directamente desde el navegador. Las API keys se almacenan localmente en este dispositivo y se env&#237;an &#250;nicamente al proveedor correspondiente para realizar las solicitudes. Almacenar una API key en <code>localStorage</code> es c&#243;modo, pero no equivale a guardar un secreto en un servidor. No se recomienda este mecanismo para secretos institucionales ni para aplicaciones p&#250;blicas de producci&#243;n; para esos entornos se recomienda utilizar un backend o proxy seguro.
+  </div>
 
-  <!-- CONFIGURACI&#211;N (plegable: se ajusta una vez y deja de estorbar) -->
-  <details class="card setup" id="panel-config">
-    <summary><span>Configuraci&#243;n</span><span class="setup-sum" id="config-resumen">Claves, modelos, par&#225;metros y cach&#233;</span></summary>
-    <div class="setup-body">
-      <div class="setup-block" role="group" aria-labelledby="h-config">
-        <h3 id="h-config">Claves de API</h3>
-    <div class="field field-narrow">
-      <label for="textProvider">Proveedor de IA para mejorar el prompt</label>
-      <select id="textProvider">
-        <option value="anthropic">Anthropic (Claude)</option>
-        <option value="openai">OpenAI (GPT)</option>
-        <option value="gemini">Google (Gemini)</option>
-      </select>
-    </div>
+  <!-- SECCI&#211;N 1 &#8212; CONFIGURACI&#211;N -->
+  <section class="card" aria-labelledby="h-config">
+    <h2 id="h-config">1. Configuraci&#243;n de las API keys</h2>
     <div class="grid2">
       <div>
-        <label for="textApiKey">API key del proveedor seleccionado <span id="textApiKeyBadge" class="badge no">sin guardar</span></label>
+        <label for="textProvider">Proveedor de IA para mejorar el prompt</label>
+        <select id="textProvider">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="gemini">Google (Gemini)</option>
+        </select>
+        <label for="textApiKey" style="margin-top:.75rem">API key del proveedor seleccionado <span id="textApiKeyBadge" class="badge no">sin guardar</span></label>
         <div class="key-row">
           <input type="password" id="textApiKey" autocomplete="off" spellcheck="false">
           <button type="button" id="textKeySave">Guardar</button>
@@ -316,9 +255,11 @@
       </div>
     </div>
     <p class="hint">Cada clave solo se env&#237;a a su proveedor oficial (api.anthropic.com, api.openai.com, generativelanguage.googleapis.com o fal.run, seg&#250;n corresponda). La validez definitiva la confirma la respuesta del proveedor.</p>
-      </div>
-      <div class="setup-block" role="group" aria-labelledby="h-models">
-        <h3 id="h-models">Modelos</h3>
+  </section>
+
+  <!-- SECCI&#211;N 2 &#8212; MODELOS -->
+  <section class="card" aria-labelledby="h-models">
+    <h2 id="h-models">2. Modelos</h2>
     <div class="grid2">
       <div>
         <div class="field">
@@ -348,9 +289,58 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- SECCI&#211;N PRO &#8212; MODO DE TRABAJO, CACH&#201; Y LOTES -->
+  <section class="card" aria-labelledby="h-pro">
+    <h2 id="h-pro">Pro — modo de trabajo, caché y lotes</h2>
+    <div class="modepicker" id="modepicker" role="radiogroup" aria-label="Modo de trabajo">
+      <button type="button" data-modo="individual" aria-pressed="true"><b>Individual</b><span>Una idea, con revisión del prompt antes de generar la imagen</span></button>
+      <button type="button" data-modo="lote" aria-pressed="false"><b>Por lotes</b><span>Varias ideas a la vez, de principio a fin, sin pausa de revisión</span></button>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="row" style="margin:0;align-items:center" for="chk-cache-resultados"><input type="checkbox" id="chk-cache-resultados" checked style="width:1.15rem;height:1.15rem;margin:0 .5rem 0 0"><span><b>Caché de resultados</b> — reutilizar un prompt y/o una imagen ya generados para los mismos parámetros</span></label>
+        <button type="button" id="btn-vaciar-cache" style="padding:.3rem .7rem;font-size:.82rem">Vaciar caché (<span id="cache-contador">0</span>)</button>
       </div>
-      <div class="setup-block" role="group" aria-labelledby="h-params">
-        <h3 id="h-params">Par&#225;metros de la imagen</h3>
+      <p class="hint">La caché reutiliza el historial de este navegador en DOS puntos independientes: antes de llamar a la IA de texto, si la misma idea + instrucciones + proveedor + modelo + tokens ya produjo un prompt, se reutiliza sin llamar a la IA; antes de llamar a FLUX, si el mismo prompt final + modelo FLUX + parámetros ya produjo una imagen, se reutiliza sin llamar a fal.ai. Cada punto se cachea por separado.</p>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="row" style="margin:0;align-items:center" for="chk-prompt-caching"><input type="checkbox" id="chk-prompt-caching" checked style="width:1.15rem;height:1.15rem;margin:0 .5rem 0 0"><span><b>Caché de prompts de Anthropic</b> (<code>cache_control</code>) — solo con proveedor Anthropic</span></label>
+      </div>
+      <p class="hint" id="nota-prompt-caching">Marca el bloque de instrucciones del sistema como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes mientras no lo cambies. Solo hay ahorro real si el bloque supera el mínimo cacheable del modelo activo.</p>
+    </div>
+  </section>
+
+  <!-- SECCI&#211;N 3 &#8212; PROMPT -->
+  <section class="card" aria-labelledby="h-prompt">
+    <h2 id="h-prompt"><span id="titulo-paso-prompt">3. Prompt</span></h2>
+    <div class="field">
+      <label for="systemPrompt">Instrucciones del sistema</label>
+      <textarea id="systemPrompt" class="tall"></textarea>
+      <div class="row">
+        <button type="button" id="systemClear">Borrar</button>
+        <button type="button" id="systemRestore">Restaurar predeterminado</button>
+      </div>
+    </div>
+    <div class="field" id="zona-idea-individual">
+      <label for="idea">Idea inicial <span aria-hidden="true">*</span></label>
+      <textarea id="idea" required aria-required="true" placeholder="Describe brevemente la prenda que quieres visualizar..."></textarea>
+      <div class="row"><button type="button" id="ideaClear">Borrar</button></div>
+    </div>
+    <div class="field hidden" id="zona-ideas-lote">
+      <label for="ideas-lote-texto">Ideas del lote (una por línea)</label>
+      <textarea id="ideas-lote-texto" class="tall" placeholder="Una idea por línea, por ejemplo:&#10;Chaqueta vaquera oversize con parches bordados&#10;Vestido midi de lino color crudo con botonadura frontal&#10;Abrigo de paño verde botella con cinturón"></textarea>
+      <div class="row"><button type="button" id="btn-anadir-lote">Añadir estas ideas al lote</button></div>
+      <div class="batch-list" id="lote-lista-ideas"></div>
+      <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna idea añadida todavía.</p>
+    </div>
+  </section>
+
+  <!-- SECCI&#211;N 4 &#8212; PAR&#193;METROS -->
+  <section class="card" aria-labelledby="h-params">
+    <h2 id="h-params">4. Par&#225;metros de la imagen</h2>
     <div class="grid3">
       <div>
         <label for="steps">N&#250;mero de pasos de inferencia</label>
@@ -370,69 +360,11 @@
       <select id="safety"></select>
       <p class="hint">Si el filtro marca una imagen, fal.ai suele devolverla en negro. Un valor m&#225;s alto es m&#225;s permisivo; por defecto, 2. Usa la opci&#243;n menos permisiva que te d&#233; buenos resultados, sobre todo si la usan alumnos.</p>
     </div>
-      </div>
-      <div class="setup-block" role="group" aria-labelledby="h-pro">
-        <h3 id="h-pro">Cach&#233; (Pro)</h3>
-    <div class="procard">
-      <div class="prohead">
-        <label class="row" style="margin:0;align-items:center" for="chk-cache-resultados"><input type="checkbox" id="chk-cache-resultados" checked style="width:1.15rem;height:1.15rem;margin:0 .5rem 0 0"><span><b>Caché de resultados</b> — reutilizar un prompt y/o una imagen ya generados para los mismos parámetros</span></label>
-        <button type="button" id="btn-vaciar-cache" style="padding:.3rem .7rem;font-size:.82rem">Vaciar caché (<span id="cache-contador">0</span>)</button>
-      </div>
-      <p class="hint">La caché reutiliza el historial de este navegador en DOS puntos independientes: antes de llamar a la IA de texto, si la misma idea + instrucciones + proveedor + modelo + tokens ya produjo un prompt, se reutiliza sin llamar a la IA; antes de llamar a FLUX, si el mismo prompt final + modelo FLUX + parámetros ya produjo una imagen, se reutiliza sin llamar a fal.ai. Cada punto se cachea por separado.</p>
-    </div>
-    <div class="procard">
-      <div class="prohead">
-        <label class="row" style="margin:0;align-items:center" for="chk-prompt-caching"><input type="checkbox" id="chk-prompt-caching" checked style="width:1.15rem;height:1.15rem;margin:0 .5rem 0 0"><span><b>Caché de prompts de Anthropic</b> (<code>cache_control</code>) — solo con proveedor Anthropic</span></label>
-      </div>
-      <p class="hint" id="nota-prompt-caching">Marca el bloque de instrucciones del sistema como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes mientras no lo cambies. Solo hay ahorro real si el bloque supera el mínimo cacheable del modelo activo.</p>
-    </div>
-      </div>
-      <div class="setup-block">
-    <div class="field">
-      <label for="systemPrompt">Instrucciones del sistema</label>
-      <textarea id="systemPrompt" class="tall"></textarea>
-      <div class="row">
-        <button type="button" id="systemClear">Borrar</button>
-        <button type="button" id="systemRestore">Restaurar predeterminado</button>
-      </div>
-    </div>
-      </div>
-    </div>
-  </details>
+  </section>
 
-  <!-- ZONA DE TRABAJO: entrada a la izquierda, resultado a la derecha -->
-  <div class="workspace">
-    <section class="card card-idea" aria-labelledby="h-prompt">
-        <h2 id="h-prompt"><span id="titulo-paso-prompt">Tu idea</span></h2>
-    <div class="modepicker" id="modepicker" role="radiogroup" aria-label="Modo de trabajo">
-      <button type="button" data-modo="individual" aria-pressed="true"><b>Individual</b><span>Una idea, con revisión del prompt antes de generar la imagen</span></button>
-      <button type="button" data-modo="lote" aria-pressed="false"><b>Por lotes</b><span>Varias ideas a la vez, de principio a fin, sin pausa de revisión</span></button>
-    </div>
-    <div class="field" id="zona-idea-individual">
-      <label for="idea">Idea inicial <span aria-hidden="true">*</span></label>
-      <textarea id="idea" required aria-required="true" placeholder="Describe brevemente la prenda que quieres visualizar..."></textarea>
-      <div class="row"><button type="button" id="ideaClear">Borrar</button></div>
-    </div>
-    <div class="field hidden" id="zona-ideas-lote">
-      <label for="ideas-lote-texto">Ideas del lote (una por línea)</label>
-      <textarea id="ideas-lote-texto" class="tall" placeholder="Una idea por línea, por ejemplo:&#10;Chaqueta vaquera oversize con parches bordados&#10;Vestido midi de lino color crudo con botonadura frontal&#10;Abrigo de paño verde botella con cinturón"></textarea>
-      <div class="row"><button type="button" id="btn-anadir-lote">Añadir estas ideas al lote</button></div>
-      <div class="batch-list" id="lote-lista-ideas"></div>
-      <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna idea añadida todavía.</p>
-    </div>
-    <div class="field" id="zona-encuadre">
-      <label for="encuadre">Qué debe mostrar la imagen</label>
-      <select id="encuadre"></select>
-    </div>
-    <div class="field" id="zona-prudencia">
-      <label for="prudencia">Prudencia del prompt cuando aparece una persona</label>
-      <select id="prudencia"></select>
-      <p class="hint" id="prudencia-hint"></p>
-    </div>
-    <p class="hint">Ambas opciones se añaden como últimas líneas a las instrucciones del sistema, así que afectan tanto al modo individual como al de lotes.</p>
-    </section>
-    <section class="card card-generar" aria-labelledby="h-action">
-        <h2 id="h-action">Generar</h2>
+  <!-- SECCI&#211;N 5 &#8212; ACCI&#211;N -->
+  <section class="card" aria-labelledby="h-action">
+    <h2 id="h-action">5. Generar prompt</h2>
     <div id="acciones-individual">
       <button type="button" id="generate" class="primary big" disabled>
         <span class="spinner" aria-hidden="true"></span><span id="generateLabel">Generar prompt</span>
@@ -446,8 +378,6 @@
       </button>
       <p class="hint">Cada idea del lote se procesa de principio a fin (mejora del prompt + imagen con FLUX) una detrás de otra, para no saturar los límites de tasa del proveedor ni de fal.ai. Necesitas ambas API keys (texto y fal.ai) guardadas.</p>
     </div>
-        <p class="hint">Atajo: <kbd>Ctrl</kbd> + <kbd>Intro</kbd> (o <kbd>&#8984;</kbd> + <kbd>Intro</kbd>) lanza la generaci&#243;n sin tocar el rat&#243;n.</p>
-    <div class="feedback">
     <div id="status" class="status" role="status" aria-live="polite"></div>
     <div id="error" class="status error" role="alert"></div>
 
@@ -462,10 +392,11 @@
         <button type="button" id="btn-descargar-lote-zip" class="primary" disabled>⬇ Descargar todo (ZIP: imágenes + prompts.txt)</button>
       </div>
     </div>
-    </div>
-    </section>
-    <section class="card card-prompt" aria-labelledby="h-claude">
-        <h2 id="h-claude">Prompt generado</h2>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section class="card" aria-labelledby="h-claude">
+    <h2 id="h-claude">Prompt generado por Claude</h2>
     <textarea id="generatedPrompt" class="tall" aria-label="Prompt generado por Claude (editable)" placeholder="El prompt generado por Claude aparecer&#225; aqu&#237;. Puedes editarlo antes de generar la imagen."></textarea>
     <p class="hint" style="margin-top:.4rem">Puedes modificar este prompt a mano; la imagen se generar&#225; con el texto que haya aqu&#237; en el momento de pulsar el bot&#243;n.</p>
     <div class="row">
@@ -481,9 +412,10 @@
       <button type="button" id="downloadTxt" disabled>Descargar prompts (.txt)</button>
     </div>
     <p class="meta" id="claudeMeta"></p>
-    </section>
-    <section class="card card-imagen" aria-labelledby="h-image">
-        <h2 id="h-image">Imagen generada</h2>
+  </section>
+
+  <section class="card" aria-labelledby="h-image">
+    <h2 id="h-image">Imagen generada</h2>
     <div class="image-box" id="imageBox"><span>La imagen generada aparecer&#225; aqu&#237;.</span></div>
     <div class="meta" id="imageMeta"></div>
     <div class="row export-row">
@@ -501,8 +433,7 @@
       <button type="button" id="downloadImage" class="primary" disabled>Descargar imagen PNG</button>
     </div>
     <p class="hint">El PNG es el archivo original que devuelve fal.ai. El JPEG se convierte en tu navegador y ocupa menos; si la imagen tuviera transparencia, se rellena con fondo blanco.</p>
-    </section>
-  </div>
+  </section>
 
   <!-- HISTORIAL LOCAL -->
   <section class="card" aria-labelledby="h-history">
@@ -548,7 +479,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:01</p>
+    <p>&#218;ltima modificaci&#243;n: 05/11/2026 18:29</p>
   </footer>
 </div>
 
@@ -727,138 +658,47 @@ const PRICING = {
 };
 
 /* Prompt del sistema predeterminado para Claude. */
-const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotografía comercial de moda, dirección de arte, fotografía de producto y descripción de materiales y texturas.
-Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generación de imágenes FLUX.
-La imagen solicitada debe representar una prenda de moda mediante una fotografía comercial hiperrealista.
-Describe de forma precisa y visualmente útil:
-* La prenda y su construcción.
+const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotograf\u00eda comercial de moda, direcci\u00f3n de arte, fotograf\u00eda de producto y descripci\u00f3n de materiales y texturas.
+
+Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generaci\u00f3n de im\u00e1genes FLUX.
+
+La imagen solicitada debe representar una prenda de moda mediante una fotograf\u00eda comercial hiperrealista de cuerpo completo.
+
+Describe de forma precisa y visualmente \u00fatil:
+
+* La prenda y su construcci\u00f3n.
 * Silueta, corte y proporciones.
 * Materiales y tejidos.
-* Textura superficial y comportamiento físico del tejido.
+* Textura superficial y comportamiento f\u00edsico del tejido.
 * Costuras, pespuntes, dobladillos, cierres y acabados.
-* Pequeñas imperfecciones naturales.
+* Peque\u00f1as imperfecciones naturales.
 * Variaciones sutiles del material.
-* Pliegues, arrugas y tensión del tejido.
+* Pliegues, arrugas y tensi\u00f3n del tejido.
 * Microdetalles visibles.
-* Caída natural de la prenda.
-* Relación entre la prenda y el cuerpo.
+* Ca\u00edda natural de la prenda.
+* Relaci\u00f3n entre la prenda y el cuerpo.
 * Pose y postura del modelo cuando sea relevante.
-* Iluminación.
+* Iluminaci\u00f3n.
 * Sombras y reflejos.
 * Entorno y fondo.
-* Composición fotográfica.
-* Distancia y perspectiva de cámara.
+* Composici\u00f3n fotogr\u00e1fica.
+* Distancia y perspectiva de c\u00e1mara.
 * Focal aproximada, por ejemplo 85mm, cuando resulte apropiada.
 * Profundidad de campo.
 * Apertura aproximada, por ejemplo f/1.4, cuando resulte apropiada.
-* Calidad y características propias de una fotografía comercial real.
-No utilices palabras vacías o genéricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripción concreta.
-En su lugar, describe los elementos físicos, ópticos, materiales y fotográficos que hacen que la imagen resulte creíble.
+* Calidad y caracter\u00edsticas propias de una fotograf\u00eda comercial real.
+
+No utilices palabras vac\u00edas o gen\u00e9ricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripci\u00f3n visual concreta.
+
+En su lugar, describe los elementos f\u00edsicos, \u00f3pticos, materiales y fotogr\u00e1ficos que hacen que la imagen resulte cre\u00edble.
+
+La fotograf\u00eda debe mostrar la prenda de cuerpo completo y permitir apreciar claramente su dise\u00f1o y construcci\u00f3n.
+
 El prompt final debe estar optimizado para FLUX.
-Devuelve ÚNICAMENTE el prompt final en español.
-No añadas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
 
-/* Encuadre: qué debe mostrar la imagen. Lo elige quien usa la aplicación y se
-   añade como última línea a las instrucciones del sistema. La marca inicial
-   permite reconocer esa línea para sustituirla en vez de acumular varias. */
-const MARCA_ENCUADRE = "[Encuadre]";
-const ENCUADRE_POR_DEFECTO = "completo";
-const ENCUADRES = {
-  prenda: {
-    label: "Solo la prenda, sin modelo",
-    requisito: "solo la prenda, sin modelo ni partes del cuerpo.",
-    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar únicamente la prenda, sin ninguna persona ni parte del cuerpo humano: fotografía de producto sobre fondo limpio o con maniquí invisible, con la prenda colocada de forma que se aprecien claramente su diseño y su construcción."
-  },
-  parcial: {
-    label: "Con modelo, solo la zona de la prenda",
-    requisito: "con modelo, encuadrando solo la zona del cuerpo que ocupa la prenda.",
-    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar la prenda puesta sobre una persona, pero encuadrada únicamente en la zona del cuerpo que ocupa la prenda (por ejemplo, de los hombros a la cadera para un top, o de la cintura a los pies para un pantalón), recortando el resto del cuerpo. La prenda debe verse completa y apreciarse con claridad su diseño y su construcción."
-  },
-  completo: {
-    label: "Con modelo, cuerpo entero",
-    requisito: "con modelo a cuerpo completo, de la cabeza a los pies.",
-    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar la prenda puesta sobre una persona a cuerpo completo, de la cabeza a los pies, y permitir apreciar claramente su diseño y su construcción."
-  }
-};
+Devuelve \u00daNICAMENTE el prompt final en espa\u00f1ol.
 
-/* Prudencia del prompt: cuando la imagen lleva una persona, un prompt
-   demasiado explícito hace que el filtro de seguridad de fal.ai marque la
-   imagen y la devuelva en negro. Estos niveles le piden al modelo de texto
-   un lenguaje más contenido, sin tocar la prenda descrita. */
-const MARCA_PRUDENCIA = "[Prudencia]";
-const PRUDENCIA_POR_DEFECTO = "ninguno";
-const PRUDENCIAS = {
-  ninguno: {
-    label: "Sin filtro",
-    requisito: "",
-    instruccion: ""
-  },
-  intermedio: {
-    label: "Filtro intermedio",
-    requisito: "profesional y no sexualizado, apto para un catálogo comercial.",
-    instruccion: MARCA_PRUDENCIA + " Describe a la persona de forma profesional y no sexualizada: nada de términos sensuales o eróticos, nada de descripciones anatómicas explícitas y nada de poses insinuantes. Si la prenda es ropa interior, baño o lencería, trátala como prenda técnica de catálogo y describe el resto con lenguaje neutro. El prompt debe poder publicarse tal cual en un catálogo comercial."
-  },
-  restrictivo: {
-    label: "Restrictivo",
-    requisito: "máxima contención, lenguaje de ficha técnica y cuerpo cubierto fuera de la prenda.",
-    instruccion: MARCA_PRUDENCIA + " Describe a la persona con la máxima contención, en lenguaje de ficha técnica: sin ninguna referencia sensual, erótica o anatómica, con pose neutra y erguida, expresión serena y mirada tranquila. Evita por completo palabras como «lencería», «sensual», «seductor», «insinuante» o «piel desnuda». Cubre con prendas básicas neutras las zonas del cuerpo que no formen parte de la prenda descrita, sin taparla ni restarle protagonismo."
-  }
-};
-
-/* Devuelve el encuadre activo, con respaldo si el valor guardado ya no existe. */
-function getEncuadre() {
-  const sel = document.getElementById("encuadre");
-  const v = sel ? sel.value : ENCUADRE_POR_DEFECTO;
-  return ENCUADRES[v] ? v : ENCUADRE_POR_DEFECTO;
-}
-
-/* Devuelve el nivel de prudencia activo, con respaldo si ya no existe. */
-function getPrudencia() {
-  const sel = document.getElementById("prudencia");
-  const v = sel ? sel.value : PRUDENCIA_POR_DEFECTO;
-  return PRUDENCIAS[v] ? v : PRUDENCIA_POR_DEFECTO;
-}
-
-/* La prudencia solo tiene sentido si la imagen muestra a una persona. */
-function prudenciaAplica() {
-  return getEncuadre() !== "prenda";
-}
-
-/* Quita del texto las líneas añadidas automáticamente (encuadre y prudencia). */
-function limpiarMarcas(texto) {
-  return String(texto || "").split("\n")
-    .filter((l) => l.indexOf(MARCA_ENCUADRE) !== 0 && l.indexOf(MARCA_PRUDENCIA) !== 0)
-    .join("\n").replace(/\s+$/, "");
-}
-
-/* Identifica qué opción de un catálogo lleva incrustado un texto. */
-function valorDeMarca(texto, marca, catalogo) {
-  const linea = String(texto || "").split("\n").find((l) => l.indexOf(marca) === 0);
-  if (!linea) return "";
-  return Object.keys(catalogo).find((k) => catalogo[k].instruccion === linea.trim()) || "";
-}
-function encuadreDeTexto(texto) { return valorDeMarca(texto, MARCA_ENCUADRE, ENCUADRES); }
-function prudenciaDeTexto(texto) { return valorDeMarca(texto, MARCA_PRUDENCIA, PRUDENCIAS); }
-
-/* Instrucciones que se envían realmente: las del cuadro de texto, la línea del
-   encuadre elegido y, si la imagen lleva persona, la de la prudencia elegida.
-   Al entrar también en la clave de caché, cambiar cualquiera de las dos genera
-   un prompt nuevo en vez de reutilizar el anterior. */
-function systemPromptEfectivo() {
-  const lineas = [limpiarMarcas(document.getElementById("systemPrompt").value), ENCUADRES[getEncuadre()].instruccion];
-  if (prudenciaAplica() && PRUDENCIAS[getPrudencia()].instruccion) lineas.push(PRUDENCIAS[getPrudencia()].instruccion);
-  return lineas.filter(Boolean).join("\n");
-}
-
-/* Ajusta el desplegable de prudencia al encuadre activo. */
-function actualizarPrudenciaUi() {
-  const aplica = prudenciaAplica();
-  const sel = document.getElementById("prudencia");
-  sel.disabled = !aplica;
-  document.getElementById("prudencia-hint").textContent = aplica
-    ? "Un prompt demasiado explícito hace que el filtro de seguridad de fal.ai marque la imagen y la devuelva en negro. Estos niveles contienen el lenguaje del prompt sin cambiar la prenda."
-    : "No se aplica: con «Solo la prenda, sin modelo» no aparece ninguna persona en la imagen.";
-}
+No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
 
 /* Claves de localStorage (las API keys usan exactamente estos nombres). */
 const STORAGE = {
@@ -874,8 +714,6 @@ const STORAGE = {
   imageSize: "genimod_image_size",
   safety: "genimod_safety_tolerance",
   exportFormat: "genimod_export_format",
-  encuadre: "genimod_encuadre",
-  prudencia: "genimod_prudencia",
   jpegQuality: "genimod_jpeg_quality"
 };
 
@@ -951,7 +789,6 @@ function refreshKeyBadges() {
     cfg.badge.className = "badge " + (saved ? "ok" : "no");
     cfg.input.placeholder = saved ? "Clave guardada (introduce otra para reemplazarla)" : "Pega aqu\u00ed tu API key";
   });
-  actualizarResumenConfig();
 }
 
 /* ==========================================================================
@@ -1059,35 +896,6 @@ function validateForm() {
   }
   updateGenerateFromPromptButton();
   return ok;
-}
-
-/* Lleva un panel a la vista SOLO si no está ya visible. En la distribución de
-   dos columnas el resultado suele estar delante de los ojos, y desplazar la
-   página en ese caso resulta molesto. */
-function traerALaVista(id) {
-  const el = $(id);
-  const r = el.getBoundingClientRect();
-  const alto = window.innerHeight || document.documentElement.clientHeight;
-  if (r.top < 0 || r.top > alto - 80) el.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-function mostrarPanelResultado() { traerALaVista("h-claude"); }
-
-/* Resume la configuración activa en la cabecera del panel plegable, para
-   poder comprobarla de un vistazo sin tener que desplegarlo. */
-function actualizarResumenConfig() {
-  const resumen = document.getElementById("config-resumen");
-  if (!resumen) return;
-  const prov = TEXT_PROVIDERS[getTextProvider()];
-  const tamano = $("imageSize").selectedOptions[0];
-  const partes = [
-    prov.label.replace(/\s*\(.*\)$/, ""),
-    getActiveModel("text") || "sin modelo",
-    getActiveModel("fal") || "sin modelo",
-  ];
-  if (tamano) partes.push(tamano.textContent.replace(/\s*\(.*\)$/, "").trim());
-  const faltan = ["text", "fal"].filter((k) => !storageGet(keyConfig(k).storage));
-  partes.push(faltan.length === 0 ? "claves ✓" : "faltan claves: " + faltan.map((k) => (k === "fal" ? "fal.ai" : "texto")).join(" y "));
-  resumen.textContent = partes.join("  ·  ");
 }
 
 /* ==========================================================================
@@ -1228,8 +1036,8 @@ ${idea}
 
 REQUISITOS:
 - Fotograf\u00eda de moda.
-- Encuadre: ${ENCUADRES[getEncuadre()].requisito}
-${prudenciaAplica() && PRUDENCIAS[getPrudencia()].requisito ? "- Lenguaje: " + PRUDENCIAS[getPrudencia()].requisito + "\n" : ""}- La prenda debe ser claramente visible.
+- Cuerpo completo.
+- La prenda debe ser claramente visible.
 - Descripci\u00f3n precisa de materiales y construcci\u00f3n.
 - Iluminaci\u00f3n y c\u00e1mara f\u00edsicamente plausibles.
 - El resultado final debe ser un prompt en espa\u00f1ol.
@@ -1449,7 +1257,6 @@ function displayGeneratedImage(info, model, steps) {
   box.appendChild(img);
   renderImageMeta(info, model, steps, info.width, info.height);
   $("downloadImage").disabled = false;
-  traerALaVista("h-image");
 }
 
 function renderImageMeta(info, model, steps, w, h) {
@@ -1636,7 +1443,7 @@ async function generar() {
   clearError();
   if (!validateForm()) { showError("Completa todos los campos obligatorios antes de generar."); return; }
 
-  const systemPrompt = systemPromptEfectivo();
+  const systemPrompt = $("systemPrompt").value;
   const idea = $("idea").value.trim();
   const textProvider = getTextProvider();
   const textModel = getActiveModel("text");
@@ -1658,7 +1465,7 @@ async function generar() {
       state.lastIdea = idea;
       displayGeneratedPrompt(previo.prompt, previo.usage, textProvider, textModel, "");
       showStatus("\u26a1 Prompt obtenido de la cach\u00e9 (historial de este navegador): misma idea e instrucciones, mismo proveedor/modelo de texto y mismo m\u00e1ximo de tokens, sin llamar a la IA.", "ok");
-      mostrarPanelResultado();
+      $("h-claude").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
   }
@@ -1675,7 +1482,7 @@ async function generar() {
       : "";
     displayGeneratedPrompt(resultado.text, resultado.usage, textProvider, textModel, truncated);
     showStatus(`Prompt generado por ${providerLabel}. Rev\u00edsalo o edita, y pulsa \u00abGenerar imagen con este prompt\u00bb cuando quieras continuar.`, "ok");
-    mostrarPanelResultado();
+    $("h-claude").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     $("status").className = "status";
     showError(err instanceof AppError ? err.message : "Se ha producido un error inesperado.");
@@ -2030,12 +1837,7 @@ function updateCompareButtons() {
 function loadFromHistory(rec) {
   clearError();
   $("idea").value = rec.idea;
-  const encRec = encuadreDeTexto(rec.systemPrompt);
-  if (encRec) $("encuadre").value = encRec;
-  const pruRec = prudenciaDeTexto(rec.systemPrompt);
-  $("prudencia").value = pruRec || PRUDENCIA_POR_DEFECTO;
-  actualizarPrudenciaUi();
-  $("systemPrompt").value = limpiarMarcas(rec.systemPrompt);
+  $("systemPrompt").value = rec.systemPrompt;
   const recProvider = TEXT_PROVIDERS[rec.textProvider] ? rec.textProvider : "anthropic";
   $("textProvider").value = recProvider;
   refreshKeyBadges();
@@ -2058,7 +1860,7 @@ function loadFromHistory(rec) {
   displayGeneratedImage({ url: src, width: rec.width, height: rec.height, contentType: rec.blob ? rec.blob.type : null, nsfw: !!rec.nsfw }, rec.falModel, rec.steps);
   validateForm();
   showStatus("Generaci\u00f3n del " + formatDate(rec.createdAt) + " cargada. Puedes editarla y volver a generar.", "ok");
-  mostrarPanelResultado();
+  $("h-claude").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function setModelSelect(selectId, customId, knownIds, value) {
@@ -2098,9 +1900,7 @@ async function renderComparison() {
     ["Tama\u00f1o", (r) => sizeLabel(r.imageSize)],
     ["Tolerancia de seguridad", (r) => r.safety || "no registrada"],
     ["Filtro activado", (r) => (r.nsfw ? "S\u00ed (imagen marcada)" : "No")],
-    ["Encuadre", (r) => { const k = encuadreDeTexto(r.systemPrompt); return k ? ENCUADRES[k].label : "no registrado"; }],
-    ["Prudencia", (r) => { const k = prudenciaDeTexto(r.systemPrompt); return k ? PRUDENCIAS[k].label : PRUDENCIAS[PRUDENCIA_POR_DEFECTO].label; }],
-    ["Instrucciones", (r) => (limpiarMarcas(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
+    ["Instrucciones", (r) => (r.systemPrompt === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
     ["Idea inicial", (r) => r.idea]
   ];
 
@@ -2214,15 +2014,6 @@ function loadSettings() {
   const savedTokens = Number(storageGet(STORAGE.maxTokens));
   $("maxTokens").value = String(Number.isInteger(savedTokens) && savedTokens >= 1 ? savedTokens : APP_CONFIG.anthropic.maxTokens);
 
-  fillSelect($("encuadre"), Object.keys(ENCUADRES).map((k) => ({ value: k, label: ENCUADRES[k].label })));
-  const savedEnc = storageGet(STORAGE.encuadre);
-  $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
-
-  fillSelect($("prudencia"), Object.keys(PRUDENCIAS).map((k) => ({ value: k, label: PRUDENCIAS[k].label })));
-  const savedPru = storageGet(STORAGE.prudencia);
-  $("prudencia").value = PRUDENCIAS[savedPru] ? savedPru : PRUDENCIA_POR_DEFECTO;
-  actualizarPrudenciaUi();
-
   $("systemPrompt").value = DEFAULT_SYSTEM_PROMPT;
   toggleCustomFields();
   refreshKeyBadges();
@@ -2235,13 +2026,10 @@ function persistPreferences() {
   storageSet(STORAGE.steps, $("steps").value);
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safety, $("safety").value);
-  storageSet(STORAGE.encuadre, getEncuadre());
-  storageSet(STORAGE.prudencia, getPrudencia());
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
   if (Number.isInteger(q) && q >= 1 && q <= 100) storageSet(STORAGE.jpegQuality, String(q));
   if (Number.isFinite(getMaxTokens())) storageSet(STORAGE.maxTokens, String(getMaxTokens()));
-  actualizarResumenConfig();
 }
 
 /* ==========================================================================
@@ -2256,7 +2044,7 @@ function cambiarModo(modo) {
   $("zona-ideas-lote").classList.toggle("hidden", !esLote);
   $("acciones-individual").classList.toggle("hidden", esLote);
   $("acciones-lote").classList.toggle("hidden", !esLote);
-  $("titulo-paso-prompt").textContent = esLote ? "Ideas del lote" : "Tu idea";
+  $("titulo-paso-prompt").textContent = esLote ? "3. Ideas del lote" : "3. Prompt";
   if (!esLote) $("panel-progreso-lote").classList.add("hidden");
 }
 
@@ -2355,7 +2143,7 @@ async function ejecutarLote() {
   loteIdeas.forEach((it) => { it.estado = "pendiente"; it.prompt = null; it.image = null; it.error = null; });
   pintarListaLote(); actualizarProgresoLote();
 
-  const systemPrompt = systemPromptEfectivo();
+  const systemPrompt = $("systemPrompt").value;
   const textModel = getActiveModel("text");
   const maxTokens = Math.min(getMaxTokens(), limiteTokensModelo(textModel));
   const steps = Number($("steps").value);
@@ -2467,8 +2255,6 @@ function initializeApp() {
   $("maxTokens").addEventListener("input", () => { persistPreferences(); validateForm(); });
   $("imageSize").addEventListener("change", persistPreferences);
   $("safety").addEventListener("change", persistPreferences);
-  $("encuadre").addEventListener("change", () => { actualizarPrudenciaUi(); persistPreferences(); });
-  $("prudencia").addEventListener("change", persistPreferences);
   $("exportFormat").addEventListener("change", () => { updateExportUi(); persistPreferences(); });
   $("jpegQuality").addEventListener("input", persistPreferences);
 
@@ -2512,23 +2298,9 @@ function initializeApp() {
   $("btn-detener-lote").addEventListener("click", () => { loteDetener = true; });
   $("btn-descargar-lote-zip").addEventListener("click", descargarLoteZip);
 
-  // La configuración arranca desplegada solo si falta alguna clave por guardar:
-  // una vez configurada, la zona de trabajo queda arriba del todo.
-  $("panel-config").open = ["text", "fal"].some((k) => !storageGet(keyConfig(k).storage));
-
-  // Atajo de teclado: Ctrl/⌘ + Intro lanza la generación del modo activo.
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey)) return;
-    const boton = modoActual === "lote" ? $("btn-lanzar-lote") : $("generate");
-    if (boton.disabled) return;
-    e.preventDefault();
-    boton.click();
-  });
-
   cambiarModo("individual");
   actualizarNotaPromptCaching();
   pintarListaIdeasLote();
-  actualizarResumenConfig();
 
   initializeHistory();
   validateForm();

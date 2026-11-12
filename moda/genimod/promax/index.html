@@ -353,16 +353,17 @@
         <details class="guia-modelos">
           <summary>&#191;Qu&#233; modelo elijo?</summary>
           <table class="tabla-guia">
-            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro de fal.ai</th></tr></thead>
+            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro del prompt</th><th>Verificador de la imagen</th></tr></thead>
             <tbody>
-              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia y verificador desactivable</td></tr>
-              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Solo tolerancia: el verificador no se puede desactivar</td></tr>
-              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites 2K o 4K: imprimir una l&#225;mina o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;an los dos; alguno puede fallar</td></tr>
+              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Siempre activo</td></tr>
+              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites 2K o 4K: imprimir una l&#225;mina o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;a la tolerancia; puede fallar</td><td>Se env&#237;a; puede fallar</td></tr>
             </tbody>
           </table>
+          <p class="hint"><b>Son dos filtros distintos.</b> El del prompt revisa el texto antes de generar y devuelve un error 422 si lo rechaza; solo los modelos con tolerancia permiten aflojarlo. El verificador de la imagen revisa el resultado y es el que devuelve la imagen en negro; ese s&#237; se desactiva con la casilla de arriba en los modelos que lo admiten.</p>
           <p class="hint">Consejo para moda: el <b>encuadre</b> y la <b>prudencia</b> de arriba influyen m&#225;s en el resultado que el modelo. Cambia una sola cosa cada vez y compara en el historial.</p>
           <p class="hint">El cat&#225;logo de fal.ai cambia con frecuencia; si sale un modelo nuevo, puedes probarlo con &#171;Otro&#8230;&#187; escribiendo su identificador.</p>
         </details>
@@ -584,7 +585,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 03:46</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:02</p>
   </footer>
 </div>
 
@@ -1291,6 +1292,21 @@ function redact(text) {
    ========================================================================== */
 class AppError extends Error {}
 
+/* fal.ai revisa el texto del prompt ANTES de generar y, si lo rechaza, devuelve
+   un 422 de tipo content_policy_violation. Es un filtro distinto del verificador
+   de la imagen (enable_safety_checker) y no hay par\u00e1metro que lo desactive. Un 422
+   tambi\u00e9n puede ser una validaci\u00f3n corriente, de ah\u00ed la comprobaci\u00f3n del tipo. */
+function esFiltroDeContenido(datos){
+  try {
+    const lista = datos && Array.isArray(datos.detail) ? datos.detail : [];
+    if (lista.some(it => it && it.type === "content_policy_violation")) return true;
+    const texto = JSON.stringify(datos || "");
+    return texto.indexOf("content_policy_violation") !== -1
+        || texto.indexOf("flagged by a content checker") !== -1;
+  } catch (e) { return false; }
+}
+const MENSAJE_FILTRO_CONTENIDO = "fal.ai ha rechazado el texto del prompt con su filtro de contenido de entrada, que lo revisa antes de generar la imagen (c\u00f3digo 422). No es el verificador de seguridad de la imagen y no se puede desactivar desde la aplicaci\u00f3n. Puedes probar con un modelo que admita tolerancia (FLUX.2 [pro] o FLUX 1.1 [pro]) y subirla, generar el prompt con el nivel de prudencia \u00abrestrictivo\u00bb, o pedir una imagen de la prenda sola, sin modelo.";
+
 function messageForStatus(status) {
   if (status === 400) return "Solicitud no v\u00e1lida. Revisa los par\u00e1metros introducidos.";
   if (status === 401) return "La API key no es v\u00e1lida o no est\u00e1 autorizada.";
@@ -1330,6 +1346,7 @@ async function fetchJson(url, options) {
   let parseFailed = false;
   try { data = await response.json(); } catch (e) { parseFailed = true; }
   if (!response.ok) {
+    if (response.status === 422 && esFiltroDeContenido(data)) throw new AppError(MENSAJE_FILTRO_CONTENIDO);
     const detail = providerDetail(data);
     throw new AppError(messageForStatus(response.status) + (detail ? ` Detalle del proveedor: ${detail}` : ""));
   }

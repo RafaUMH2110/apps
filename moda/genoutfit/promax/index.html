@@ -495,16 +495,17 @@
         <details class="guia-modelos">
           <summary>&#191;Qu&#233; modelo elijo?</summary>
           <table class="tabla-guia">
-            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro de fal.ai</th></tr></thead>
+            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro del prompt</th><th>Verificador de la imagen</th></tr></thead>
             <tbody>
-              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia y verificador desactivable</td></tr>
-              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Solo tolerancia: el verificador no se puede desactivar</td></tr>
-              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites mucha resoluci&#243;n: imprimir o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Verificador desactivable</td></tr>
-              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;an los dos; alguno puede fallar</td></tr>
+              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Siempre activo</td></tr>
+              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites mucha resoluci&#243;n: imprimir o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;a la tolerancia; puede fallar</td><td>Se env&#237;a; puede fallar</td></tr>
             </tbody>
           </table>
+          <p class="hint"><b>Son dos filtros distintos.</b> El del prompt revisa el texto antes de generar y devuelve un error 422 si lo rechaza; solo los modelos con tolerancia permiten aflojarlo. El verificador de la imagen revisa el resultado y es el que devuelve la imagen en negro; ese s&#237; se desactiva con la casilla de arriba en los modelos que lo admiten.</p>
           <p class="hint">Solo afecta a las im&#225;genes de cada pieza. La foto de modelo se sigue haciendo con FLUX Kontext, que es quien conserva las prendas y el rostro.</p>
         </details>
         <div class="grid2" id="grid-piezas-flux">
@@ -671,7 +672,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 03:46
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 04:02
 </footer>
 
 <script>
@@ -1227,11 +1228,32 @@ async function fetchConTimeout(url, opciones, timeoutMs = APP_CONFIG.requestTime
     throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
   } finally { clearTimeout(id); }
 }
+/* fal.ai revisa el texto del prompt ANTES de generar y, si lo rechaza, devuelve
+   un 422 de tipo content_policy_violation. Es un filtro distinto del verificador
+   de la imagen (enable_safety_checker) y no hay par\u00e1metro que lo desactive. Un 422
+   tambi\u00e9n puede ser una validaci\u00f3n corriente, de ah\u00ed la comprobaci\u00f3n del tipo. */
+function esFiltroDeContenido(datos){
+  try {
+    const lista = datos && Array.isArray(datos.detail) ? datos.detail : [];
+    if (lista.some(it => it && it.type === "content_policy_violation")) return true;
+    const texto = JSON.stringify(datos || "");
+    return texto.indexOf("content_policy_violation") !== -1
+        || texto.indexOf("flagged by a content checker") !== -1;
+  } catch (e) { return false; }
+}
+const MENSAJE_FILTRO_CONTENIDO = "fal.ai ha rechazado el texto del prompt con su filtro de contenido de entrada, que lo revisa antes de generar la imagen (c\u00f3digo 422). No es el verificador de seguridad de la imagen y no se puede desactivar desde la aplicaci\u00f3n. Puedes probar con un modelo que admita tolerancia (FLUX.2 [pro] o FLUX 1.1 [pro]) y subirla, generar el prompt con el nivel de prudencia \u00abrestrictivo\u00bb, o pedir una imagen de la prenda sola, sin modelo.";
+
 function mensajeErrorHttp(status, cuerpo){
+  if (status === 422 && esFiltroDeContenido(cuerpo)) return MENSAJE_FILTRO_CONTENIDO;
   if (status === 401 || status === 403) return "La API key no es válida o no tiene permisos (código " + status + ").";
   if (status === 429) return "Se ha alcanzado el límite de uso de la API (código 429). Espera unos segundos e inténtalo de nuevo.";
   if (status === 404) return "El modelo indicado no existe o no está disponible en tu cuenta (código 404). Revisa el identificador del modelo.";
-  const detalle = cuerpo && (cuerpo.error && cuerpo.error.message ? cuerpo.error.message : JSON.stringify(cuerpo).slice(0,200));
+  let detalle = "";
+  if (cuerpo && cuerpo.error && typeof cuerpo.error.message === "string") detalle = cuerpo.error.message;
+  else if (cuerpo && typeof cuerpo.detail === "string") detalle = cuerpo.detail;
+  else if (cuerpo && Array.isArray(cuerpo.detail) && cuerpo.detail[0] && cuerpo.detail[0].msg) detalle = cuerpo.detail[0].msg;
+  else if (cuerpo) detalle = JSON.stringify(cuerpo).slice(0, 200);
+  detalle = detalle.slice(0, 300);
   return "Error del proveedor (código " + status + ")" + (detalle ? ": " + detalle : ".");
 }
 // Algunos modelos de OpenAI (p. ej. la familia de razonamiento gpt-6-*) ya no

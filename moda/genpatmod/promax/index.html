@@ -462,6 +462,7 @@
     <div class="botones">
       <button type="button" class="primario" id="btn-descargar-pdf" style="display:none;">Descargar PDF</button>
     </div>
+    <p class="hint hidden" id="nombre-pdf-vista"></p>
     <iframe id="pdf-preview"></iframe>
     <div class="contador-coste" id="contador-coste"></div>
   </section>
@@ -578,6 +579,7 @@
     <div class="botones">
       <button type="button" class="primario grande" id="btn-redactar-prompt-imagen">Redactar el prompt de la imagen</button>
     </div>
+    <p class="hint hidden" id="aviso-reredactar">Has cambiado los materiales o el encuadre desde que se redact&#243; el prompt: vuelve a pulsar &#8220;Redactar el prompt de la imagen&#8221; para que los nuevos valores se reflejen, o edita el prompt a mano.</p>
 
     <div class="field hidden" id="zona-prompt-imagen">
       <label for="prompt-imagen">Prompt de la imagen (en espa&#241;ol, editable)</label>
@@ -587,6 +589,7 @@
       <p class="hint">FLUX se entren&#243; casi solo con descripciones en ingl&#233;s y sigue bastante peor un prompt en espa&#241;ol. La versi&#243;n inglesa viene en la misma llamada que la espa&#241;ola; si editas el cuadro de arriba, se traduce de nuevo al generar.</p>
       <div class="botones">
         <button type="button" class="primario grande" id="btn-generar-imagen">Generar imagen</button>
+        <button type="button" class="secundario" id="btn-exportar-prompts-imagen">Exportar prompts de la imagen (.txt)</button>
       </div>
       <div class="field hidden" id="zona-prompt-enviado-img">
         <label for="prompt-enviado-img">Prompt enviado a fal.ai</label>
@@ -596,6 +599,9 @@
     </div>
 
     <div id="estado-imagen" class="estado-caja"><div class="spinner"></div><span id="estado-texto-imagen"></span></div>
+    <div class="botones hidden" id="acciones-imagenes">
+      <button type="button" class="secundario" id="btn-vaciar-imagenes">Quitar las im&#225;genes de esta pantalla</button>
+    </div>
     <div id="resultado-imagen"></div>
   </section>
 
@@ -631,7 +637,7 @@
 
 <footer>
   GenPatMod ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 07:16
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:05
 </footer>
 
 
@@ -872,6 +878,8 @@ const estimacionTokensDiv = $("estimacion-tokens");
 let costeAcumulado = {entrada: 0, salida: 0, usd: 0};
 let ultimosPrompts = null; // para exportar a .txt
 let ultimoPdfBlobUrl = null;
+let ultimoPdfBlob = null;
+let ultimoPdfNombreDefecto = "patron.pdf";
 let ultimoPlanGenerado = null; // para poder restaurar el texto si se cancela la edición
 let ultimosOpts = null; // proveedor/modelo/apiKey de la última generación, para regenerar sin repetir el paso 1
 let pendienteContinuar = null; // datos guardados mientras se espera a que el usuario revise/edite el prompt mejorado
@@ -1777,6 +1785,26 @@ function solicitarDetener(){
 btnDetener.addEventListener("click", solicitarDetener);
 btnDetenerPiezas.addEventListener("click", solicitarDetener);
 
+function nombrePdfActual(){
+  return resolverNombreFichero(inputNombrePdf.value, "pdf", ultimoPdfNombreDefecto);
+}
+
+/* El visor de PDF del navegador toma el nombre de descarga del objeto que hay
+   detrás de la URL, no del botón de la app. Creando la URL a partir de un File
+   con el nombre pedido, el botón de descarga del propio visor propone ese mismo
+   nombre en vez de uno inventado. Se rehace al cambiar el campo del nombre. */
+function refrescarVistaPdf(){
+  if (!ultimoPdfBlob) return;
+  const nombre = nombrePdfActual();
+  if (ultimoPdfBlobUrl) URL.revokeObjectURL(ultimoPdfBlobUrl);
+  const fichero = new File([ultimoPdfBlob], nombre, { type: "application/pdf" });
+  ultimoPdfBlobUrl = URL.createObjectURL(fichero);
+  pdfPreview.src = ultimoPdfBlobUrl;
+  pdfPreview.style.display = "block";
+  $("nombre-pdf-vista").textContent = "Se descargará como: " + nombre;
+  $("nombre-pdf-vista").classList.remove("hidden");
+}
+
 async function generarPiezasYPDF(plan, opts, ideaParaExportar, promptsPrevios, avisosTruncado){
   cajaEstadoActiva = estadoPiezas;
   resultadoDiv.innerHTML = "";
@@ -1808,17 +1836,13 @@ async function generarPiezasYPDF(plan, opts, ideaParaExportar, promptsPrevios, a
 
   estadoPiezas.fijar("Construyendo el PDF (portada + una página A4 por pieza, autoescalado)…", "busy");
   const pdf = await construirPDF(piezasGeneradas, plan.prenda, generarTextoResumen(plan));
-  const blobUrl = pdf.output("bloburl");
-  ultimoPdfBlobUrl = blobUrl;
-
-  pdfPreview.src = blobUrl;
-  pdfPreview.style.display = "block";
+  ultimoPdfNombreDefecto = "patron_" + plan.prenda.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".pdf";
+  // El título del documento es lo que muestra el visor del navegador en su barra.
+  try { pdf.setProperties({ title: nombrePdfActual().replace(/\.pdf$/i, ""), subject: "Patrón de corte: " + plan.prenda, creator: "GenPatMod ProMax" }); } catch (e) { /* jsPDF antiguo */ }
+  ultimoPdfBlob = pdf.output("blob");
+  refrescarVistaPdf();
   btnDescargarPdf.style.display = "inline-block";
-  btnDescargarPdf.onclick = () => {
-    const nombreDefecto = "patron_" + plan.prenda.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".pdf";
-    const nombreArchivo = resolverNombreFichero(inputNombrePdf.value, "pdf", nombreDefecto);
-    guardarArchivo(nombreArchivo, pdf.output("blob"), "application/pdf");
-  };
+  btnDescargarPdf.onclick = () => guardarArchivo(nombrePdfActual(), ultimoPdfBlob, "application/pdf");
 
   ultimosPrompts = {idea: ideaParaExportar, plan, promptsUsados};
   btnExportarTxt.disabled = false;
@@ -2515,6 +2539,8 @@ function borrarTodosLosDatos(){
   btnDescargarPdf.style.display = "none";
   btnDescargarPdf.onclick = null;
   if (ultimoPdfBlobUrl){ URL.revokeObjectURL(ultimoPdfBlobUrl); ultimoPdfBlobUrl = null; }
+  ultimoPdfBlob = null;
+  $("nombre-pdf-vista").classList.add("hidden");
   pdfPreview.src = "about:blank";
   pdfPreview.style.display = "none";
   btnExportarTxt.disabled = true;
@@ -2535,10 +2561,14 @@ function borrarTodosLosDatos(){
   $("resultado-imagen").innerHTML = "";
   mostrarPromptEnviadoImagen("", "");
   planParaImagen = null; promptImagenEsBase = ""; promptImagenEn = ""; ultimaImagenBlob = null;
+  variantesImagen = [];
+  $("acciones-imagenes").classList.add("hidden");
+  $("aviso-reredactar").classList.add("hidden");
   ultimoRegistroHistorialId = null;
 
   actualizarBotonGenerar();
 }
+inputNombrePdf.addEventListener("input", refrescarVistaPdf);
 btnBorrarTodo.addEventListener("click", borrarTodosLosDatos);
 
 renderHistorial();
@@ -2565,12 +2595,15 @@ const FAL_MODELOS = {
     label: "FLUX.2 [pro] — fotorrealismo de estudio",
     guia: "La mejor opción por defecto para moda: luz, tejido y caída de calidad de estudio. Admite tanto la tolerancia como desactivar el verificador.",
     params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"],
+    // fal.ai restringe la tolerancia de este modelo a 1-5; con 6 devuelve un 422.
+    maxTolerancia: 5,
     tamanos: ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
   },
   "fal-ai/flux-pro/v1.1": {
     label: "FLUX 1.1 [pro] — buena y rápida",
     guia: "Buena calidad y rápida, pero su verificador de imagen no se puede desactivar: con prendas muy ajustadas puede devolver la imagen en negro.",
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"],
+    maxTolerancia: 6,
     tamanos: ["portrait_4_3", "portrait_16_9"]
   },
   "fal-ai/bytedance/seedream/v4.5/text-to-image": {
@@ -2665,6 +2698,7 @@ let planParaImagen = null;      // plan de piezas de la última generación
 let promptImagenEsBase = "";    // español tal como lo devolvió la IA
 let promptImagenEn = "";        // inglés devuelto en la misma llamada
 let ultimaImagenBlob = null;
+let variantesImagen = [];       // todas las imágenes generadas con este patrón
 
 function rellenarSelect(sel, valores, etiquetas){
   sel.innerHTML = "";
@@ -2719,7 +2753,18 @@ function actualizarControlesFal(){
 
   const admiteTolerancia = params.indexOf("safety_tolerance") !== -1;
   $("zona-fal-tolerancia").classList.toggle("hidden", !admiteTolerancia);
-  $("hint-fal-tolerancia").textContent = "1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro safety_tolerance de fal.ai.";
+  if (admiteTolerancia){
+    // Cada modelo admite un rango distinto: FLUX.2 [pro] llega a 5 y devuelve un
+    // 422 con 6, mientras que FLUX 1.1 [pro] sí acepta 6.
+    const topeTol = (info && info.maxTolerancia) || 6;
+    const selTol = $("fal-tolerancia");
+    const previoTol = selTol.value;
+    const valores = [];
+    for (let i = 1; i <= topeTol; i++) valores.push(String(i));
+    rellenarSelect(selTol, valores);
+    selTol.value = valores.indexOf(previoTol) >= 0 ? previoTol : String(Math.min(4, topeTol));
+    $("hint-fal-tolerancia").textContent = "1 bloquea más contenido sensible; " + topeTol + " es el más permisivo que admite este modelo. Define el parámetro safety_tolerance de fal.ai.";
+  }
 
   const admiteVerificador = params.indexOf("enable_safety_checker") !== -1;
   $("zona-fal-verificador").classList.toggle("hidden", !admiteVerificador);
@@ -2864,6 +2909,7 @@ async function redactarPromptImagen(){
     promptImagenEn = versiones.en;
     $("prompt-imagen").value = versiones.es;
     actualizarLargoPromptImagen();
+    $("aviso-reredactar").classList.add("hidden");
     mostrarPromptEnviadoImagen("", "");
     $("zona-prompt-imagen").classList.remove("hidden");
     estadoImagen.fijar("Prompt redactado. Revísalo y genera la imagen.", "ok");
@@ -2879,7 +2925,6 @@ async function generarImagenDeLaPrenda(){
   if (!prompt){ alert("No hay prompt que enviar."); return; }
   const btn = $("btn-generar-imagen");
   btn.disabled = true;
-  $("resultado-imagen").innerHTML = "";
   try {
     // FLUX sigue bastante peor un prompt en español, así que la imagen se pide
     // con la versión inglesa, que ya vino en la misma llamada que la española.
@@ -2913,31 +2958,42 @@ async function generarImagenDeLaPrenda(){
     ultimaImagenBlob = blob;
     const urlLocal = URL.createObjectURL(blob);
 
+    // Cada generación se añade a la galería en vez de sustituir a la anterior:
+    // así se pueden comparar variantes del mismo patrón con otros materiales.
+    variantesImagen.push({ blob: blob, prompt: prompt, promptEnviado: promptEnviado, modelo: modeloFalActivo(), fecha: Date.now() });
+    const n = variantesImagen.length;
     const cont = $("resultado-imagen");
-    cont.innerHTML = "";
+    const tarjeta = document.createElement("div");
+    tarjeta.className = "variante-imagen";
+    const titulo = document.createElement("p");
+    titulo.className = "hint";
+    titulo.style.marginTop = "0";
+    titulo.textContent = "Variante " + n + " · " + modeloFalActivo() + " · " + resumenMaterialesCorto();
+    tarjeta.appendChild(titulo);
     const el = document.createElement("img");
     el.src = urlLocal;
-    el.alt = "Imagen generada de la prenda";
+    el.alt = "Imagen generada de la prenda, variante " + n;
     el.className = "imagen-prenda";
-    cont.appendChild(el);
+    tarjeta.appendChild(el);
     if (img.nsfw){
       const av = document.createElement("p");
       av.className = "hint";
       av.textContent = "fal.ai ha marcado la imagen con su verificador de contenido: si se ve en negro, prueba a desmarcar el verificador en un modelo que lo permita.";
-      cont.appendChild(av);
+      tarjeta.appendChild(av);
     }
     const acciones = document.createElement("div");
     acciones.className = "botones";
     const bDesc = document.createElement("button");
-    bDesc.type = "button"; bDesc.className = "primario"; bDesc.textContent = "⬇ Descargar imagen";
+    bDesc.type = "button"; bDesc.className = "secundario"; bDesc.textContent = "⬇ Descargar imagen";
     bDesc.addEventListener("click", () => {
-      const base = (planParaImagen && planParaImagen.prenda ? planParaImagen.prenda : "prenda").toLowerCase().replace(/[^a-z0-9]+/g, "_");
-      guardarArchivo(base + ".jpg", blob, blob.type || "image/jpeg");
+      guardarArchivo(nombreBaseImagen() + "_" + n + ".jpg", blob, blob.type || "image/jpeg");
     });
     acciones.appendChild(bDesc);
-    cont.appendChild(acciones);
+    tarjeta.appendChild(acciones);
+    cont.insertBefore(tarjeta, cont.firstChild);
+    $("acciones-imagenes").classList.remove("hidden");
 
-    estadoImagen.fijar("Imagen generada.", "ok");
+    estadoImagen.fijar("Imagen generada (variante " + n + "). Puedes cambiar los materiales o el prompt y volver a generar.", "ok");
     try { await adjuntarImagenAlHistorial(blob, promptEnviado); }
     catch (e){ console.error("No se ha podido guardar la imagen en el historial:", e); }
   } catch (e){
@@ -2945,6 +3001,50 @@ async function generarImagenDeLaPrenda(){
   } finally {
     btn.disabled = false;
   }
+}
+
+function nombreBaseImagen(){
+  const base = (planParaImagen && planParaImagen.prenda ? planParaImagen.prenda : "prenda");
+  return base.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "prenda";
+}
+
+function resumenMaterialesCorto(){
+  const tejidoSel = $("img-tejido").value;
+  const tejido = tejidoSel === "otro" ? ($("img-tejido-otro").value.trim() || "tejido sin especificar") : tejidoSel;
+  const color = $("img-color").value.trim();
+  return (color ? color + ", " : "") + tejido;
+}
+
+/* Texto con todo lo que ha llevado a cada imagen, para guardarlo junto al
+   patrón o para comentarlo en clase. */
+function textoPromptsImagen(){
+  const lineas = [];
+  lineas.push("GenPatMod ProMax — prompts de la imagen");
+  lineas.push("Fecha: " + new Date().toLocaleString("es-ES"));
+  if (planParaImagen) lineas.push("Prenda: " + planParaImagen.prenda);
+  lineas.push("");
+  lineas.push("== Parámetros elegidos ==");
+  lineas.push(describirEleccionesImagen());
+  lineas.push("");
+  lineas.push("== Instrucciones del sistema ==");
+  lineas.push(SYSTEM_PROMPT_IMAGEN);
+  lineas.push("");
+  lineas.push("== Prompt en español (el que se muestra y se edita) ==");
+  lineas.push($("prompt-imagen").value.trim() || "(todavía no se ha redactado)");
+  lineas.push("");
+  lineas.push("== Prompt enviado a fal.ai ==");
+  lineas.push($("prompt-enviado-img").value.trim() || "(todavía no se ha generado ninguna imagen)");
+  if (variantesImagen.length){
+    lineas.push("");
+    lineas.push("== Variantes generadas ==");
+    variantesImagen.forEach((v, i) => {
+      lineas.push("");
+      lineas.push("--- Variante " + (i + 1) + " — " + v.modelo + " — " + new Date(v.fecha).toLocaleString("es-ES"));
+      lineas.push("Español: " + v.prompt);
+      lineas.push("Enviado: " + v.promptEnviado);
+    });
+  }
+  return lineas.join("\n");
 }
 
 /* La imagen se genera después del patrón, así que se añade al registro que
@@ -2955,10 +3055,14 @@ async function adjuntarImagenAlHistorial(blob, promptEnviado){
   const todos = await historyGetAll();
   const reg = todos.find(r => r.id === ultimoRegistroHistorialId);
   if (!reg) return;
-  reg.imagenBlob = blob;
+  reg.imagenBlob = blob;                       // la última, para la miniatura
   reg.promptImagen = $("prompt-imagen").value.trim();
   reg.promptImagenEnviado = promptEnviado;
   reg.modeloImagen = modeloFalActivo();
+  reg.variantes = (reg.variantes || []).concat([{
+    blob: blob, prompt: reg.promptImagen, promptEnviado: promptEnviado,
+    modelo: reg.modeloImagen, materiales: resumenMaterialesCorto(), fecha: Date.now()
+  }]);
   await historyTx("readwrite", s => s.put(reg));
   await renderHistorial();
 }
@@ -2968,6 +3072,9 @@ async function adjuntarImagenAlHistorial(blob, promptEnviado){
 function prepararSeccionImagen(plan){
   planParaImagen = plan;
   promptImagenEsBase = ""; promptImagenEn = ""; ultimaImagenBlob = null;
+  variantesImagen = [];
+  $("acciones-imagenes").classList.add("hidden");
+  $("aviso-reredactar").classList.add("hidden");
   $("prompt-imagen").value = "";
   $("zona-prompt-imagen").classList.add("hidden");
   $("resultado-imagen").innerHTML = "";
@@ -3017,6 +3124,23 @@ $("img-tejido").addEventListener("change", function(){ $("zona-tejido-otro").cla
 $("prompt-imagen").addEventListener("input", actualizarLargoPromptImagen);
 $("btn-redactar-prompt-imagen").addEventListener("click", redactarPromptImagen);
 $("btn-generar-imagen").addEventListener("click", generarImagenDeLaPrenda);
+$("btn-exportar-prompts-imagen").addEventListener("click", () => {
+  guardarArchivo(nombreBaseImagen() + "_prompts_imagen.txt", textoPromptsImagen(), "text/plain;charset=utf-8");
+});
+$("btn-vaciar-imagenes").addEventListener("click", () => {
+  $("resultado-imagen").innerHTML = "";
+  $("acciones-imagenes").classList.add("hidden");
+});
+// Si se cambian los materiales o el encuadre con un prompt ya redactado, ese
+// prompt deja de corresponder con lo que hay en pantalla.
+["img-color","img-color2","img-tejido","img-tejido-otro","img-textura","img-estampado",
+ "img-peso","img-encuadre","img-fondo","img-luz","img-extra"].forEach(id => {
+  const el = $(id);
+  if (!el) return;
+  const marcar = () => { if (promptImagenEsBase) $("aviso-reredactar").classList.remove("hidden"); };
+  el.addEventListener("change", marcar);
+  el.addEventListener("input", marcar);
+});
 
 function pintarEstadoClaveFal(){
   const hay = !!localStorage.getItem(CLAVE_FAL);

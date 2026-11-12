@@ -819,7 +819,7 @@
 
 <footer>
   GenOutFitFaceM ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 05:10
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:05
 </footer>
 
 <script>
@@ -1196,11 +1196,14 @@ const FAL_MODELS_IMG = {
   "fal-ai/flux-2-pro": {
     label: "FLUX.2 [pro] \u2014 fotorrealismo de estudio",
     guia: "La mejor opci\u00f3n por defecto para moda: luz, piel y ca\u00edda de tejido de calidad de estudio. Admite la tolerancia y desactivar el verificador.",
+    // fal.ai restringe la tolerancia de este modelo a 1-5; con 6 devuelve un 422.
+    maxTolerancia: 5,
     params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"]
   },
   "fal-ai/flux-pro/v1.1": {
     label: "FLUX 1.1 [pro] \u2014 la de siempre",
     guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena y r\u00e1pida, pero su verificador de imagen no se puede desactivar.",
+    maxTolerancia: 6,
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"]
   },
   "fal-ai/bytedance/seedream/v4.5/text-to-image": {
@@ -1246,7 +1249,19 @@ function actualizarControlesImagen(){
   document.getElementById("zona-modelo-otro").classList.toggle("hidden", !esOtro);
   document.getElementById("modelo-imagen-guia").textContent = info ? info.guia
     : "Identificador escrito a mano: se env\u00edan los par\u00e1metros habituales y ser\u00e1 fal.ai quien rechace los que ese modelo no admita.";
-  document.getElementById("zona-safety").classList.toggle("hidden", params.indexOf("safety_tolerance") === -1);
+  const admiteTolerancia = params.indexOf("safety_tolerance") !== -1;
+  document.getElementById("zona-safety").classList.toggle("hidden", !admiteTolerancia);
+  if (admiteTolerancia){
+    // Cada modelo admite un rango distinto: FLUX.2 [pro] llega a 5 y devuelve un
+    // 422 con 6, mientras que FLUX 1.1 [pro] sí acepta 6.
+    const topeTol = (info && info.maxTolerancia) || 6;
+    const selTol = document.getElementById("sel-safety-tolerance");
+    Array.from(selTol.options).forEach(o => {
+      const fuera = Number(o.value) > topeTol;
+      o.hidden = fuera; o.disabled = fuera;
+    });
+    if (Number(selTol.value) > topeTol) selTol.value = String(Math.min(3, topeTol));
+  }
   document.getElementById("zona-safety-checker").classList.toggle("hidden", params.indexOf("enable_safety_checker") === -1);
   const hayPasos = params.indexOf("num_inference_steps") !== -1;
   const campoPasos = document.getElementById("input-pasos-inferencia") || document.getElementById("sel-pasos-inferencia");

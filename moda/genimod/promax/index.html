@@ -598,7 +598,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 05:10</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 08:05</p>
   </footer>
 </div>
 
@@ -731,6 +731,8 @@ const FAL_MODELS = {
     label: "FLUX.2 [pro] \u2014 fotorrealismo de estudio",
     guia: "La mejor opci\u00f3n por defecto para moda: luz, piel y ca\u00edda de tejido de calidad de estudio. Admite tanto la tolerancia como desactivar el verificador.",
     params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"],
+    // fal.ai restringe la tolerancia de este modelo a 1-5; con 6 devuelve un 422.
+    maxTolerancia: 5,
     imageSizes: [
       { value: "square_hd",      label: "Cuadrada (alta)" },
       { value: "square",         label: "Cuadrada" },
@@ -744,6 +746,7 @@ const FAL_MODELS = {
     label: "FLUX 1.1 [pro] \u2014 la de siempre",
     guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena calidad y r\u00e1pida, pero su verificador de imagen no se puede desactivar.",
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"],
+    maxTolerancia: 6,
     imageSizes: [
       { value: "portrait_4_3",  label: "Retrato 4:3" },
       { value: "portrait_16_9", label: "Retrato 16:9" }
@@ -1134,6 +1137,14 @@ function actualizarControlesSeguridad() {
   const hayTolerancia = params.indexOf("safety_tolerance") !== -1;
   const hayVerificador = params.indexOf("enable_safety_checker") !== -1;
   $("zona-safety").classList.toggle("hidden", !hayTolerancia);
+  if (hayTolerancia) {
+    // Cada modelo admite un rango distinto: FLUX.2 [pro] llega a 5 y devuelve un
+    // 422 con 6, mientras que FLUX 1.1 [pro] s\u00ed acepta 6.
+    const topeTol = (info && info.maxTolerancia) || 6;
+    const previoTol = $("safety").value;
+    fillSelect($("safety"), SAFETY_TOLERANCE_OPTIONS.filter((o) => Number(o.value) <= topeTol));
+    $("safety").value = Number(previoTol) <= topeTol && previoTol ? previoTol : String(Math.min(2, topeTol));
+  }
   $("zona-safety-checker").classList.toggle("hidden", !hayVerificador);
   if (hayVerificador) {
     $("hint-safety-checker").textContent = $("chk-safety-checker").checked

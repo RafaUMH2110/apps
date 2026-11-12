@@ -504,6 +504,7 @@
         <h2 id="h-claude">Prompt generado</h2>
     <textarea id="generatedPrompt" class="tall" aria-label="Prompt generado por Claude (editable)" placeholder="El prompt generado por Claude aparecer&#225; aqu&#237;. Puedes editarlo antes de generar la imagen."></textarea>
     <p class="hint" style="margin-top:.4rem">Puedes modificar este prompt a mano; la imagen se generar&#225; con el texto que haya aqu&#237; en el momento de pulsar el bot&#243;n.</p>
+    <p class="hint" id="promptLargo"></p>
     <div class="row">
       <button type="button" id="generateFromPrompt" class="primary" disabled>
         <span class="spinner" aria-hidden="true"></span><span id="generateFromPromptLabel">Generar imagen con este prompt</span>
@@ -585,7 +586,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:02</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:45</p>
   </footer>
 </div>
 
@@ -819,35 +820,18 @@ const PRICING = {
 };
 
 /* Prompt del sistema predeterminado para Claude. */
-const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotografía comercial de moda, dirección de arte, fotografía de producto y descripción de materiales y texturas.
-Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generación de imágenes FLUX.
-La imagen solicitada debe representar una prenda de moda mediante una fotografía comercial hiperrealista.
-Describe de forma precisa y visualmente útil:
-* La prenda y su construcción.
-* Silueta, corte y proporciones.
-* Materiales y tejidos.
-* Textura superficial y comportamiento físico del tejido.
-* Costuras, pespuntes, dobladillos, cierres y acabados.
-* Pequeñas imperfecciones naturales.
-* Variaciones sutiles del material.
-* Pliegues, arrugas y tensión del tejido.
-* Microdetalles visibles.
-* Caída natural de la prenda.
-* Relación entre la prenda y el cuerpo.
-* Pose y postura del modelo cuando sea relevante.
-* Iluminación.
-* Sombras y reflejos.
-* Entorno y fondo.
-* Composición fotográfica.
-* Distancia y perspectiva de cámara.
-* Focal aproximada, por ejemplo 85mm, cuando resulte apropiada.
-* Profundidad de campo.
-* Apertura aproximada, por ejemplo f/1.4, cuando resulte apropiada.
-* Calidad y características propias de una fotografía comercial real.
+const DEFAULT_SYSTEM_PROMPT = `Eres un experto en moda, patronaje, materiales textiles y acabados, con conocimientos de fotografía comercial de producto.
+Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt para un modelo de generación de imágenes FLUX.
+FLUX lee el prompt de principio a fin y pierde fuerza según avanza: lo que se escribe al final apenas influye en la imagen y, si el prompt es largo, se descarta. Por eso el orden importa tanto como el contenido.
+ESTRUCTURA OBLIGATORIA, en este orden exacto y en un solo párrafo seguido:
+1. Primera frase, la más importante: qué muestra la imagen. Nombra el tipo de prenda dentro de las cinco primeras palabras, di sobre qué aparece (sola, sobre maniquí o puesta sobre una persona) y describe el encuadre y la zona del cuerpo visible según el encuadre indicado al final de estas instrucciones, diciendo por dónde se recorta la imagen y qué queda fuera de cuadro.
+2. Cuerpo del prompt, la parte más extensa: la prenda. Materiales y tejidos con su nombre concreto, color y acabado, corte y silueta, costuras, cierres, dobladillos y remates, caída del tejido, pliegues y zonas de tensión, y las pequeñas imperfecciones y variaciones propias de una prenda real.
+3. Última frase, breve: luz, fondo y distancia de cámara.
+LONGITUD: el prompt final no debe pasar de 130 palabras. Si no cabe todo, conserva siempre la primera frase entera y recorta detalles de construcción.
+Describe solo lo que se ve en el encuadre pedido. No menciones etiquetas interiores, forros ocultos, refuerzos internos, composiciones impresas ni técnicas de fabricación que no dejen una marca visible en la imagen.
+No describas equipo ni ajustes fotográficos (marca de cámara, focal, apertura, ISO, temperatura de color, postproducción) salvo que la idea inicial los pida expresamente.
 No utilices palabras vacías o genéricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripción concreta.
-En su lugar, describe los elementos físicos, ópticos, materiales y fotográficos que hacen que la imagen resulte creíble.
-El prompt final debe estar optimizado para FLUX.
-Devuelve ÚNICAMENTE el prompt final en español.
+Devuelve ÚNICAMENTE el prompt final en español, en un solo párrafo.
 No añadas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
 
 /* Encuadre: qué debe mostrar la imagen. Lo elige quien usa la aplicación y se
@@ -1388,9 +1372,10 @@ ${idea}
 REQUISITOS:
 - Fotograf\u00eda de moda.
 - Encuadre: ${ENCUADRES[getEncuadre()].requisito}
-${prudenciaAplica() && PRUDENCIAS[getPrudencia()].requisito ? "- Lenguaje: " + PRUDENCIAS[getPrudencia()].requisito + "\n" : ""}- La prenda debe ser claramente visible.
-- Descripci\u00f3n precisa de materiales y construcci\u00f3n.
-- Iluminaci\u00f3n y c\u00e1mara f\u00edsicamente plausibles.
+${prudenciaAplica() && PRUDENCIAS[getPrudencia()].requisito ? "- Lenguaje: " + PRUDENCIAS[getPrudencia()].requisito + "\n" : ""}- Empieza por qu\u00e9 muestra la imagen: tipo de prenda, encuadre y zona del cuerpo visible.
+- Sigue con la prenda: materiales, corte, color, costuras y acabados visibles.
+- Termina con una frase breve de luz, fondo y distancia de c\u00e1mara.
+- M\u00e1ximo 130 palabras, en un solo p\u00e1rrafo.
 - El resultado final debe ser un prompt en espa\u00f1ol.
 - Devuelve exclusivamente el prompt final.`;
 }
@@ -1567,8 +1552,24 @@ function extractFalImage(data) {
 /* ==========================================================================
    VISUALIZACI\u00d3N
    ========================================================================== */
+/* FLUX solo atiende al principio del prompt: su codificador de texto admite
+   unas 512 unidades en FLUX.1 [pro] y la mitad en [schnell], y el español gasta
+   bastante más de una por palabra. Este aviso avisa antes de que el final del
+   prompt (donde suele ir el encuadre) deje de tener efecto. */
+const PALABRAS_RECOMENDADAS = 130;
+function actualizarLargoPrompt() {
+  const aviso = $("promptLargo");
+  const texto = $("generatedPrompt").value.trim();
+  if (!texto) { aviso.textContent = ""; return; }
+  const n = texto.split(/\s+/).length;
+  aviso.textContent = n <= PALABRAS_RECOMENDADAS
+    ? n + " palabras. FLUX atiende bien a un prompt de esta longitud."
+    : n + " palabras. FLUX lee el prompt de principio a fin y pierde fuerza según avanza: por encima de unas " + PALABRAS_RECOMENDADAS + " el final (encuadre, luz, fondo) puede quedarse sin efecto. Recorta detalles de construcción y deja al principio el tipo de prenda y el encuadre.";
+}
+
 function displayGeneratedPrompt(text, usage, provider, model, note) {
   $("generatedPrompt").value = text;
+  actualizarLargoPrompt();
   ["copyPrompt", "downloadPrompt", "clearPrompt", "downloadTxt"].forEach((id) => { $(id).disabled = !text; });
   updateGenerateFromPromptButton();
   const meta = $("claudeMeta");
@@ -2686,6 +2687,7 @@ function initializeApp() {
     const t = $("generatedPrompt").value;
     ["copyPrompt", "downloadPrompt", "clearPrompt", "downloadTxt"].forEach((id) => { $(id).disabled = !t; });
     updateGenerateFromPromptButton();
+    actualizarLargoPrompt();
   });
   $("copyPrompt").addEventListener("click", () => copyToClipboard($("generatedPrompt").value));
   $("downloadPrompt").addEventListener("click", downloadPromptOnly);

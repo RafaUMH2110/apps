@@ -1,0 +1,3046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenPatMod ProMax &#8212; Generador de Patrones de Corte e Imagen</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZjJhNWMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZDhiNTVjIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCNiZykiLz4KICA8IS0tIHBpZXphIGRlIHBhdHJvbiAoY29udG9ybm8gZGUgdW5hIG1hbmdhIHNpbXBsaWZpY2FkYSkgY29uIGxpbmVhIGRlIGNvc3R1cmEgZGlzY29udGludWEgLS0+CiAgPHBhdGggZD0iTTE4IDE0IEwzNCAxMiBMNDYgMjIgTDQyIDM0IEw0NiA0NCBMMzQgNTIgTDIwIDUwIEwxNiAzNiBMMjIgMjYgWiIKICAgICAgICBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjk1Ii8+CiAgPHBhdGggZD0iTTE4IDE0IEwzNCAxMiBMNDYgMjIgTDQyIDM0IEw0NiA0NCBMMzQgNTIgTDIwIDUwIEwxNiAzNiBMMjIgMjYgWiIKICAgICAgICBmaWxsPSJub25lIiBzdHJva2U9IiMxZjRlNWYiIHN0cm9rZS13aWR0aD0iMS40IiBzdHJva2UtZGFzaGFycmF5PSIyLjQgMi4yIiBvcGFjaXR5PSIwLjY1Ii8+CiAgPCEtLSB0aWplcmFzIC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM0LDM0KSByb3RhdGUoMTgpIiBmaWxsPSJub25lIiBzdHJva2U9IiNjMDU2M2EiIHN0cm9rZS13aWR0aD0iMi40IiBzdHJva2UtbGluZWNhcD0icm91bmQiPgogICAgPGNpcmNsZSBjeD0iLTUiIGN5PSI3IiByPSIyLjYiLz4KICAgIDxjaXJjbGUgY3g9IjUiIGN5PSI3IiByPSIyLjYiLz4KICAgIDxsaW5lIHgxPSItMy4yIiB5MT0iNS4yIiB4Mj0iOSIgeTI9Ii0xMCIvPgogICAgPGxpbmUgeDE9IjMuMiIgeTE9IjUuMiIgeDI9Ii05IiB5Mj0iLTEwIi8+CiAgPC9nPgo8L3N2Zz4K">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f6f2e8;
+    --card: #fffdf9;
+    --border: #e3d9c2;
+    --border-strong: #c7b483;
+    --text: #211d14;
+    --muted: #6d6552;
+    --blue-50: #eceef7;
+    --blue-100: #d9ddf0;
+    --blue-500: #46569c;
+    --blue-600: #2e3c7e;
+    --blue-700: #1f2a5c;
+    --gold: #b3862a;
+    --gold-ink: #3c2d08;
+    --gold-soft: #f6ecd2;
+    --ok: #2b6b47;
+    --ok-bg: #e7f3ea;
+    --err: #a3302b;
+    --err-bg: #fbe6e4;
+    --warn-bg: #fbf0d6;
+    --warn-border: #d9ba72;
+    --radius: 14px;
+    --shadow: 0 3px 16px rgba(33,29,20,.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Public Sans', "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  main { max-width: 1160px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+
+  header.hero { max-width: 1160px; margin: 0 auto; padding: 2.5rem 1.25rem 1.25rem; text-align: left; }
+  header.hero h1 { font-family: 'Fraunces', Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 2.8rem); margin: 0; letter-spacing: -0.02em; color: var(--blue-700); font-weight: 700; }
+  .badge-pro { display: inline-block; margin-left: .6rem; vertical-align: middle; font-family: 'Public Sans', sans-serif; font-size: .62em; font-weight: 700; letter-spacing: .06em; color: var(--gold-ink); background: var(--gold-soft); border: 1px solid var(--gold); border-radius: 999px; padding: .2rem .65rem; }
+  .pro-strip { max-width: 1160px; margin: 0 auto 1.25rem; padding: 0 1.25rem; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font-size: .85rem; color: var(--muted); }
+  .pro-strip b { color: var(--blue-700); }
+  header.hero p { margin: .3rem 0 1rem; font-size: 1.1rem; color: var(--muted); }
+  .flow { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .9rem; }
+  .flow .step { background: var(--blue-50); border: 1px solid var(--blue-100); color: var(--blue-700); padding: .25rem .7rem; border-radius: 999px; font-weight: 600; }
+  .flow .sep { color: var(--blue-500); }
+
+  .aviso {
+    max-width: 1160px; margin: 0 auto 1.25rem; padding: .8rem 1.25rem;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 10px;
+    color: #7a5b12; font-size: .88rem;
+  }
+
+  section.panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.4rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  section.panel h2 {
+    margin: 0 0 .9rem; font-size: 1.15rem; color: var(--blue-700);
+    border-bottom: none; padding-bottom: 0;
+  }
+
+  details.panel-guia {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.1rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  details.panel-guia summary { cursor: pointer; font-weight: 700; color: var(--blue-700); font-size: 1.1rem; padding: .25rem 0; }
+  details.panel-guia[open] summary { margin-bottom: .6rem; }
+  details.panel-guia ol, details.panel-guia ul { padding-left: 1.3rem; margin: .6rem 0; }
+  details.panel-guia li { margin-bottom: .35rem; }
+  details.panel-guia p { line-height: 1.55; margin: .6rem 0; }
+  details.panel-guia strong { color: var(--text); }
+
+  label { display: block; font-size: .92rem; font-weight: 600; margin: .7rem 0 .35rem; color: var(--text); }
+  select, input[type=password], input[type=text], input[type=number], textarea {
+    width: 100%; padding: .6rem .75rem; border: 1px solid var(--border-strong); border-radius: 10px;
+    font-size: .95rem; font-family: inherit; background: #fff; color: var(--text);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  textarea.tall { min-height: 150px; }
+  #prompt-mejorado.tall { min-height: 280px; }
+  #input-max-tokens { width: 100%; text-align: right; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--blue-500); outline-offset: 2px;
+  }
+
+  .fila { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .fila > div { flex: 1; min-width: 180px; }
+  .field { margin-bottom: .9rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+  @media (max-width: 700px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .pick-row { display: flex; align-items: flex-start; gap: .5rem; font-weight: 600; margin: .3rem 0 .2rem; cursor: pointer; }
+  .pick-row input { width: 1.15rem; height: 1.15rem; margin-top: .15rem; flex-shrink: 0; }
+  .hint { font-size: .85rem; color: var(--muted); margin: .35rem 0 0; font-weight: 400; }
+
+  .botones { display: flex; gap: .6rem; margin-top: .8rem; flex-wrap: wrap; }
+  button {
+    cursor: pointer; border: 1px solid var(--border-strong); border-radius: 10px;
+    padding: .55rem 1rem; font-size: .92rem; font-weight: 600; font-family: inherit;
+    background: #fff; color: var(--blue-700);
+  }
+  button:hover:not(:disabled) { background: var(--blue-50); }
+  button.primario { background: var(--blue-600); color: #fff; border-color: var(--blue-600); }
+  button.primario:hover:not(:disabled) { background: var(--blue-700); }
+  button.primario:disabled { background: #bcd3ea; border-color: #bcd3ea; color: #fff; cursor: not-allowed; }
+  button.secundario { background: var(--blue-50); color: var(--blue-700); border-color: var(--blue-100); }
+  button.secundario:hover:not(:disabled) { background: var(--blue-100); }
+  button.peligro { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; }
+  button.peligro:hover:not(:disabled) { background: #fadbd8; }
+  button.grande { width: 100%; font-size: 1.1rem; padding: .9rem 1rem; display: flex; align-items: center; justify-content: center; gap: .6rem; }
+  button:disabled { cursor: not-allowed; opacity: .6; }
+
+  .estado-key { font-size: .85rem; margin-top: .5rem; color: var(--muted); }
+  .estado-key.si { color: var(--ok); font-weight: 600; }
+
+  .estado-caja {
+    display: none; margin-top: 1rem; padding: .75rem 1rem; border-radius: 10px;
+    background: var(--blue-50); color: var(--blue-700); font-size: .9rem;
+    align-items: center; gap: .6rem; border: 1px solid var(--blue-100);
+  }
+  .estado-caja.visible { display: flex; }
+  .estado-caja.error { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; }
+  .estado-caja.ok .spinner, .estado-caja.error .spinner { display: none; }
+
+  #aviso-truncado {
+    margin-top: .9rem; padding: .7rem 1rem; border-radius: 10px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); color: #7a5b12; font-size: .88rem;
+  }
+
+  .spinner {
+    width: 16px; height: 16px; border: 3px solid rgba(43,108,176,.25);
+    border-top-color: currentColor; border-radius: 50%;
+    animation: girar .8s linear infinite; flex-shrink: 0;
+  }
+  button .spinner { border-color: rgba(255,255,255,.4); border-top-color: #fff; display: none; }
+  button.busy .spinner { display: inline-block; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+  .pieza-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: .8rem;
+    margin-bottom: .8rem; background: var(--blue-50);
+  }
+  .pieza-card h3 { margin: 0 0 .5rem; font-size: .95rem; color: var(--blue-700); }
+  .pieza-card .svg-wrap { max-width: 220px; margin: 0 auto .5rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .pieza-card .svg-wrap svg { display: block; width: 100%; height: auto; }
+  .pieza-card p { margin: 0; font-size: .82rem; color: var(--muted); }
+
+  #resultado { margin-top: 1rem; }
+  #pdf-preview {
+    width: 100%; height: 480px; border: 1px solid var(--border); border-radius: 10px;
+    display: none; margin-top: 1rem; background: #fff;
+  }
+  .contador-coste { font-size: .82rem; color: var(--muted); margin-top: .8rem; border-top: 1px dashed var(--border); padding-top: .6rem; }
+
+  footer { text-align: center; font-size: .82rem; color: var(--muted); padding: 1.5rem 1.25rem 3rem; max-width: 1160px; margin: 0 auto; }
+  footer a { color: var(--blue-600); }
+
+  #svg-render-host { position: absolute; left: -99999px; top: 0; width: 210mm; height: 297mm; background: #fff; overflow: hidden; }
+
+  /* Historial y comparación */
+  .hist-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+  .hist-toolbar .hist-contador { color: var(--muted); font-size: .9rem; margin-right: auto; }
+  .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .hist-item { border: 1px solid var(--border); border-radius: 12px; padding: .8rem; background: #fff; display: flex; flex-direction: column; gap: .4rem; }
+  .hist-item.selected { border-color: var(--blue-600); box-shadow: 0 0 0 2px var(--blue-100); }
+  .hist-item h4 { margin: 0; font-size: 1rem; color: var(--blue-700); }
+  .hist-pick { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .85rem; margin: 0; cursor: pointer; }
+  .hist-pick input { width: 1.05rem; height: 1.05rem; }
+  .hist-info { font-size: .8rem; color: var(--muted); margin: 0; }
+  .hist-idea { font-size: .85rem; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .hist-item .botones { margin-top: .3rem; }
+  .hist-item .botones button { padding: .35rem .65rem; font-size: .82rem; }
+  .hist-vacio { grid-column: 1 / -1; color: var(--muted); padding: 1rem; text-align: center; background: var(--blue-50); border: 2px dashed var(--border-strong); border-radius: 12px; }
+
+  .compare-scroll { overflow-x: auto; margin-top: 1rem; }
+  .compare-grid { display: grid; gap: 1rem; min-width: 0; }
+  .compare-col { border: 1px solid var(--border); border-radius: 12px; padding: .8rem; background: #fff; min-width: 0; }
+  .compare-col h4 { margin: 0 0 .5rem; font-size: .92rem; color: var(--blue-700); }
+  .compare-col dl { margin: 0 0 .7rem; font-size: .85rem; }
+  .compare-col dl div { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem .4rem; border-radius: 6px; }
+  .compare-col dt { color: var(--muted); flex-shrink: 0; }
+  .compare-col dd { margin: 0; text-align: right; word-break: break-word; }
+  .compare-col .diff { background: var(--blue-100); font-weight: 700; }
+
+  .modepicker { display: flex; gap: .6rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+  .modepicker button {
+    flex: 1; min-width: 200px; text-align: left; background: #fff; border: 1px solid var(--border-strong);
+    border-radius: 12px; padding: .7rem .9rem; cursor: pointer; font-family: inherit;
+  }
+  .modepicker button b { display: block; font-size: .95rem; }
+  .modepicker button span { display: block; color: var(--muted); font-size: .78rem; margin-top: .15rem; }
+  .modepicker button[aria-pressed="true"] { background: var(--blue-700); border-color: var(--blue-700); }
+  .modepicker button[aria-pressed="true"] b, .modepicker button[aria-pressed="true"] span { color: #fff; }
+
+  .procard { border: 1px solid var(--border); border-radius: 12px; padding: .8rem 1rem; margin-bottom: .8rem; background: var(--blue-50); }
+  .procard .prohead { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+  .procard .hint { margin-top: .5rem; }
+
+  .batch-list { display: flex; flex-direction: column; gap: .5rem; margin-top: .8rem; max-height: 360px; overflow-y: auto; }
+  .batch-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; border: 1px solid var(--border); border-radius: 10px; padding: .55rem .8rem; background: #fff; }
+  .batch-row .br-left { min-width: 0; flex: 1; }
+  .batch-row .br-title { font-size: .88rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .batch-row .br-meta { font-size: .78rem; color: var(--muted); margin-top: .1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .batch-row .br-remove {
+    flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--border-strong);
+    background: #fff; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; font-size: .85rem;
+  }
+  .batch-row .br-remove:hover { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; }
+
+  .pill { flex-shrink: 0; font-size: .74rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
+  .pill.pend { background: var(--blue-50); color: var(--muted); border: 1px solid var(--border); }
+  .pill.run { background: var(--warn-bg); color: #7a5b12; border: 1px solid var(--warn-border); }
+  .pill.done { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+  .pill.cachehit { background: var(--gold-soft); color: var(--gold-ink); border: 1px solid var(--gold); }
+  .pill.err { background: var(--err-bg); color: var(--err); border: 1px solid #f3c6c2; }
+
+  .progress-wrap { margin-top: .8rem; }
+  .progress-track { height: 10px; border-radius: 999px; background: var(--blue-50); border: 1px solid var(--border); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; background: var(--blue-600); transition: width .3s ease; }
+  .progress-label { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: .35rem; }
+
+  h3.sub-h { margin: 1.4rem 0 .4rem; font-family: 'Public Sans', sans-serif; font-size: .95rem; color: var(--blue-700); letter-spacing: .02em; }
+  details.guia-modelos { margin-top: .6rem; border: 1px solid var(--border); border-radius: 10px; padding: .6rem .9rem; background: var(--blue-50); }
+  details.guia-modelos summary { cursor: pointer; font-weight: 600; color: var(--blue-700); font-size: .92rem; }
+  details.guia-modelos[open] summary { margin-bottom: .6rem; }
+  .tabla-guia { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .tabla-guia th, .tabla-guia td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tabla-guia th { color: var(--muted); font-weight: 600; }
+  .tabla-guia tr:last-child td { border-bottom: 0; }
+  .imagen-prenda { display: block; max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius); margin-top: .8rem; }
+  .hist-miniatura { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); margin: .5rem 0; }
+
+  .hidden { display: none !important; }
+  @media (max-width: 640px) { section.panel, details.panel-guia { padding: 1.1rem; } header.hero { padding: 2rem 1rem 1rem; } }
+</style>
+</head>
+<body
+  data-app-title="GenPatMod ProMax"
+  data-app-description="Genera patrones de corte de moda en SVG y PDF A4 con Claude, OpenAI o Gemini, y a partir del patrón genera la imagen de la prenda con fal.ai indicando color, tejido, textura, estampado y encuadre. Con catálogo de modelos FLUX y Seedream, revisión del plan de piezas e historial local."
+  data-categories="ia,diseno-creatividad,automatizacion,docencia"
+  data-tags="Claude,OpenAI,Gemini,fal.ai,FLUX,Seedream,SVG,PDF,Patrones,Imágenes"
+  data-client-only="true"
+>
+
+<header class="hero">
+  <h1>GenPatMod<span class="badge-pro">PROMAX</span></h1>
+  <p>Genera patrones de corte de moda con IA, expórtalos como PDF A4 listo para imprimir y obtén la imagen de la prenda terminada</p>
+  <div class="flow" aria-label="Flujo de trabajo">
+    <span class="step">Idea inicial</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">Planificación de piezas</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">Piezas en SVG</span><span class="sep" aria-hidden="true">&#8594;</span>
+    <span class="step">PDF A4</span>
+  </div>
+</header>
+<p class="pro-strip">
+  <span>⚡ <b>Caché de resultados</b> — plan y piezas por separado</span>
+  <span>🗂 <b>Caché de prompts</b> Anthropic</span>
+  <span>📦 <b>Modo por lotes</b> — varias prendas de una vez</span>
+  <span>🧠 Catálogo de modelos ampliado</span>
+</p>
+
+<div class="aviso">
+  <strong>Avisos:</strong> la IA puede cometer errores en las medidas o la forma de las piezas; revisa siempre el patrón antes de cortar tela. Tu API key se guarda solo en este navegador (<code>localStorage</code>) y se envía únicamente al endpoint oficial del proveedor elegido (Anthropic, OpenAI o Google); no se recomienda este mecanismo para secretos institucionales ni aplicaciones públicas de producción.
+</div>
+
+<main>
+
+  <details class="panel-guia">
+    <summary>&#191;Cómo funciona GenPatMod ProMax?</summary>
+    <p><strong>Novedades Pro:</strong> rediseño visual, catálogo de modelos ampliado, caché de resultados independiente para el plan de piezas y para cada pieza en SVG, caché de prompts de Anthropic (<code>cache_control</code>) y un modo por lotes para generar varias prendas de principio a fin.</p>
+    <p><strong>GenPatMod</strong> es una aplicación de un solo archivo HTML que, a partir de la descripción libre de una prenda, genera con IA sus piezas de patrón de corte en SVG y las exporta como un PDF A4 listo para imprimir. No necesita instalación ni servidor: funciona con tu propia clave de API de Anthropic, OpenAI o Google.</p>
+    <ol>
+      <li>Describes la prenda con una idea inicial en lenguaje natural.</li>
+      <li>La IA planifica qué piezas forman la prenda y sus medidas aproximadas (el "plan de piezas").</li>
+      <li>Si la casilla "Mostrar y revisar el plan de piezas" está activada, la app se detiene para que revises o edites el plan antes de continuar.</li>
+      <li>La IA genera el SVG de cada pieza por separado, a su tamaño real en centímetros.</li>
+      <li>GenPatMod compone el PDF de forma determinista, sin IA: escala cada pieza a A4, la centra y añade una regla de control de 10&nbsp;cm.</li>
+      <li>La app muestra el resultado, lo guarda en el historial de este navegador y permite descargar el PDF completo y cada SVG por separado.</li>
+    </ol>
+    <p><strong>Paso 4, la imagen de la prenda:</strong> con el patr&#243;n ya hecho, la app redacta un prompt a partir del plan de piezas m&#225;s el color, el tejido, la textura, el estampado y el encuadre que elijas, y pide la fotograf&#237;a a fal.ai. El prompt se muestra en espa&#241;ol y es editable; a fal.ai se le env&#237;a su versi&#243;n inglesa, que FLUX entiende bastante mejor, y que viene en la misma llamada que la espa&#241;ola. La imagen se guarda junto al patr&#243;n en el historial.</p>
+    <p>El resultado depende de:</p>
+    <ul>
+      <li>La idea inicial: cuanto más detalle des, mejor será el patrón.</li>
+      <li>El proveedor y el modelo de IA seleccionados.</li>
+      <li>El número máximo de tokens de salida (el límite de cada modelo se muestra junto al campo).</li>
+      <li>Si editas el plan de piezas a mano antes de generar.</li>
+    </ul>
+    <p><strong>El PDF generado</strong> incluye una o dos páginas iniciales con el plan de piezas (si es muy largo, se trunca con un aviso), y una página A4 por pieza con su contorno a tamaño real —o reducido con la escala indicada si no cabe entera—, un título con prenda/pieza/medidas, y una regla de control de 10&nbsp;cm reales: imprime siempre <strong>sin</strong> "ajustar a página" para que esa regla sea fiable.</p>
+    <p><strong>Avisos frecuentes:</strong> "la respuesta de la IA se ha quedado corta" &#8594; sube el número máximo de tokens de salida y vuelve a generar. Error 401/403 &#8594; la clave no es válida o no tiene permisos. Error 429 &#8594; límite de uso alcanzado, espera e inténtalo de nuevo. Error 404 &#8594; el modelo no existe o no está disponible en tu cuenta. Si editas el plan a mano, mantén el formato ("Prenda: ..." y una lista numerada de piezas).</p>
+    <p>Prueba a cambiar solo una variable cada vez (proveedor, modelo, nivel de detalle de la idea) para observar su efecto sobre el resultado. El historial guarda cada generación con su idea, su plan y el PDF resultante, para que puedas recuperarlas o compararlas.</p>
+  </details>
+
+  <section class="panel" aria-labelledby="h-config">
+    <h2 id="h-config">1. Configuración del proveedor de IA</h2>
+    <div class="grid3">
+      <div class="field">
+        <label for="sel-proveedor">Proveedor</label>
+        <select id="sel-proveedor">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="gemini">Google (Gemini)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sel-modelo">Modelo</label>
+        <select id="sel-modelo"></select>
+      </div>
+      <div class="field">
+        <label for="input-max-tokens">Nº máx. tokens de salida</label>
+        <input type="number" id="input-max-tokens" min="256" max="9999999" step="1" value="4096">
+        <p class="hint" id="limite-tokens-modelo"></p>
+      </div>
+    </div>
+    <div class="field" id="modelo-otro-wrap" style="display:none;">
+      <label for="input-modelo-otro">Identificador de modelo</label>
+      <input type="text" id="input-modelo-otro" placeholder="Ej: claude-sonnet-4-5">
+    </div>
+
+    <div class="field">
+      <label for="input-apikey">API key del proveedor activo</label>
+      <input type="password" id="input-apikey" autocomplete="off" spellcheck="false" placeholder="Pega aquí tu API key">
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-guardar-key">Guardar clave</button>
+        <button type="button" class="secundario" id="btn-mostrar-key" aria-pressed="false">Mostrar</button>
+        <button type="button" class="peligro" id="btn-borrar-key">Borrar clave</button>
+      </div>
+      <p class="estado-key" id="estado-key">No hay ninguna clave guardada para este proveedor.</p>
+    </div>
+    <div class="field">
+      <label for="input-apikey-fal">API key de fal.ai (solo para la imagen de la prenda, paso 4)</label>
+      <input type="password" id="input-apikey-fal" autocomplete="off" spellcheck="false" placeholder="Pega aquí tu clave de fal.ai">
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-guardar-apikey-fal">Guardar clave</button>
+        <button type="button" class="peligro" id="btn-borrar-apikey-fal">Borrar clave</button>
+      </div>
+      <p class="estado-key" id="estado-key-fal">No hay ninguna clave de fal.ai guardada.</p>
+    </div>
+    <p class="hint">Cada clave solo se envía a su proveedor oficial. La validez definitiva la confirma la respuesta de la API.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-pro">
+    <h2 id="h-pro">Pro — modo de trabajo, caché y lotes</h2>
+    <div class="modepicker" id="modepicker" role="radiogroup" aria-label="Modo de trabajo">
+      <button type="button" data-modo="individual" aria-pressed="true"><b>Individual</b><span>Una prenda, con revisión opcional del plan de piezas antes de generar</span></button>
+      <button type="button" data-modo="lote" aria-pressed="false"><b>Por lotes</b><span>Varias prendas a la vez, de principio a fin, sin pausa de revisión</span></button>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="pick-row" style="margin:0" for="chk-cache-resultados"><input type="checkbox" id="chk-cache-resultados" checked><span><b>Caché de resultados</b> — reutilizar un plan de piezas y/o una pieza en SVG ya generados para los mismos parámetros</span></label>
+        <button type="button" class="secundario" id="btn-vaciar-cache" style="padding:.3rem .7rem;font-size:.82rem">Vaciar caché (<span id="cache-contador">0</span>)</button>
+      </div>
+      <p class="hint">La caché se guarda en un almacén propio de este navegador, independiente del historial visible de generaciones, con DOS puntos de comprobación: antes de llamar a la IA para planificar las piezas (misma idea, proveedor, modelo y máximo de tokens) y antes de llamar a la IA para dibujar cada pieza (mismo nombre y descripción de pieza, proveedor, modelo y máximo de tokens). Si una coincide, se reutiliza sin gastar nada.</p>
+    </div>
+    <div class="procard">
+      <div class="prohead">
+        <label class="pick-row" style="margin:0" for="chk-prompt-caching"><input type="checkbox" id="chk-prompt-caching" checked><span><b>Caché de prompts de Anthropic</b> (<code>cache_control</code>) — solo con proveedor Anthropic</span></label>
+      </div>
+      <p class="hint" id="nota-prompt-caching">Marca el bloque de instrucciones del sistema (planificación o dibujo de piezas) como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes. Solo hay ahorro real si el bloque supera el mínimo cacheable del modelo activo.</p>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-idea">
+    <h2 id="h-idea"><span id="titulo-paso-idea">2. Describe la prenda</span></h2>
+    <div class="field" id="zona-idea-individual">
+      <label for="input-idea">Idea inicial (descripción libre de la prenda) <span aria-hidden="true">*</span></label>
+      <textarea id="input-idea" class="tall" placeholder="Ej: una camisa clásica de manga larga con cuello camisero, puños y botonadura delantera, talla M"></textarea>
+    </div>
+    <div class="field hidden" id="zona-ideas-lote">
+      <label for="ideas-lote-texto">Prendas del lote (una por línea)</label>
+      <textarea id="ideas-lote-texto" class="tall" placeholder="Una idea por línea, por ejemplo:&#10;Camisa clásica de manga larga con cuello camisero y botonadura delantera, talla M&#10;Falda midi plisada de tiro alto&#10;Chaqueta vaquera oversize con parches bordados"></textarea>
+      <div class="botones"><button type="button" class="secundario" id="btn-anadir-lote">Añadir estas prendas al lote</button></div>
+      <div class="batch-list" id="lote-lista-ideas"></div>
+      <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna prenda añadida todavía.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label for="input-nombre-pdf">Nombre del fichero PDF (opcional, solo modo individual)</label>
+        <input type="text" id="input-nombre-pdf" placeholder="Por defecto: patron_&lt;prenda&gt;.pdf">
+      </div>
+      <div class="field">
+        <label for="input-nombre-txt">Nombre del fichero de prompts .txt (opcional, solo modo individual)</label>
+        <input type="text" id="input-nombre-txt" placeholder="Por defecto: genpatmod_prompts.txt">
+      </div>
+    </div>
+
+    <div class="field" id="zona-mostrar-prompt">
+      <label class="pick-row" for="chk-mostrar-prompt">
+        <input type="checkbox" id="chk-mostrar-prompt" checked>
+        <span>Mostrar y revisar el plan de piezas antes de generarlas</span>
+      </label>
+      <p class="hint">Si se desactiva, la IA genera las piezas directamente sin pausar para tu revisión. En modo por lotes esta pausa no se aplica nunca: cada prenda se procesa de principio a fin.</p>
+    </div>
+
+    <div id="acciones-individual">
+      <div class="botones">
+        <button type="button" class="primario grande" id="btn-generar" disabled>Generar patrón</button>
+        <button type="button" class="secundario" id="btn-estimar-tokens" disabled>Estimar tokens de entrada</button>
+        <button type="button" class="peligro" id="btn-detener" style="display:none;">&#9209; Detener generación</button>
+      </div>
+      <p class="hint">La estimación consulta solo el conteo de tokens de ENTRADA (gratuito en los proveedores que lo ofrecen) del paso de planificación, con la misma idea que se enviaría; los tokens de SALIDA nunca se pueden conocer antes de generar, solo se puede mostrar el techo configurado.</p>
+      <div class="contador-coste" id="estimacion-tokens" style="display:none;"></div>
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-exportar-txt" disabled>Exportar prompts (.txt)</button>
+      </div>
+    </div>
+    <div id="acciones-lote" class="hidden">
+      <div class="botones">
+        <button type="button" class="primario grande" id="btn-lanzar-lote" disabled>Lanzar lote ▶</button>
+      </div>
+      <p class="hint">Cada prenda del lote se procesa de principio a fin (plan de piezas + SVG de cada pieza + PDF) una detrás de otra, para no saturar los límites de tasa del proveedor. Cada patrón generado se guarda también en el historial de más abajo.</p>
+    </div>
+
+    <div id="estado-generacion" class="estado-caja"><div class="spinner"></div><span id="estado-texto"></span></div>
+
+    <div class="hidden" id="panel-progreso-lote">
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="lote-progress-fill"></div></div>
+        <div class="progress-label"><span id="lote-progress-texto">0 / 0</span><span id="lote-progress-estado">en cola</span></div>
+      </div>
+      <div class="batch-list" id="lote-lista"></div>
+      <div class="botones" style="margin-top:.8rem">
+        <button type="button" class="peligro" id="btn-detener-lote" disabled>Detener lote</button>
+        <button type="button" class="primario" id="btn-descargar-lote-zip" disabled>⬇ Descargar todo (ZIP: PDFs + resumen.txt)</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-resultado" style="display:none;" aria-labelledby="h-resultado">
+    <h2 id="h-resultado">3. Resultado</h2>
+    <div id="prompt-mejorado-wrap" style="display:none;">
+      <label style="margin-top:0;">Prompt mejorado (plan de piezas decidido por la IA)</label>
+      <textarea id="prompt-mejorado" readonly class="tall" style="font-family:ui-monospace,Consolas,monospace;font-size:0.8rem;background:var(--blue-50);"></textarea>
+      <div class="botones">
+        <button type="button" class="secundario" id="btn-editar-prompt">Editar prompt mejorado</button>
+        <button type="button" class="primario" id="btn-continuar-generacion" style="display:none;">Generar piezas con este plan</button>
+        <button type="button" class="primario" id="btn-regenerar-prompt" style="display:none;">Generar con este prompt editado</button>
+      </div>
+    </div>
+    <div id="aviso-truncado" style="display:none;"></div>
+    <div id="resultado"></div>
+    <div class="botones">
+      <button type="button" class="peligro" id="btn-detener-piezas" style="display:none;">&#9209; Detener generación</button>
+    </div>
+    <div id="estado-generacion-piezas" class="estado-caja"><div class="spinner"></div><span id="estado-texto-piezas"></span></div>
+    <div class="botones">
+      <button type="button" class="primario" id="btn-descargar-pdf" style="display:none;">Descargar PDF</button>
+    </div>
+    <iframe id="pdf-preview"></iframe>
+    <div class="contador-coste" id="contador-coste"></div>
+  </section>
+
+  <section class="panel hidden" id="panel-imagen" aria-labelledby="h-imagen">
+    <h2 id="h-imagen">4. Imagen de la prenda</h2>
+    <p class="hint" style="margin-top:0">A partir del plan de piezas que acabas de generar, la IA redacta un prompt y fal.ai produce la fotograf&#237;a de la prenda terminada. El patr&#243;n ya describe la construcci&#243;n &#8212;piezas, costuras, cierres&#8212;; aqu&#237; a&#241;ades lo que el patr&#243;n no dice: de qu&#233; color es, en qu&#233; tejido est&#225; cortada y c&#243;mo se fotograf&#237;a.</p>
+
+    <h3 class="sub-h">Materiales y color</h3>
+    <div class="grid3">
+      <div class="field">
+        <label for="img-color">Color principal</label>
+        <input type="text" id="img-color" placeholder="Ej: azul marino, crudo, rojo carm&#237;n">
+      </div>
+      <div class="field">
+        <label for="img-color2">Color secundario (opcional)</label>
+        <input type="text" id="img-color2" placeholder="Ej: ribetes en blanco roto">
+      </div>
+      <div class="field">
+        <label for="img-tejido">Tejido</label>
+        <select id="img-tejido"></select>
+      </div>
+    </div>
+    <div class="field hidden" id="zona-tejido-otro">
+      <label for="img-tejido-otro">&#191;Qu&#233; tejido?</label>
+      <input type="text" id="img-tejido-otro" placeholder="Ej: tweed de lana con hilo metalizado">
+    </div>
+    <div class="grid3">
+      <div class="field">
+        <label for="img-textura">Textura y acabado</label>
+        <select id="img-textura"></select>
+      </div>
+      <div class="field">
+        <label for="img-estampado">Estampado</label>
+        <select id="img-estampado"></select>
+      </div>
+      <div class="field">
+        <label for="img-peso">Peso y ca&#237;da</label>
+        <select id="img-peso"></select>
+      </div>
+    </div>
+
+    <h3 class="sub-h">La fotograf&#237;a</h3>
+    <div class="grid3">
+      <div class="field">
+        <label for="img-encuadre">Qu&#233; debe mostrar la imagen</label>
+        <select id="img-encuadre"></select>
+      </div>
+      <div class="field">
+        <label for="img-fondo">Fondo</label>
+        <select id="img-fondo"></select>
+      </div>
+      <div class="field">
+        <label for="img-luz">Luz</label>
+        <select id="img-luz"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="img-extra">Otros detalles (opcional)</label>
+      <textarea id="img-extra" placeholder="Ej: botones de n&#225;car, cremallera vista met&#225;lica, prenda ligeramente arrugada como si se acabara de usar"></textarea>
+    </div>
+
+    <h3 class="sub-h">Modelo de imagen de fal.ai</h3>
+    <div class="grid2">
+      <div class="field">
+        <label for="fal-modelo">Modelo de imagen</label>
+        <select id="fal-modelo"></select>
+        <p class="hint" id="fal-modelo-guia"></p>
+      </div>
+      <div class="field">
+        <label for="fal-tamano">Tama&#241;o de la imagen</label>
+        <select id="fal-tamano"></select>
+      </div>
+    </div>
+    <div class="field hidden" id="zona-fal-otro">
+      <label for="fal-modelo-otro">Identificador del modelo en fal.ai</label>
+      <input type="text" id="fal-modelo-otro" placeholder="Ej: fal-ai/recraft/v3/text-to-image">
+      <p class="hint">Se env&#237;an todos los par&#225;metros: si el modelo no admite alguno, fal.ai devolver&#225; un error indicando cu&#225;l.</p>
+    </div>
+
+    <details class="guia-modelos">
+      <summary>&#191;Qu&#233; modelo elijo?</summary>
+      <table class="tabla-guia">
+        <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro del prompt</th><th>Verificador de la imagen</th></tr></thead>
+        <tbody>
+          <tr><td>FLUX.2 [pro]</td><td>Opci&#243;n por defecto: luz, tejido y ca&#237;da de calidad de estudio</td><td>Media</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Desactivable</td></tr>
+          <tr><td>FLUX 1.1 [pro]</td><td>Buena calidad y r&#225;pida</td><td>Media, r&#225;pida</td><td>Tolerancia ajustable (1&#8211;6)</td><td>Siempre activo</td></tr>
+          <tr><td>Seedream 4.5</td><td>Mucha resoluci&#243;n: imprimir o proyectar en grande</td><td>Alta, m&#225;s lenta</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+          <tr><td>FLUX.1 [dev]</td><td>Modelo abierto con pasos de inferencia ajustables</td><td>Baja</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+          <tr><td>FLUX.1 [schnell]</td><td>Pruebas r&#225;pidas y clases con mucha gente generando a la vez</td><td>La m&#225;s barata</td><td>Fijo, de fal.ai</td><td>Desactivable</td></tr>
+          <tr><td>Otro&#8230;</td><td>Cualquier otro identificador de fal.ai</td><td>&#8212;</td><td>Se env&#237;a la tolerancia; puede fallar</td><td>Se env&#237;a; puede fallar</td></tr>
+        </tbody>
+      </table>
+      <p class="hint"><b>Son dos filtros distintos.</b> El del prompt revisa el texto antes de generar y devuelve un error 422 si lo rechaza; solo los modelos con tolerancia permiten aflojarlo. El verificador de la imagen revisa el resultado y es el que devuelve la imagen en negro; ese s&#237; se desactiva con la casilla de abajo en los modelos que lo admiten.</p>
+    </details>
+
+    <div class="grid2">
+      <div class="field">
+        <label for="fal-pasos">Pasos de inferencia</label>
+        <input type="number" id="fal-pasos" min="1" max="50" step="1" value="28">
+        <p class="hint" id="hint-fal-pasos"></p>
+      </div>
+      <div class="field" id="zona-fal-tolerancia">
+        <label for="fal-tolerancia">Tolerancia del filtro de seguridad</label>
+        <select id="fal-tolerancia"></select>
+        <p class="hint" id="hint-fal-tolerancia"></p>
+      </div>
+    </div>
+    <div class="field hidden" id="zona-fal-verificador">
+      <label class="pick-row" for="chk-fal-verificador"><input type="checkbox" id="chk-fal-verificador" checked><span>Verificador de seguridad de fal.ai sobre la imagen generada</span></label>
+      <p class="hint">Si lo desmarcas, fal.ai no revisa la imagen resultante y deja de devolverla en negro. No afecta al filtro que revisa el texto del prompt, que no se puede desactivar.</p>
+    </div>
+
+    <div class="botones">
+      <button type="button" class="primario grande" id="btn-redactar-prompt-imagen">Redactar el prompt de la imagen</button>
+    </div>
+
+    <div class="field hidden" id="zona-prompt-imagen">
+      <label for="prompt-imagen">Prompt de la imagen (en espa&#241;ol, editable)</label>
+      <textarea id="prompt-imagen" class="tall"></textarea>
+      <p class="hint" id="prompt-imagen-largo"></p>
+      <label class="pick-row" for="chk-traducir-imagen"><input type="checkbox" id="chk-traducir-imagen" checked><span>Traducir el prompt al ingl&#233;s antes de enviarlo a fal.ai</span></label>
+      <p class="hint">FLUX se entren&#243; casi solo con descripciones en ingl&#233;s y sigue bastante peor un prompt en espa&#241;ol. La versi&#243;n inglesa viene en la misma llamada que la espa&#241;ola; si editas el cuadro de arriba, se traduce de nuevo al generar.</p>
+      <div class="botones">
+        <button type="button" class="primario grande" id="btn-generar-imagen">Generar imagen</button>
+      </div>
+      <div class="field hidden" id="zona-prompt-enviado-img">
+        <label for="prompt-enviado-img">Prompt enviado a fal.ai</label>
+        <textarea id="prompt-enviado-img" readonly aria-readonly="true"></textarea>
+        <p class="hint" id="prompt-enviado-img-nota"></p>
+      </div>
+    </div>
+
+    <div id="estado-imagen" class="estado-caja"><div class="spinner"></div><span id="estado-texto-imagen"></span></div>
+    <div id="resultado-imagen"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-historial">
+    <h2 id="h-historial">Historial de generaciones</h2>
+    <p class="hint" style="margin-top:0">Cada patrón generado se guarda automáticamente en este navegador (IndexedDB) con su idea, su plan de piezas y el PDF resultante. No incluye API keys. Selecciona de 2 a 4 para compararlas.</p>
+    <div class="hist-toolbar">
+      <span class="hist-contador" id="historial-contador" aria-live="polite">0 generaciones</span>
+      <button type="button" class="primario" id="historial-comparar" disabled>Comparar selección</button>
+      <button type="button" class="secundario" id="historial-quitar-seleccion" disabled>Quitar selección</button>
+      <button type="button" class="peligro" id="historial-vaciar" disabled>Vaciar historial</button>
+    </div>
+    <div id="historial-lista" class="hist-grid"></div>
+    <div id="comparacion-wrap" class="hidden">
+      <h3 style="margin-top:1.25rem;color:var(--blue-700);font-size:1.05rem;">Comparación</h3>
+      <p class="hint">Los valores que difieren entre las generaciones aparecen resaltados.</p>
+      <div class="compare-scroll"><div id="comparacion-grid" class="compare-grid"></div></div>
+      <div class="botones"><button type="button" class="secundario" id="comparacion-cerrar">Cerrar comparación</button></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-borrado">
+    <h2 id="h-borrado">Borrar datos</h2>
+    <p class="hint" style="margin-top:0">Borra la idea, el prompt mejorado, las piezas en SVG y el PDF mostrados, y los nombres de fichero si los has cambiado. No afecta al proveedor, el modelo, el número máximo de tokens ni a tu API key, y no borra el historial guardado.</p>
+    <div class="botones">
+      <button type="button" class="peligro" id="btn-borrar-todo">&#128465;&#65039; Borrar todos los datos introducidos</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="svg-render-host"></div>
+
+<footer>
+  GenPatMod ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 07:16
+</footer>
+
+
+<script>
+
+/* ============================================================================
+ * CONSTANTES EDITABLES
+ * ==========================================================================*/
+
+// --- System prompt de PATRONAJE (rol del modelo al dibujar cada pieza) -----
+// Este es el system prompt literal definido para esta app (BLOQUE 0).
+const SYSTEM_PROMPT_PATRON = `Eres un experto en diseño de patrones de confección y generación de SVG,
+especializado en crear piezas de patrón de corte precisas, claras y listas para producción.
+
+Tu tarea es generar el código SVG de UNA SOLA pieza de patrón de corte, completo,
+válido y autocontenido.
+
+### 1. Sistema de coordenadas (MUY IMPORTANTE)
+- El elemento raíz debe ser: <svg xmlns="http://www.w3.org/2000/svg"
+  width="Xcm" height="Ycm" viewBox="0 0 X Y">
+  donde X e Y son el ancho y el alto REALES de la pieza en centímetros.
+- El viewBox debe usar EXACTAMENTE los mismos números que width/height (sin la unidad).
+  Es decir, 1 unidad de usuario del SVG = 1 centímetro real.
+- No apliques ningún transform de escalado global ni reduzcas la pieza: dibújala
+  a su tamaño real en centímetros, tal como se describe en el encargo.
+- No te preocupes por si la pieza cabe o no en una hoja A4: eso se gestiona
+  automáticamente fuera de este SVG.
+
+### 2. Contenido de la pieza
+- Dibuja el contorno de corte completo de la pieza como un <path> o <polygon> cerrado.
+- Incluye el margen de costura como una línea discontinua paralela al contorno, si procede.
+- Añade referencias de patronaje cuando sean relevantes: línea de hilo (con flecha),
+  línea de doblez, piquetes, centro delantero/espalda, número de pieza.
+- Incluye el nombre de la pieza como texto (<text>), en español, en mayúsculas,
+  bien centrado y sin solaparse con otras líneas.
+- Indica las medidas principales junto a los bordes correspondientes (en cm),
+  colocando cada etiqueta de medida LIGERAMENTE POR FUERA del contorno (con una
+  pequeña marca o línea corta que la una al borde que mide), nunca escrita
+  encima del propio trazo de corte.
+- Tamaño de letra: usa un font-size de entre 0.45 y 0.7 (en las mismas unidades
+  del SVG, es decir, cm) para TODOS los textos, sea cual sea el tamaño real de
+  la pieza. Esto es importante incluso en piezas grandes: el PDF final puede
+  reducir la pieza completa para que quepa en A4, y un texto escrito demasiado
+  pequeño en estas unidades quedaría ilegible al imprimir.
+- Si la pieza es pequeña o sencilla, incluye solo las anotaciones esenciales
+  (nombre y medidas imprescindibles): no llenes la pieza de referencias
+  opcionales si no hay espacio limpio para colocarlas sin solapamientos.
+- IMPORTANTE: dos textos nunca deben solaparse ni tocarse entre sí, ni con el
+  contorno de la pieza. Deja siempre un margen de separación de al menos 0.5 cm
+  alrededor de cada texto. Si no hay espacio suficiente, usa un tamaño de letra
+  más pequeño (nunca por debajo de 0.45) en vez de invadir otro elemento.
+- Todo el contenido (contorno, líneas de margen, referencias y textos) debe
+  quedar dentro del rectángulo width x height / viewBox que tú mismo declares
+  para la pieza: no dibujes nada fuera de esos límites.
+
+### 3. Reglas técnicas
+- Usa únicamente geometría vectorial pura: <path>, <line>, <polyline>, <polygon>,
+  <rect>, <circle>, <text>, <g>. Nada de imágenes rasterizadas, filtros, JavaScript,
+  fuentes externas ni referencias externas.
+- Usa trazos finos (stroke-width entre 0.05 y 0.15, ya que las unidades son centímetros)
+  y colores de alto contraste sobre fondo blanco o transparente.
+- Todas las etiquetas de apertura deben tener su cierre correspondiente, terminando
+  correctamente en </svg>.
+- El idioma de todos los textos debe ser español.
+
+### 4. Formato de salida
+Devuelve ÚNICAMENTE el código SVG dentro de un bloque de código Markdown de tipo \`xml\`.
+No añadas explicaciones, comentarios ni ningún texto fuera del bloque de código.`;
+
+// --- System prompt de PLANIFICACIÓN (decide qué piezas tiene la prenda) ----
+// Asunción (FASE 1): la idea libre del usuario se traduce primero en una
+// lista de piezas con sus medidas, y luego cada pieza se dibuja por separado
+// con el system prompt anterior — igual que en el cuaderno Python de partida.
+const SYSTEM_PROMPT_PLANIFICAR = `Eres un patronista experto en confección industrial.
+A partir de la idea inicial de una prenda que te da el usuario, decide qué piezas de
+patrón forman esa prenda (las estrictamente necesarias, entre 1 y 8) y describe cada
+una con su forma y sus medidas reales aproximadas en centímetros para una talla
+estándar M, incluyendo margen de costura y referencias de patronaje relevantes.
+
+Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comentarios
+y sin fences de markdown, con este esquema EXACTO:
+{"prenda": "<nombre de la prenda>", "piezas": [{"nombre": "<identificador corto, en minúsculas, sin espacios ni tildes>", "descripcion": "<descripción completa: forma, medidas reales en cm, margen de costura, referencias de patronaje>"}]}
+
+Todo el texto (nombres y descripciones) debe estar en español.`;
+
+// --- Modelos que aparecen en cada desplegable --------------------------------
+const MODELOS_POR_PROVEEDOR = {
+  anthropic: {
+    modelos: ["claude-sonnet-5", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-sonnet-4-5", "claude-haiku-4-5-20251001", "claude-fable-5-1"],
+    porDefecto: "claude-sonnet-5" // catálogo Pro unificado con el resto de apps
+  },
+  openai: {
+    modelos: ["gpt-6-luna", "gpt-6-astra", "gpt-6.1-sol", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"],
+    porDefecto: "gpt-6.1-sol"
+  },
+  gemini: {
+    modelos: ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.5-flash-lite"],
+    porDefecto: "gemini-3.8-flash"
+  }
+};
+// PRO: umbral mínimo de tokens (aprox.) a partir del cual Anthropic permite
+// cachear un bloque "system" con cache_control. Solo informativo.
+const CACHE_MIN_TOKENS_ANTHROPIC = {
+  "claude-sonnet-5": 1024, "claude-opus-5-5": 512, "claude-sonnet-5-5": 512,
+  "claude-haiku-5-5": 512, "claude-sonnet-4-5": 1024,
+  "claude-haiku-4-5-20251001": 1024, "claude-fable-5-1": 512
+};
+// La lista de modelos de cada proveedor cambia con frecuencia: revisa la
+// documentación oficial y usa "Otro…" con el identificador exacto si el
+// modelo que quieres usar no aparece en la lista.
+
+// --- Límite de tokens de salida DOCUMENTADO de cada modelo (orientativo) -----
+// Esta app no fuerza ningún tope: el valor solo se muestra como información
+// junto al campo "Máximo de tokens" (ver ajustarLimiteTokens). Si un modelo no
+// aparece aquí (p. ej. uno escrito a mano en "Otro…"), se muestra
+// LIMITE_TOKENS_DEFECTO. Verifica los límites vigentes en la documentación de
+// cada proveedor si vas a cambiar de modelo con frecuencia.
+const LIMITE_TOKENS_DEFECTO = 8000;
+const LIMITES_TOKENS_MODELO = {
+  "claude-sonnet-4-5": 64000,
+  "claude-sonnet-5": 128000,
+  "claude-opus-5-5": 128000,
+  "claude-sonnet-5-5": 128000,
+  "claude-haiku-5-5": 128000,
+  "claude-haiku-4-5-20251001": 64000,
+  "claude-fable-5-1": 128000,
+  "gpt-6-astra": 128000,
+  "gpt-6.1-sol": 128000,
+  "gpt-6-luna": 128000,
+  "gpt-4.1": 32768,
+  "gpt-4.1-mini": 32768,
+  "gpt-4o": 16384,
+  "gpt-4o-mini": 16384,
+  "gemini-3.1-pro-preview": 65536,
+  "gemini-3.8-flash": 65536,
+  "gemini-3.5-flash-lite": 65536
+};
+
+function limiteTokensModelo(modelo){
+  return LIMITES_TOKENS_MODELO[modelo] || LIMITE_TOKENS_DEFECTO;
+}
+
+// --- Precios orientativos (USD por millón de tokens) ------------------------
+// AVISO: precios aproximados en el momento de escribir esta app. Verifica las
+// tarifas vigentes antes de usarlos con fines de facturación real.
+const PRECIOS_POR_MTOK = {
+  "claude-sonnet-4-5": {in: 3.00, out: 15.00},
+  "claude-sonnet-5": {in: 2.00, out: 10.00},
+  "claude-opus-5-5": {in: 4.00, out: 20.00},
+  "claude-sonnet-5-5": {in: 2.00, out: 10.00},
+  "claude-haiku-5-5": {in: 0.10, out: 0.50},
+  "claude-haiku-4-5-20251001": {in: 1.00, out: 5.00},
+  "claude-fable-5-1": {in: 10.00, out: 50.00},
+  "gpt-6-astra": {in: 10.00, out: 50.00},
+  "gpt-6.1-sol": {in: 2.00, out: 10.00},
+  "gpt-6-luna": {in: 0.10, out: 0.50},
+  "gpt-4.1": {in: 2.00, out: 8.00},
+  "gpt-4.1-mini": {in: 0.40, out: 1.60},
+  "gpt-4o": {in: 2.50, out: 10.00},
+  "gpt-4o-mini": {in: 0.15, out: 0.60},
+  "gemini-3.1-pro-preview": {in: 2.50, out: 15.00},
+  "gemini-3.8-flash": {in: 0.75, out: 3.75},
+  "gemini-3.5-flash-lite": {in: 0.30, out: 2.50}
+};
+
+// --- Geometría de la página impresa (idéntica al pipeline Python de origen) -
+const A4_ANCHO_MM = 210.0;
+const A4_ALTO_MM = 297.0;
+const MARGEN_MM = 12.0;
+const AREA_ANCHO_MM = A4_ANCHO_MM - 2 * MARGEN_MM;
+const RESERVA_REGLA_MM = 10.0; // franja inferior reservada para la regla de control, para que nunca se solape con la pieza
+const AREA_ALTO_MM = A4_ALTO_MM - 2 * MARGEN_MM;
+const AREA_ALTO_UTIL_MM = AREA_ALTO_MM - RESERVA_REGLA_MM; // alto realmente disponible para dibujar la pieza
+const UNIDAD_A_CM = {cm: 1.0, mm: 0.1, in: 2.54, px: 2.54 / 96.0, "": 1.0};
+
+// --- Medición y autoajuste de textos, para garantizar que ningún texto de la
+//     cabecera o la regla se salga de la página impresa -----------------------
+function medirTextoMm(texto, fontSizeMm, fontFamily){
+  if (!medirTextoMm._ctx){
+    medirTextoMm._ctx = document.createElement("canvas").getContext("2d");
+  }
+  const px = fontSizeMm * 96 / 25.4; // mm -> px (asumiendo 96dpi, aproximación suficiente para ajustar tamaños)
+  medirTextoMm._ctx.font = `${px}px ${fontFamily}`;
+  return medirTextoMm._ctx.measureText(texto).width * 25.4 / 96; // px -> mm
+}
+
+function ajustarFontSizeParaCaber(texto, anchoMaximoMm, fontSizeInicial, fontSizeMinimo, fontFamily){
+  fontFamily = fontFamily || "Helvetica, Arial, sans-serif";
+  let fs = fontSizeInicial;
+  while (fs > fontSizeMinimo && medirTextoMm(texto, fs, fontFamily) > anchoMaximoMm){
+    fs -= 0.1;
+  }
+  return Math.max(fs, fontSizeMinimo);
+}
+
+const CLAVES_LOCALSTORAGE = {anthropic: "ia_anthropic_key", openai: "ia_openai_key", gemini: "ia_gemini_key"};
+
+/* ============================================================================
+ * ESTADO Y REFERENCIAS DE UI
+ * ==========================================================================*/
+const $ = (id) => document.getElementById(id);
+const selProveedor = $("sel-proveedor");
+const selModelo = $("sel-modelo");
+const modeloOtroWrap = $("modelo-otro-wrap");
+const inputModeloOtro = $("input-modelo-otro");
+const inputApiKey = $("input-apikey");
+const inputMaxTokens = $("input-max-tokens");
+const limiteTokensModeloDiv = $("limite-tokens-modelo");
+const chkMostrarPrompt = $("chk-mostrar-prompt");
+const estadoKey = $("estado-key");
+const inputIdea = $("input-idea");
+const inputNombrePdf = $("input-nombre-pdf");
+const inputNombreTxt = $("input-nombre-txt");
+const btnGenerar = $("btn-generar");
+const btnDetener = $("btn-detener");
+const btnDetenerPiezas = $("btn-detener-piezas");
+const btnExportarTxt = $("btn-exportar-txt");
+const estadoGeneracion = $("estado-generacion");
+const estadoTexto = $("estado-texto");
+const estadoGeneracionPiezas = $("estado-generacion-piezas");
+const estadoTextoPiezas = $("estado-texto-piezas");
+const btnBorrarTodo = $("btn-borrar-todo");
+const panelResultado = $("panel-resultado");
+const resultadoDiv = $("resultado");
+const promptMejoradoWrap = $("prompt-mejorado-wrap");
+const promptMejoradoTexto = $("prompt-mejorado");
+const btnEditarPrompt = $("btn-editar-prompt");
+const btnContinuarGeneracion = $("btn-continuar-generacion");
+const btnRegenerarPrompt = $("btn-regenerar-prompt");
+const avisoTruncadoDiv = $("aviso-truncado");
+const btnDescargarPdf = $("btn-descargar-pdf");
+const pdfPreview = $("pdf-preview");
+const contadorCoste = $("contador-coste");
+const svgRenderHost = $("svg-render-host");
+const btnEstimarTokens = $("btn-estimar-tokens");
+const estimacionTokensDiv = $("estimacion-tokens");
+
+let costeAcumulado = {entrada: 0, salida: 0, usd: 0};
+let ultimosPrompts = null; // para exportar a .txt
+let ultimoPdfBlobUrl = null;
+let ultimoPlanGenerado = null; // para poder restaurar el texto si se cancela la edición
+let ultimosOpts = null; // proveedor/modelo/apiKey de la última generación, para regenerar sin repetir el paso 1
+let pendienteContinuar = null; // datos guardados mientras se espera a que el usuario revise/edite el prompt mejorado
+
+/* ============================================================================
+ * GESTIÓN DE PROVEEDOR / MODELO / API KEY
+ * ==========================================================================*/
+function proveedorActivo(){ return selProveedor.value; }
+
+// Esta versión (GenPatMod, no restringida) no fuerza ningún tope de tokens
+// de salida para ningún proveedor: el límite documentado del modelo activo
+// se muestra solo como información (ver ajustarLimiteTokens).
+function obtenerMaxTokens(){
+  const valor = parseInt(inputMaxTokens.value, 10);
+  return valor && valor >= 256 ? valor : 4096;
+}
+
+function ajustarLimiteTokens(){
+  const limite = limiteTokensModelo(modeloActivo());
+  inputMaxTokens.removeAttribute("max");
+  limiteTokensModeloDiv.textContent = `Máximo documentado para este modelo: ${limite.toLocaleString("es-ES")} tokens (la aplicación no fuerza este tope: es solo informativo, puedes escribir cualquier valor).`;
+}
+
+function modeloActivo(){
+  return selModelo.value === "__otro__" ? inputModeloOtro.value.trim() : selModelo.value;
+}
+
+function repintarModelos(){
+  const cfg = MODELOS_POR_PROVEEDOR[proveedorActivo()];
+  selModelo.innerHTML = "";
+  cfg.modelos.forEach(m => {
+    const op = document.createElement("option");
+    op.value = m; op.textContent = m;
+    if (m === cfg.porDefecto) op.selected = true;
+    selModelo.appendChild(op);
+  });
+  const opOtro = document.createElement("option");
+  opOtro.value = "__otro__"; opOtro.textContent = "Otro…";
+  selModelo.appendChild(opOtro);
+  modeloOtroWrap.style.display = "none";
+}
+
+function cargarKeyGuardada(){
+  const clave = localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || "";
+  inputApiKey.value = clave;
+  actualizarEstadoKey();
+}
+
+function actualizarEstadoKey(){
+  const hay = !!localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]);
+  estadoKey.textContent = hay ? "✅ Hay una clave guardada para este proveedor." : "No hay ninguna clave guardada para este proveedor.";
+  estadoKey.className = "estado-key" + (hay ? " si" : "");
+  actualizarBotonGenerar();
+}
+
+function validarFormatoKey(proveedor, key){
+  if (!key) return false;
+  if (proveedor === "anthropic") return key.startsWith("sk-ant-");
+  if (proveedor === "openai") return key.startsWith("sk-");
+  if (proveedor === "gemini") return key.startsWith("AIza");
+  return true;
+}
+
+selProveedor.addEventListener("change", () => { repintarModelos(); cargarKeyGuardada(); ajustarLimiteTokens(); });
+selModelo.addEventListener("change", () => {
+  modeloOtroWrap.style.display = selModelo.value === "__otro__" ? "block" : "none";
+  ajustarLimiteTokens();
+});
+inputModeloOtro.addEventListener("input", ajustarLimiteTokens);
+
+$("btn-guardar-key").addEventListener("click", () => {
+  const key = inputApiKey.value.trim();
+  if (!key){ alert("Escribe una API key antes de guardar."); return; }
+  if (!validarFormatoKey(proveedorActivo(), key)){
+    if (!confirm("El formato de la clave no parece habitual para este proveedor. ¿Guardarla igualmente?")) return;
+  }
+  localStorage.setItem(CLAVES_LOCALSTORAGE[proveedorActivo()], key);
+  actualizarEstadoKey();
+});
+
+$("btn-borrar-key").addEventListener("click", () => {
+  localStorage.removeItem(CLAVES_LOCALSTORAGE[proveedorActivo()]);
+  inputApiKey.value = "";
+  actualizarEstadoKey();
+});
+
+$("btn-mostrar-key").addEventListener("click", () => {
+  const mostrar = inputApiKey.type === "password";
+  inputApiKey.type = mostrar ? "text" : "password";
+  $("btn-mostrar-key").textContent = mostrar ? "Ocultar" : "Mostrar";
+  $("btn-mostrar-key").setAttribute("aria-pressed", String(mostrar));
+});
+
+inputIdea.addEventListener("input", actualizarBotonGenerar);
+inputApiKey.addEventListener("input", actualizarBotonGenerar);
+
+function actualizarBotonGenerar(){
+  const hayKey = !!(localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || inputApiKey.value.trim());
+  const hayIdea = inputIdea.value.trim().length > 0;
+  btnGenerar.disabled = !(hayKey && hayIdea);
+  btnEstimarTokens.disabled = !(hayKey && hayIdea);
+}
+
+repintarModelos();
+cargarKeyGuardada();
+ajustarLimiteTokens();
+
+/* ============================================================================
+ * LLAMADA UNIFICADA A LA IA (Anthropic / OpenAI / Gemini)
+ * ==========================================================================*/
+// Permite cancelar una generación en curso desde el botón "Detener generación".
+let controladorCancelacion = null;
+class OperacionCancelada extends Error {}
+
+async function fetchConTimeout(url, opciones, timeoutMs = 60000){
+  const controlador = new AbortController();
+  const id = setTimeout(() => controlador.abort(), timeoutMs);
+  const senalCancelacion = controladorCancelacion ? controladorCancelacion.signal : null;
+  const onCancelacionGlobal = () => controlador.abort();
+  if (senalCancelacion) senalCancelacion.addEventListener("abort", onCancelacionGlobal);
+  try{
+    return await fetch(url, {...opciones, signal: controlador.signal});
+  } catch(e){
+    if (senalCancelacion && senalCancelacion.aborted) throw new OperacionCancelada("Generación detenida por el usuario.");
+    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (60 s). Inténtalo de nuevo.");
+    throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
+  } finally {
+    clearTimeout(id);
+    if (senalCancelacion) senalCancelacion.removeEventListener("abort", onCancelacionGlobal);
+  }
+}
+
+function mensajeErrorHttp(status, cuerpo){
+  if (status === 401 || status === 403) return "La API key no es válida o no tiene permisos (código " + status + ").";
+  if (status === 429) return "Se ha alcanzado el límite de uso de la API (código 429). Espera unos segundos e inténtalo de nuevo.";
+  if (status === 404) return "El modelo indicado no existe o no está disponible en tu cuenta (código 404). Revisa el identificador del modelo.";
+  const detalle = cuerpo && (cuerpo.error && cuerpo.error.message ? cuerpo.error.message : JSON.stringify(cuerpo).slice(0,200));
+  return "Error del proveedor (código " + status + ")" + (detalle ? ": " + detalle : ".");
+}
+// Algunos modelos de OpenAI (p. ej. la familia de razonamiento gpt-6-*) ya no
+// aceptan "max_tokens" y devuelven un error 400 pidiendo "max_completion_tokens"
+// en su lugar. Se detecta ese error concreto en el cuerpo de la respuesta para
+// reintentar la llamada una única vez renombrando el parámetro, sin necesidad
+// de mantener una lista de qué modelos lo requieren.
+function requiereMaxCompletionTokens(cuerpo){
+  const msg = cuerpo && cuerpo.error && typeof cuerpo.error.message === "string" ? cuerpo.error.message : "";
+  return /max_tokens/i.test(msg) && /max_completion_tokens/i.test(msg);
+}
+
+async function llamarIA(systemPrompt, userPrompt, opts){
+  const {proveedor, modelo, apiKey, maxTokens} = opts;
+  let url, headers, body, extraerTexto, extraerUso, estaTruncado;
+
+  if (proveedor === "anthropic"){
+    url = "https://api.anthropic.com/v1/messages";
+    headers = {"content-type":"application/json","x-api-key": apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+    // PRO: caché de prompts de Anthropic (cache_control), activable con #chk-prompt-caching.
+    const cacheActivo = !!($("chk-prompt-caching") && $("chk-prompt-caching").checked);
+    const systemBody = cacheActivo
+      ? [{type: "text", text: systemPrompt, cache_control: {type: "ephemeral"}}]
+      : systemPrompt;
+    body = {model: modelo, max_tokens: maxTokens, system: systemBody, messages: [{role:"user", content: userPrompt}]};
+    extraerTexto = (d) => (d.content && d.content[0] && d.content[0].text) || "";
+    extraerUso = (d) => ({entrada: d.usage?.input_tokens || 0, salida: d.usage?.output_tokens || 0});
+    estaTruncado = (d) => d.stop_reason === "max_tokens";
+  } else if (proveedor === "openai"){
+    url = "https://api.openai.com/v1/chat/completions";
+    headers = {"content-type":"application/json","Authorization":"Bearer " + apiKey};
+    body = {model: modelo, max_tokens: maxTokens, messages: [{role:"system", content: systemPrompt},{role:"user", content: userPrompt}]};
+    extraerTexto = (d) => (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
+    extraerUso = (d) => ({entrada: d.usage?.prompt_tokens || 0, salida: d.usage?.completion_tokens || 0});
+    estaTruncado = (d) => d.choices && d.choices[0] && d.choices[0].finish_reason === "length";
+  } else if (proveedor === "gemini"){
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelo) + ":generateContent?key=" + encodeURIComponent(apiKey);
+    headers = {"content-type":"application/json"};
+    body = {system_instruction: {parts: [{text: systemPrompt}]}, contents: [{role:"user", parts:[{text: userPrompt}]}], generationConfig: {maxOutputTokens: maxTokens}};
+    extraerTexto = (d) => (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0].text) || "";
+    extraerUso = (d) => ({entrada: d.usageMetadata?.promptTokenCount || 0, salida: d.usageMetadata?.candidatesTokenCount || 0});
+    estaTruncado = (d) => d.candidates && d.candidates[0] && d.candidates[0].finishReason === "MAX_TOKENS";
+  } else {
+    throw new Error("Proveedor desconocido: " + proveedor);
+  }
+
+  let resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  let data;
+  try { data = await resp.json(); } catch(e){ data = {}; }
+  if (!resp.ok && proveedor === "openai" && requiereMaxCompletionTokens(data)){
+    const { max_tokens, ...bodySinMaxTokens } = body;
+    const bodyAlt = { ...bodySinMaxTokens, max_completion_tokens: max_tokens };
+    resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(bodyAlt)});
+    try { data = await resp.json(); } catch(e){ data = {}; }
+  }
+
+  if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+
+  const texto = extraerTexto(data);
+  const uso = extraerUso(data);
+  const truncado = !!estaTruncado(data);
+
+  acumularCoste(modelo, uso.entrada, uso.salida);
+
+  return {texto, truncado, uso};
+}
+
+function acumularCoste(modelo, entrada, salida){
+  costeAcumulado.entrada += entrada;
+  costeAcumulado.salida += salida;
+  const precios = PRECIOS_POR_MTOK[modelo];
+  if (precios){
+    costeAcumulado.usd += (entrada / 1e6) * precios.in + (salida / 1e6) * precios.out;
+  }
+  pintarContadorCoste();
+}
+
+function pintarContadorCoste(){
+  const {entrada, salida, usd} = costeAcumulado;
+  const precioConocido = !!PRECIOS_POR_MTOK[modeloActivo()];
+  contadorCoste.textContent = `Tokens usados en esta sesión — entrada: ${entrada.toLocaleString("es-ES")}, salida: ${salida.toLocaleString("es-ES")}.` +
+    (precioConocido ? ` Coste estimado: $${usd.toFixed(4)} (aproximado, verifica las tarifas vigentes).` : " (no hay precio de referencia cargado para este modelo).");
+}
+
+/* ============================================================================
+ * PRO — CACHÉ DE RESULTADOS (dos claves independientes, almacén propio)
+ * GenPatMod tiene un pipeline en dos pasos de IA, cada uno con varias
+ * llamadas (planificación: 1 llamada; piezas: 1 llamada POR pieza), así que
+ * se cachea cada paso por separado:
+ * - cacheKeyPlan: idea + proveedor + modelo + máximo de tokens → evita
+ *   repetir la planificación completa de la prenda.
+ * - cacheKeyPieza: nombre + descripción de UNA pieza + proveedor + modelo +
+ *   máximo de tokens → evita repetir el dibujo de esa pieza concreta, y
+ *   permite reutilizarla aunque aparezca en una prenda distinta.
+ * A diferencia del historial visible (que guarda PDFs completos por
+ * generación), esta caché usa su propio almacén IndexedDB, pensado para
+ * guardar muchas entradas pequeñas (un plan o una pieza) en vez de PDFs.
+ * ==========================================================================*/
+const CACHE_DB = "genpatmod_cache";
+const CACHE_STORE = "entradas";
+function abrirCacheDb(){
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB){ reject(new Error("IndexedDB no disponible")); return; }
+    const req = indexedDB.open(CACHE_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(CACHE_STORE, {keyPath:"cacheKey"});
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function cacheTx(modo, accion){
+  const db = await abrirCacheDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CACHE_STORE, modo);
+    const store = tx.objectStore(CACHE_STORE);
+    let resultado;
+    const req = accion(store);
+    if (req) req.onsuccess = () => { resultado = req.result; };
+    tx.oncomplete = () => { db.close(); resolve(resultado); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function cacheGet(cacheKey){
+  if (!cacheKey) return null;
+  try {
+    const entrada = await cacheTx("readonly", s => s.get(cacheKey));
+    return entrada ? entrada.datos : null;
+  } catch(e){ return null; }
+}
+async function cacheSet(cacheKey, tipo, datos){
+  if (!cacheKey) return;
+  try { await cacheTx("readwrite", s => s.put({cacheKey, tipo, datos, createdAt: Date.now()})); }
+  catch(e){ /* la caché es best-effort: un fallo aquí no debe interrumpir la generación */ }
+  actualizarContadorCache();
+}
+async function actualizarContadorCache(){
+  try {
+    const todas = await cacheTx("readonly", s => s.getAll());
+    $("cache-contador").textContent = String((todas || []).length);
+  } catch(e){ $("cache-contador").textContent = "0"; }
+}
+async function vaciarCache(){
+  try { await cacheTx("readwrite", s => s.clear()); } catch(e){ /* nada que vaciar */ }
+  await actualizarContadorCache();
+}
+function fnv1a(str){
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h.toString(36);
+}
+function calcularCacheKeyPlan(idea, proveedor, modelo, maxTokens){
+  return "cp_" + fnv1a([idea, proveedor, modelo, maxTokens].join("||"));
+}
+function calcularCacheKeyPieza(nombre, descripcion, proveedor, modelo, maxTokens){
+  return "cz_" + fnv1a([nombre, descripcion, proveedor, modelo, maxTokens].join("||"));
+}
+function actualizarNotaPromptCaching(){
+  const nota = $("nota-prompt-caching");
+  if (!nota) return;
+  if (proveedorActivo() !== "anthropic"){
+    nota.textContent = "Solo tiene efecto con el proveedor Anthropic; con " + proveedorActivo() + " esta casilla no cambia nada.";
+    return;
+  }
+  const minimo = CACHE_MIN_TOKENS_ANTHROPIC[modeloActivo()];
+  nota.textContent = "Marca el bloque de instrucciones del sistema (planificación o dibujo de piezas) como reutilizable entre llamadas consecutivas a Anthropic, abaratando las siguientes." +
+    (minimo ? ` Mínimo cacheable del modelo activo: ${minimo.toLocaleString("es-ES")} tokens (si las instrucciones no lo alcanzan, Anthropic las procesa igual, sin coste extra ni ahorro).` : "");
+}
+selProveedor.addEventListener("change", actualizarNotaPromptCaching);
+selModelo.addEventListener("change", actualizarNotaPromptCaching);
+inputModeloOtro.addEventListener("input", actualizarNotaPromptCaching);
+
+/* ============================================================================
+ * ESTIMACIÓN PREVIA DE TOKENS DE ENTRADA (antes de lanzar la generación real)
+ * ==========================================================================*/
+// Cuenta los tokens de ENTRADA que consumiría el paso 1 (planificación de
+// piezas) con esta misma idea, sin generar nada ni gastar tokens de salida.
+// Anthropic y Gemini ofrecen un endpoint gratuito de conteo exacto; OpenAI
+// no lo ofrece y se recurre a una estimación aproximada. Los tokens de
+// SALIDA nunca se pueden conocer de antemano (dependen de lo que decida
+// generar el modelo, y aquí además hay varias llamadas posteriores por cada
+// pieza): lo único mostrable de la salida es el techo configurado por
+// llamada (maxTokens).
+async function contarTokensEntrada(systemPrompt, userPrompt, opts){
+  const {proveedor, modelo, apiKey} = opts;
+
+  if (proveedor === "anthropic"){
+    const url = "https://api.anthropic.com/v1/messages/count_tokens";
+    const headers = {"content-type":"application/json","x-api-key": apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+    const body = {model: modelo, system: systemPrompt, messages: [{role:"user", content: userPrompt}]};
+    const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+    let data; try { data = await resp.json(); } catch(e){ data = {}; }
+    if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+    return {entrada: data.input_tokens || 0, aproximado: false};
+  }
+
+  if (proveedor === "gemini"){
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelo) + ":countTokens?key=" + encodeURIComponent(apiKey);
+    const headers = {"content-type":"application/json"};
+    const body = {generateContentRequest: {model: "models/" + modelo, system_instruction: {parts: [{text: systemPrompt}]}, contents: [{role:"user", parts:[{text: userPrompt}]}]}};
+    const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+    let data; try { data = await resp.json(); } catch(e){ data = {}; }
+    if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
+    return {entrada: data.totalTokens || 0, aproximado: false};
+  }
+
+  // OpenAI no ofrece un endpoint público de conteo de tokens: se estima con
+  // una heurística aproximada (~4 caracteres por token).
+  const textoTotal = (systemPrompt || "") + " " + (userPrompt || "");
+  const entrada = Math.ceil(textoTotal.length / 4);
+  return {entrada, aproximado: true};
+}
+
+function formatearEstimacionTokens(entrada, aproximado, maxTokens, modelo){
+  const precios = PRECIOS_POR_MTOK[modelo];
+  let texto = (aproximado ? "≈ " : "") + entrada.toLocaleString("es-ES") + " tokens de entrada (paso 1: planificación)" +
+    (aproximado
+      ? " (estimación aproximada: este proveedor no ofrece un endpoint de conteo exacto)."
+      : " (conteo exacto facilitado por el proveedor; esta consulta no tiene coste).") +
+    ` Techo de tokens de salida configurado por llamada: ${maxTokens.toLocaleString("es-ES")} (el consumo real de salida depende de lo que genere el modelo, y esta app realiza varias llamadas: planificación + una por cada pieza).`;
+  if (precios){
+    const costeEntrada = (entrada/1e6)*precios.in;
+    const costeSalidaMax = (maxTokens/1e6)*precios.out;
+    texto += ` Coste estimado solo del paso 1: $${costeEntrada.toFixed(4)} de entrada${aproximado ? " (aprox.)" : ""} + hasta $${costeSalidaMax.toFixed(4)} de salida si se agotara el techo configurado.`;
+  } else {
+    texto += " (no hay precio de referencia cargado para este modelo).";
+  }
+  return texto;
+}
+
+btnEstimarTokens.addEventListener("click", async () => {
+  btnEstimarTokens.disabled = true;
+  estimacionTokensDiv.style.display = "none";
+  try{
+    const opts = {
+      proveedor: proveedorActivo(),
+      modelo: modeloActivo(),
+      apiKey: (inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || ""),
+      maxTokens: obtenerMaxTokens()
+    };
+    if (!opts.apiKey) throw new Error("Indica la API key del proveedor activo.");
+    if (!opts.modelo) throw new Error("Indica un identificador de modelo válido.");
+    const idea = inputIdea.value.trim();
+    if (!idea) throw new Error("Describe antes la idea inicial de la prenda.");
+    const userPrompt = "Idea inicial de la prenda: " + idea;
+    const {entrada, aproximado} = await contarTokensEntrada(SYSTEM_PROMPT_PLANIFICAR, userPrompt, opts);
+    estimacionTokensDiv.textContent = formatearEstimacionTokens(entrada, aproximado, opts.maxTokens, opts.modelo);
+    estimacionTokensDiv.style.display = "block";
+  } catch(err){
+    estimacionTokensDiv.textContent = "⚠️ No se ha podido estimar: " + (err.message || err);
+    estimacionTokensDiv.style.display = "block";
+  } finally {
+    actualizarBotonGenerar();
+  }
+});
+
+/* ============================================================================
+ * EXTRACCIÓN DE JSON / SVG DE LA RESPUESTA DEL MODELO
+ * ==========================================================================*/
+function extraerJSON(texto){
+  let limpio = texto.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try { return JSON.parse(limpio); } catch(e){}
+  const inicio = limpio.indexOf("{");
+  const fin = limpio.lastIndexOf("}");
+  if (inicio >= 0 && fin > inicio){
+    try { return JSON.parse(limpio.slice(inicio, fin+1)); } catch(e){}
+  }
+  return null;
+}
+
+// En estos SVG 1 unidad de usuario = 1 cm. Algunos modelos (p. ej. Haiku 4.5)
+// escriben el tamaño de letra CON unidad, normalmente en un bloque <style>
+// ("font-size: 0.6cm"). Pero 0.6cm equivale a 0.6 x 37.8 = 22.7 unidades, es
+// decir, un texto de 22 cm de alto: la pieza se mide enorme, se reduce hasta
+// quedar diminuta en la hoja y los textos salen gigantes y solapados. Esta
+// función convierte esas unidades a unidades de usuario (px = 1 unidad) y, si
+// aun así el tamaño es absurdo (> FONT_SIZE_MAX_CM), lo sustituye por el
+// tamaño estándar del system prompt (0.45–0.7).
+const CM_POR_UNIDAD_CSS = {cm: 1, mm: 0.1, in: 2.54, pt: 2.54 / 72, pc: 2.54 / 6};
+const FONT_SIZE_MAX_CM = 2;
+const FONT_SIZE_DEFECTO_CM = 0.6;
+function normalizarTamanosTexto(svg){
+  return svg.replace(/(font-size\s*[:=]\s*["']?\s*)(\d*\.?\d+)\s*(cm|mm|in|pt|pc|px|em|rem|%)?/gi, (m, pre, num, unidad) => {
+    const u = (unidad || "").toLowerCase();
+    if (u === "em" || u === "rem" || u === "%") return m; // tamaños relativos: no se tocan
+    let v = parseFloat(num);
+    if (!isFinite(v) || v <= 0) return m;
+    if (u in CM_POR_UNIDAD_CSS) v *= CM_POR_UNIDAD_CSS[u];
+    if (v > FONT_SIZE_MAX_CM) v = FONT_SIZE_DEFECTO_CM;
+    return pre + parseFloat(v.toFixed(3)) + "px";
+  });
+}
+
+function extraerSVG(texto){
+  let m = /```(?:xml|svg)?\s*(<svg[\s\S]*?<\/svg>)\s*```/i.exec(texto);
+  if (m) return normalizarTamanosTexto(m[1]);
+  m = /(<svg[\s\S]*?<\/svg>)/i.exec(texto);
+  return m ? normalizarTamanosTexto(m[1]) : "";
+}
+
+/* ============================================================================
+ * PASO 1 — PLANIFICAR LAS PIEZAS DE LA PRENDA
+ * ==========================================================================*/
+async function planificarPiezas(idea, opts, avisosTruncado){
+  const maxTokensBase = obtenerMaxTokens();
+  const userPrompt = "Idea inicial de la prenda: " + idea;
+  let resp = await llamarIA(SYSTEM_PROMPT_PLANIFICAR, userPrompt, {...opts, maxTokens: maxTokensBase});
+  let plan = extraerJSON(resp.texto);
+
+  if (!plan || !Array.isArray(plan.piezas) || plan.piezas.length === 0 || resp.truncado){
+    const userRetry = "Tu respuesta anterior no cumplía el formato pedido o estaba incompleta. " +
+      "Devuelve ÚNICAMENTE el objeto JSON válido y completo, sin texto adicional ni fences de markdown, " +
+      "con el esquema exacto indicado.\n\n" + userPrompt;
+    resp = await llamarIA(SYSTEM_PROMPT_PLANIFICAR, userRetry, {...opts, maxTokens: Math.round(maxTokensBase * 1.6)});
+    plan = extraerJSON(resp.texto);
+  }
+
+  if (resp.truncado && avisosTruncado) avisosTruncado.push("la planificación de las piezas");
+
+  if (!plan || !Array.isArray(plan.piezas) || plan.piezas.length === 0){
+    throw new Error("No se ha podido obtener un plan de piezas válido. Prueba a describir la idea con más detalle.");
+  }
+  return plan;
+}
+
+/* ============================================================================
+ * PASO 2 — GENERAR EL SVG DE CADA PIEZA
+ * ==========================================================================*/
+async function generarSVGPieza(nombre, descripcion, opts, avisosTruncado){
+  const userPrompt = `Genera la pieza de patrón de corte descrita a continuación, siguiendo estrictamente
+las reglas del system prompt (coordenadas en centímetros reales, viewBox coincidente
+con width/height, sin escalar ni recortar la pieza).
+
+Pieza: ${nombre}
+Descripción: ${descripcion}`;
+
+  const maxTokensBase = obtenerMaxTokens();
+  let resp = await llamarIA(SYSTEM_PROMPT_PATRON, userPrompt, {...opts, maxTokens: maxTokensBase});
+  let svg = extraerSVG(resp.texto);
+
+  if (!svg || resp.truncado){
+    const userRetry = "Tu respuesta anterior no contenía un SVG válido y completo, o estaba truncada. " +
+      "Devuelve ÚNICAMENTE el bloque de código SVG completo (con apertura y cierre </svg>), sin texto adicional.\n\n" + userPrompt;
+    resp = await llamarIA(SYSTEM_PROMPT_PATRON, userRetry, {...opts, maxTokens: Math.round(maxTokensBase * 1.6)});
+    svg = extraerSVG(resp.texto);
+  }
+
+  if (resp.truncado && avisosTruncado) avisosTruncado.push(`la pieza "${nombre}"`);
+
+  if (!svg) throw new Error(`No se ha podido generar un SVG válido para la pieza "${nombre}".`);
+  return svg;
+}
+
+/* ============================================================================
+ * PIPELINE DETERMINISTA DE MAQUETACIÓN A4 (sin IA) — ported del cuaderno Python
+ * ==========================================================================*/
+function parsearLongitud(valor){
+  const m = /^\s*([\d.]+)\s*([a-zA-Z%]*)\s*$/.exec(valor || "");
+  if (!m) return null;
+  const numero = parseFloat(m[1]);
+  const unidad = m[2].toLowerCase();
+  if (unidad === "%") return null;
+  return numero * (UNIDAD_A_CM[unidad] ?? 1.0);
+}
+
+function parsearDimensionesSVG(svg){
+  const mOpen = /<svg[^>]*>/i.exec(svg);
+  if (!mOpen) throw new Error("El SVG generado no contiene una etiqueta <svg> válida.");
+  const etiqueta = mOpen[0];
+
+  const vbMatch = /viewBox\s*=\s*["']([^"']+)["']/i.exec(etiqueta);
+  let viewbox = null;
+  if (vbMatch){
+    const partes = vbMatch[1].trim().split(/[\s,]+/).map(Number);
+    if (partes.length === 4 && partes.every(n => !isNaN(n))) viewbox = partes;
+  }
+
+  const wMatch = /\bwidth\s*=\s*["']([^"']+)["']/i.exec(etiqueta);
+  const hMatch = /\bheight\s*=\s*["']([^"']+)["']/i.exec(etiqueta);
+  let anchoCm = null, altoCm = null;
+  if (wMatch && hMatch){
+    anchoCm = parsearLongitud(wMatch[1]);
+    altoCm = parsearLongitud(hMatch[1]);
+  }
+  if ((anchoCm == null || altoCm == null) && viewbox){
+    anchoCm = viewbox[2]; altoCm = viewbox[3];
+  }
+  if (!anchoCm || !altoCm || anchoCm <= 0 || altoCm <= 0){
+    throw new Error("No se han podido determinar las dimensiones físicas del SVG generado.");
+  }
+  if (!viewbox) viewbox = [0, 0, anchoCm, altoCm];
+  return {anchoCm, altoCm, viewbox};
+}
+
+function extraerContenidoInterno(svg){
+  const m = /<svg[^>]*>([\s\S]*)<\/svg>/i.exec(svg);
+  return m ? m[1] : "";
+}
+
+// Red de seguridad determinista de legibilidad: el system prompt ya le pide al
+// modelo tamaños de letra razonables, pero una pieza grande que tiene que
+// reducirse mucho para caber en A4 (factorX/factorY < 1) puede dejar, aun así,
+// textos impresos demasiado pequeños. Esta función mide el tamaño de letra
+// REALMENTE impreso de cada <text> (su font-size declarado multiplicado por el
+// factor de escala final a mm) y, si queda por debajo de un mínimo legible,
+// lo amplía envolviéndolo en un <g> con su propio scale(), manteniendo fijo su
+// punto de anclaje (x,y) para no desplazarlo ni hacer que invada otro texto
+// más de lo estrictamente necesario. Si el SVG no se puede parsear, se recurre
+// a la extracción por regex de siempre, sin aplicar ningún ajuste.
+const MIN_LEGIBLE_MM = 2.6;
+function repararTextosParaLegibilidad(svgPieza, factorX, factorY){
+  try{
+    const doc = new DOMParser().parseFromString(svgPieza, "image/svg+xml");
+    const raiz = doc.documentElement;
+    if (!raiz || raiz.nodeName.toLowerCase() !== "svg" || raiz.querySelector("parsererror")){
+      return extraerContenidoInterno(svgPieza);
+    }
+    const svgNS = "http://www.w3.org/2000/svg";
+    const factor = Math.min(factorX, factorY) || 1.0;
+    const textos = Array.from(raiz.getElementsByTagNameNS(svgNS, "text"));
+    textos.forEach(txt => {
+      let fsAttr = parseFloat(txt.getAttribute("font-size"));
+      if (!fsAttr || !isFinite(fsAttr) || fsAttr <= 0) fsAttr = 0.55; // tamaño típico por defecto del system prompt
+      const impresoMm = fsAttr * factor;
+      if (impresoMm >= MIN_LEGIBLE_MM) return; // ya es legible, no se toca
+      const boost = MIN_LEGIBLE_MM / impresoMm;
+      const x = parseFloat(txt.getAttribute("x")) || 0;
+      const y = parseFloat(txt.getAttribute("y")) || 0;
+      const g = doc.createElementNS(svgNS, "g");
+      g.setAttribute("transform", `translate(${x},${y}) scale(${boost}) translate(${-x},${-y})`);
+      txt.parentNode.insertBefore(g, txt);
+      g.appendChild(txt);
+    });
+    return Array.from(raiz.childNodes).map(n => new XMLSerializer().serializeToString(n)).join("");
+  } catch(e){
+    return extraerContenidoInterno(svgPieza);
+  }
+}
+
+function escapeXML(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function resolverNombreFichero(valorCampo, extension, nombrePorDefecto){
+  let nombre = (valorCampo || "").trim();
+  if (!nombre) return nombrePorDefecto;
+  if (!nombre.toLowerCase().endsWith("." + extension)) nombre += "." + extension;
+  return nombre;
+}
+
+// Mide el rectángulo REAL que ocupa el contenido dibujado por el modelo
+// (incluyendo cualquier texto o trazo que sobresalga de las dimensiones que
+// el propio SVG dice tener). Es la fuente de verdad para el escalado: así, si
+// el modelo declara mal su width/height/viewBox, o un texto se sale del
+// límite que él mismo se puso, el patrón se sigue ajustando correctamente
+// a la página en lugar de desbordarla.
+function medirBBoxReal(svgPieza){
+  try{
+    const doc = new DOMParser().parseFromString(svgPieza, "image/svg+xml");
+    const raiz = doc.documentElement;
+    if (!raiz || raiz.nodeName.toLowerCase() !== "svg") return null;
+    const svgNS = "http://www.w3.org/2000/svg";
+    const wrapper = document.createElementNS(svgNS, "svg");
+    const g = document.createElementNS(svgNS, "g");
+    Array.from(raiz.childNodes).forEach(nodo => {
+      if (nodo.nodeType === 1) g.appendChild(nodo.cloneNode(true)); // solo elementos
+    });
+    wrapper.appendChild(g);
+    svgRenderHost.innerHTML = "";
+    svgRenderHost.appendChild(wrapper);
+    const caja = g.getBBox();
+    svgRenderHost.innerHTML = "";
+    if (!caja || !isFinite(caja.width) || !isFinite(caja.height) || caja.width <= 0 || caja.height <= 0) return null;
+    return {x: caja.x, y: caja.y, width: caja.width, height: caja.height};
+  } catch(e){
+    svgRenderHost.innerHTML = "";
+    return null;
+  }
+}
+
+function construirPaginaA4(svgPieza, tituloPrenda, nombrePieza, indicePieza, totalPiezas){
+  // Preferimos SIEMPRE la caja real medida en el navegador (incluye textos que
+  // se salgan del viewBox declarado). Solo si no se puede medir recurrimos a
+  // los atributos que dice tener el propio SVG, como red de seguridad.
+  const cajaReal = medirBBoxReal(svgPieza);
+  let anchoCm, altoCm, vbX, vbY, factorXBase, factorYBase;
+  if (cajaReal){
+    anchoCm = cajaReal.width;
+    altoCm = cajaReal.height;
+    vbX = cajaReal.x;
+    vbY = cajaReal.y;
+    factorXBase = 1.0; // 1 unidad del SVG = 1 cm, según el system prompt de patronaje
+    factorYBase = 1.0;
+  } else {
+    const declarado = parsearDimensionesSVG(svgPieza);
+    anchoCm = declarado.anchoCm;
+    altoCm = declarado.altoCm;
+    [vbX, vbY] = declarado.viewbox;
+    const vbW = declarado.viewbox[2], vbH = declarado.viewbox[3];
+    factorXBase = vbW ? anchoCm / vbW : 1.0;
+    factorYBase = vbH ? altoCm / vbH : 1.0;
+  }
+
+  const cmPorUnidadX = factorXBase;
+  const cmPorUnidadY = factorYBase;
+  const anchoMm = anchoCm * 10.0, altoMm = altoCm * 10.0;
+
+  // El alto disponible excluye la franja reservada para la regla de control,
+  // así la pieza nunca puede solaparse con ella.
+  const escalaAjustar = Math.min(AREA_ANCHO_MM / anchoMm, AREA_ALTO_UTIL_MM / altoMm);
+  const escalaFinal = Math.min(1.0, escalaAjustar); // nunca ampliamos, solo reducimos si hace falta
+
+  const anchoFinalMm = anchoMm * escalaFinal, altoFinalMm = altoMm * escalaFinal;
+  const offsetX = MARGEN_MM + (AREA_ANCHO_MM - anchoFinalMm) / 2.0;
+  const offsetY = MARGEN_MM + (AREA_ALTO_UTIL_MM - altoFinalMm) / 2.0;
+
+  const factorX = cmPorUnidadX * 10.0 * escalaFinal;
+  const factorY = cmPorUnidadY * 10.0 * escalaFinal;
+
+  // Aplicamos la red de seguridad de legibilidad ya con el factor de escala
+  // final conocido, para saber exactamente qué tamaño va a quedar impreso.
+  const contenido = repararTextosParaLegibilidad(svgPieza, factorX, factorY);
+
+  const longitudReglaMm = 100.0 * escalaFinal;
+  const reglaY = A4_ALTO_MM - MARGEN_MM - 6;
+  const reglaX0 = MARGEN_MM;
+
+  const textoEscala = Math.abs(escalaFinal - 1.0) < 1e-6 ? "1:1 (tamaño real)" : `1:${(1/escalaFinal).toFixed(2)}`;
+
+  // --- Cabecera en dos líneas, con el tamaño de letra autoajustado para que
+  //     NUNCA se salga del ancho imprimible, sea cual sea la longitud del
+  //     nombre de la prenda o de la pieza. -------------------------------
+  const FUENTE = "Helvetica, Arial, sans-serif";
+  const linea1Texto = `${tituloPrenda} — ${nombrePieza.replace(/_/g," ").toUpperCase()}`;
+  const linea2Texto = `Pieza ${indicePieza}/${totalPiezas} — Escala: ${textoEscala} — Tamaño real: ${anchoCm.toFixed(1)} x ${altoCm.toFixed(1)} cm`;
+  const fsLinea1 = ajustarFontSizeParaCaber(linea1Texto, AREA_ANCHO_MM, 4.2, 2.6, FUENTE);
+  const fsLinea2 = ajustarFontSizeParaCaber(linea2Texto, AREA_ANCHO_MM, 3.4, 2.4, FUENTE);
+  const linea1 = escapeXML(linea1Texto);
+  const linea2 = escapeXML(linea2Texto);
+
+  // --- Texto de la regla, también autoajustado por seguridad --------------
+  const textoRegla = `Regla de control: esta línea mide 10 cm reales si se imprime SIN "ajustar a página".`;
+  const fsRegla = ajustarFontSizeParaCaber(textoRegla, AREA_ANCHO_MM, 3.2, 2.2, FUENTE);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${A4_ANCHO_MM}mm" height="${A4_ALTO_MM}mm" viewBox="0 0 ${A4_ANCHO_MM} ${A4_ALTO_MM}">
+  <rect x="0" y="0" width="${A4_ANCHO_MM}" height="${A4_ALTO_MM}" fill="white"/>
+  <rect x="${MARGEN_MM}" y="${MARGEN_MM}" width="${AREA_ANCHO_MM}" height="${AREA_ALTO_MM}" fill="none" stroke="#cccccc" stroke-width="0.3" stroke-dasharray="2,2"/>
+  <text x="${MARGEN_MM}" y="5" font-family="${FUENTE}" font-size="${fsLinea1.toFixed(2)}" fill="#000000">${linea1}</text>
+  <text x="${MARGEN_MM}" y="9.3" font-family="${FUENTE}" font-size="${fsLinea2.toFixed(2)}" fill="#000000">${linea2}</text>
+  <g transform="translate(${offsetX},${offsetY}) scale(${factorX},${factorY}) translate(${-vbX},${-vbY})">
+    ${contenido}
+  </g>
+  <line x1="${reglaX0}" y1="${reglaY}" x2="${reglaX0 + longitudReglaMm}" y2="${reglaY}" stroke="black" stroke-width="0.4"/>
+  <line x1="${reglaX0}" y1="${reglaY - 1}" x2="${reglaX0}" y2="${reglaY + 1}" stroke="black" stroke-width="0.4"/>
+  <line x1="${reglaX0 + longitudReglaMm}" y1="${reglaY - 1}" x2="${reglaX0 + longitudReglaMm}" y2="${reglaY + 1}" stroke="black" stroke-width="0.4"/>
+  <text x="${reglaX0}" y="${reglaY + 4.5}" font-family="${FUENTE}" font-size="${fsRegla.toFixed(2)}" fill="#000000">${escapeXML(textoRegla)}</text>
+</svg>`;
+}
+
+function agregarPaginasResumen(pdf, nombrePrenda, textoResumen){
+  const MARGEN = 15;
+  const ANCHO_UTIL = A4_ANCHO_MM - 2 * MARGEN;
+  const ALTO_LINEA = 5;
+  const Y_INICIO_P1 = 32;
+  const Y_LIMITE = A4_ALTO_MM - MARGEN;
+  const Y_INICIO_P2 = MARGEN;
+
+  const lineasPorPagina1 = Math.floor((Y_LIMITE - Y_INICIO_P1) / ALTO_LINEA);
+  const lineasPorPagina2 = Math.floor((Y_LIMITE - Y_INICIO_P2) / ALTO_LINEA);
+  const maxLineasTotal = lineasPorPagina1 + lineasPorPagina2;
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
+  let lineas = pdf.splitTextToSize(textoResumen, ANCHO_UTIL);
+  if (lineas.length > maxLineasTotal){
+    lineas = lineas.slice(0, maxLineasTotal - 1);
+    lineas.push("[…] contenido truncado — el plan completo se muestra en pantalla.");
+  }
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(15);
+  pdf.text(nombrePrenda, MARGEN, 20);
+  pdf.setDrawColor(200);
+  pdf.line(MARGEN, 24, A4_ANCHO_MM - MARGEN, 24);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
+  let y = Y_INICIO_P1;
+  let enPagina2 = false;
+  lineas.forEach(linea => {
+    if (!enPagina2 && y > Y_LIMITE){
+      pdf.addPage("a4", "portrait");
+      enPagina2 = true;
+      y = Y_INICIO_P2;
+    }
+    pdf.text(linea, MARGEN, y);
+    y += ALTO_LINEA;
+  });
+}
+
+async function construirPDF(piezas, nombrePrenda, textoResumen){
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
+
+  agregarPaginasResumen(pdf, nombrePrenda, textoResumen);
+
+  for (let i = 0; i < piezas.length; i++){
+    pdf.addPage("a4", "portrait");
+    const paginaSVG = construirPaginaA4(piezas[i].svg, nombrePrenda, piezas[i].nombre, i+1, piezas.length);
+    const svgEl = new DOMParser().parseFromString(paginaSVG, "image/svg+xml").documentElement;
+    svgRenderHost.innerHTML = "";
+    svgRenderHost.appendChild(svgEl);
+    await pdf.svg(svgEl, {x:0, y:0, width:A4_ANCHO_MM, height:A4_ALTO_MM});
+  }
+  svgRenderHost.innerHTML = "";
+  return pdf;
+}
+
+/* ============================================================================
+ * RENDERIZADO DE PIEZAS EN PANTALLA (vista previa)
+ * ==========================================================================*/
+function svgParaPreview(svgString){
+  try{
+    const doc = new DOMParser().parseFromString(svgString, "image/svg+xml").documentElement;
+    doc.removeAttribute("width");
+    doc.removeAttribute("height");
+    return new XMLSerializer().serializeToString(doc);
+  } catch(e){ return svgString; }
+}
+
+async function guardarArchivo(nombreArchivo, contenido, tipoMime){
+  // Dentro de un Artifact publicado, los enlaces de descarga clásicos no
+  // funcionan: se usa la capacidad "downloads" del visor. Fuera de ese
+  // entorno (fichero abierto directamente, o alojado en tu propio servidor
+  // o GitHub Pages) no existe window.claude, así que se recurre a la
+  // descarga normal del navegador.
+  let downloads = null;
+  if (window.claude && window.claude.use){
+    try { downloads = await window.claude.use("downloads"); } catch(e){ downloads = null; }
+  }
+  const datos = contenido instanceof Blob ? contenido : new Blob([contenido], {type: tipoMime});
+  if (downloads){
+    try{
+      await downloads.save({filename: nombreArchivo, data: datos});
+    } catch(err){
+      console.error("No se ha podido guardar el fichero:", err);
+      if (!err || err.code !== "declined"){
+        alert(`No se ha podido guardar "${nombreArchivo}": ${(err && (err.message || err.code)) || "error desconocido"}.`);
+      }
+    }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(datos);
+  a.download = nombreArchivo;
+  a.click();
+}
+
+function pintarPieza(nombre, descripcion, svg){
+  const card = document.createElement("div");
+  card.className = "pieza-card";
+  card.innerHTML = `<h3>${escapeXML(nombre.replace(/_/g," ").toUpperCase())}</h3>
+    <div class="svg-wrap">${svgParaPreview(svg)}</div>
+    <p>${escapeXML(descripcion)}</p>
+    <div class="botones"><button class="secundario btn-descargar-svg">⬇️ Descargar SVG</button></div>`;
+  card.querySelector(".btn-descargar-svg").addEventListener("click", () => {
+    const nombreArchivo = nombre.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".svg";
+    guardarArchivo(nombreArchivo, svg, "image/svg+xml");
+  });
+  resultadoDiv.appendChild(card);
+}
+
+function formatearNombrePieza(nombre){
+  const limpio = String(nombre || "").replace(/_/g," ").trim();
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1);
+}
+
+function generarTextoResumen(plan){
+  let texto = `Prenda: ${plan.prenda}\n\nPiezas (${plan.piezas.length}):\n`;
+  plan.piezas.forEach((p, i) => {
+    texto += `\n${i+1}. ${formatearNombrePieza(p.nombre)}\n   ${p.descripcion}\n`;
+  });
+  return texto;
+}
+
+function pintarPromptMejorado(plan){
+  ultimoPlanGenerado = plan;
+  promptMejoradoTexto.value = generarTextoResumen(plan);
+  promptMejoradoWrap.style.display = "block";
+}
+
+// Interpreta de vuelta el texto del "prompt mejorado" (con el mismo formato que
+// genera generarTextoResumen) tras haber sido editado a mano por el usuario.
+function parsearTextoResumenEditado(texto){
+  const mPrenda = /^Prenda:\s*(.+)$/m.exec(texto);
+  if (!mPrenda) return null;
+  const prenda = mPrenda[1].trim();
+  if (!prenda) return null;
+
+  const piezas = [];
+  let actual = null;
+  texto.split("\n").forEach(linea => {
+    const mNum = /^\s*\d+\.\s+(.+?)\s*$/.exec(linea);
+    if (mNum){
+      if (actual && actual.nombre) piezas.push(actual);
+      actual = {nombre: mNum[1].trim(), descripcion: ""};
+    } else if (actual && /^Prenda:/.test(linea) === false && /^Piezas\s*\(/.test(linea) === false && linea.trim()){
+      actual.descripcion += (actual.descripcion ? " " : "") + linea.trim();
+    }
+  });
+  if (actual && actual.nombre) piezas.push(actual);
+
+  if (piezas.length === 0) return null;
+  return {prenda, piezas};
+}
+
+function mostrarAvisoTruncado(avisosTruncado){
+  if (!avisosTruncado || avisosTruncado.length === 0){
+    avisoTruncadoDiv.style.display = "none";
+    avisoTruncadoDiv.textContent = "";
+    return;
+  }
+  avisoTruncadoDiv.textContent = "⚠️ La respuesta de la IA se ha quedado corta por falta de tokens en: " +
+    avisosTruncado.join(", ") + ". El resultado puede estar incompleto: sube el \"Nº máximo de tokens de salida\" y vuelve a generar.";
+  avisoTruncadoDiv.style.display = "block";
+}
+
+/* ============================================================================
+ * ORQUESTACIÓN PRINCIPAL
+ * ==========================================================================*/
+// Cada caja de estado (la del plan de piezas y la de la generación de las
+// piezas) se controla igual: "busy" muestra el círculo de carga, "ok" y
+// "error" lo detienen y solo dejan el mensaje.
+function crearControladorEstado(contenedor, textoEl){
+  return {
+    fijar(texto, tipo){
+      contenedor.classList.add("visible");
+      contenedor.classList.toggle("error", tipo === "error");
+      contenedor.classList.toggle("ok", tipo === "ok");
+      textoEl.textContent = texto;
+    },
+    ocultar(){
+      contenedor.classList.remove("visible", "error", "ok");
+    }
+  };
+}
+const estadoPlan = crearControladorEstado(estadoGeneracion, estadoTexto);
+const estadoPiezas = crearControladorEstado(estadoGeneracionPiezas, estadoTextoPiezas);
+let cajaEstadoActiva = estadoPlan; // a qué caja dirigir un error o una cancelación
+
+function iniciarCancelable(){
+  controladorCancelacion = new AbortController();
+  btnDetener.disabled = false;
+  btnDetener.style.display = "inline-block";
+  btnDetenerPiezas.disabled = false;
+  btnDetenerPiezas.style.display = "inline-block";
+}
+function finalizarCancelable(){
+  controladorCancelacion = null;
+  btnDetener.style.display = "none";
+  btnDetenerPiezas.style.display = "none";
+}
+function solicitarDetener(){
+  if (controladorCancelacion) controladorCancelacion.abort();
+  btnDetener.disabled = true;
+  btnDetenerPiezas.disabled = true;
+}
+btnDetener.addEventListener("click", solicitarDetener);
+btnDetenerPiezas.addEventListener("click", solicitarDetener);
+
+async function generarPiezasYPDF(plan, opts, ideaParaExportar, promptsPrevios, avisosTruncado){
+  cajaEstadoActiva = estadoPiezas;
+  resultadoDiv.innerHTML = "";
+  btnDescargarPdf.style.display = "none";
+  pdfPreview.style.display = "none";
+  btnExportarTxt.disabled = true;
+
+  const usarCache = !!($("chk-cache-resultados") && $("chk-cache-resultados").checked);
+  const maxTokensActual = obtenerMaxTokens();
+  const promptsUsados = promptsPrevios.slice();
+  const piezasGeneradas = [];
+  for (let i = 0; i < plan.piezas.length; i++){
+    if (controladorCancelacion && controladorCancelacion.signal.aborted) throw new OperacionCancelada("Generación detenida por el usuario.");
+    const pieza = plan.piezas[i];
+    // PRO: caché de resultados (paso 2 — una clave por cada pieza).
+    const cacheKeyPieza = calcularCacheKeyPieza(pieza.nombre, pieza.descripcion, opts.proveedor, opts.modelo, maxTokensActual);
+    let svg = usarCache ? await cacheGet(cacheKeyPieza) : null;
+    if (svg){
+      estadoPiezas.fijar(`⚡ Pieza "${pieza.nombre}" obtenida de la caché (${i+1}/${plan.piezas.length}).`, "busy");
+    } else {
+      estadoPiezas.fijar(`Generando el patrón de la pieza "${pieza.nombre}" (${i+1}/${plan.piezas.length})…`, "busy");
+      svg = await generarSVGPieza(pieza.nombre, pieza.descripcion, opts, avisosTruncado);
+      if (usarCache) await cacheSet(cacheKeyPieza, "pieza", svg);
+    }
+    piezasGeneradas.push({nombre: pieza.nombre, descripcion: pieza.descripcion, svg});
+    pintarPieza(pieza.nombre, pieza.descripcion, svg);
+    promptsUsados.push({etapa:"Pieza: " + pieza.nombre, system: SYSTEM_PROMPT_PATRON, user: "Descripción: " + pieza.descripcion, resultado: "(SVG generado, ver PDF)"});
+  }
+
+  estadoPiezas.fijar("Construyendo el PDF (portada + una página A4 por pieza, autoescalado)…", "busy");
+  const pdf = await construirPDF(piezasGeneradas, plan.prenda, generarTextoResumen(plan));
+  const blobUrl = pdf.output("bloburl");
+  ultimoPdfBlobUrl = blobUrl;
+
+  pdfPreview.src = blobUrl;
+  pdfPreview.style.display = "block";
+  btnDescargarPdf.style.display = "inline-block";
+  btnDescargarPdf.onclick = () => {
+    const nombreDefecto = "patron_" + plan.prenda.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".pdf";
+    const nombreArchivo = resolverNombreFichero(inputNombrePdf.value, "pdf", nombreDefecto);
+    guardarArchivo(nombreArchivo, pdf.output("blob"), "application/pdf");
+  };
+
+  ultimosPrompts = {idea: ideaParaExportar, plan, promptsUsados};
+  btnExportarTxt.disabled = false;
+
+  mostrarAvisoTruncado(avisosTruncado);
+  estadoPiezas.fijar(`Listo. Se han generado ${piezasGeneradas.length} pieza(s) para "${plan.prenda}".`, "ok");
+
+  try {
+    ultimoRegistroHistorialId = await guardarEnHistorial({
+      idea: ideaParaExportar, plan,
+      proveedor: opts.proveedor, modelo: opts.modelo,
+      pdfBlob: pdf.output("blob")
+    });
+  } catch (e) {
+    console.error("No se ha podido guardar en el historial:", e);
+  }
+
+  // ProMax: con el patrón ya hecho se puede pedir la imagen de la prenda.
+  prepararSeccionImagen(plan);
+}
+
+btnGenerar.addEventListener("click", async () => {
+  const proveedor = proveedorActivo();
+  const modelo = modeloActivo();
+  const apiKey = inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedor]) || "";
+  const idea = inputIdea.value.trim();
+
+  if (!modelo){ alert("Indica un identificador de modelo."); return; }
+  if (!validarFormatoKey(proveedor, apiKey)){
+    if (!confirm("El formato de la API key no parece habitual para " + proveedor + ". ¿Continuar de todos modos?")) return;
+  }
+
+  btnGenerar.disabled = true;
+  panelResultado.style.display = "block";
+  promptMejoradoWrap.style.display = "none";
+  promptMejoradoTexto.value = "";
+  promptMejoradoTexto.readOnly = true;
+  btnEditarPrompt.textContent = "✏️ Editar prompt mejorado";
+  btnEditarPrompt.style.display = "inline-block";
+  btnContinuarGeneracion.style.display = "none";
+  btnRegenerarPrompt.style.display = "none";
+  pendienteContinuar = null;
+  mostrarAvisoTruncado(null);
+  estadoPiezas.ocultar();
+
+  const opts = {proveedor, modelo, apiKey};
+  ultimosOpts = opts;
+  const avisosTruncado = [];
+
+  cajaEstadoActiva = estadoPlan;
+  iniciarCancelable();
+  try{
+    // PRO: caché de resultados (paso 1 — idea → plan de piezas).
+    const usarCache = !!($("chk-cache-resultados") && $("chk-cache-resultados").checked);
+    const cacheKeyPlan = calcularCacheKeyPlan(idea, proveedor, modelo, obtenerMaxTokens());
+    let plan = usarCache ? await cacheGet(cacheKeyPlan) : null;
+    if (plan){
+      estadoPlan.fijar("⚡ Plan de piezas obtenido de la caché (misma idea, proveedor, modelo y máximo de tokens), sin llamar a la IA.", "ok");
+    } else {
+      estadoPlan.fijar("Analizando la idea y planificando las piezas del patrón…", "busy");
+      plan = await planificarPiezas(idea, opts, avisosTruncado);
+      if (usarCache) await cacheSet(cacheKeyPlan, "plan", plan);
+    }
+    ultimoPlanGenerado = plan;
+    const promptsUsados = [{etapa:"Planificación", system: SYSTEM_PROMPT_PLANIFICAR, user: "Idea inicial de la prenda: " + idea, resultado: JSON.stringify(plan, null, 2)}];
+
+    if (chkMostrarPrompt.checked){
+      pintarPromptMejorado(plan);
+      pendienteContinuar = {plan, opts, idea, promptsUsados, avisosTruncado};
+      btnContinuarGeneracion.style.display = "inline-block";
+      estadoPlan.fijar("Plan de piezas obtenido. Revísalo o edítalo, y pulsa «Generar piezas con este plan» para continuar.", "ok");
+      return;
+    }
+
+    promptMejoradoWrap.style.display = "none";
+    estadoPlan.fijar("Plan de piezas obtenido.", "ok");
+    await generarPiezasYPDF(plan, opts, idea, promptsUsados, avisosTruncado);
+  } catch(err){
+    if (err instanceof OperacionCancelada){
+      cajaEstadoActiva.fijar("⏹ " + err.message, "ok");
+    } else {
+      console.error(err);
+      cajaEstadoActiva.fijar("❌ " + err.message, "error");
+    }
+  } finally {
+    finalizarCancelable();
+    actualizarBotonGenerar();
+  }
+});
+
+btnEditarPrompt.addEventListener("click", () => {
+  if (promptMejoradoTexto.readOnly){
+    promptMejoradoTexto.readOnly = false;
+    promptMejoradoTexto.style.background = "#fff";
+    promptMejoradoTexto.focus();
+    btnEditarPrompt.textContent = "Cancelar edición";
+    btnContinuarGeneracion.style.display = "none";
+    btnRegenerarPrompt.style.display = "inline-block";
+  } else {
+    if (ultimoPlanGenerado) pintarPromptMejorado(ultimoPlanGenerado);
+    promptMejoradoTexto.readOnly = true;
+    promptMejoradoTexto.style.background = "var(--gris-claro)";
+    btnEditarPrompt.textContent = "✏️ Editar prompt mejorado";
+    btnRegenerarPrompt.style.display = "none";
+    if (pendienteContinuar) btnContinuarGeneracion.style.display = "inline-block";
+  }
+});
+
+btnContinuarGeneracion.addEventListener("click", async () => {
+  if (!pendienteContinuar) return;
+  const {plan, opts, idea, promptsUsados, avisosTruncado} = pendienteContinuar;
+  pendienteContinuar = null;
+  btnContinuarGeneracion.style.display = "none";
+  btnEditarPrompt.style.display = "none";
+  btnGenerar.disabled = true;
+
+  cajaEstadoActiva = estadoPiezas;
+  iniciarCancelable();
+  try{
+    estadoPiezas.fijar("Generando las piezas a partir del plan revisado…", "busy");
+    await generarPiezasYPDF(plan, opts, idea, promptsUsados, avisosTruncado);
+  } catch(err){
+    if (err instanceof OperacionCancelada){
+      estadoPiezas.fijar("⏹ " + err.message, "ok");
+    } else {
+      console.error(err);
+      estadoPiezas.fijar("❌ " + err.message, "error");
+    }
+  } finally {
+    finalizarCancelable();
+    btnEditarPrompt.style.display = "inline-block";
+    actualizarBotonGenerar();
+  }
+});
+
+btnRegenerarPrompt.addEventListener("click", async () => {
+  if (!ultimosOpts){
+    alert("Genera primero un patrón para fijar el proveedor, el modelo y la API key.");
+    return;
+  }
+  const textoEditado = promptMejoradoTexto.value;
+  const planEditado = parsearTextoResumenEditado(textoEditado);
+  if (!planEditado){
+    alert("No se ha podido interpretar el prompt editado. Mantén el formato: una línea \"Prenda: ...\" y una lista numerada de piezas (\"1. nombre\" seguido de su descripción).");
+    return;
+  }
+
+  pendienteContinuar = null;
+  btnGenerar.disabled = true;
+  btnRegenerarPrompt.disabled = true;
+  promptMejoradoTexto.readOnly = true;
+  btnEditarPrompt.textContent = "✏️ Editar prompt mejorado";
+  btnContinuarGeneracion.style.display = "none";
+  btnRegenerarPrompt.style.display = "none";
+  ultimoPlanGenerado = planEditado;
+  mostrarAvisoTruncado(null);
+
+  const avisosTruncado = [];
+  const promptsUsados = [{etapa:"Planificación (prompt editado a mano)", system: "(el usuario editó manualmente el prompt mejorado)", user: textoEditado, resultado: JSON.stringify(planEditado, null, 2)}];
+
+  cajaEstadoActiva = estadoPiezas;
+  iniciarCancelable();
+  try{
+    estadoPiezas.fijar("Regenerando el patrón a partir del prompt editado…", "busy");
+    await generarPiezasYPDF(planEditado, ultimosOpts, inputIdea.value.trim(), promptsUsados, avisosTruncado);
+  } catch(err){
+    if (err instanceof OperacionCancelada){
+      estadoPiezas.fijar("⏹ " + err.message, "ok");
+    } else {
+      console.error(err);
+      estadoPiezas.fijar("❌ " + err.message, "error");
+    }
+  } finally {
+    finalizarCancelable();
+    btnRegenerarPrompt.disabled = false;
+    actualizarBotonGenerar();
+  }
+});
+
+btnExportarTxt.addEventListener("click", () => {
+  if (!ultimosPrompts) return;
+  let contenido = "GenPatMod — prompts de entrada de esta generación\n";
+  contenido += "=".repeat(60) + "\n\n";
+  contenido += "Idea inicial:\n" + ultimosPrompts.idea + "\n\n";
+  contenido += "Plan de piezas (JSON):\n" + JSON.stringify(ultimosPrompts.plan, null, 2) + "\n\n";
+  ultimosPrompts.promptsUsados.forEach(p => {
+    contenido += "-".repeat(60) + "\n";
+    contenido += "Etapa: " + p.etapa + "\n\nSystem prompt:\n" + p.system + "\n\nUser prompt:\n" + p.user + "\n\n";
+  });
+  guardarArchivo(resolverNombreFichero(inputNombreTxt.value, "txt", "genpatmod_prompts.txt"), contenido, "text/plain;charset=utf-8");
+});
+
+/* ============================================================================
+ * HISTORIAL LOCAL (IndexedDB)
+ * Guarda idea, plan de piezas, proveedor/modelo y el PDF resultante.
+ * Nunca guarda API keys. Solo existe en este navegador.
+ * ==========================================================================*/
+const HISTORY_DB = "genpatmod_history";
+const HISTORY_STORE = "generaciones";
+const HISTORY_MAX = 25;
+const historySelection = new Set();
+
+function abrirHistoryDb(){
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB){ reject(new Error("IndexedDB no disponible")); return; }
+    const req = indexedDB.open(HISTORY_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(HISTORY_STORE, {keyPath:"id"});
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function historyTx(modo, accion){
+  const db = await abrirHistoryDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, modo);
+    const store = tx.objectStore(HISTORY_STORE);
+    let resultado;
+    const req = accion(store);
+    if (req) req.onsuccess = () => { resultado = req.result; };
+    tx.oncomplete = () => { db.close(); resolve(resultado); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+async function historyGetAll(){
+  const todos = await historyTx("readonly", s => s.getAll());
+  return (todos || []).sort((a,b) => b.createdAt - a.createdAt);
+}
+
+async function guardarEnHistorial(datos){
+  const registro = {
+    id: Date.now() + "-" + Math.random().toString(36).slice(2,8),
+    createdAt: Date.now(),
+    idea: datos.idea,
+    plan: datos.plan,
+    proveedor: datos.proveedor,
+    modelo: datos.modelo,
+    numPiezas: datos.plan.piezas.length,
+    pdfBlob: datos.pdfBlob
+  };
+  await historyTx("readwrite", s => s.put(registro));
+  const todos = await historyGetAll();
+  const extra = todos.slice(HISTORY_MAX);
+  if (extra.length) await historyTx("readwrite", s => { extra.forEach(r => s.delete(r.id)); });
+  await renderHistorial();
+  return registro.id;
+}
+
+function formatearFechaHist(ts){
+  return new Date(ts).toLocaleString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+
+function descargarPdfHistorial(rec){
+  const nombre = "patron_" + (rec.plan.prenda || "prenda").toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".pdf";
+  guardarArchivo(nombre, rec.pdfBlob, "application/pdf");
+}
+
+function cargarDesdeHistorial(rec){
+  inputIdea.value = rec.idea;
+  if (MODELOS_POR_PROVEEDOR[rec.proveedor]){
+    selProveedor.value = rec.proveedor;
+    repintarModelos();
+    cargarKeyGuardada();
+    const cfg = MODELOS_POR_PROVEEDOR[rec.proveedor];
+    if (cfg.modelos.includes(rec.modelo)){
+      selModelo.value = rec.modelo;
+      modeloOtroWrap.style.display = "none";
+    } else {
+      selModelo.value = "__otro__";
+      inputModeloOtro.value = rec.modelo;
+      modeloOtroWrap.style.display = "block";
+    }
+    ajustarLimiteTokens();
+  }
+  panelResultado.style.display = "block";
+  pintarPromptMejorado(rec.plan);
+  btnContinuarGeneracion.style.display = "none";
+  btnRegenerarPrompt.style.display = "none";
+  resultadoDiv.innerHTML = "";
+  mostrarAvisoTruncado(null);
+  estadoPiezas.ocultar();
+  estadoPlan.fijar(`Generación del ${formatearFechaHist(rec.createdAt)} cargada. Edita la idea o el plan y pulsa "Generar patrón" para repetirla.`, "ok");
+  actualizarBotonGenerar();
+  $("input-idea").scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+async function renderHistorial(){
+  const lista = $("historial-lista");
+  let registros = [];
+  try { registros = await historyGetAll(); }
+  catch(e){
+    lista.innerHTML = '<div class="hist-vacio">El historial no está disponible en este navegador.</div>';
+    return;
+  }
+
+  const idsActuales = new Set(registros.map(r => r.id));
+  [...historySelection].forEach(id => { if (!idsActuales.has(id)) historySelection.delete(id); });
+
+  $("historial-contador").textContent = `${registros.length} ${registros.length === 1 ? "generación" : "generaciones"}`;
+  $("historial-vaciar").disabled = registros.length === 0;
+
+  lista.innerHTML = "";
+  if (!registros.length){
+    lista.innerHTML = '<div class="hist-vacio">Todavía no hay generaciones guardadas. Genera un patrón para empezar el historial.</div>';
+    actualizarBotonesComparar();
+    return;
+  }
+
+  registros.forEach(rec => {
+    const item = document.createElement("article");
+    item.className = "hist-item" + (historySelection.has(rec.id) ? " selected" : "");
+
+    const pick = document.createElement("label");
+    pick.className = "hist-pick";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = historySelection.has(rec.id);
+    cb.addEventListener("change", () => {
+      if (cb.checked){
+        if (historySelection.size >= 4){
+          cb.checked = false;
+          estadoPlan.fijar("Puedes comparar como máximo 4 generaciones.", "ok");
+          return;
+        }
+        historySelection.add(rec.id);
+      } else historySelection.delete(rec.id);
+      item.classList.toggle("selected", cb.checked);
+      actualizarBotonesComparar();
+    });
+    pick.append(cb, document.createTextNode(" Comparar"));
+    item.appendChild(pick);
+
+    const titulo = document.createElement("h4");
+    titulo.textContent = rec.plan.prenda || "(sin nombre)";
+    item.appendChild(titulo);
+
+    const info = document.createElement("p");
+    info.className = "hist-info";
+    info.textContent = `${formatearFechaHist(rec.createdAt)} · ${rec.numPiezas} pieza(s) · ${rec.proveedor}/${rec.modelo}`;
+    item.appendChild(info);
+
+    const idea = document.createElement("p");
+    idea.className = "hist-idea";
+    idea.textContent = rec.idea;
+    idea.title = rec.idea;
+    item.appendChild(idea);
+
+    // ProMax: miniatura de la imagen de la prenda, si se generó.
+    if (rec.imagenBlob){
+      const mini = document.createElement("img");
+      mini.className = "hist-miniatura";
+      mini.alt = "Imagen generada de " + (rec.plan.prenda || "la prenda");
+      mini.loading = "lazy";
+      mini.src = URL.createObjectURL(rec.imagenBlob);
+      mini.addEventListener("load", () => URL.revokeObjectURL(mini.src), { once: true });
+      if (rec.promptImagen) mini.title = rec.promptImagen;
+      item.appendChild(mini);
+    }
+
+    const acciones = document.createElement("div");
+    acciones.className = "botones";
+    const bCargar = document.createElement("button");
+    bCargar.type = "button"; bCargar.className = "secundario"; bCargar.textContent = "Cargar";
+    bCargar.addEventListener("click", () => cargarDesdeHistorial(rec));
+    const bPdf = document.createElement("button");
+    bPdf.type = "button"; bPdf.className = "secundario"; bPdf.textContent = "PDF";
+    bPdf.addEventListener("click", () => descargarPdfHistorial(rec));
+    let bImg = null;
+    if (rec.imagenBlob){
+      bImg = document.createElement("button");
+      bImg.type = "button"; bImg.className = "secundario"; bImg.textContent = "Imagen";
+      bImg.addEventListener("click", () => {
+        const base = (rec.plan.prenda || "prenda").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+        guardarArchivo(base + ".jpg", rec.imagenBlob, rec.imagenBlob.type || "image/jpeg");
+      });
+    }
+    const bBorrar = document.createElement("button");
+    bBorrar.type = "button"; bBorrar.className = "peligro"; bBorrar.textContent = "Eliminar";
+    bBorrar.addEventListener("click", async () => {
+      await historyTx("readwrite", s => s.delete(rec.id));
+      historySelection.delete(rec.id);
+      await renderHistorial();
+    });
+    acciones.append(bCargar, bPdf);
+    if (bImg) acciones.appendChild(bImg);
+    acciones.appendChild(bBorrar);
+    item.appendChild(acciones);
+
+    lista.appendChild(item);
+  });
+  actualizarBotonesComparar();
+}
+
+function actualizarBotonesComparar(){
+  const n = historySelection.size;
+  $("historial-comparar").disabled = n < 2;
+  $("historial-comparar").textContent = n ? `Comparar selección (${n})` : "Comparar selección";
+  $("historial-quitar-seleccion").disabled = n === 0;
+}
+
+async function renderComparacionHistorial(){
+  const todos = await historyGetAll();
+  const elegidos = todos.filter(r => historySelection.has(r.id)).sort((a,b) => a.createdAt - b.createdAt);
+  if (elegidos.length < 2) return;
+
+  const filas = [
+    ["Prenda", r => r.plan.prenda || "—"],
+    ["Nº de piezas", r => String(r.numPiezas)],
+    ["Proveedor / modelo", r => `${r.proveedor} / ${r.modelo}`],
+    ["Idea inicial", r => r.idea]
+  ];
+
+  const grid = $("comparacion-grid");
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = `repeat(${elegidos.length}, minmax(220px, 1fr))`;
+
+  elegidos.forEach(rec => {
+    const col = document.createElement("div");
+    col.className = "compare-col";
+    const h = document.createElement("h4");
+    h.textContent = formatearFechaHist(rec.createdAt);
+    col.appendChild(h);
+
+    const dl = document.createElement("dl");
+    filas.forEach(([etiqueta, obtener]) => {
+      const valores = elegidos.map(obtener);
+      const difiere = new Set(valores).size > 1;
+      const fila = document.createElement("div");
+      if (difiere) fila.className = "diff";
+      const dt = document.createElement("dt"); dt.textContent = etiqueta;
+      const dd = document.createElement("dd"); dd.textContent = obtener(rec);
+      fila.append(dt, dd);
+      dl.appendChild(fila);
+    });
+    col.appendChild(dl);
+
+    const bPdf = document.createElement("button");
+    bPdf.type = "button"; bPdf.className = "secundario"; bPdf.textContent = "Descargar PDF";
+    bPdf.addEventListener("click", () => descargarPdfHistorial(rec));
+    col.appendChild(bPdf);
+
+    grid.appendChild(col);
+  });
+
+  $("comparacion-wrap").classList.remove("hidden");
+  $("comparacion-wrap").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function cerrarComparacionHistorial(){
+  $("comparacion-wrap").classList.add("hidden");
+  $("comparacion-grid").innerHTML = "";
+}
+
+$("historial-comparar").addEventListener("click", renderComparacionHistorial);
+$("comparacion-cerrar").addEventListener("click", cerrarComparacionHistorial);
+$("historial-quitar-seleccion").addEventListener("click", () => { historySelection.clear(); renderHistorial(); });
+$("historial-vaciar").addEventListener("click", async () => {
+  if (!confirm("¿Vaciar todo el historial de patrones generados en este navegador? Esta acción no se puede deshacer.")) return;
+  await historyTx("readwrite", s => s.clear());
+  historySelection.clear();
+  cerrarComparacionHistorial();
+  await renderHistorial();
+});
+
+$("btn-vaciar-cache").addEventListener("click", async () => {
+  if (!confirm("¿Vaciar la caché de resultados (planes y piezas)? Esta acción no se puede deshacer. No afecta al historial de generaciones de más abajo.")) return;
+  await vaciarCache();
+});
+
+/* ============================================================================
+ * PRO — MODO DE TRABAJO: individual / por lotes
+ * ==========================================================================*/
+let modoActual = "individual";
+function cambiarModo(modo){
+  modoActual = modo;
+  $("modepicker").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.modo === modo)));
+  const esLote = modo === "lote";
+  $("zona-idea-individual").classList.toggle("hidden", esLote);
+  $("zona-ideas-lote").classList.toggle("hidden", !esLote);
+  $("zona-mostrar-prompt").classList.toggle("hidden", esLote);
+  $("acciones-individual").classList.toggle("hidden", esLote);
+  $("acciones-lote").classList.toggle("hidden", !esLote);
+  $("titulo-paso-idea").textContent = esLote ? "2. Prendas del lote" : "2. Describe la prenda";
+  if (!esLote) $("panel-progreso-lote").classList.add("hidden");
+}
+$("modepicker").querySelectorAll("button").forEach(b => b.addEventListener("click", () => cambiarModo(b.dataset.modo)));
+
+/* ============================================================================
+ * PRO — LOTE: lista de prendas (una idea por línea)
+ * ==========================================================================*/
+let loteIdeas = []; // [{id, idea, estado, plan, pdfBlob, error}]
+function anadirIdeasLote(){
+  const lineas = $("ideas-lote-texto").value.split("\n").map(l => l.trim()).filter(Boolean);
+  lineas.forEach(idea => {
+    loteIdeas.push({id: Date.now() + "-" + Math.random().toString(36).slice(2,8), idea, estado: "pendiente", plan: null, pdfBlob: null, error: null});
+  });
+  $("ideas-lote-texto").value = "";
+  pintarListaIdeasLote();
+}
+function quitarIdeaLote(id){ loteIdeas = loteIdeas.filter(it => it.id !== id); pintarListaIdeasLote(); }
+function pintarListaIdeasLote(){
+  const box = $("lote-lista-ideas");
+  box.innerHTML = "";
+  loteIdeas.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "batch-row";
+    const left = document.createElement("div");
+    left.className = "br-left";
+    const titulo = document.createElement("div");
+    titulo.className = "br-title";
+    titulo.textContent = it.idea;
+    left.appendChild(titulo);
+    const quitar = document.createElement("button");
+    quitar.type = "button"; quitar.className = "br-remove"; quitar.setAttribute("aria-label", "Quitar");
+    quitar.textContent = "✕";
+    quitar.addEventListener("click", () => quitarIdeaLote(it.id));
+    row.append(left, quitar);
+    box.appendChild(row);
+  });
+  $("contador-lote").textContent = loteIdeas.length ? `${loteIdeas.length} prenda(s) en el lote.` : "Ninguna prenda añadida todavía.";
+  $("btn-lanzar-lote").disabled = loteIdeas.length === 0;
+}
+$("btn-anadir-lote").addEventListener("click", anadirIdeasLote);
+
+/* ============================================================================
+ * PRO — LOTE: motor de procesamiento (secuencial, de principio a fin)
+ * Cada prenda se procesa completa (plan + todas sus piezas + PDF), igual que
+ * en el modo individual sin pausa de revisión, comprobando ambas cachés
+ * (plan y cada pieza) como en el modo individual. "Detener lote" es
+ * cooperativo: deja terminar la prenda en curso y no empieza las pendientes.
+ * ==========================================================================*/
+let loteDetener = false;
+function pintarListaLote(){
+  const box = $("lote-lista");
+  box.innerHTML = "";
+  const mapaPill = {pendiente:["pend","Pendiente"], procesando:["run","Procesando"], hecho:["done","Hecho"], cache:["cachehit","Caché"], error:["err","Error"]};
+  loteIdeas.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "batch-row";
+    const left = document.createElement("div");
+    left.className = "br-left";
+    const titulo = document.createElement("div");
+    titulo.className = "br-title";
+    titulo.textContent = (it.plan && it.plan.prenda) ? it.plan.prenda : it.idea;
+    const meta = document.createElement("div");
+    meta.className = "br-meta";
+    meta.textContent = it.error || (it.pdfBlob ? "PDF listo" : "");
+    left.append(titulo, meta);
+    const p = mapaPill[it.estado] || mapaPill.pendiente;
+    const pill = document.createElement("span");
+    pill.className = "pill " + p[0];
+    pill.textContent = p[1];
+    row.append(left, pill);
+    box.appendChild(row);
+  });
+}
+function actualizarProgresoLote(){
+  const total = loteIdeas.length;
+  const hechos = loteIdeas.filter(it => ["hecho","cache","error"].includes(it.estado)).length;
+  const pct = total ? Math.round(hechos/total*100) : 0;
+  $("lote-progress-fill").style.width = pct + "%";
+  $("lote-progress-texto").textContent = `${hechos} / ${total}`;
+  $("lote-progress-estado").textContent = hechos === total && total > 0 ? "completado" : (loteDetener ? "detenido" : "en curso");
+}
+async function ejecutarLote(){
+  if (!loteIdeas.length) return;
+  const proveedor = proveedorActivo();
+  const modelo = modeloActivo();
+  const apiKey = inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedor]) || "";
+  if (!modelo){ alert("Indica un identificador de modelo antes de lanzar el lote."); return; }
+  if (!apiKey){ alert("Indica la API key del proveedor activo antes de lanzar el lote."); return; }
+
+  const opts = {proveedor, modelo, apiKey};
+  ultimosOpts = opts;
+  const maxTokensActual = obtenerMaxTokens();
+  const usarCache = !!($("chk-cache-resultados") && $("chk-cache-resultados").checked);
+
+  loteDetener = false;
+  $("btn-lanzar-lote").disabled = true;
+  $("btn-detener-lote").disabled = false;
+  $("btn-descargar-lote-zip").disabled = true;
+  $("panel-progreso-lote").classList.remove("hidden");
+  loteIdeas.forEach(it => { it.estado = "pendiente"; it.plan = null; it.pdfBlob = null; it.error = null; });
+  pintarListaLote(); actualizarProgresoLote();
+
+  for (const it of loteIdeas){
+    if (loteDetener) { if (it.estado === "pendiente") continue; }
+    it.estado = "procesando"; pintarListaLote();
+    let huboCache = false;
+    try {
+      iniciarCancelable();
+      const avisosTruncado = [];
+
+      const cacheKeyPlan = calcularCacheKeyPlan(it.idea, proveedor, modelo, maxTokensActual);
+      let plan = usarCache ? await cacheGet(cacheKeyPlan) : null;
+      if (plan) { huboCache = true; } else {
+        plan = await planificarPiezas(it.idea, opts, avisosTruncado);
+        if (usarCache) await cacheSet(cacheKeyPlan, "plan", plan);
+      }
+      it.plan = plan; pintarListaLote();
+
+      const piezasGeneradas = [];
+      for (const pieza of plan.piezas){
+        const cacheKeyPieza = calcularCacheKeyPieza(pieza.nombre, pieza.descripcion, proveedor, modelo, maxTokensActual);
+        let svg = usarCache ? await cacheGet(cacheKeyPieza) : null;
+        if (svg) { huboCache = true; }
+        else {
+          svg = await generarSVGPieza(pieza.nombre, pieza.descripcion, opts, avisosTruncado);
+          if (usarCache) await cacheSet(cacheKeyPieza, "pieza", svg);
+        }
+        piezasGeneradas.push({nombre: pieza.nombre, descripcion: pieza.descripcion, svg});
+      }
+
+      const pdf = await construirPDF(piezasGeneradas, plan.prenda, generarTextoResumen(plan));
+      it.pdfBlob = pdf.output("blob");
+      it.estado = huboCache ? "cache" : "hecho";
+
+      try {
+        ultimoRegistroHistorialId = await guardarEnHistorial({idea: it.idea, plan, proveedor, modelo, pdfBlob: it.pdfBlob});
+        prepararSeccionImagen(plan);
+      } catch(e){ console.error("No se ha podido guardar en el historial:", e); }
+    } catch(err){
+      it.estado = "error";
+      it.error = err instanceof OperacionCancelada ? err.message : (err && err.message ? err.message : String(err));
+    } finally {
+      finalizarCancelable();
+    }
+    pintarListaLote(); actualizarProgresoLote();
+  }
+
+  $("btn-lanzar-lote").disabled = false;
+  $("btn-detener-lote").disabled = true;
+  const algunoListo = loteIdeas.some(it => it.pdfBlob);
+  $("btn-descargar-lote-zip").disabled = !algunoListo;
+}
+$("btn-lanzar-lote").addEventListener("click", ejecutarLote);
+$("btn-detener-lote").addEventListener("click", () => { loteDetener = true; solicitarDetener(); });
+
+function nombreArchivoLote(it, i){
+  const base = (it.plan && it.plan.prenda) ? it.plan.prenda : it.idea;
+  return ("patron_" + (i+1) + "_" + base).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60) || ("patron_" + (i+1));
+}
+async function descargarLoteZip(){
+  if (!window.JSZip){ alert("No se ha podido cargar JSZip."); return; }
+  const zip = new JSZip();
+  const resumenTxt = [];
+  loteIdeas.forEach((it, i) => {
+    if (it.pdfBlob) zip.file(nombreArchivoLote(it, i) + ".pdf", it.pdfBlob);
+    resumenTxt.push(`#### ${i+1}. ${it.idea}\n\n${it.plan ? generarTextoResumen(it.plan) : (it.error || "(sin resultado)")}\n`);
+  });
+  if (resumenTxt.length) zip.file("resumen.txt", resumenTxt.join("\n----------------------------------------\n\n"));
+  const blob = await zip.generateAsync({type: "blob"});
+  await guardarArchivo("genpatmod_lote.zip", blob, "application/zip");
+}
+$("btn-descargar-lote-zip").addEventListener("click", descargarLoteZip);
+
+cambiarModo("individual");
+actualizarNotaPromptCaching();
+actualizarContadorCache();
+pintarListaIdeasLote();
+
+/* ============================================================================
+ * BORRADO DE DATOS INTRODUCIDOS
+ * No modifica proveedor, modelo, número máximo de tokens, API key ni el
+ * historial guardado en IndexedDB.
+ * ==========================================================================*/
+function borrarTodosLosDatos(){
+  if (!confirm("¿Borrar la idea, el prompt mejorado, las piezas y el PDF mostrados? El proveedor, el modelo, el número de tokens y la API key no se modifican. Esta acción no se puede deshacer.")) return;
+
+  if (controladorCancelacion) controladorCancelacion.abort();
+
+  inputIdea.value = "";
+  inputNombrePdf.value = "";
+  inputNombreTxt.value = "";
+  chkMostrarPrompt.checked = true;
+
+  pendienteContinuar = null;
+  ultimoPlanGenerado = null;
+  ultimosPrompts = null;
+
+  promptMejoradoWrap.style.display = "none";
+  promptMejoradoTexto.value = "";
+  promptMejoradoTexto.readOnly = true;
+  promptMejoradoTexto.style.background = "var(--blue-50)";
+  btnEditarPrompt.textContent = "✏️ Editar prompt mejorado";
+  btnEditarPrompt.style.display = "inline-block";
+  btnContinuarGeneracion.style.display = "none";
+  btnRegenerarPrompt.style.display = "none";
+
+  mostrarAvisoTruncado(null);
+  resultadoDiv.innerHTML = "";       // también elimina los SVG de las piezas mostradas
+  btnDescargarPdf.style.display = "none";
+  btnDescargarPdf.onclick = null;
+  if (ultimoPdfBlobUrl){ URL.revokeObjectURL(ultimoPdfBlobUrl); ultimoPdfBlobUrl = null; }
+  pdfPreview.src = "about:blank";
+  pdfPreview.style.display = "none";
+  btnExportarTxt.disabled = true;
+
+  estimacionTokensDiv.style.display = "none";
+  estimacionTokensDiv.textContent = "";
+
+  costeAcumulado = {entrada: 0, salida: 0, usd: 0};
+  pintarContadorCoste();
+
+  estadoPlan.ocultar();
+  estadoPiezas.ocultar();
+  estadoImagen.ocultar();
+  panelResultado.style.display = "none";
+  $("panel-imagen").classList.add("hidden");
+  $("zona-prompt-imagen").classList.add("hidden");
+  $("prompt-imagen").value = "";
+  $("resultado-imagen").innerHTML = "";
+  mostrarPromptEnviadoImagen("", "");
+  planParaImagen = null; promptImagenEsBase = ""; promptImagenEn = ""; ultimaImagenBlob = null;
+  ultimoRegistroHistorialId = null;
+
+  actualizarBotonGenerar();
+}
+btnBorrarTodo.addEventListener("click", borrarTodosLosDatos);
+
+renderHistorial();
+
+/* ============================================================================
+   ProMax: imagen de la prenda a partir del patrón generado
+   ----------------------------------------------------------------------------
+   El plan de piezas ya describe la construcción (piezas, costuras, cierres).
+   Lo que el patrón no dice —color, tejido, acabado, encuadre— se pide aquí y
+   se junta todo en un prompt para fal.ai.
+   ========================================================================== */
+
+const FAL_BASE_URL = "https://fal.run/";
+const CLAVE_FAL = "ia_fal_key";
+const CLAVE_FAL_MODELO = "genpatmod_promax_fal_modelo";
+const CLAVE_FAL_MODELO_OTRO = "genpatmod_promax_fal_modelo_otro";
+const CLAVE_FAL_VERIFICADOR = "genpatmod_promax_fal_verificador";
+const CLAVE_TRADUCIR = "genpatmod_promax_traducir";
+
+/* Cada modelo declara qué parámetros admite: el cuerpo de la petición se
+   construye solo con esos, para no enviarle a fal.ai un campo que rechace. */
+const FAL_MODELOS = {
+  "fal-ai/flux-2-pro": {
+    label: "FLUX.2 [pro] — fotorrealismo de estudio",
+    guia: "La mejor opción por defecto para moda: luz, tejido y caída de calidad de estudio. Admite tanto la tolerancia como desactivar el verificador.",
+    params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"],
+    tamanos: ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
+  },
+  "fal-ai/flux-pro/v1.1": {
+    label: "FLUX 1.1 [pro] — buena y rápida",
+    guia: "Buena calidad y rápida, pero su verificador de imagen no se puede desactivar: con prendas muy ajustadas puede devolver la imagen en negro.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"],
+    tamanos: ["portrait_4_3", "portrait_16_9"]
+  },
+  "fal-ai/bytedance/seedream/v4.5/text-to-image": {
+    label: "Seedream 4.5 — máxima resolución",
+    guia: "Resolución 2K o 4K de una pasada, buena para imprimir la ficha de la prenda o proyectarla. Más lenta que FLUX.",
+    params: ["prompt", "num_images", "image_size", "enable_safety_checker"],
+    tamanos: ["auto_2K", "auto_4K", "square_hd", "portrait_4_3", "portrait_16_9", "landscape_4_3"]
+  },
+  "fal-ai/flux/dev": {
+    label: "FLUX.1 [dev] — abierta, filtro desactivable",
+    guia: "Modelo abierto de calidad notable. Permite desactivar el verificador de imagen y ajustar los pasos de inferencia.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
+    tamanos: ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
+  },
+  "fal-ai/flux/schnell": {
+    label: "FLUX.1 [schnell] — rápida y barata",
+    guia: "La más rápida y económica: ideal para que el alumnado pruebe muchas variantes del mismo patrón. Menos detalle de tejido que las Pro.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
+    tamanos: ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
+  }
+};
+const FAL_PARAMS_OTRO = ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"];
+const FAL_TAMANOS_OTRO = ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"];
+const FAL_TAMANO_LABEL = {
+  square_hd: "Cuadrada (alta)", square: "Cuadrada",
+  portrait_4_3: "Retrato 4:3", portrait_16_9: "Retrato 16:9",
+  landscape_4_3: "Apaisada 4:3", landscape_16_9: "Apaisada 16:9",
+  auto_2K: "automática 2K", auto_4K: "automática 4K"
+};
+
+const OPC_TEJIDO = ["popelín de algodón", "lino", "denim", "punto de algodón", "lana fría", "franela de lana",
+  "seda", "satén", "gasa", "tul", "encaje", "pana", "loneta", "sarga", "crepé", "jersey elástico",
+  "neopreno", "piel sintética", "tejido técnico impermeable", "otro"];
+const OPC_TEXTURA = ["mate", "satinada", "con brillo sedoso", "aterciopelada", "perchada", "rugosa",
+  "lavada a la piedra", "con aspecto arrugado", "plisada", "acanalada", "texturizada en relieve"];
+const OPC_ESTAMPADO = ["liso", "rayas finas", "rayas anchas", "cuadros vichy", "cuadro escocés", "pata de gallo",
+  "flores pequeñas", "flores grandes", "lunares", "geométrico", "animal print", "tie-dye", "camuflaje"];
+const OPC_PESO = ["ligero, con mucha caída", "peso medio, con cuerpo", "pesado y estructurado", "rígido, que mantiene la forma"];
+const OPC_ENCUADRE = [
+  { v: "producto", t: "Solo la prenda, fotografía de producto",
+    d: "La fotografía muestra únicamente la prenda, sin ninguna persona ni parte del cuerpo: colocada sobre un maniquí invisible, de modo que se aprecien su volumen, su corte y todas sus costuras." },
+  { v: "plano", t: "Solo la prenda, extendida (flat lay)",
+    d: "La fotografía muestra la prenda extendida en plano sobre una superficie lisa, vista desde arriba, bien estirada y simétrica, como en una ficha de producto: se ven el corte completo y todos los remates." },
+  { v: "zona", t: "Con modelo, solo la zona de la prenda",
+    d: "La fotografía muestra la prenda puesta sobre una persona, encuadrada solo en la zona del cuerpo que ocupa la prenda y recortando el resto. La prenda se ve completa y se aprecia cómo cae sobre el cuerpo." },
+  { v: "cuerpo", t: "Con modelo, cuerpo entero",
+    d: "La fotografía muestra la prenda puesta sobre una persona a cuerpo completo, de modo que se aprecien la silueta, las proporciones y la caída de la prenda sobre el cuerpo." },
+  { v: "detalle", t: "Detalle de una costura o remate",
+    d: "La fotografía es un primer plano de un detalle de construcción de la prenda —una costura, un cierre, un remate— con el resto de la prenda desenfocada al fondo." }
+];
+const OPC_FONDO = ["papel de estudio gris claro", "papel de estudio blanco", "papel de estudio en color crudo",
+  "pared de hormigón", "madera clara", "exterior urbano desenfocado", "exterior natural desenfocado", "fondo negro"];
+const OPC_LUZ = ["luz de estudio suave y difusa", "luz lateral marcada, con sombras definidas",
+  "luz natural de ventana", "luz cenital uniforme, sin sombras", "luz cálida de atardecer"];
+
+const SYSTEM_PROMPT_IMAGEN = `Eres un experto en moda, patronaje, materiales textiles y acabados, con conocimientos de fotografía comercial de producto.
+Recibes el plan de piezas de un patrón de corte y las decisiones de material y fotografía que ha tomado la persona usuaria.
+Tu tarea es redactar un prompt para un modelo de generación de imágenes FLUX que muestre esa prenda ya confeccionada.
+FLUX lee el prompt de principio a fin y pierde fuerza según avanza: lo que se escribe al final apenas influye en la imagen. Por eso el orden importa tanto como el contenido.
+ESTRUCTURA OBLIGATORIA, en este orden exacto y en un solo párrafo seguido:
+1. Primera frase, la más importante: qué muestra la imagen. Nombra el tipo de prenda dentro de las cinco primeras palabras y describe el encuadre tal como se indica más abajo, diciendo qué aparece y qué queda fuera de cuadro.
+2. Cuerpo del prompt, la parte más extensa: la prenda. El tejido, el color y el acabado indicados, y la construcción que se deduce del plan de piezas: corte, silueta, costuras visibles, cierres, dobladillos, cuellos, puños, bolsillos y remates. Añade la caída del tejido, los pliegues y las pequeñas imperfecciones propias de una prenda real.
+3. Última frase, breve: luz, fondo y distancia de cámara.
+LONGITUD: el prompt final no debe pasar de 130 palabras. Si no cabe todo, conserva siempre la primera frase entera y recorta detalles de construcción.
+Traduce el plan de piezas a lo que se ve por fuera. No menciones número de piezas, márgenes de costura, hilo de tela, piquetes, tallas ni medidas en centímetros: nada de eso aparece en una fotografía.
+No describas equipo ni ajustes fotográficos (marca de cámara, focal, apertura, ISO, temperatura de color, postproducción).
+No utilices palabras vacías o genéricas como "photorealistic", "hyperrealistic", "ultra-detailed" o "hyperdetailed" como sustituto de una descripción visual concreta.
+Devuelve el prompt final DOS VECES, en este formato exacto y sin nada más:
+[ES]
+el prompt en español, en un solo párrafo
+[EN]
+el mismo prompt en inglés, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el término inglés habitual en moda para cada prenda, tejido, costura y acabado
+No añadas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown, ni antes ni después de esas dos marcas.`;
+
+const SYSTEM_TRADUCCION = `Eres un traductor técnico especializado en moda, tejidos y fotografía de producto.
+Traduces al inglés prompts de generación de imágenes escritos en español.
+Mantienes el mismo orden, la misma estructura y aproximadamente la misma longitud: no añades ni quitas elementos.
+Usas el término inglés habitual en moda para cada prenda, tejido, costura y acabado, en vez de una traducción literal.
+Devuelves ÚNICAMENTE la traducción, en un solo párrafo, sin explicaciones, comentarios, comillas ni bloques Markdown.`;
+
+/* El modelo devuelve el prompt dos veces, marcado con [ES] y [EN]. Si no
+   respeta el formato, todo el texto se toma como la versión española y la
+   traducción se pide aparte al generar la imagen. */
+function partirVersiones(texto){
+  const t = String(texto || "");
+  const m = /\[ES\]([\s\S]*?)\[EN\]([\s\S]*)$/i.exec(t);
+  if (!m) return { es: t.trim(), en: "" };
+  return { es: m[1].trim(), en: m[2].trim() };
+}
+
+let planParaImagen = null;      // plan de piezas de la última generación
+let promptImagenEsBase = "";    // español tal como lo devolvió la IA
+let promptImagenEn = "";        // inglés devuelto en la misma llamada
+let ultimaImagenBlob = null;
+
+function rellenarSelect(sel, valores, etiquetas){
+  sel.innerHTML = "";
+  valores.forEach((v, i) => {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = etiquetas ? etiquetas[i] : v;
+    sel.appendChild(o);
+  });
+}
+
+function modeloFalActivo(){
+  const v = $("fal-modelo").value;
+  if (v === "__otro__") return $("fal-modelo-otro").value.trim();
+  return v;
+}
+function paramsDelModeloFal(){
+  const m = modeloFalActivo();
+  return FAL_MODELOS[m] ? FAL_MODELOS[m].params : FAL_PARAMS_OTRO;
+}
+function verificadorFalActivo(){
+  return $("chk-fal-verificador").checked;
+}
+
+/* Muestra, oculta o deshabilita cada control según lo que admita el modelo. */
+function actualizarControlesFal(){
+  const clave = $("fal-modelo").value;
+  const info = FAL_MODELOS[clave];
+  const params = paramsDelModeloFal();
+  $("zona-fal-otro").classList.toggle("hidden", clave !== "__otro__");
+  $("fal-modelo-guia").textContent = info ? info.guia
+    : "Modelo escrito a mano: se envían todos los parámetros y fal.ai dirá si alguno no le sirve.";
+
+  const tamanos = info ? info.tamanos : FAL_TAMANOS_OTRO;
+  const previo = $("fal-tamano").value;
+  rellenarSelect($("fal-tamano"), tamanos, tamanos.map(t => FAL_TAMANO_LABEL[t] || t));
+  $("fal-tamano").value = tamanos.indexOf(previo) >= 0 ? previo : tamanos[0];
+
+  const admitePasos = params.indexOf("num_inference_steps") !== -1;
+  const campoPasos = $("fal-pasos");
+  campoPasos.disabled = !admitePasos;
+  // [schnell] está destilado para 1-4 pasos: con 28 tarda y gasta sin mejorar nada.
+  const tope = clave === "fal-ai/flux/schnell" ? 4 : 50;
+  campoPasos.max = String(tope);
+  if (parseInt(campoPasos.value, 10) > tope) campoPasos.value = String(tope);
+  if (clave === "fal-ai/flux/schnell" && parseInt(campoPasos.value, 10) < 1) campoPasos.value = "4";
+  $("hint-fal-pasos").textContent = !admitePasos
+    ? "El modelo elegido no admite este parámetro: no se envía."
+    : (tope === 4
+        ? "[schnell] está destilado para 1 a 4 pasos: más no mejora el resultado y sí el coste."
+        : "Más pasos, más detalle y más coste. Entre 20 y 35 suele bastar.");
+
+  const admiteTolerancia = params.indexOf("safety_tolerance") !== -1;
+  $("zona-fal-tolerancia").classList.toggle("hidden", !admiteTolerancia);
+  $("hint-fal-tolerancia").textContent = "1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro safety_tolerance de fal.ai.";
+
+  const admiteVerificador = params.indexOf("enable_safety_checker") !== -1;
+  $("zona-fal-verificador").classList.toggle("hidden", !admiteVerificador);
+}
+
+/* Construye el cuerpo de la petición solo con los parámetros admitidos.
+   enable_safety_checker solo se envía al desactivarlo: su valor por defecto en
+   fal.ai ya es true y así no se manda a un modelo que no lo admita. */
+function construirCuerpoFal(prompt){
+  const params = paramsDelModeloFal();
+  const todos = {
+    prompt: prompt,
+    num_inference_steps: Math.max(1, Math.min(parseInt($("fal-pasos").max, 10) || 50, parseInt($("fal-pasos").value, 10) || 28)),
+    num_images: 1,
+    output_format: "jpeg",
+    image_size: $("fal-tamano").value,
+    safety_tolerance: $("fal-tolerancia").value
+  };
+  const cuerpo = {};
+  params.forEach(k => { if (k in todos) cuerpo[k] = todos[k]; });
+  if (params.indexOf("enable_safety_checker") !== -1 && !verificadorFalActivo()) cuerpo.enable_safety_checker = false;
+  return cuerpo;
+}
+
+/* fal.ai revisa el texto del prompt ANTES de generar y, si lo rechaza, devuelve
+   un 422 de tipo content_policy_violation. Es un filtro distinto del verificador
+   de la imagen y no hay parámetro que lo desactive. Un 422 también puede ser una
+   validación corriente, de ahí la comprobación del tipo. */
+function esFiltroDeContenido(datos){
+  try {
+    const lista = datos && Array.isArray(datos.detail) ? datos.detail : [];
+    if (lista.some(it => it && it.type === "content_policy_violation")) return true;
+    const texto = JSON.stringify(datos || "");
+    return texto.indexOf("content_policy_violation") !== -1
+        || texto.indexOf("flagged by a content checker") !== -1;
+  } catch (e) { return false; }
+}
+const MENSAJE_FILTRO_CONTENIDO = "fal.ai ha rechazado el texto del prompt con su filtro de contenido de entrada, que lo revisa antes de generar la imagen (código 422). No es el verificador de seguridad de la imagen y no se puede desactivar desde la aplicación. Puedes probar con un modelo que admita tolerancia (FLUX.2 [pro] o FLUX 1.1 [pro]) y subirla, o pedir la prenda sola, sin modelo.";
+
+function detalleErrorFal(cuerpo){
+  if (!cuerpo) return "";
+  if (cuerpo.error && typeof cuerpo.error.message === "string") return cuerpo.error.message.slice(0, 300);
+  if (typeof cuerpo.detail === "string") return cuerpo.detail.slice(0, 300);
+  if (Array.isArray(cuerpo.detail) && cuerpo.detail[0] && cuerpo.detail[0].msg) return String(cuerpo.detail[0].msg).slice(0, 300);
+  return JSON.stringify(cuerpo).slice(0, 200);
+}
+
+async function pedirImagenAFal(prompt){
+  const clave = $("input-apikey-fal").value.trim() || localStorage.getItem(CLAVE_FAL) || "";
+  if (!clave) throw new Error("Falta la API key de fal.ai.");
+  const modelo = modeloFalActivo();
+  if (!modelo) throw new Error("Indica un identificador de modelo de fal.ai.");
+  const resp = await fetchConTimeout(FAL_BASE_URL + modelo, {
+    method: "POST",
+    headers: { "Authorization": "Key " + clave, "Content-Type": "application/json" },
+    body: JSON.stringify(construirCuerpoFal(prompt))
+  }, 180000);
+  let datos = null;
+  try { datos = await resp.json(); } catch (e) { datos = null; }
+  if (!resp.ok){
+    if (resp.status === 422 && esFiltroDeContenido(datos)) throw new Error(MENSAJE_FILTRO_CONTENIDO);
+    if (resp.status === 401 || resp.status === 403) throw new Error("fal.ai ha rechazado la clave (" + resp.status + "). Revisa la API key.");
+    if (resp.status === 429) throw new Error("fal.ai ha devuelto 429: límite de uso alcanzado. Espera un poco e inténtalo de nuevo.");
+    const det = detalleErrorFal(datos);
+    throw new Error("fal.ai ha devuelto un error " + resp.status + (det ? ": " + det : "."));
+  }
+  const imagenes = datos && (datos.images || datos.image);
+  const url = Array.isArray(imagenes) ? (imagenes[0] && imagenes[0].url) : (imagenes && imagenes.url);
+  if (!url) throw new Error("fal.ai ha respondido sin imagen. Respuesta: " + detalleErrorFal(datos));
+  return { url: url, nsfw: !!(datos.has_nsfw_concepts && datos.has_nsfw_concepts[0]) };
+}
+
+/* Reúne lo que ha elegido la persona usuaria en el mensaje que se envía a la IA
+   de texto junto con el plan de piezas. */
+function describirEleccionesImagen(){
+  const tejidoSel = $("img-tejido").value;
+  const tejido = tejidoSel === "otro" ? ($("img-tejido-otro").value.trim() || "sin especificar") : tejidoSel;
+  const enc = OPC_ENCUADRE.find(e => e.v === $("img-encuadre").value) || OPC_ENCUADRE[0];
+  const lineas = [
+    "Color principal: " + ($("img-color").value.trim() || "sin especificar"),
+    "Tejido: " + tejido,
+    "Textura y acabado: " + $("img-textura").value,
+    "Estampado: " + $("img-estampado").value,
+    "Peso y caída: " + $("img-peso").value,
+    "Encuadre: " + enc.d,
+    "Fondo: " + $("img-fondo").value,
+    "Luz: " + $("img-luz").value
+  ];
+  const color2 = $("img-color2").value.trim();
+  if (color2) lineas.splice(1, 0, "Color secundario: " + color2);
+  const extra = $("img-extra").value.trim();
+  if (extra) lineas.push("Otros detalles pedidos: " + extra);
+  return lineas.join("\n");
+}
+
+function textoPlanParaImagen(plan){
+  const piezas = (plan.piezas || []).map(p => "- " + p.nombre + ": " + p.descripcion).join("\n");
+  return "Prenda: " + plan.prenda + "\nPiezas del patrón:\n" + piezas;
+}
+
+const PALABRAS_RECOMENDADAS = 130;
+function actualizarLargoPromptImagen(){
+  const aviso = $("prompt-imagen-largo");
+  const texto = $("prompt-imagen").value.trim();
+  if (!texto){ aviso.textContent = ""; return; }
+  const n = texto.split(/\s+/).length;
+  aviso.textContent = n <= PALABRAS_RECOMENDADAS
+    ? n + " palabras. FLUX atiende bien a un prompt de esta longitud."
+    : n + " palabras. FLUX lee el prompt de principio a fin y pierde fuerza según avanza: por encima de unas " + PALABRAS_RECOMENDADAS + " el final (encuadre, luz, fondo) puede quedarse sin efecto. Recorta detalles de construcción.";
+}
+
+function mostrarPromptEnviadoImagen(texto, nota){
+  $("zona-prompt-enviado-img").classList.toggle("hidden", !texto);
+  $("prompt-enviado-img").value = texto || "";
+  $("prompt-enviado-img-nota").textContent = nota || "";
+}
+
+const estadoImagen = crearControladorEstado($("estado-imagen"), $("estado-texto-imagen"));
+
+function opcionesTextoActuales(){
+  const proveedor = proveedorActivo();
+  return {
+    proveedor: proveedor,
+    modelo: modeloActivo(),
+    apiKey: inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[proveedor]) || "",
+    maxTokens: obtenerMaxTokens()
+  };
+}
+
+async function redactarPromptImagen(){
+  if (!planParaImagen){ alert("Genera primero un patrón: el prompt de la imagen se redacta a partir de su plan de piezas."); return; }
+  const opts = opcionesTextoActuales();
+  if (!opts.apiKey){ alert("Falta la API key del proveedor de texto (sección 1)."); return; }
+  const btn = $("btn-redactar-prompt-imagen");
+  btn.disabled = true;
+  estadoImagen.fijar("Redactando el prompt de la imagen a partir del plan de piezas…", "busy");
+  try {
+    const userPrompt = textoPlanParaImagen(planParaImagen) + "\n\nDecisiones de material y fotografía:\n" + describirEleccionesImagen();
+    const resp = await llamarIA(SYSTEM_PROMPT_IMAGEN, userPrompt, opts);
+    const versiones = partirVersiones(resp.texto);
+    promptImagenEsBase = versiones.es;
+    promptImagenEn = versiones.en;
+    $("prompt-imagen").value = versiones.es;
+    actualizarLargoPromptImagen();
+    mostrarPromptEnviadoImagen("", "");
+    $("zona-prompt-imagen").classList.remove("hidden");
+    estadoImagen.fijar("Prompt redactado. Revísalo y genera la imagen.", "ok");
+  } catch (e){
+    estadoImagen.fijar("❌ " + (e.message || String(e)), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generarImagenDeLaPrenda(){
+  const prompt = $("prompt-imagen").value.trim();
+  if (!prompt){ alert("No hay prompt que enviar."); return; }
+  const btn = $("btn-generar-imagen");
+  btn.disabled = true;
+  $("resultado-imagen").innerHTML = "";
+  try {
+    // FLUX sigue bastante peor un prompt en español, así que la imagen se pide
+    // con la versión inglesa, que ya vino en la misma llamada que la española.
+    let promptEnviado = prompt;
+    let nota = "Se ha enviado el prompt en español, tal cual.";
+    const quiereIngles = $("chk-traducir-imagen").checked;
+    const editado = prompt !== promptImagenEsBase;
+    const opts = opcionesTextoActuales();
+    if (quiereIngles && !editado && promptImagenEn){
+      promptEnviado = promptImagenEn;
+      nota = "Versión en inglés devuelta en la misma llamada que la española, sin coste adicional.";
+    } else if (quiereIngles && opts.apiKey){
+      estadoImagen.fijar("Traduciendo el prompt al inglés…", "busy");
+      const r = await llamarIA(SYSTEM_TRADUCCION, "Traduce al inglés este prompt:\n\n" + prompt, opts);
+      const traducido = String(r && r.texto || "").trim();
+      if (traducido){
+        promptEnviado = traducido;
+        nota = editado
+          ? "Traducido al inglés: el prompt se ha editado a mano desde que se redactó."
+          : "Traducido al inglés.";
+      }
+    } else if (quiereIngles){
+      nota = "Se ha enviado en español: falta la API key del proveedor de texto para traducirlo.";
+    }
+    mostrarPromptEnviadoImagen(promptEnviado, nota);
+
+    estadoImagen.fijar("Generando la imagen con " + (modeloFalActivo() || "fal.ai") + "…", "busy");
+    const img = await pedirImagenAFal(promptEnviado);
+    const resp = await fetch(img.url);
+    const blob = await resp.blob();
+    ultimaImagenBlob = blob;
+    const urlLocal = URL.createObjectURL(blob);
+
+    const cont = $("resultado-imagen");
+    cont.innerHTML = "";
+    const el = document.createElement("img");
+    el.src = urlLocal;
+    el.alt = "Imagen generada de la prenda";
+    el.className = "imagen-prenda";
+    cont.appendChild(el);
+    if (img.nsfw){
+      const av = document.createElement("p");
+      av.className = "hint";
+      av.textContent = "fal.ai ha marcado la imagen con su verificador de contenido: si se ve en negro, prueba a desmarcar el verificador en un modelo que lo permita.";
+      cont.appendChild(av);
+    }
+    const acciones = document.createElement("div");
+    acciones.className = "botones";
+    const bDesc = document.createElement("button");
+    bDesc.type = "button"; bDesc.className = "primario"; bDesc.textContent = "⬇ Descargar imagen";
+    bDesc.addEventListener("click", () => {
+      const base = (planParaImagen && planParaImagen.prenda ? planParaImagen.prenda : "prenda").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+      guardarArchivo(base + ".jpg", blob, blob.type || "image/jpeg");
+    });
+    acciones.appendChild(bDesc);
+    cont.appendChild(acciones);
+
+    estadoImagen.fijar("Imagen generada.", "ok");
+    try { await adjuntarImagenAlHistorial(blob, promptEnviado); }
+    catch (e){ console.error("No se ha podido guardar la imagen en el historial:", e); }
+  } catch (e){
+    estadoImagen.fijar("❌ " + (e.message || String(e)), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* La imagen se genera después del patrón, así que se añade al registro que
+   acaba de guardarse en vez de crear uno nuevo. */
+let ultimoRegistroHistorialId = null;
+async function adjuntarImagenAlHistorial(blob, promptEnviado){
+  if (!ultimoRegistroHistorialId) return;
+  const todos = await historyGetAll();
+  const reg = todos.find(r => r.id === ultimoRegistroHistorialId);
+  if (!reg) return;
+  reg.imagenBlob = blob;
+  reg.promptImagen = $("prompt-imagen").value.trim();
+  reg.promptImagenEnviado = promptEnviado;
+  reg.modeloImagen = modeloFalActivo();
+  await historyTx("readwrite", s => s.put(reg));
+  await renderHistorial();
+}
+
+/* Abre la sección de imagen con el plan recién generado y propone un color
+   si la idea inicial ya mencionaba uno. */
+function prepararSeccionImagen(plan){
+  planParaImagen = plan;
+  promptImagenEsBase = ""; promptImagenEn = ""; ultimaImagenBlob = null;
+  $("prompt-imagen").value = "";
+  $("zona-prompt-imagen").classList.add("hidden");
+  $("resultado-imagen").innerHTML = "";
+  mostrarPromptEnviadoImagen("", "");
+  estadoImagen.ocultar();
+  $("panel-imagen").classList.remove("hidden");
+}
+
+/* --- Puesta en marcha de la sección de imagen --- */
+rellenarSelect($("img-tejido"), OPC_TEJIDO);
+rellenarSelect($("img-textura"), OPC_TEXTURA);
+rellenarSelect($("img-estampado"), OPC_ESTAMPADO);
+rellenarSelect($("img-peso"), OPC_PESO);
+rellenarSelect($("img-fondo"), OPC_FONDO);
+rellenarSelect($("img-luz"), OPC_LUZ);
+rellenarSelect($("img-encuadre"), OPC_ENCUADRE.map(e => e.v), OPC_ENCUADRE.map(e => e.t));
+rellenarSelect($("fal-tolerancia"), ["1","2","3","4","5","6"]);
+$("fal-tolerancia").value = "4";
+
+(function(){
+  const sel = $("fal-modelo");
+  Object.keys(FAL_MODELOS).forEach(k => {
+    const o = document.createElement("option");
+    o.value = k; o.textContent = FAL_MODELOS[k].label;
+    sel.appendChild(o);
+  });
+  const otro = document.createElement("option");
+  otro.value = "__otro__"; otro.textContent = "Otro…";
+  sel.appendChild(otro);
+  const guardado = localStorage.getItem(CLAVE_FAL_MODELO);
+  sel.value = (FAL_MODELOS[guardado] || guardado === "__otro__") ? guardado : "fal-ai/flux-2-pro";
+  const otroGuardado = localStorage.getItem(CLAVE_FAL_MODELO_OTRO);
+  if (otroGuardado) $("fal-modelo-otro").value = otroGuardado;
+  $("chk-fal-verificador").checked = localStorage.getItem(CLAVE_FAL_VERIFICADOR) !== "0";
+  $("chk-traducir-imagen").checked = localStorage.getItem(CLAVE_TRADUCIR) !== "0";
+  actualizarControlesFal();
+})();
+
+$("fal-modelo").addEventListener("change", () => {
+  localStorage.setItem(CLAVE_FAL_MODELO, $("fal-modelo").value);
+  actualizarControlesFal();
+});
+$("fal-modelo-otro").addEventListener("input", function(){ localStorage.setItem(CLAVE_FAL_MODELO_OTRO, this.value.trim()); });
+$("chk-fal-verificador").addEventListener("change", function(){ localStorage.setItem(CLAVE_FAL_VERIFICADOR, this.checked ? "1" : "0"); });
+$("chk-traducir-imagen").addEventListener("change", function(){ localStorage.setItem(CLAVE_TRADUCIR, this.checked ? "1" : "0"); });
+$("img-tejido").addEventListener("change", function(){ $("zona-tejido-otro").classList.toggle("hidden", this.value !== "otro"); });
+$("prompt-imagen").addEventListener("input", actualizarLargoPromptImagen);
+$("btn-redactar-prompt-imagen").addEventListener("click", redactarPromptImagen);
+$("btn-generar-imagen").addEventListener("click", generarImagenDeLaPrenda);
+
+function pintarEstadoClaveFal(){
+  const hay = !!localStorage.getItem(CLAVE_FAL);
+  $("estado-key-fal").textContent = hay
+    ? "Clave de fal.ai guardada en este navegador. Solo se envía a fal.ai."
+    : "No hay ninguna clave de fal.ai guardada.";
+}
+(function(){
+  const guardada = localStorage.getItem(CLAVE_FAL);
+  if (guardada) $("input-apikey-fal").value = guardada;
+  pintarEstadoClaveFal();
+})();
+$("btn-guardar-apikey-fal").addEventListener("click", () => {
+  const v = $("input-apikey-fal").value.trim();
+  if (!v){ alert("Introduce una clave antes de guardarla."); return; }
+  localStorage.setItem(CLAVE_FAL, v);
+  pintarEstadoClaveFal();
+});
+$("btn-borrar-apikey-fal").addEventListener("click", () => {
+  localStorage.removeItem(CLAVE_FAL);
+  $("input-apikey-fal").value = "";
+  pintarEstadoClaveFal();
+});
+
+</script>
+</body>
+</html>

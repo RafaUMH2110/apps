@@ -423,8 +423,13 @@
     <div class="field" id="zona-encuadre">
       <label for="encuadre">Qué debe mostrar la imagen</label>
       <select id="encuadre"></select>
-      <p class="hint">Se añade como última línea a las instrucciones del sistema, así que afecta tanto al modo individual como al de lotes.</p>
     </div>
+    <div class="field" id="zona-prudencia">
+      <label for="prudencia">Prudencia del prompt cuando aparece una persona</label>
+      <select id="prudencia"></select>
+      <p class="hint" id="prudencia-hint"></p>
+    </div>
+    <p class="hint">Ambas opciones se añaden como últimas líneas a las instrucciones del sistema, así que afectan tanto al modo individual como al de lotes.</p>
     </section>
     <section class="card card-generar" aria-labelledby="h-action">
         <h2 id="h-action">Generar</h2>
@@ -543,7 +548,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 01:53</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:01</p>
   </footer>
 </div>
 
@@ -776,6 +781,30 @@ const ENCUADRES = {
   }
 };
 
+/* Prudencia del prompt: cuando la imagen lleva una persona, un prompt
+   demasiado explícito hace que el filtro de seguridad de fal.ai marque la
+   imagen y la devuelva en negro. Estos niveles le piden al modelo de texto
+   un lenguaje más contenido, sin tocar la prenda descrita. */
+const MARCA_PRUDENCIA = "[Prudencia]";
+const PRUDENCIA_POR_DEFECTO = "ninguno";
+const PRUDENCIAS = {
+  ninguno: {
+    label: "Sin filtro",
+    requisito: "",
+    instruccion: ""
+  },
+  intermedio: {
+    label: "Filtro intermedio",
+    requisito: "profesional y no sexualizado, apto para un catálogo comercial.",
+    instruccion: MARCA_PRUDENCIA + " Describe a la persona de forma profesional y no sexualizada: nada de términos sensuales o eróticos, nada de descripciones anatómicas explícitas y nada de poses insinuantes. Si la prenda es ropa interior, baño o lencería, trátala como prenda técnica de catálogo y describe el resto con lenguaje neutro. El prompt debe poder publicarse tal cual en un catálogo comercial."
+  },
+  restrictivo: {
+    label: "Restrictivo",
+    requisito: "máxima contención, lenguaje de ficha técnica y cuerpo cubierto fuera de la prenda.",
+    instruccion: MARCA_PRUDENCIA + " Describe a la persona con la máxima contención, en lenguaje de ficha técnica: sin ninguna referencia sensual, erótica o anatómica, con pose neutra y erguida, expresión serena y mirada tranquila. Evita por completo palabras como «lencería», «sensual», «seductor», «insinuante» o «piel desnuda». Cubre con prendas básicas neutras las zonas del cuerpo que no formen parte de la prenda descrita, sin taparla ni restarle protagonismo."
+  }
+};
+
 /* Devuelve el encuadre activo, con respaldo si el valor guardado ya no existe. */
 function getEncuadre() {
   const sel = document.getElementById("encuadre");
@@ -783,24 +812,52 @@ function getEncuadre() {
   return ENCUADRES[v] ? v : ENCUADRE_POR_DEFECTO;
 }
 
-/* Quita del texto la línea de encuadre, si la hubiera. */
-function limpiarEncuadre(texto) {
-  return String(texto || "").split("\n").filter((l) => l.indexOf(MARCA_ENCUADRE) !== 0).join("\n").replace(/\s+$/, "");
+/* Devuelve el nivel de prudencia activo, con respaldo si ya no existe. */
+function getPrudencia() {
+  const sel = document.getElementById("prudencia");
+  const v = sel ? sel.value : PRUDENCIA_POR_DEFECTO;
+  return PRUDENCIAS[v] ? v : PRUDENCIA_POR_DEFECTO;
 }
 
-/* Identifica qué encuadre lleva incrustado un texto de instrucciones. */
-function encuadreDeTexto(texto) {
-  const linea = String(texto || "").split("\n").find((l) => l.indexOf(MARCA_ENCUADRE) === 0);
+/* La prudencia solo tiene sentido si la imagen muestra a una persona. */
+function prudenciaAplica() {
+  return getEncuadre() !== "prenda";
+}
+
+/* Quita del texto las líneas añadidas automáticamente (encuadre y prudencia). */
+function limpiarMarcas(texto) {
+  return String(texto || "").split("\n")
+    .filter((l) => l.indexOf(MARCA_ENCUADRE) !== 0 && l.indexOf(MARCA_PRUDENCIA) !== 0)
+    .join("\n").replace(/\s+$/, "");
+}
+
+/* Identifica qué opción de un catálogo lleva incrustado un texto. */
+function valorDeMarca(texto, marca, catalogo) {
+  const linea = String(texto || "").split("\n").find((l) => l.indexOf(marca) === 0);
   if (!linea) return "";
-  return Object.keys(ENCUADRES).find((k) => ENCUADRES[k].instruccion === linea.trim()) || "";
+  return Object.keys(catalogo).find((k) => catalogo[k].instruccion === linea.trim()) || "";
+}
+function encuadreDeTexto(texto) { return valorDeMarca(texto, MARCA_ENCUADRE, ENCUADRES); }
+function prudenciaDeTexto(texto) { return valorDeMarca(texto, MARCA_PRUDENCIA, PRUDENCIAS); }
+
+/* Instrucciones que se envían realmente: las del cuadro de texto, la línea del
+   encuadre elegido y, si la imagen lleva persona, la de la prudencia elegida.
+   Al entrar también en la clave de caché, cambiar cualquiera de las dos genera
+   un prompt nuevo en vez de reutilizar el anterior. */
+function systemPromptEfectivo() {
+  const lineas = [limpiarMarcas(document.getElementById("systemPrompt").value), ENCUADRES[getEncuadre()].instruccion];
+  if (prudenciaAplica() && PRUDENCIAS[getPrudencia()].instruccion) lineas.push(PRUDENCIAS[getPrudencia()].instruccion);
+  return lineas.filter(Boolean).join("\n");
 }
 
-/* Instrucciones que se envían realmente: las del cuadro de texto más la línea
-   del encuadre elegido. Al entrar también en la clave de caché, cambiar de
-   encuadre genera un prompt nuevo en vez de reutilizar el anterior. */
-function systemPromptEfectivo() {
-  const base = limpiarEncuadre(document.getElementById("systemPrompt").value);
-  return (base ? base + "\n" : "") + ENCUADRES[getEncuadre()].instruccion;
+/* Ajusta el desplegable de prudencia al encuadre activo. */
+function actualizarPrudenciaUi() {
+  const aplica = prudenciaAplica();
+  const sel = document.getElementById("prudencia");
+  sel.disabled = !aplica;
+  document.getElementById("prudencia-hint").textContent = aplica
+    ? "Un prompt demasiado explícito hace que el filtro de seguridad de fal.ai marque la imagen y la devuelva en negro. Estos niveles contienen el lenguaje del prompt sin cambiar la prenda."
+    : "No se aplica: con «Solo la prenda, sin modelo» no aparece ninguna persona en la imagen.";
 }
 
 /* Claves de localStorage (las API keys usan exactamente estos nombres). */
@@ -818,6 +875,7 @@ const STORAGE = {
   safety: "genimod_safety_tolerance",
   exportFormat: "genimod_export_format",
   encuadre: "genimod_encuadre",
+  prudencia: "genimod_prudencia",
   jpegQuality: "genimod_jpeg_quality"
 };
 
@@ -1171,7 +1229,7 @@ ${idea}
 REQUISITOS:
 - Fotograf\u00eda de moda.
 - Encuadre: ${ENCUADRES[getEncuadre()].requisito}
-- La prenda debe ser claramente visible.
+${prudenciaAplica() && PRUDENCIAS[getPrudencia()].requisito ? "- Lenguaje: " + PRUDENCIAS[getPrudencia()].requisito + "\n" : ""}- La prenda debe ser claramente visible.
 - Descripci\u00f3n precisa de materiales y construcci\u00f3n.
 - Iluminaci\u00f3n y c\u00e1mara f\u00edsicamente plausibles.
 - El resultado final debe ser un prompt en espa\u00f1ol.
@@ -1974,7 +2032,10 @@ function loadFromHistory(rec) {
   $("idea").value = rec.idea;
   const encRec = encuadreDeTexto(rec.systemPrompt);
   if (encRec) $("encuadre").value = encRec;
-  $("systemPrompt").value = limpiarEncuadre(rec.systemPrompt);
+  const pruRec = prudenciaDeTexto(rec.systemPrompt);
+  $("prudencia").value = pruRec || PRUDENCIA_POR_DEFECTO;
+  actualizarPrudenciaUi();
+  $("systemPrompt").value = limpiarMarcas(rec.systemPrompt);
   const recProvider = TEXT_PROVIDERS[rec.textProvider] ? rec.textProvider : "anthropic";
   $("textProvider").value = recProvider;
   refreshKeyBadges();
@@ -2038,7 +2099,8 @@ async function renderComparison() {
     ["Tolerancia de seguridad", (r) => r.safety || "no registrada"],
     ["Filtro activado", (r) => (r.nsfw ? "S\u00ed (imagen marcada)" : "No")],
     ["Encuadre", (r) => { const k = encuadreDeTexto(r.systemPrompt); return k ? ENCUADRES[k].label : "no registrado"; }],
-    ["Instrucciones", (r) => (limpiarEncuadre(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
+    ["Prudencia", (r) => { const k = prudenciaDeTexto(r.systemPrompt); return k ? PRUDENCIAS[k].label : PRUDENCIAS[PRUDENCIA_POR_DEFECTO].label; }],
+    ["Instrucciones", (r) => (limpiarMarcas(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
     ["Idea inicial", (r) => r.idea]
   ];
 
@@ -2156,6 +2218,11 @@ function loadSettings() {
   const savedEnc = storageGet(STORAGE.encuadre);
   $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
 
+  fillSelect($("prudencia"), Object.keys(PRUDENCIAS).map((k) => ({ value: k, label: PRUDENCIAS[k].label })));
+  const savedPru = storageGet(STORAGE.prudencia);
+  $("prudencia").value = PRUDENCIAS[savedPru] ? savedPru : PRUDENCIA_POR_DEFECTO;
+  actualizarPrudenciaUi();
+
   $("systemPrompt").value = DEFAULT_SYSTEM_PROMPT;
   toggleCustomFields();
   refreshKeyBadges();
@@ -2169,6 +2236,7 @@ function persistPreferences() {
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safety, $("safety").value);
   storageSet(STORAGE.encuadre, getEncuadre());
+  storageSet(STORAGE.prudencia, getPrudencia());
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
   if (Number.isInteger(q) && q >= 1 && q <= 100) storageSet(STORAGE.jpegQuality, String(q));
@@ -2399,7 +2467,8 @@ function initializeApp() {
   $("maxTokens").addEventListener("input", () => { persistPreferences(); validateForm(); });
   $("imageSize").addEventListener("change", persistPreferences);
   $("safety").addEventListener("change", persistPreferences);
-  $("encuadre").addEventListener("change", persistPreferences);
+  $("encuadre").addEventListener("change", () => { actualizarPrudenciaUi(); persistPreferences(); });
+  $("prudencia").addEventListener("change", persistPreferences);
   $("exportFormat").addEventListener("change", () => { updateExportUi(); persistPreferences(); });
   $("jpegQuality").addEventListener("input", persistPreferences);
 

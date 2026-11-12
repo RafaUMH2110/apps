@@ -313,7 +313,7 @@
   }
 </style>
 </head>
-<body data-app-title="TeleMet Mobile ProMax" data-app-description="Versión Pro de TeleMet Mobile: panel en vivo, con aspecto de app nativa instalable en la pantalla de inicio, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Añade tendencia (▲▼—) por variable respecto a la lectura anterior, sensación térmica calculada (índice de calor / sensación de frío), una franja de resumen del día, un histórico de los últimos 7 días aprovechando los datos que ya se conservan en este dispositivo, y gráficas de evolución plegables (ocultas tras un botón) para no alargar el scroll. Mismo motor que TeleMet Mobile: luz de estado persistente, tiempo límite de petición configurable, visibilidad de la API Key y exportación a CSV con BOM UTF-8. Versi&#243;n ProMax: pantalla completa para proyectar, pantalla siempre encendida y atajos de teclado." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ios,pwa,pantalla de inicio,panel,dashboard,graficos,tiempo real,diseno editorial,tendencia,sensacion termica,historico" data-client-only="true">
+<body data-app-title="TeleMet Mobile ProMax" data-app-description="Versión Pro de TeleMet Mobile: panel en vivo, con aspecto de app nativa instalable en la pantalla de inicio, de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Añade tendencia (▲▼—) por variable respecto a la lectura anterior, sensación térmica calculada (índice de calor / sensación de frío), una franja de resumen del día, un histórico de los últimos 7 días aprovechando los datos que ya se conservan en este dispositivo, y gráficas de evolución plegables (ocultas tras un botón) para no alargar el scroll. Mismo motor que TeleMet Mobile: luz de estado persistente, tiempo límite de petición configurable, visibilidad de la API Key y exportación a CSV con BOM UTF-8. Versi&#243;n ProMax: pantalla completa, modo quiosco, pantalla siempre encendida, alertas por umbral, exportaci&#243;n del hist&#243;rico en JSON y atajos de teclado." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,ios,pwa,pantalla de inicio,panel,dashboard,graficos,tiempo real,diseno editorial,tendencia,sensacion termica,historico" data-client-only="true">
 
 <!--
   ============================================================================
@@ -519,7 +519,7 @@
     <li><b>Backoff</b>Espera creciente entre reintentos tras un error transitorio: se duplica cada vez, hasta el máximo configurado.</li>
     <li><b>Histórico del día</b>Al abrir la app se intenta recuperar el día completo desde la API; si tu cuenta no tiene acceso, se sigue solo con lo sondeado en este dispositivo.</li>
   </ul>
-  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 12 de noviembre de 2026, 3:01</div>
+  <div class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 12 de noviembre de 2026, 3:16</div>
 </section>
 
 <script>
@@ -2181,49 +2181,98 @@
 
 <!-- ===================================================================
      ProMax · utilidades comunes: aspecto, pantalla completa, pantalla
-     siempre encendida, atajos de teclado y reanudación del sondeo.
+     siempre encendida, modo quiosco, alertas por umbral, exportación del
+     histórico en JSON y atajos de teclado.
      =================================================================== -->
 <style>
   .pmx-bar{position:fixed;right:14px;bottom:var(--pmx-bottom,14px);z-index:9000;display:flex;align-items:center;gap:4px;
     padding:5px;border-radius:999px;background:var(--card-bg,var(--bg,#fff));color:var(--ink,var(--texto,#13202e));
     border:1px solid var(--line,rgba(127,127,127,.3));box-shadow:0 10px 30px -14px rgba(0,0,0,.55)}
   .pmx-bar button{all:unset;box-sizing:border-box;cursor:pointer;width:36px;height:36px;border-radius:50%;
-    display:grid;place-items:center;color:inherit}
+    display:grid;place-items:center;color:inherit;position:relative}
   .pmx-bar button:hover{background:rgba(127,127,127,.18)}
   .pmx-bar button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
   .pmx-bar button[aria-pressed="true"]{background:#2E4B6B;color:#fff}
+  .pmx-bar button.pmx-alarma{background:#B3261E;color:#fff;animation:pmxLatido 1.2s ease-in-out infinite}
+  @keyframes pmxLatido{50%{opacity:.55}}
+  @media (prefers-reduced-motion:reduce){.pmx-bar button.pmx-alarma{animation:none}}
   .pmx-bar svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .pmx-toast{position:fixed;right:14px;bottom:calc(var(--pmx-bottom,14px) + 56px);z-index:9000;max-width:320px;
+  .pmx-toast{position:fixed;right:14px;bottom:calc(var(--pmx-bottom,14px) + 56px);z-index:9001;max-width:330px;
     padding:10px 14px;border-radius:12px;background:#13202e;color:#fff;
     font:500 13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
     box-shadow:0 10px 30px -14px rgba(0,0,0,.6);opacity:0;transform:translateY(6px);
     transition:opacity .2s ease,transform .2s ease;pointer-events:none}
   .pmx-toast.ver{opacity:1;transform:none}
-  @media print{.pmx-bar,.pmx-toast{display:none !important}}
+  .pmx-panel{position:fixed;right:14px;bottom:calc(var(--pmx-bottom,14px) + 56px);z-index:9002;width:min(340px,calc(100vw - 28px));
+    padding:14px 16px;border-radius:14px;background:var(--card-bg,var(--bg,#fff));color:var(--ink,var(--texto,#13202e));
+    border:1px solid var(--line,rgba(127,127,127,.3));box-shadow:0 18px 44px -18px rgba(0,0,0,.6);
+    font:400 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .pmx-panel[hidden]{display:none}
+  .pmx-panel h4{margin:0 0 4px;font-size:14px}
+  .pmx-panel .pmx-sub{margin:0 0 10px;opacity:.7;font-size:12px}
+  .pmx-panel select,.pmx-panel input[type=number]{font:inherit;padding:5px 7px;border-radius:8px;
+    border:1px solid var(--line,rgba(127,127,127,.4));background:transparent;color:inherit;min-width:0}
+  .pmx-nueva{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}
+  .pmx-nueva select#pmxMag{grid-column:1 / -1}
+  .pmx-nueva .pmx-cv{display:flex;gap:6px}
+  .pmx-nueva .pmx-cv select{flex:1}
+  .pmx-nueva .pmx-cv input{width:76px}
+  .pmx-panel button.pmx-txt{all:unset;cursor:pointer;padding:6px 11px;border-radius:9px;background:#2E4B6B;color:#fff;
+    font:600 12.5px system-ui,sans-serif;text-align:center}
+  .pmx-panel button.pmx-txt:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+  .pmx-regla{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed var(--line,rgba(127,127,127,.3))}
+  .pmx-regla span{flex:1}
+  .pmx-regla button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(127,127,127,.2);font-size:13px;line-height:1}
+  .pmx-panel label.pmx-check{display:flex;gap:7px;align-items:flex-start;margin-top:10px;font-size:12.5px}
+  .pmx-oculto{display:none !important}
+  body.pmx-quiosco main,body.pmx-quiosco .wrap{max-width:none !important}
+  body.pmx-quiosco main{zoom:var(--pmx-zoom,1.2);padding-top:8px !important}
+  @media print{.pmx-bar,.pmx-toast,.pmx-panel{display:none !important}}
 </style>
 <div class="pmx-bar" id="pmxBar" role="group" aria-label="Utilidades ProMax"></div>
 <div class="pmx-toast" id="pmxToast" role="status" aria-live="polite"></div>
+<div class="pmx-panel" id="pmxPanelAlertas" hidden role="dialog" aria-label="Alertas por umbral">
+  <h4>Alertas por umbral</h4>
+  <p class="pmx-sub">Se comprueban con cada lectura que recibe la aplicación.</p>
+  <div id="pmxReglas"></div>
+  <div class="pmx-nueva">
+    <select id="pmxMag" aria-label="Magnitud"></select>
+    <div class="pmx-cv">
+      <select id="pmxCond" aria-label="Condición">
+        <option value="gt">supera</option>
+        <option value="lt">baja de</option>
+      </select>
+      <input type="number" id="pmxValor" step="0.1" value="30" aria-label="Valor">
+    </div>
+    <button type="button" class="pmx-txt" id="pmxAddRegla">Añadir</button>
+  </div>
+  <label class="pmx-check"><input type="checkbox" id="pmxNotif"><span>Avisarme también con una notificación del navegador</span></label>
+</div>
 <script>
 (function(){
   "use strict";
-  var CFG = {"pref": "telemetmobile", "tema": false, "iniciar": null, "detener": null, "manual": "btnSondeoManual", "pausa": "btnPausarReanudar"};
+  var CFG = {"pref": "telemetmobile", "nombre": "TeleMet Mobile ProMax", "tema": false, "iniciar": null, "detener": null, "manual": "btnSondeoManual", "pausa": "btnPausarReanudar", "quiosco": "#tilesGrid", "db": "telemetmobilepro_db"};
   var bar = document.getElementById("pmxBar");
   var toastEl = document.getElementById("pmxToast");
-  var temporizadorToast = null;
+  var tToast = null;
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("ver");
-    clearTimeout(temporizadorToast);
-    temporizadorToast = setTimeout(function(){ toastEl.classList.remove("ver"); }, 3200);
+    clearTimeout(tToast);
+    tToast = setTimeout(function(){ toastEl.classList.remove("ver"); }, 4000);
   }
   function svg(d){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>'; }
   var ICONO = {
-    auto: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
-    claro: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
-    oscuro: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
-    pantalla: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
-    bombilla: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"/>',
-    teclado: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/>'
+    auto:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
+    claro:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+    oscuro:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
+    pantalla:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    quiosco:'<rect x="2.5" y="4.5" width="19" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/>',
+    bombilla:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"/>',
+    campana:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6M13.7 20a2 2 0 0 1-3.4 0"/>',
+    descarga:'<path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 20h16"/>',
+    teclado:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/>'
   };
   function boton(id, titulo, icono){
     var b = document.createElement("button");
@@ -2233,50 +2282,47 @@
     bar.appendChild(b);
     return b;
   }
+  function leer(clave, porDefecto){
+    try { var v = localStorage.getItem(CFG.pref + clave); return v === null ? porDefecto : v; }
+    catch (e) { return porDefecto; }
+  }
+  function guardar(clave, valor){ try { localStorage.setItem(CFG.pref + clave, valor); } catch (e) {} }
 
-  /* La barra se aparta de una barra de navegación inferior, si la hay. */
   var navInf = document.querySelector(".bottomnav, .tabbar, .barra-inferior");
   if (navInf && navInf.offsetHeight) {
     document.documentElement.style.setProperty("--pmx-bottom", (navInf.offsetHeight + 16) + "px");
   }
 
-  /* ---------- Aspecto: automático, claro u oscuro ---------- */
-  var btnTema = null, TEMAS = ["auto", "claro", "oscuro"], tema = "auto";
-  var ciclarTema = null;
+  /* ---------- Aspecto ---------- */
+  var btnTema = null, TEMAS = ["auto","claro","oscuro"], tema = "auto", ciclarTema = null;
   if (CFG.tema) {
-    var CLAVE_TEMA = CFG.pref + "_tema";
-    try { tema = localStorage.getItem(CLAVE_TEMA) || "auto"; } catch (e) { tema = "auto"; }
+    tema = leer("_tema", "auto");
     if (TEMAS.indexOf(tema) === -1) tema = "auto";
     btnTema = boton("pmxTema", "Aspecto (tecla T)", ICONO.auto);
-    var NOMBRE = {auto: "automático (el del sistema)", claro: "claro", oscuro: "oscuro"};
+    var NOMBRE = {auto:"automático (el del sistema)", claro:"claro", oscuro:"oscuro"};
     var pintarTema = function(avisar){
       if (tema === "auto") document.documentElement.removeAttribute("data-tema");
       else document.documentElement.setAttribute("data-tema", tema);
       btnTema.innerHTML = svg(ICONO[tema === "auto" ? "auto" : tema]);
       btnTema.title = "Aspecto: " + NOMBRE[tema] + " (tecla T)";
       btnTema.setAttribute("aria-label", btnTema.title);
-      try { localStorage.setItem(CLAVE_TEMA, tema); } catch (e) {}
+      guardar("_tema", tema);
       if (avisar) toast("Aspecto " + NOMBRE[tema] + ".");
     };
-    ciclarTema = function(){
-      tema = TEMAS[(TEMAS.indexOf(tema) + 1) % TEMAS.length];
-      pintarTema(true);
-    };
+    ciclarTema = function(){ tema = TEMAS[(TEMAS.indexOf(tema)+1) % TEMAS.length]; pintarTema(true); };
     btnTema.addEventListener("click", ciclarTema);
     pintarTema(false);
   }
 
-  /* ---------- Pantalla completa (para proyectar en clase) ---------- */
+  /* ---------- Pantalla completa ---------- */
   var btnPantalla = boton("pmxPantalla", "Pantalla completa (tecla F)", ICONO.pantalla);
-  var enPantallaCompleta = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  var enPantallaCompleta = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); };
   function alternarPantalla(){
     try {
       if (!enPantallaCompleta()) {
         var el = document.documentElement;
         (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
-      } else {
-        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-      }
+      } else { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
     } catch (e) { toast("Este navegador no permite la pantalla completa."); }
   }
   btnPantalla.addEventListener("click", alternarPantalla);
@@ -2284,7 +2330,43 @@
     btnPantalla.setAttribute("aria-pressed", String(enPantallaCompleta()));
   });
 
-  /* ---------- Pantalla siempre encendida (Wake Lock) ---------- */
+  /* ---------- Modo quiosco: solo las lecturas ---------- */
+  var btnQuiosco = boton("pmxQuiosco", "Modo quiosco: solo las lecturas (tecla Q)", ICONO.quiosco);
+  btnQuiosco.setAttribute("aria-pressed", "false");
+  var enQuiosco = false, ocultados = [];
+  function alternarQuiosco(){
+    if (!enQuiosco) {
+      var mantener = [];
+      try { mantener = Array.prototype.slice.call(document.querySelectorAll(CFG.quiosco || "")); } catch (e) {}
+      mantener = mantener.filter(function(el){ return el.offsetParent !== null || el.getClientRects().length; });
+      if (!mantener.length) { toast("Todavía no hay lecturas que mostrar en grande."); return; }
+      // "rama" son los ancestros por los que hay que bajar; al llegar a un
+      // elemento de "mantener" se para, para no ocultar su contenido.
+      var rama = [];
+      mantener.forEach(function(el){ var n = el.parentElement; while (n && n !== document.body) { rama.push(n); n = n.parentElement; } });
+      (function recorrer(nodo){
+        Array.prototype.forEach.call(nodo.children, function(h){
+          if (h.id === "pmxBar" || h.id === "pmxToast" || h.classList.contains("pmx-panel")) return;
+          if (h.tagName === "SCRIPT" || h.tagName === "STYLE") return;
+          if (mantener.indexOf(h) !== -1) return;
+          if (rama.indexOf(h) !== -1) recorrer(h);
+          else { h.classList.add("pmx-oculto"); ocultados.push(h); }
+        });
+      })(document.body);
+      document.body.classList.add("pmx-quiosco");
+      enQuiosco = true;
+      toast("Modo quiosco. Pulsa Q o el botón para volver.");
+    } else {
+      ocultados.forEach(function(h){ h.classList.remove("pmx-oculto"); });
+      ocultados = [];
+      document.body.classList.remove("pmx-quiosco");
+      enQuiosco = false;
+    }
+    btnQuiosco.setAttribute("aria-pressed", String(enQuiosco));
+  }
+  btnQuiosco.addEventListener("click", alternarQuiosco);
+
+  /* ---------- Pantalla siempre encendida ---------- */
   var btnLuz = null, wakeLock = null, luzPedida = false, alternarLuz = null;
   if ("wakeLock" in navigator) {
     btnLuz = boton("pmxLuz", "Mantener la pantalla encendida (tecla P)", ICONO.bombilla);
@@ -2299,47 +2381,181 @@
       if (!luzPedida) {
         pedirLuz().then(function(){
           luzPedida = true;
-          btnLuz.setAttribute("aria-pressed", "true");
+          btnLuz.setAttribute("aria-pressed","true");
           toast("La pantalla no se apagará mientras esta pestaña esté a la vista.");
         }).catch(function(){ toast("El navegador no ha permitido mantener la pantalla encendida."); });
       } else {
         luzPedida = false;
-        btnLuz.setAttribute("aria-pressed", "false");
+        btnLuz.setAttribute("aria-pressed","false");
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
         toast("La pantalla vuelve a apagarse sola.");
       }
     };
     btnLuz.addEventListener("click", alternarLuz);
-    // El bloqueo se pierde al cambiar de pestaña: se vuelve a pedir al volver.
     document.addEventListener("visibilitychange", function(){
       if (luzPedida && !wakeLock && document.visibilityState === "visible") pedirLuz().catch(function(){});
     });
   }
 
+  /* ---------- Alertas por umbral ----------
+     Las lecturas se leen de la propia respuesta de Weather Underground, así
+     que no dependen de cómo las pinte cada app. */
+  var MAGS = {
+    temp:      {etq:"Temperatura (°C)",       leer:function(o,m){ return n(m.temp); }},
+    sensacion: {etq:"Sensación térmica (°C)", leer:function(o,m){ return n(m.heatIndex !== undefined ? m.heatIndex : m.windChill); }},
+    rocio:     {etq:"Punto de rocío (°C)",    leer:function(o,m){ return n(m.dewpt !== undefined ? m.dewpt : o.dewpoint); }},
+    humedad:   {etq:"Humedad (%)",            leer:function(o,m){ return n(o.humidity); }},
+    presion:   {etq:"Presión (hPa)",          leer:function(o,m){ return n(m.pressure); }},
+    viento:    {etq:"Viento (km/h)",          leer:function(o,m){ return n(m.windSpeed); }},
+    racha:     {etq:"Racha (km/h)",           leer:function(o,m){ return n(m.windGust); }},
+    lluvia:    {etq:"Lluvia (mm/h)",          leer:function(o,m){ return n(m.precipRate); }},
+    uv:        {etq:"Índice UV",              leer:function(o,m){ return n(o.uv); }}
+  };
+  function n(v){ var x = Number(v); return Number.isFinite(x) ? x : null; }
+
+  var panel = document.getElementById("pmxPanelAlertas");
+  var selMag = document.getElementById("pmxMag");
+  Object.keys(MAGS).forEach(function(k){
+    var o = document.createElement("option"); o.value = k; o.textContent = MAGS[k].etq; selMag.appendChild(o);
+  });
+  var reglas = [];
+  try { reglas = JSON.parse(leer("_alertas", "[]")) || []; } catch (e) { reglas = []; }
+  var notifOn = leer("_alertas_notif", "0") === "1";
+  document.getElementById("pmxNotif").checked = notifOn;
+  var btnAlertas = boton("pmxAlertas", "Alertas por umbral (tecla A)", ICONO.campana);
+
+  function pintarReglas(){
+    var cont = document.getElementById("pmxReglas");
+    cont.innerHTML = "";
+    if (!reglas.length) {
+      var p = document.createElement("p");
+      p.className = "pmx-sub"; p.style.margin = "0";
+      p.textContent = "Todavía no hay ninguna alerta.";
+      cont.appendChild(p);
+    }
+    reglas.forEach(function(r, i){
+      var fila = document.createElement("div");
+      fila.className = "pmx-regla";
+      var txt = document.createElement("span");
+      txt.textContent = (MAGS[r.mag] ? MAGS[r.mag].etq : r.mag) + " " + (r.cond === "gt" ? "supera" : "baja de") + " " + r.valor;
+      var quitar = document.createElement("button");
+      quitar.type = "button"; quitar.textContent = "×"; quitar.title = "Quitar esta alerta";
+      quitar.addEventListener("click", function(){ reglas.splice(i,1); guardarReglas(); });
+      fila.appendChild(txt); fila.appendChild(quitar);
+      cont.appendChild(fila);
+    });
+    btnAlertas.setAttribute("aria-pressed", String(reglas.length > 0));
+    btnAlertas.title = reglas.length ? reglas.length + " alerta(s) activa(s) (tecla A)" : "Alertas por umbral (tecla A)";
+  }
+  function guardarReglas(){ guardar("_alertas", JSON.stringify(reglas)); pintarReglas(); }
+  document.getElementById("pmxAddRegla").addEventListener("click", function(){
+    var v = Number(document.getElementById("pmxValor").value);
+    if (!Number.isFinite(v)) { toast("Escribe un valor numérico."); return; }
+    if (reglas.length >= 8) { toast("Máximo ocho alertas."); return; }
+    reglas.push({mag: selMag.value, cond: document.getElementById("pmxCond").value, valor: v});
+    guardarReglas();
+    toast("Alerta añadida.");
+  });
+  document.getElementById("pmxNotif").addEventListener("change", function(){
+    notifOn = this.checked;
+    guardar("_alertas_notif", notifOn ? "1" : "0");
+    if (notifOn && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+  });
+  function alternarAlertas(){
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) document.getElementById("pmxValor").focus();
+  }
+  btnAlertas.addEventListener("click", alternarAlertas);
+  pintarReglas();
+
+  var estadoReglas = {};
+  function revisarAlertas(data){
+    var obs = ((data && data.observations) || [])[0];
+    if (!obs || !reglas.length) return;
+    var m = obs.metric || obs.metricSI || {};
+    reglas.forEach(function(r){
+      var mag = MAGS[r.mag];
+      if (!mag) return;
+      var v = mag.leer(obs, m);
+      if (v === null) return;
+      var cumple = r.cond === "gt" ? v > r.valor : v < r.valor;
+      var clave = r.mag + "|" + r.cond + "|" + r.valor;
+      if (cumple && !estadoReglas[clave]) {
+        estadoReglas[clave] = true;
+        disparar(mag.etq + ": " + v + " " + (r.cond === "gt" ? "supera" : "baja de") + " " + r.valor);
+      } else if (!cumple) { estadoReglas[clave] = false; }
+    });
+  }
+  function disparar(texto){
+    toast("⚠ " + texto);
+    btnAlertas.classList.add("pmx-alarma");
+    setTimeout(function(){ btnAlertas.classList.remove("pmx-alarma"); }, 12000);
+    if (notifOn && "Notification" in window && Notification.permission === "granted") {
+      try { new Notification(CFG.nombre, {body: texto}); } catch (e) {}
+    }
+  }
+  var fetchOriginal = window.fetch;
+  window.fetch = function(entrada){
+    var p = fetchOriginal.apply(this, arguments);
+    try {
+      var url = typeof entrada === "string" ? entrada : (entrada && entrada.url) || "";
+      if (url.indexOf("/v2/pws/observations/current") !== -1) {
+        p.then(function(r){
+          if (r && r.ok) r.clone().json().then(revisarAlertas).catch(function(){});
+        }).catch(function(){});
+      }
+    } catch (e) {}
+    return p;
+  };
+
+  /* ---------- Exportar el histórico en JSON ---------- */
+  var btnJson = boton("pmxJson", "Descargar el histórico en JSON", ICONO.descarga);
+  btnJson.addEventListener("click", function(){
+    if (!CFG.db || !window.indexedDB) { toast("Esta aplicación no guarda histórico en el navegador."); return; }
+    var req;
+    try { req = indexedDB.open(CFG.db); } catch (e) { toast("No se ha podido abrir el histórico."); return; }
+    req.onerror = function(){ toast("No se ha podido abrir el histórico."); };
+    req.onsuccess = function(){
+      var db = req.result;
+      var nombres = Array.prototype.slice.call(db.objectStoreNames);
+      if (!nombres.length) { toast("Todavía no hay histórico guardado."); db.close(); return; }
+      var salida = {app: CFG.nombre, exportado: new Date().toISOString(), almacenes: {}};
+      var tx = db.transaction(nombres, "readonly");
+      var faltan = nombres.length;
+      nombres.forEach(function(nom){
+        var pet = tx.objectStore(nom).getAll();
+        pet.onsuccess = function(){ salida.almacenes[nom] = pet.result; if (--faltan === 0) bajar(); };
+        pet.onerror = function(){ salida.almacenes[nom] = []; if (--faltan === 0) bajar(); };
+      });
+      function bajar(){
+        db.close();
+        var total = Object.keys(salida.almacenes).reduce(function(a,k){ return a + salida.almacenes[k].length; }, 0);
+        if (!total) { toast("Todavía no hay histórico guardado."); return; }
+        var blob = new Blob([JSON.stringify(salida, null, 2)], {type: "application/json"});
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = CFG.pref + "_historico_" + new Date().toISOString().slice(0,10) + ".json";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+        toast("Histórico exportado: " + total + " registro(s) en JSON.");
+      }
+    };
+  });
+
   /* ---------- Reanudar el sondeo tras recargar ---------- */
-  var CLAVE_SONDEO = CFG.pref + "_pmx_sondeo";
   var btnIniciar = CFG.iniciar ? document.getElementById(CFG.iniciar) : null;
   var btnDetener = CFG.detener ? document.getElementById(CFG.detener) : null;
   if (btnIniciar && btnDetener) {
-    btnIniciar.addEventListener("click", function(){
-      try { localStorage.setItem(CLAVE_SONDEO, String(Date.now())); } catch (e) {}
-    });
-    btnDetener.addEventListener("click", function(){
-      try { localStorage.removeItem(CLAVE_SONDEO); } catch (e) {}
-    });
-    var marca = 0;
-    try { marca = Number(localStorage.getItem(CLAVE_SONDEO) || 0); } catch (e) { marca = 0; }
-    // Solo se reanuda si el monitor segu\u00eda activo hace menos de dos horas.
-    if (marca && Date.now() - marca < 2 * 3600 * 1000) {
+    btnIniciar.addEventListener("click", function(){ guardar("_pmx_sondeo", String(Date.now())); });
+    btnDetener.addEventListener("click", function(){ guardar("_pmx_sondeo", "0"); });
+    var marca = Number(leer("_pmx_sondeo", "0")) || 0;
+    if (marca && Date.now() - marca < 2*3600*1000) {
       var intentos = 0;
       var esperando = setInterval(function(){
         if (!btnIniciar.disabled) {
-          clearInterval(esperando);
-          btnIniciar.click();
+          clearInterval(esperando); btnIniciar.click();
           toast("Sondeo reanudado: estaba activo al cerrar la página.");
-        } else if (++intentos > 40) {
-          clearInterval(esperando);
-        }
+        } else if (++intentos > 40) { clearInterval(esperando); }
       }, 250);
     }
   }
@@ -2350,8 +2566,8 @@
   function escribiendo(e){
     var t = e.target;
     if (!t) return false;
-    var n = (t.tagName || "").toLowerCase();
-    return n === "input" || n === "textarea" || n === "select" || t.isContentEditable;
+    var nom = (t.tagName || "").toLowerCase();
+    return nom === "input" || nom === "textarea" || nom === "select" || t.isContentEditable;
   }
   function pulsar(b, nombre){
     if (!b || b.disabled) { toast("Ahora mismo no se puede: " + nombre + "."); return; }
@@ -2359,12 +2575,15 @@
   }
   document.addEventListener("keydown", function(e){
     if (e.ctrlKey || e.metaKey || e.altKey || escribiendo(e)) return;
-    var k = e.key.toLowerCase();
+    var k = (e.key || "").toLowerCase();
+    if (k === "escape" && !panel.hidden) { panel.hidden = true; return; }
     if (k === "f") { e.preventDefault(); alternarPantalla(); }
-    else if (k === "t" && btnTema) { e.preventDefault(); ciclarTema(); }
-    else if (k === "p" && btnLuz) { e.preventDefault(); alternarLuz(); }
+    else if (k === "q") { e.preventDefault(); alternarQuiosco(); }
+    else if (k === "a") { e.preventDefault(); alternarAlertas(); }
+    else if (k === "t" && ciclarTema) { e.preventDefault(); ciclarTema(); }
+    else if (k === "p" && alternarLuz) { e.preventDefault(); alternarLuz(); }
     else if (k === "s" && btnManual) { e.preventDefault(); pulsar(btnManual, "sondear ahora"); }
-    else if (e.key === " " || k === "spacebar") {
+    else if (e.key === " ") {
       if (btnPausa) { e.preventDefault(); pulsar(btnPausa, "pausar o reanudar"); }
       else if (btnIniciar && btnDetener) {
         e.preventDefault();
@@ -2373,14 +2592,14 @@
     }
   });
 
-  /* ---------- Ayuda de atajos ---------- */
-  var atajos = ["F · pantalla completa"];
-  if (btnTema) atajos.push("T · aspecto");
-  if (btnLuz) atajos.push("P · pantalla encendida");
+  /* ---------- Recordatorio de atajos ---------- */
+  var atajos = ["F · pantalla completa", "Q · quiosco", "A · alertas"];
+  if (ciclarTema) atajos.push("T · aspecto");
+  if (alternarLuz) atajos.push("P · pantalla encendida");
   if (btnManual) atajos.push("S · sondear ahora");
   if (btnPausa || (btnIniciar && btnDetener)) atajos.push("Espacio · iniciar o detener");
   var btnAtajos = boton("pmxAtajos", "Atajos de teclado", ICONO.teclado);
-  btnAtajos.addEventListener("click", function(){ toast("Atajos: " + atajos.join("  ·  ")); });
+  btnAtajos.addEventListener("click", function(){ toast("Atajos: " + atajos.join("   ")); });
 })();
 </script>
 

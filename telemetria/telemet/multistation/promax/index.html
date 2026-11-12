@@ -687,7 +687,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     <h3>Server history (TeleMet Collector)</h3>
     <p class="sub">If the collector runs on the same server, this app reads, for each station, its file <code>history_&lt;ID&gt;.json</code> (or <code>historial_&lt;ID&gt;.json</code>) and, if it does not exist, the single <code>history.json</code> / <code>historial.json</code> when its <code>stationId</code> matches. It only <strong>adds</strong> missing readings: it never deletes or modifies local data. If there is no collector, it is simply ignored. It synchronises on its own when the page opens and every 2 minutes; these tables update automatically.</p>
     <div class="grid2" style="align-items:end">
-      <div class="field"><label for="servBaseInput">Folder of the JSON files (relative to this page)</label><input type="text" id="servBaseInput" value="data/" spellcheck="false" autocomplete="off"><p class="help">Default <code>data/</code>. If there is no file there, the app also tries the usual TeleMet History/Historial folders (<code>../telemethistory/data/</code>, <code>../telemethistorial/datos/</code>, <code>../history/data/</code> and <code>../historial/datos/</code>). For any other location, type it here.</p></div>
+      <div class="field"><label for="servBaseInput">Folder of the JSON files (relative to this page)</label><input type="text" id="servBaseInput" value="data/" spellcheck="false" autocomplete="off"><p class="help">Default <code>data/</code>. If there is no file there, the app also tries the usual TeleMet History/Historial folders (<code>../telemethistory/data/</code>, <code>../telemethistorial/datos/</code>, <code>../history/data/</code> and <code>../historial/datos/</code>). This ProMax copy sits one folder deeper than the usual app, so it tries those same folders two levels up as well (<code>../../history/data/</code> and so on). For any other location, type it here.</p></div>
       <div class="field"><button type="button" class="btn btn-dark" id="btnSyncServidor" style="width:100%"><svg class="i"><use href="#i-refresh"></use></svg>Synchronise now</button></div>
     </div>
     <div class="tbl-wrap"><div id="servEstado"></div></div>
@@ -719,7 +719,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet MultiStation ProMax. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 12 November 2026, 03:16</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 12 November 2026, 05:18</p>
 </footer>
 
 <div class="bottomnav">
@@ -2547,17 +2547,33 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
      SERVER (TeleMet Collector): one JSON per station
      ============================================================ */
   function normalizarBase(b){ b = (b || '').trim(); return b && !/\/$/.test(b) ? b + '/' : b; }
-  const SERV_BASES_ALT = ['../telemethistory/data/', '../telemethistorial/datos/', '../history/data/', '../historial/datos/'];
+  // Las carpetas del colector cuelgan de telemet/, al lado de la app "pro".
+  // Esta copia ProMax está un nivel más abajo, así que los mismos destinos se
+  // prueban tanto un nivel por encima de esta página como dos.
+  const SERV_SUFIJOS = ['telemethistory/data/', 'telemethistorial/datos/', 'history/data/', 'historial/datos/'];
+  const SERV_BASES_ALT = [];
+  ['../', '../../'].forEach(p => SERV_SUFIJOS.forEach(s => SERV_BASES_ALT.push(p + s)));
+  // Carpeta en la que se encontr\u00f3 el \u00faltimo archivo: se prueba la primera, para
+  // no repetir en cada sincronizaci\u00f3n los 404 de todas las dem\u00e1s.
+  let servBaseOk = '';
   async function sincronizarEstacion(e){
     const r = rt(e), key = kEst(e), seg = nombreArchivoSeguro(key);
     // Folder given by the user and, if there is no file there, the usual
     // TeleMet History/Historial folders next to this app (siblings).
     const bases = [normalizarBase(cfg.servBase)];
     SERV_BASES_ALT.forEach(x => { if (bases.indexOf(x) < 0) bases.push(x); });
+    if (servBaseOk) bases.unshift(servBaseOk);
     const cands = [];
-    bases.forEach(base => { cands.push(base + 'history_' + seg + '.json', base + 'historial_' + seg + '.json', base + 'history.json', base + 'historial.json'); });
+    const vistas = {};
+    bases.forEach(base => {
+      if (vistas[base]) return;
+      vistas[base] = true;
+      ['history_' + seg + '.json', 'historial_' + seg + '.json', 'history.json', 'historial.json']
+        .forEach(f => cands.push({ base: base, url: base + f }));
+    });
     let otra = null, formato = false;
-    for (const url of cands){
+    for (const cand of cands){
+      const url = cand.url;
       let data;
       try {
         const resp = await fetchConTimeout(url + '?t=' + Date.now(), 15000);
@@ -2570,6 +2586,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       const filas = [];
       lecturas.forEach(l => { if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v }); });
       const ultima = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
+      servBaseOk = cand.base;
       if (!filas.length) return { estado: 'ok', url: url, recibidas: 0, anadidas: 0, ultimaMs: null, intervaloS: data.intervaloS || data.intervalS };
       const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
       const locales = (await consultarRango(key, minMs - SERV_TOL_MS, ultima + SERV_TOL_MS)).map(f => f.epochMs).sort((a, b) => a - b);
@@ -2581,7 +2598,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     }
     if (otra !== null) return { estado: 'otra-estacion', otra: otra };
     if (formato) return { estado: 'formato' };
-    return { estado: 'no-disponible', probadas: cands.slice(0, 4).concat(cands.length > 4 ? ['…'] : []) };
+    return { estado: 'no-disponible', probadas: cands.slice(0, 4).map(c => c.url).concat(cands.length > 4 ? ['…'] : []) };
   }
   let sincronizando = false;
   async function sincronizarTodas(manual){

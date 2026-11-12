@@ -79,6 +79,7 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
   .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
   .field { margin-bottom: 1rem; }
+  .field-narrow { max-width: 32rem; }
   .row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
   .key-row { display: flex; gap: .5rem; flex-wrap: wrap; }
   .key-row input { flex: 1 1 200px; }
@@ -224,16 +225,24 @@
 
   /* Zona de trabajo: en pantallas anchas, entrada a la izquierda y resultado
      a la derecha, fijo mientras se desplaza el resto de la p&#225;gina. */
-  .workspace { display: grid; grid-template-columns: 1fr; gap: 0 1.25rem; align-items: start; }
-  .col > .card:last-child { margin-bottom: 1.25rem; }
+  .workspace { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  .workspace > .card { margin-bottom: 0; display: flex; flex-direction: column; }
   .card h2 { scroll-margin-top: 1rem; }
   @media (min-width: 1100px) {
-    .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    /* El prompt se queda m&#225;s bajo para que la imagen entre antes en pantalla;
-       sigue siendo redimensionable arrastrando su esquina. */
-    .col-result textarea.tall { min-height: 150px; }
-    .col-result .image-box img { max-height: 65vh; }
-    .col-result .row button { padding: .4rem .75rem; font-size: .94rem; }
+    /* Ret&#237;cula de 2x2: las dos fichas de cada fila comparten altura, as&#237; que
+       sus bordes superior e inferior quedan alineados entre columnas. */
+    .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+    .card-idea    { grid-column: 1; grid-row: 1; }
+    .card-generar { grid-column: 1; grid-row: 2; }
+    .card-prompt  { grid-column: 2; grid-row: 1; }
+    .card-imagen  { grid-column: 2; grid-row: 2; }
+    /* El espacio sobrante de cada fila lo absorbe el &#225;rea de texto, en lugar
+       de dejar un hueco en blanco al final de la ficha m&#225;s corta. */
+    .card-prompt > textarea { min-height: 150px; flex: 1 1 auto; }
+    .card-idea #zona-idea-individual, .card-idea #zona-ideas-lote { display: flex; flex-direction: column; flex: 1 1 auto; }
+    .card-idea #zona-idea-individual > textarea, .card-idea #zona-ideas-lote > textarea { flex: 1 1 auto; }
+    .card-imagen .image-box img { max-height: 65vh; }
+    .card-prompt .row button, .card-imagen .row button { padding: .4rem .75rem; font-size: .94rem; }
   }
 
   @media (max-width: 800px) {
@@ -277,15 +286,17 @@
     <div class="setup-body">
       <div class="setup-block" role="group" aria-labelledby="h-config">
         <h3 id="h-config">Claves de API</h3>
+    <div class="field field-narrow">
+      <label for="textProvider">Proveedor de IA para mejorar el prompt</label>
+      <select id="textProvider">
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="openai">OpenAI (GPT)</option>
+        <option value="gemini">Google (Gemini)</option>
+      </select>
+    </div>
     <div class="grid2">
       <div>
-        <label for="textProvider">Proveedor de IA para mejorar el prompt</label>
-        <select id="textProvider">
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="openai">OpenAI (GPT)</option>
-          <option value="gemini">Google (Gemini)</option>
-        </select>
-        <label for="textApiKey" style="margin-top:.75rem">API key del proveedor seleccionado <span id="textApiKeyBadge" class="badge no">sin guardar</span></label>
+        <label for="textApiKey">API key del proveedor seleccionado <span id="textApiKeyBadge" class="badge no">sin guardar</span></label>
         <div class="key-row">
           <input type="password" id="textApiKey" autocomplete="off" spellcheck="false">
           <button type="button" id="textKeySave">Guardar</button>
@@ -391,8 +402,7 @@
 
   <!-- ZONA DE TRABAJO: entrada a la izquierda, resultado a la derecha -->
   <div class="workspace">
-    <div class="col col-input">
-      <section class="card" aria-labelledby="h-prompt">
+    <section class="card card-idea" aria-labelledby="h-prompt">
         <h2 id="h-prompt"><span id="titulo-paso-prompt">Tu idea</span></h2>
     <div class="modepicker" id="modepicker" role="radiogroup" aria-label="Modo de trabajo">
       <button type="button" data-modo="individual" aria-pressed="true"><b>Individual</b><span>Una idea, con revisión del prompt antes de generar la imagen</span></button>
@@ -410,8 +420,13 @@
       <div class="batch-list" id="lote-lista-ideas"></div>
       <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna idea añadida todavía.</p>
     </div>
-      </section>
-      <section class="card" aria-labelledby="h-action">
+    <div class="field" id="zona-encuadre">
+      <label for="encuadre">Qué debe mostrar la imagen</label>
+      <select id="encuadre"></select>
+      <p class="hint">Se añade como última línea a las instrucciones del sistema, así que afecta tanto al modo individual como al de lotes.</p>
+    </div>
+    </section>
+    <section class="card card-generar" aria-labelledby="h-action">
         <h2 id="h-action">Generar</h2>
     <div id="acciones-individual">
       <button type="button" id="generate" class="primary big" disabled>
@@ -427,6 +442,7 @@
       <p class="hint">Cada idea del lote se procesa de principio a fin (mejora del prompt + imagen con FLUX) una detrás de otra, para no saturar los límites de tasa del proveedor ni de fal.ai. Necesitas ambas API keys (texto y fal.ai) guardadas.</p>
     </div>
         <p class="hint">Atajo: <kbd>Ctrl</kbd> + <kbd>Intro</kbd> (o <kbd>&#8984;</kbd> + <kbd>Intro</kbd>) lanza la generaci&#243;n sin tocar el rat&#243;n.</p>
+    <div class="feedback">
     <div id="status" class="status" role="status" aria-live="polite"></div>
     <div id="error" class="status error" role="alert"></div>
 
@@ -441,10 +457,9 @@
         <button type="button" id="btn-descargar-lote-zip" class="primary" disabled>⬇ Descargar todo (ZIP: imágenes + prompts.txt)</button>
       </div>
     </div>
-      </section>
     </div>
-    <div class="col col-result">
-      <section class="card" aria-labelledby="h-claude">
+    </section>
+    <section class="card card-prompt" aria-labelledby="h-claude">
         <h2 id="h-claude">Prompt generado</h2>
     <textarea id="generatedPrompt" class="tall" aria-label="Prompt generado por Claude (editable)" placeholder="El prompt generado por Claude aparecer&#225; aqu&#237;. Puedes editarlo antes de generar la imagen."></textarea>
     <p class="hint" style="margin-top:.4rem">Puedes modificar este prompt a mano; la imagen se generar&#225; con el texto que haya aqu&#237; en el momento de pulsar el bot&#243;n.</p>
@@ -461,8 +476,8 @@
       <button type="button" id="downloadTxt" disabled>Descargar prompts (.txt)</button>
     </div>
     <p class="meta" id="claudeMeta"></p>
-      </section>
-      <section class="card" aria-labelledby="h-image">
+    </section>
+    <section class="card card-imagen" aria-labelledby="h-image">
         <h2 id="h-image">Imagen generada</h2>
     <div class="image-box" id="imageBox"><span>La imagen generada aparecer&#225; aqu&#237;.</span></div>
     <div class="meta" id="imageMeta"></div>
@@ -481,8 +496,7 @@
       <button type="button" id="downloadImage" class="primary" disabled>Descargar imagen PNG</button>
     </div>
     <p class="hint">El PNG es el archivo original que devuelve fal.ai. El JPEG se convierte en tu navegador y ocupa menos; si la imagen tuviera transparencia, se rellena con fondo blanco.</p>
-      </section>
-    </div>
+    </section>
   </div>
 
   <!-- HISTORIAL LOCAL -->
@@ -529,7 +543,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 01:32</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 01:47</p>
   </footer>
 </div>
 
@@ -708,47 +722,86 @@ const PRICING = {
 };
 
 /* Prompt del sistema predeterminado para Claude. */
-const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotograf\u00eda comercial de moda, direcci\u00f3n de arte, fotograf\u00eda de producto y descripci\u00f3n de materiales y texturas.
-
-Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generaci\u00f3n de im\u00e1genes FLUX.
-
-La imagen solicitada debe representar una prenda de moda mediante una fotograf\u00eda comercial hiperrealista de cuerpo completo.
-
-Describe de forma precisa y visualmente \u00fatil:
-
-* La prenda y su construcci\u00f3n.
+const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotografía comercial de moda, dirección de arte, fotografía de producto y descripción de materiales y texturas.
+Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generación de imágenes FLUX.
+La imagen solicitada debe representar una prenda de moda mediante una fotografía comercial hiperrealista.
+Describe de forma precisa y visualmente útil:
+* La prenda y su construcción.
 * Silueta, corte y proporciones.
 * Materiales y tejidos.
-* Textura superficial y comportamiento f\u00edsico del tejido.
+* Textura superficial y comportamiento físico del tejido.
 * Costuras, pespuntes, dobladillos, cierres y acabados.
-* Peque\u00f1as imperfecciones naturales.
+* Pequeñas imperfecciones naturales.
 * Variaciones sutiles del material.
-* Pliegues, arrugas y tensi\u00f3n del tejido.
+* Pliegues, arrugas y tensión del tejido.
 * Microdetalles visibles.
-* Ca\u00edda natural de la prenda.
-* Relaci\u00f3n entre la prenda y el cuerpo.
+* Caída natural de la prenda.
+* Relación entre la prenda y el cuerpo.
 * Pose y postura del modelo cuando sea relevante.
-* Iluminaci\u00f3n.
+* Iluminación.
 * Sombras y reflejos.
 * Entorno y fondo.
-* Composici\u00f3n fotogr\u00e1fica.
-* Distancia y perspectiva de c\u00e1mara.
+* Composición fotográfica.
+* Distancia y perspectiva de cámara.
 * Focal aproximada, por ejemplo 85mm, cuando resulte apropiada.
 * Profundidad de campo.
 * Apertura aproximada, por ejemplo f/1.4, cuando resulte apropiada.
-* Calidad y caracter\u00edsticas propias de una fotograf\u00eda comercial real.
-
-No utilices palabras vac\u00edas o gen\u00e9ricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripci\u00f3n visual concreta.
-
-En su lugar, describe los elementos f\u00edsicos, \u00f3pticos, materiales y fotogr\u00e1ficos que hacen que la imagen resulte cre\u00edble.
-
-La fotograf\u00eda debe mostrar la prenda de cuerpo completo y permitir apreciar claramente su dise\u00f1o y construcci\u00f3n.
-
+* Calidad y características propias de una fotografía comercial real.
+No utilices palabras vacías o genéricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripción concreta.
+En su lugar, describe los elementos físicos, ópticos, materiales y fotográficos que hacen que la imagen resulte creíble.
 El prompt final debe estar optimizado para FLUX.
+Devuelve ÚNICAMENTE el prompt final en español.
+No añadas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
 
-Devuelve \u00daNICAMENTE el prompt final en espa\u00f1ol.
+/* Encuadre: qué debe mostrar la imagen. Lo elige quien usa la aplicación y se
+   añade como última línea a las instrucciones del sistema. La marca inicial
+   permite reconocer esa línea para sustituirla en vez de acumular varias. */
+const MARCA_ENCUADRE = "[Encuadre]";
+const ENCUADRE_POR_DEFECTO = "completo";
+const ENCUADRES = {
+  prenda: {
+    label: "Solo la prenda, sin modelo",
+    requisito: "solo la prenda, sin modelo ni partes del cuerpo.",
+    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar únicamente la prenda, sin ninguna persona ni parte del cuerpo humano: fotografía de producto sobre fondo limpio o con maniquí invisible, con la prenda colocada de forma que se aprecien claramente su diseño y su construcción."
+  },
+  parcial: {
+    label: "Con modelo, solo la zona de la prenda",
+    requisito: "con modelo, encuadrando solo la zona del cuerpo que ocupa la prenda.",
+    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar la prenda puesta sobre una persona, pero encuadrada únicamente en la zona del cuerpo que ocupa la prenda (por ejemplo, de los hombros a la cadera para un top, o de la cintura a los pies para un pantalón), recortando el resto del cuerpo. La prenda debe verse completa y apreciarse con claridad su diseño y su construcción."
+  },
+  completo: {
+    label: "Con modelo, cuerpo entero",
+    requisito: "con modelo a cuerpo completo, de la cabeza a los pies.",
+    instruccion: MARCA_ENCUADRE + " La fotografía debe mostrar la prenda puesta sobre una persona a cuerpo completo, de la cabeza a los pies, y permitir apreciar claramente su diseño y su construcción."
+  }
+};
 
-No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
+/* Devuelve el encuadre activo, con respaldo si el valor guardado ya no existe. */
+function getEncuadre() {
+  const sel = document.getElementById("encuadre");
+  const v = sel ? sel.value : ENCUADRE_POR_DEFECTO;
+  return ENCUADRES[v] ? v : ENCUADRE_POR_DEFECTO;
+}
+
+/* Quita del texto la línea de encuadre, si la hubiera. */
+function limpiarEncuadre(texto) {
+  return String(texto || "").split("\n").filter((l) => l.indexOf(MARCA_ENCUADRE) !== 0).join("\n").replace(/\s+$/, "");
+}
+
+/* Identifica qué encuadre lleva incrustado un texto de instrucciones. */
+function encuadreDeTexto(texto) {
+  const linea = String(texto || "").split("\n").find((l) => l.indexOf(MARCA_ENCUADRE) === 0);
+  if (!linea) return "";
+  return Object.keys(ENCUADRES).find((k) => ENCUADRES[k].instruccion === linea.trim()) || "";
+}
+
+/* Instrucciones que se envían realmente: las del cuadro de texto más la línea
+   del encuadre elegido. Al entrar también en la clave de caché, cambiar de
+   encuadre genera un prompt nuevo en vez de reutilizar el anterior. */
+function systemPromptEfectivo() {
+  const base = limpiarEncuadre(document.getElementById("systemPrompt").value);
+  return (base ? base + "\n" : "") + ENCUADRES[getEncuadre()].instruccion;
+}
 
 /* Claves de localStorage (las API keys usan exactamente estos nombres). */
 const STORAGE = {
@@ -764,6 +817,7 @@ const STORAGE = {
   imageSize: "genimod_image_size",
   safety: "genimod_safety_tolerance",
   exportFormat: "genimod_export_format",
+  encuadre: "genimod_encuadre",
   jpegQuality: "genimod_jpeg_quality"
 };
 
@@ -1116,7 +1170,7 @@ ${idea}
 
 REQUISITOS:
 - Fotograf\u00eda de moda.
-- Cuerpo completo.
+- Encuadre: ${ENCUADRES[getEncuadre()].requisito}
 - La prenda debe ser claramente visible.
 - Descripci\u00f3n precisa de materiales y construcci\u00f3n.
 - Iluminaci\u00f3n y c\u00e1mara f\u00edsicamente plausibles.
@@ -1524,7 +1578,7 @@ async function generar() {
   clearError();
   if (!validateForm()) { showError("Completa todos los campos obligatorios antes de generar."); return; }
 
-  const systemPrompt = $("systemPrompt").value;
+  const systemPrompt = systemPromptEfectivo();
   const idea = $("idea").value.trim();
   const textProvider = getTextProvider();
   const textModel = getActiveModel("text");
@@ -1918,7 +1972,9 @@ function updateCompareButtons() {
 function loadFromHistory(rec) {
   clearError();
   $("idea").value = rec.idea;
-  $("systemPrompt").value = rec.systemPrompt;
+  const encRec = encuadreDeTexto(rec.systemPrompt);
+  if (encRec) $("encuadre").value = encRec;
+  $("systemPrompt").value = limpiarEncuadre(rec.systemPrompt);
   const recProvider = TEXT_PROVIDERS[rec.textProvider] ? rec.textProvider : "anthropic";
   $("textProvider").value = recProvider;
   refreshKeyBadges();
@@ -1981,7 +2037,8 @@ async function renderComparison() {
     ["Tama\u00f1o", (r) => sizeLabel(r.imageSize)],
     ["Tolerancia de seguridad", (r) => r.safety || "no registrada"],
     ["Filtro activado", (r) => (r.nsfw ? "S\u00ed (imagen marcada)" : "No")],
-    ["Instrucciones", (r) => (r.systemPrompt === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
+    ["Encuadre", (r) => { const k = encuadreDeTexto(r.systemPrompt); return k ? ENCUADRES[k].label : "no registrado"; }],
+    ["Instrucciones", (r) => (limpiarEncuadre(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
     ["Idea inicial", (r) => r.idea]
   ];
 
@@ -2095,6 +2152,10 @@ function loadSettings() {
   const savedTokens = Number(storageGet(STORAGE.maxTokens));
   $("maxTokens").value = String(Number.isInteger(savedTokens) && savedTokens >= 1 ? savedTokens : APP_CONFIG.anthropic.maxTokens);
 
+  fillSelect($("encuadre"), Object.keys(ENCUADRES).map((k) => ({ value: k, label: ENCUADRES[k].label })));
+  const savedEnc = storageGet(STORAGE.encuadre);
+  $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
+
   $("systemPrompt").value = DEFAULT_SYSTEM_PROMPT;
   toggleCustomFields();
   refreshKeyBadges();
@@ -2107,6 +2168,7 @@ function persistPreferences() {
   storageSet(STORAGE.steps, $("steps").value);
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safety, $("safety").value);
+  storageSet(STORAGE.encuadre, getEncuadre());
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
   if (Number.isInteger(q) && q >= 1 && q <= 100) storageSet(STORAGE.jpegQuality, String(q));
@@ -2225,7 +2287,7 @@ async function ejecutarLote() {
   loteIdeas.forEach((it) => { it.estado = "pendiente"; it.prompt = null; it.image = null; it.error = null; });
   pintarListaLote(); actualizarProgresoLote();
 
-  const systemPrompt = $("systemPrompt").value;
+  const systemPrompt = systemPromptEfectivo();
   const textModel = getActiveModel("text");
   const maxTokens = Math.min(getMaxTokens(), limiteTokensModelo(textModel));
   const steps = Number($("steps").value);
@@ -2337,6 +2399,7 @@ function initializeApp() {
   $("maxTokens").addEventListener("input", () => { persistPreferences(); validateForm(); });
   $("imageSize").addEventListener("change", persistPreferences);
   $("safety").addEventListener("change", persistPreferences);
+  $("encuadre").addEventListener("change", persistPreferences);
   $("exportFormat").addEventListener("change", () => { updateExportUi(); persistPreferences(); });
   $("jpegQuality").addEventListener("input", persistPreferences);
 

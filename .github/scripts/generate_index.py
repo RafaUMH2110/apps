@@ -11,7 +11,7 @@ con el GITHUB_TOKEN propio del repo."""
 import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from portal_render import extract_app_metadata, render_portal_html, render_portal_html_temas
+from portal_render import extract_app_metadata, render_portal_html, render_portal_html_temas, clase_de_app
 
 ROOT = "."
 EXCLUDE_DIRS = {"appindex", ".github", ".git"}
@@ -54,6 +54,7 @@ def list_local_apps(root):
                 if meta is None:
                     continue
                 meta["group"] = rel.split("/")[0]
+                meta["clase_app"] = clase_de_app(rel, meta)
                 for slug in AUTO_CATEGORIES_BY_GROUP.get(meta["group"], []):
                     if slug not in meta["categories"]:
                         meta["categories"].append(slug)

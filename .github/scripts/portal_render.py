@@ -66,6 +66,7 @@ def extract_app_metadata(html_text):
     categories = [c.strip() for c in html.unescape(get_attr("data-categories") or "").split(",") if c.strip()]
     tags = [html.unescape(t.strip()) for t in (get_attr("data-tags") or "").split(",") if t.strip()]
     client_only = (get_attr("data-client-only") or "").strip().lower() == "true"
+    clase = (get_attr("data-app-class") or "").strip().lower()
 
     return {
         "title": title,
@@ -73,6 +74,7 @@ def extract_app_metadata(html_text):
         "categories": categories,
         "tags": tags,
         "client_only": client_only,
+        "clase": clase,
     }
 
 
@@ -160,6 +162,60 @@ GROUP_INFO = {
 # cualquier familia nueva que no esté en esta lista se añade al final, por
 # orden alfabético de su etiqueta (ver _group_order_for, más abajo).
 GROUP_ORDER_DEFAULT = ["consultar", "pdfs", "moda", "telemetria"]
+
+# Clases de app: el portal principal agrupa las fichas por clase, en este
+# orden. La clase sale del atributo data-app-class de la propia app y, si no
+# lo lleva, se deduce de su ruta y de su título (ver clase_de_app).
+CLASE_ORDER = ["normal", "pro", "promax", "alumnos"]
+CLASE_INFO = {
+    "normal": {
+        "label": "Aplicaciones",
+        "icon": "layout-grid",
+        "blurb": "Versiones de referencia de cada herramienta, con todas sus opciones a la vista.",
+    },
+    "pro": {
+        "label": "Pro",
+        "icon": "zap",
+        "blurb": "Versiones ampliadas: caché de resultados y de prompts, modo por lotes y catálogo de modelos más amplio.",
+    },
+    "promax": {
+        "label": "ProMax",
+        "icon": "rocket",
+        "blurb": "Sobre las Pro: configuración plegable, zona de trabajo a dos columnas y control del encuadre y de lo explícito del prompt.",
+    },
+    "alumnos": {
+        "label": "Para el aula",
+        "icon": "graduation-cap",
+        "blurb": "Versiones para alumnos, con modelos y parámetros acotados por el profesor.",
+    },
+}
+
+
+def clase_info(slug):
+    return CLASE_INFO.get(slug, {"label": slug.title() or "Otras", "icon": "folder", "blurb": ""})
+
+
+def clase_de_app(rel, meta):
+    """Clase de una app: primero lo que declare data-app-class; si no, la
+    carpeta pro/ o promax/ de su ruta; si no, el sufijo de su título; y por
+    último, una pista de que es la versión para el aula."""
+    declarada = (meta.get("clase") or "").strip().lower()
+    if declarada in CLASE_INFO:
+        return declarada
+    partes = [p.lower() for p in rel.split("/")]
+    if "promax" in partes:
+        return "promax"
+    if "pro" in partes:
+        return "pro"
+    titulo = meta.get("title", "").strip().lower()
+    if titulo.endswith("promax"):
+        return "promax"
+    if titulo.endswith(" pro"):
+        return "pro"
+    texto = titulo + " " + meta.get("description", "").lower()
+    if "alumno" in texto or "para el aula" in texto:
+        return "alumnos"
+    return "normal"
 
 
 def group_info(slug):
@@ -287,6 +343,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .group-head .gcount { font-family: var(--font-mono); font-size: .76rem; color: var(--muted); }
   .group-blurb { font-size: .86rem; color: var(--muted); margin: -8px 0 0; max-width: 62ch; line-height: 1.5; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 16px; }
+  .badge.fam { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 11px; transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
   .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--border-strong); }
   .card-top { display: flex; align-items: flex-start; gap: 11px; }
@@ -410,11 +467,15 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 <script id="category-meta" type="application/json">__CATEGORY_META_JSON__</script>
 <script id="group-meta" type="application/json">__GROUP_META_JSON__</script>
 <script id="group-order" type="application/json">__GROUP_ORDER_JSON__</script>
+<script id="clase-meta" type="application/json">__CLASE_META_JSON__</script>
+<script id="clase-order" type="application/json">__CLASE_ORDER_JSON__</script>
 <script>
   const CATALOG = JSON.parse(document.getElementById('catalog-data').textContent);
   const CATEGORY_META = JSON.parse(document.getElementById('category-meta').textContent);
   const GROUP_META = JSON.parse(document.getElementById('group-meta').textContent);
   const GROUP_ORDER = JSON.parse(document.getElementById('group-order').textContent);
+  const CLASE_META = JSON.parse(document.getElementById('clase-meta').textContent);
+  const CLASE_ORDER = JSON.parse(document.getElementById('clase-order').textContent);
 
   let activeCategory = 'all';
   let query = '';
@@ -468,10 +529,12 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   function cardHtml(app) {
     const primaryCat = app.categories[0];
     const meta = CATEGORY_META[primaryCat] || { label: primaryCat, icon: 'sparkles' };
-    const badges = app.categories.map(c => {
-      const m = CATEGORY_META[c] || { label: c };
-      return `<span class="badge">${escapeHtml(m.label)}</span>`;
-    }).join('');
+    const fam = GROUP_META[app.group];
+    const badges = (fam ? `<span class="badge fam">${escapeHtml(fam.label)}</span>` : '') +
+      app.categories.map(c => {
+        const m = CATEGORY_META[c] || { label: c };
+        return `<span class="badge">${escapeHtml(m.label)}</span>`;
+      }).join('');
     return `<div class="card">
         <div class="card-top">
           <div class="card-icon"><i data-lucide="${meta.icon}"></i></div>
@@ -490,7 +553,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     const resultsLine = document.getElementById('results-line');
 
     resultsLine.textContent = filtered.length === CATALOG.length
-      ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'} en ${GROUP_ORDER.length} familia${GROUP_ORDER.length === 1 ? '' : 's'}`
+      ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'}`
       : `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
@@ -500,15 +563,24 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     }
     emptyEl.style.display = 'none';
 
-    const byGroup = {};
+    // Las fichas se agrupan por clase de app (normales, pro, promax y, al
+    // final, las del aula). Dentro de cada clase van por familia y t\u00edtulo.
+    const porClase = {};
     filtered.forEach(app => {
-      (byGroup[app.group] = byGroup[app.group] || []).push(app);
+      const c = app.clase_app || 'normal';
+      (porClase[c] = porClase[c] || []).push(app);
     });
+    const posFamilia = (app) => {
+      const i = GROUP_ORDER.indexOf(app.group);
+      return i === -1 ? GROUP_ORDER.length : i;
+    };
+    Object.keys(porClase).forEach(c => porClase[c].sort((a, b) =>
+      posFamilia(a) - posFamilia(b) || a.title.localeCompare(b.title, 'es')));
 
     sectionsEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:34px;">` +
-      GROUP_ORDER.filter(g => byGroup[g] && byGroup[g].length).map(g => {
-        const meta = GROUP_META[g] || { label: g, icon: 'folder', blurb: '' };
-        const apps = byGroup[g];
+      CLASE_ORDER.filter(c => porClase[c] && porClase[c].length).map(c => {
+        const meta = CLASE_META[c] || { label: c, icon: 'folder', blurb: '' };
+        const apps = porClase[c];
         return `<section class="group-section">
             <div class="group-head">
               <div class="gicon"><i data-lucide="${meta.icon}"></i></div>
@@ -564,6 +636,9 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
 
     group_order = _group_order_for(catalog)
     group_meta = {slug: group_info(slug) for slug in group_order}
+    clase_order = [c for c in CLASE_ORDER if any(app.get("clase_app") == c for app in catalog)]
+    clase_order += sorted({app.get("clase_app", "normal") for app in catalog} - set(CLASE_ORDER))
+    clase_meta = {slug: clase_info(slug) for slug in clase_order}
 
     client_only_count = sum(1 for app in catalog if app.get("client_only"))
     if total > 0 and client_only_count == total:
@@ -588,6 +663,8 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
     out = out.replace("__CATEGORY_META_JSON__", json.dumps(category_meta, ensure_ascii=False))
     out = out.replace("__GROUP_META_JSON__", json.dumps(group_meta, ensure_ascii=False))
     out = out.replace("__GROUP_ORDER_JSON__", json.dumps(group_order, ensure_ascii=False))
+    out = out.replace("__CLASE_META_JSON__", json.dumps(clase_meta, ensure_ascii=False))
+    out = out.replace("__CLASE_ORDER_JSON__", json.dumps(clase_order, ensure_ascii=False))
     out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
     out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
     out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))

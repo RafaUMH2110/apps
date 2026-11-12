@@ -365,10 +365,14 @@
         <select id="imageSize"></select>
       </div>
     </div>
-    <div class="field" style="margin-top:1rem">
+    <div class="field" style="margin-top:1rem" id="zona-safety">
       <label for="safety">Tolerancia del filtro de seguridad de fal.ai</label>
       <select id="safety"></select>
-      <p class="hint">Si el filtro marca una imagen, fal.ai suele devolverla en negro. Un valor m&#225;s alto es m&#225;s permisivo; por defecto, 2. Usa la opci&#243;n menos permisiva que te d&#233; buenos resultados, sobre todo si la usan alumnos.</p>
+      <p class="hint">Afecta a la moderaci&#243;n del <em>prompt</em>: un valor m&#225;s alto es m&#225;s permisivo; por defecto, 2. No desactiva el verificador que fal.ai aplica a la imagen ya generada, que es el que la devuelve en negro.</p>
+    </div>
+    <div class="field hidden" id="zona-safety-checker">
+      <label class="row" style="align-items:center;margin:0" for="chk-safety-checker"><input type="checkbox" id="chk-safety-checker" checked style="width:1.15rem;height:1.15rem;margin:0 .5rem 0 0"><span>Verificador de seguridad de fal.ai sobre la imagen generada</span></label>
+      <p class="hint" id="hint-safety-checker"></p>
     </div>
       </div>
       <div class="setup-block" role="group" aria-labelledby="h-pro">
@@ -554,7 +558,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:39</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 03:25</p>
   </footer>
 </div>
 
@@ -690,10 +694,35 @@ const FAL_MODELS = {
       { value: "portrait_4_3",  label: "Retrato 4:3" },
       { value: "portrait_16_9", label: "Retrato 16:9" }
     ]
+  },
+  "fal-ai/flux/dev": {
+    label: "FLUX.1 [dev] (fal-ai/flux/dev) \u2014 filtro desactivable",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
+    imageSizes: [
+      { value: "square_hd",     label: "Cuadrada (alta)" },
+      { value: "square",        label: "Cuadrada" },
+      { value: "portrait_4_3",  label: "Retrato 4:3" },
+      { value: "portrait_16_9", label: "Retrato 16:9" },
+      { value: "landscape_4_3", label: "Apaisada 4:3" },
+      { value: "landscape_16_9",label: "Apaisada 16:9" }
+    ]
+  },
+  "fal-ai/flux/schnell": {
+    label: "FLUX.1 [schnell] (fal-ai/flux/schnell) \u2014 r\u00e1pido, filtro desactivable",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
+    imageSizes: [
+      { value: "square_hd",     label: "Cuadrada (alta)" },
+      { value: "square",        label: "Cuadrada" },
+      { value: "portrait_4_3",  label: "Retrato 4:3" },
+      { value: "portrait_16_9", label: "Retrato 16:9" },
+      { value: "landscape_4_3", label: "Apaisada 4:3" },
+      { value: "landscape_16_9",label: "Apaisada 16:9" }
+    ]
   }
 };
+
 /* Par\u00e1metros enviados a un modelo introducido manualmente ("Otro\u2026"). */
-const CUSTOM_FAL_PARAMS = ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"];
+const CUSTOM_FAL_PARAMS = ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"];
 /* Niveles del filtro de seguridad de la familia FLUX Pro (se env\u00edan como texto). */
 const SAFETY_TOLERANCE_OPTIONS = [
   { value: "1", label: "1 - Muy estricto" },
@@ -894,6 +923,7 @@ const STORAGE = {
   maxTokens: "genimod_max_tokens",
   imageSize: "genimod_image_size",
   safety: "genimod_safety_tolerance",
+  safetyChecker: "genimod_safety_checker",
   exportFormat: "genimod_export_format",
   encuadre: "genimod_encuadre",
   prudencia: "genimod_prudencia",
@@ -1017,10 +1047,37 @@ function fillTextModels(preferred) {
 function refreshImageSizes(preferred) {
   const sel = $("falModel").value;
   const sizes = sel === OTHER ? CUSTOM_FAL_IMAGE_SIZES : FAL_MODELS[sel].imageSizes;
+  // El tama\u00f1o elegido se lee ANTES de repintar: al repintar, el desplegable
+  // vuelve a su primera opci\u00f3n y se perder\u00eda al cambiar de modelo.
+  const previo = $("imageSize").value;
   fillSelect($("imageSize"), sizes.map((s) => ({ value: s.value, label: s.label })));
-  const wanted = preferred || $("imageSize").value;
+  const wanted = preferred || previo;
   if (sizes.some((s) => s.value === wanted)) $("imageSize").value = wanted;
   else $("imageSize").value = sizes.some((s) => s.value === APP_CONFIG.fal.defaultImageSize) ? APP_CONFIG.fal.defaultImageSize : sizes[0].value;
+}
+
+/* Cada familia de modelos usa un control distinto: FLUX Pro solo admite
+   safety_tolerance (modera el prompt) y los FLUX abiertos solo admiten
+   enable_safety_checker (el verificador de la imagen ya generada). Se muestra
+   el que corresponda, para no ofrecer un ajuste que el modelo ignora. */
+function actualizarControlesSeguridad() {
+  const sel = $("falModel").value;
+  const params = FAL_MODELS[sel] ? FAL_MODELS[sel].params : CUSTOM_FAL_PARAMS;
+  const hayTolerancia = params.indexOf("safety_tolerance") !== -1;
+  const hayVerificador = params.indexOf("enable_safety_checker") !== -1;
+  $("zona-safety").classList.toggle("hidden", !hayTolerancia);
+  $("zona-safety-checker").classList.toggle("hidden", !hayVerificador);
+  if (hayVerificador) {
+    $("hint-safety-checker").textContent = $("chk-safety-checker").checked
+      ? "Si lo desmarcas, fal.ai no revisa la imagen generada y deja de devolverla en negro. D\u00e9jalo activado si la aplicaci\u00f3n la usan alumnos."
+      : "Desactivado: fal.ai no revisar\u00e1 la imagen generada.";
+  }
+  const notaTol = $("zona-safety").querySelector(".hint");
+  if (notaTol) {
+    notaTol.textContent = hayVerificador
+      ? "Afecta a la moderaci\u00f3n del prompt: un valor m\u00e1s alto es m\u00e1s permisivo; por defecto, 2."
+      : "Afecta a la moderaci\u00f3n del prompt: un valor m\u00e1s alto es m\u00e1s permisivo; por defecto, 2. Este modelo no permite desactivar el verificador que fal.ai aplica a la imagen ya generada, que es el que la devuelve en negro; para eso elige un modelo FLUX abierto.";
+  }
 }
 
 function toggleCustomFields() {
@@ -1353,7 +1410,7 @@ function extractGeminiText(data) {
 /* ==========================================================================
    FAL.AI \u2014 GENERACI\u00d3N DE IMAGEN
    ========================================================================== */
-function buildFalBody(model, prompt, steps, imageSize, safety) {
+function buildFalBody(model, prompt, steps, imageSize, safety, verificador) {
   const allowed = FAL_MODELS[model] ? FAL_MODELS[model].params : CUSTOM_FAL_PARAMS;
   const all = {
     prompt,
@@ -1365,10 +1422,16 @@ function buildFalBody(model, prompt, steps, imageSize, safety) {
   };
   const body = {};
   allowed.forEach((k) => { if (k in all) body[k] = all[k]; });
+  // enable_safety_checker solo se env\u00eda cuando se desactiva: su valor por
+  // defecto en fal.ai ya es true, y as\u00ed no se manda a un modelo que no lo
+  // admita (los endpoints estrictos responden 422 ante un campo desconocido).
+  if (allowed.indexOf("enable_safety_checker") !== -1 && verificador === false) {
+    body.enable_safety_checker = false;
+  }
   return body;
 }
 
-async function generarImagenConFal(prompt, model, steps, imageSize, safety) {
+async function generarImagenConFal(prompt, model, steps, imageSize, safety, verificador) {
   const headers = {
     "Authorization": "Key " + storageGet(STORAGE.falKey),
     "Content-Type": "application/json"
@@ -1376,7 +1439,7 @@ async function generarImagenConFal(prompt, model, steps, imageSize, safety) {
   const url = APP_CONFIG.fal.baseUrl + model;   // p. ej. https://fal.run/fal-ai/flux-pro/v1.1
   let data = await fetchJson(url, {
     method: "POST", headers,
-    body: JSON.stringify(buildFalBody(model, prompt, steps, imageSize, safety))
+    body: JSON.stringify(buildFalBody(model, prompt, steps, imageSize, safety, verificador))
   });
 
   // Si el servicio responde con un flujo de cola en lugar del resultado final, se sigue el flujo documentado.
@@ -1747,11 +1810,12 @@ async function generarImagenDesdePrompt() {
   const steps = Number($("steps").value);
   const imageSize = $("imageSize").value;
   const safety = $("safety").value;
+  const verificador = $("chk-safety-checker").checked;
 
   state.lastPrompt = prompt;
 
   // PRO: caché de resultados (paso 2 de 2 — prompt → imagen).
-  const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety);
+  const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador);
   if ($("chk-cache-resultados").checked) {
     const previo = await buscarEnCacheHistorial("cacheKeyImagen", cacheKeyImagen);
     if (previo) {
@@ -1767,10 +1831,10 @@ async function generarImagenDesdePrompt() {
   showLoading(true, "Generando…");
   try {
     showStatus("Generando imagen con FLUX a partir del prompt editado…", "info");
-    const image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety);
+    const image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety, verificador);
     displayGeneratedImage(image, falModel, steps);
     if (image.nsfw) {
-      showStatus("Aviso: fal.ai ha marcado la imagen con su filtro de seguridad y probablemente sea negra. Sube la tolerancia (máx. 6) o reformula el prompt con lenguaje más técnico y menos centrado en el cuerpo.", "error");
+      showStatus("Aviso: fal.ai ha marcado la imagen con su verificador de seguridad y probablemente sea negra. Sube la tolerancia (máx. 6) o reformula el prompt con lenguaje más técnico y menos centrado en el cuerpo.", "error");
     } else {
       showStatus("Imagen generada correctamente.", "ok");
     }
@@ -1866,8 +1930,8 @@ function fnv1a(str) {
 function calcularCacheKeyIdea(systemPrompt, idea, textProvider, textModel, maxTokens) {
   return "ci_" + fnv1a([systemPrompt, idea, textProvider, textModel, maxTokens].join("||"));
 }
-function calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety) {
-  return "cm_" + fnv1a([prompt, falModel, steps, imageSize, safety].join("||"));
+function calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador) {
+  return "cm_" + fnv1a([prompt, falModel, steps, imageSize, safety, verificador === false ? "sinverif" : "verif"].join("||"));
 }
 async function buscarEnCacheHistorial(campo, cacheKey) {
   if (!cacheKey) return null;
@@ -2269,6 +2333,8 @@ function loadSettings() {
   const savedEnc = storageGet(STORAGE.encuadre);
   $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
 
+  $("chk-safety-checker").checked = storageGet(STORAGE.safetyChecker) !== "0";
+
   fillSelect($("prudencia"), Object.keys(PRUDENCIAS).map((k) => ({ value: k, label: PRUDENCIAS[k].label })));
   const savedPru = storageGet(STORAGE.prudencia);
   $("prudencia").value = PRUDENCIAS[savedPru] ? savedPru : PRUDENCIA_POR_DEFECTO;
@@ -2276,6 +2342,7 @@ function loadSettings() {
 
   $("systemPrompt").value = DEFAULT_SYSTEM_PROMPT;
   toggleCustomFields();
+  actualizarControlesSeguridad();
   refreshKeyBadges();
 }
 
@@ -2286,6 +2353,7 @@ function persistPreferences() {
   storageSet(STORAGE.steps, $("steps").value);
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safety, $("safety").value);
+  storageSet(STORAGE.safetyChecker, $("chk-safety-checker").checked ? "1" : "0");
   storageSet(STORAGE.encuadre, getEncuadre());
   storageSet(STORAGE.prudencia, getPrudencia());
   storageSet(STORAGE.exportFormat, getExportFormat());
@@ -2412,6 +2480,7 @@ async function ejecutarLote() {
   const steps = Number($("steps").value);
   const imageSize = $("imageSize").value;
   const safety = $("safety").value;
+  const verificador = $("chk-safety-checker").checked;
   const usarCache = $("chk-cache-resultados").checked && !saltarCacheUnaVez;
   saltarCacheUnaVez = false;
 
@@ -2429,14 +2498,14 @@ async function ejecutarLote() {
       }
       it.prompt = prompt; pintarListaLote();
 
-      const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety);
+      const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador);
       let image, cacheoImagen = false;
       const previoImagen = usarCache ? await buscarEnCacheHistorial("cacheKeyImagen", cacheKeyImagen) : null;
       if (previoImagen) {
         image = { url: previoImagen.url, width: previoImagen.width, height: previoImagen.height, nsfw: !!previoImagen.nsfw, blob: previoImagen.blob || null };
         cacheoImagen = true;
       } else {
-        image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety);
+        image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety, verificador);
       }
       it.image = image;
       it.estado = (cacheoIdea || cacheoImagen) ? "cache" : "hecho";
@@ -2513,12 +2582,13 @@ function initializeApp() {
   });
   $("textModel").addEventListener("change", () => { toggleCustomFields(); persistPreferences(); validateForm(); });
   $("textCustom").addEventListener("input", () => { persistPreferences(); validateForm(); });
-  $("falModel").addEventListener("change", () => { toggleCustomFields(); refreshImageSizes(); persistPreferences(); validateForm(); });
+  $("falModel").addEventListener("change", () => { toggleCustomFields(); refreshImageSizes(); actualizarControlesSeguridad(); persistPreferences(); validateForm(); });
   $("falCustom").addEventListener("input", () => { persistPreferences(); validateForm(); });
   $("steps").addEventListener("change", persistPreferences);
   $("maxTokens").addEventListener("input", () => { persistPreferences(); validateForm(); });
   $("imageSize").addEventListener("change", persistPreferences);
   $("safety").addEventListener("change", persistPreferences);
+  $("chk-safety-checker").addEventListener("change", () => { actualizarControlesSeguridad(); persistPreferences(); });
   $("encuadre").addEventListener("change", () => { actualizarPrudenciaUi(); persistPreferences(); });
   $("prudencia").addEventListener("change", persistPreferences);
   $("exportFormat").addEventListener("change", () => { updateExportUi(); persistPreferences(); });

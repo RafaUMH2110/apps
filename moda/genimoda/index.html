@@ -321,12 +321,24 @@
     <textarea id="generatedPrompt" class="tall" aria-label="Prompt generado por Claude (editable)" placeholder="El prompt generado por Claude aparecer&#225; aqu&#237;. Puedes editarlo antes de generar la imagen."></textarea>
     <p class="hint" style="margin-top:.4rem">Puedes modificar este prompt a mano; la imagen se generar&#225; con el texto que haya aqu&#237; en el momento de pulsar el bot&#243;n.</p>
     <p class="hint" id="promptLargo"></p>
+    <div class="field">
+      <label class="pick-row" for="traducirPrompt">
+        <input type="checkbox" id="traducirPrompt" checked>
+        <span>Traducir el prompt al ingl&#233;s antes de enviarlo a FLUX</span>
+      </label>
+      <p class="hint">FLUX se entren&#243; casi solo con descripciones en ingl&#233;s y sigue bastante peor un prompt en espa&#241;ol. El cuadro de arriba se queda en espa&#241;ol; la traducci&#243;n se hace al pulsar el bot&#243;n, se muestra debajo y es la que se env&#237;a. Necesita la API key del proveedor de texto.</p>
+    </div>
     <div class="row">
       <button type="button" id="generateFromPrompt" class="primary" disabled>
         <span class="spinner" aria-hidden="true"></span><span id="generateFromPromptLabel">Generar imagen con este prompt</span>
       </button>
     </div>
     <p class="hint" id="generateFromPromptHint"></p>
+    <div class="field hidden" id="zonaPromptEnviado">
+      <label for="promptEnviado">Prompt enviado a FLUX</label>
+      <textarea id="promptEnviado" readonly aria-readonly="true"></textarea>
+      <p class="hint" id="promptEnviadoNota"></p>
+    </div>
     <div class="row">
       <button type="button" id="copyPrompt" disabled>Copiar prompt</button>
       <button type="button" id="downloadPrompt" disabled>Descargar prompt</button>
@@ -378,7 +390,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:38</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:43</p>
   </footer>
 </div>
 
@@ -634,6 +646,7 @@ const STORAGE = {
   imageSize: "genimod_alumnos_image_size",
   safetyTolerance: "genimod_alumnos_safety_tolerance",
   encuadre: "genimod_alumnos_encuadre",
+  traducir: "genimod_alumnos_traducir",
   exportFormat: "genimod_alumnos_export_format",
   jpegQuality: "genimod_alumnos_jpeg_quality"
 };
@@ -990,7 +1003,24 @@ REQUISITOS:
 /* Llamada unificada al proveedor de texto activo (Anthropic, OpenAI o Gemini)
    para mejorar la idea inicial y obtener el prompt destinado a FLUX. */
 async function mejorarIdeaConIA(systemPrompt, idea, provider, model, maxTokens) {
-  const userMessage = buildUserMessage(idea);
+  return llamarProveedorTexto(systemPrompt, buildUserMessage(idea), provider, model, maxTokens);
+}
+
+/* Instrucciones para traducir al ingl\u00e9s el prompt ya escrito. FLUX se entren\u00f3
+   casi solo con descripciones en ingl\u00e9s y sigue bastante peor un prompt en
+   espa\u00f1ol, as\u00ed que la imagen se pide con la versi\u00f3n inglesa. */
+const SYSTEM_TRADUCCION = `Eres un traductor t\u00e9cnico especializado en moda, tejidos y fotograf\u00eda de producto.
+Traduces al ingl\u00e9s prompts de generaci\u00f3n de im\u00e1genes escritos en espa\u00f1ol.
+Mantienes el mismo orden, la misma estructura y aproximadamente la misma longitud: no a\u00f1ades ni quitas elementos.
+Usas el t\u00e9rmino ingl\u00e9s habitual en moda para cada prenda, tejido, costura y acabado, en vez de una traducci\u00f3n literal.
+Devuelves \u00daNICAMENTE la traducci\u00f3n, en un solo p\u00e1rrafo, sin explicaciones, comentarios, comillas ni bloques Markdown.`;
+
+async function traducirPromptAIngles(texto, provider, model, maxTokens) {
+  const r = await llamarProveedorTexto(SYSTEM_TRADUCCION, "Traduce al ingl\u00e9s este prompt:\n\n" + texto, provider, model, maxTokens);
+  return String(r && r.text || "").trim();
+}
+
+async function llamarProveedorTexto(systemPrompt, userMessage, provider, model, maxTokens) {
 
   if (provider === "openai") {
     const messages = [];
@@ -1203,6 +1233,13 @@ function extractFalImage(data) {
 /* ==========================================================================
    VISUALIZACI\u00d3N
    ========================================================================== */
+/* Muestra, bajo el bot\u00f3n, el texto exacto que se ha enviado a FLUX. */
+function mostrarPromptEnviado(texto, nota) {
+  $("zonaPromptEnviado").classList.toggle("hidden", !texto);
+  $("promptEnviado").value = texto || "";
+  $("promptEnviadoNota").textContent = nota || "";
+}
+
 /* FLUX solo atiende al principio del prompt: su codificador de texto admite
    unas 512 unidades en FLUX.1 [pro] y la mitad en [schnell], y el espa\u00f1ol gasta
    bastante m\u00e1s de una por palabra. Este aviso avisa antes de que el final del
@@ -1221,6 +1258,7 @@ function actualizarLargoPrompt() {
 function displayGeneratedPrompt(text, usage, provider, model, note) {
   $("generatedPrompt").value = text;
   actualizarLargoPrompt();
+  mostrarPromptEnviado("", "");
   ["copyPrompt", "downloadPrompt", "clearPrompt", "downloadTxt"].forEach((id) => { $(id).disabled = !text; });
   updateGenerateFromPromptButton();
   const meta = $("claudeMeta");
@@ -1528,8 +1566,26 @@ async function generarImagenDesdePrompt() {
   state.lastPrompt = prompt;
   showLoading(true, "Generando\u2026");
   try {
-    showStatus("Generando imagen con FLUX a partir del prompt editado\u2026", "info");
-    const image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety);
+    // FLUX sigue bastante peor un prompt en espa\u00f1ol, as\u00ed que la imagen se pide
+    // con la traducci\u00f3n al ingl\u00e9s, que es la que se muestra y se guarda.
+    let promptEnviado = prompt;
+    let nota = "Se ha enviado el prompt en espa\u00f1ol, tal cual.";
+    const proveedorTexto = getTextProvider();
+    const hayClaveTexto = !!storageGet(TEXT_PROVIDERS[proveedorTexto].keyStorage);
+    if ($("traducirPrompt").checked && hayClaveTexto) {
+      showStatus("Traduciendo el prompt al ingl\u00e9s\u2026", "info");
+      const tope = Number.isFinite(getMaxTokens()) ? getMaxTokens() : APP_CONFIG.anthropic.maxTokens;
+      const traducido = await traducirPromptAIngles(prompt, proveedorTexto, getActiveModel("text"), tope);
+      if (traducido) {
+        promptEnviado = traducido;
+        nota = "Traducido al ingl\u00e9s con " + TEXT_PROVIDERS[proveedorTexto].label + ". El cuadro de arriba sigue en espa\u00f1ol: edita ah\u00ed y se traduce de nuevo en cada generaci\u00f3n.";
+      }
+    } else if ($("traducirPrompt").checked && !hayClaveTexto) {
+      nota = "Se ha enviado en espa\u00f1ol: falta la API key de " + TEXT_PROVIDERS[proveedorTexto].label + " para traducirlo.";
+    }
+    mostrarPromptEnviado(promptEnviado, nota);
+    showStatus("Generando imagen con FLUX\u2026", "info");
+    const image = await generarImagenConFal(promptEnviado, falModel, steps, imageSize, safety);
     displayGeneratedImage(image, falModel, steps);
     if (image.nsfw) {
       showStatus("Aviso: fal.ai ha marcado la imagen con su filtro de seguridad y probablemente sea negra. Reformula el prompt con lenguaje m\u00e1s t\u00e9cnico y menos centrado en el cuerpo.", "error");
@@ -1537,7 +1593,7 @@ async function generarImagenDesdePrompt() {
       showStatus("Imagen generada correctamente.", "ok");
     }
     await guardarEnHistorial({
-      idea: state.lastIdea, systemPrompt: state.lastSystem, prompt, improved: wantsImprove(),
+      idea: state.lastIdea, systemPrompt: state.lastSystem, prompt, promptEnviado, improved: wantsImprove(),
       textProvider: wantsImprove() ? getTextProvider() : null, textModel: wantsImprove() ? getActiveModel("text") : null,
       falModel, steps, imageSize, safety, image, usage: null
     });
@@ -1803,6 +1859,7 @@ function loadFromHistory(rec) {
   if (APP_CONFIG.fal.safetyToleranceOpciones.includes(Number(rec.safety))) $("selSafetyTolerance").value = String(Number(rec.safety));
   persistPreferences();
 
+  mostrarPromptEnviado(rec.promptEnviado || "", rec.promptEnviado && rec.promptEnviado !== rec.prompt ? "Prompt en ingl\u00e9s con el que se gener\u00f3 esta imagen." : "");
   state.lastPrompt = rec.prompt;
   state.lastSystem = rec.systemPrompt;
   state.lastIdea = rec.idea;
@@ -1855,6 +1912,7 @@ async function renderComparison() {
     ["Tama\u00f1o", (r) => sizeLabel(r.imageSize)],
     ["Filtro activado", (r) => (r.nsfw ? "S\u00ed (imagen marcada)" : "No")],
     ["Encuadre", (r) => { const k = encuadreDeTexto(r.systemPrompt); return k ? ENCUADRES[k].label : "no registrado"; }],
+    ["Enviado a FLUX", (r) => (!r.promptEnviado ? "no registrado" : (r.promptEnviado === r.prompt ? "en espa\u00f1ol" : "traducido al ingl\u00e9s"))],
     ["Instrucciones", (r) => (limpiarMarcas(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
     ["Idea inicial", (r) => r.idea]
   ];
@@ -1963,6 +2021,9 @@ function loadSettings() {
   const savedEnc = storageGet(STORAGE.encuadre);
   $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
 
+  const savedTrad = storageGet(STORAGE.traducir);
+  $("traducirPrompt").checked = savedTrad === "" ? true : savedTrad === "1";
+
   const savedImprove = storageGet(STORAGE.improvePrompt);
   $("improvePrompt").checked = savedImprove === "" ? true : savedImprove === "1";
 
@@ -1992,6 +2053,7 @@ function persistPreferences() {
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safetyTolerance, $("selSafetyTolerance").value);
   storageSet(STORAGE.encuadre, getEncuadre());
+  storageSet(STORAGE.traducir, $("traducirPrompt").checked ? "1" : "0");
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
   if (Number.isInteger(q) && q >= 1 && q <= 100) storageSet(STORAGE.jpegQuality, String(q));
@@ -2022,6 +2084,7 @@ function initializeApp() {
   $("textModel").addEventListener("change", () => { updateMaxTokensUI(); persistPreferences(); validateForm(); });
   $("falModel").addEventListener("change", () => { refreshImageSizes(); actualizarUiTolerancia(); persistPreferences(); validateForm(); });
   $("encuadre").addEventListener("change", persistPreferences);
+  $("traducirPrompt").addEventListener("change", persistPreferences);
   $("steps").addEventListener("change", persistPreferences);
   $("imageSize").addEventListener("change", persistPreferences);
   $("selSafetyTolerance").addEventListener("change", persistPreferences);

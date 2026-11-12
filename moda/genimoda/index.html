@@ -253,6 +253,11 @@
       <p class="hint">Si se desactiva, la IA no interviene: la idea inicial se env&#237;a tal cual a FLUX, sin usar la API del proveedor de texto ni las instrucciones del sistema.</p>
     </div>
     <div class="field claude-only">
+      <label for="encuadre">Qu&#233; debe mostrar la imagen</label>
+      <select id="encuadre"></select>
+      <p class="hint">Se a&#241;ade como &#250;ltima l&#237;nea de las instrucciones del sistema al enviarlas. Solo act&#250;a si el prompt se mejora con IA.</p>
+    </div>
+    <div class="field claude-only">
       <label for="systemPrompt">Instrucciones del sistema</label>
       <textarea id="systemPrompt" class="tall"></textarea>
       <div class="row">
@@ -286,6 +291,7 @@
       <div>
         <label for="selSafetyTolerance">Tolerancia del filtro de seguridad de fal.ai</label>
         <select id="selSafetyTolerance"></select>
+        <p class="hint" id="hintSafety"></p>
       </div>
     </div>
   </section>
@@ -371,7 +377,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:51</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:20</p>
   </footer>
 </div>
 
@@ -399,8 +405,8 @@ const APP_CONFIG = {
     defaultModel: "fal-ai/flux-pro/v1.1",
     defaultInferenceSteps: 2,
     defaultImageSize: "portrait_4_3",
-    safetyToleranceDefecto: 3,                    // Versi\u00f3n alumnos: elegible entre 1 y 5 con selSafetyTolerance
-    safetyToleranceOpciones: [1, 2, 3, 4, 5],
+    safetyToleranceDefecto: 3,                    // Versi\u00f3n alumnos: elegible entre 1 y 6 con selSafetyTolerance
+    safetyToleranceOpciones: [1, 2, 3, 4, 5, 6],
     outputFormat: "png",
     numImages: 1
   }
@@ -485,6 +491,17 @@ const FAL_MODELS = {
       { value: "portrait_4_3",  label: "Retrato 4:3" },
       { value: "portrait_16_9", label: "Retrato 16:9" }
     ]
+  },
+  "fal-ai/flux/schnell": {
+    label: "FLUX.1 [schnell] (fal-ai/flux/schnell)",
+    // No admite safety_tolerance: fal.ai aplica su propio filtro al prompt.
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size"],
+    imageSizes: [
+      { value: "portrait_4_3",  label: "Retrato 4:3" },
+      { value: "portrait_16_9", label: "Retrato 16:9" },
+      { value: "square_hd",     label: "Cuadrado HD" },
+      { value: "landscape_4_3", label: "Apaisado 4:3" }
+    ]
   }
 };
 /* Par\u00e1metros enviados a un modelo introducido manualmente ("Otro\u2026"). */
@@ -542,15 +559,55 @@ const PRICING = {
   fal: {}
 };
 
+/* Encuadre de la imagen. La l\u00ednea del encuadre elegido se a\u00f1ade como \u00faltima
+   l\u00ednea de las instrucciones del sistema al enviarlas. La marca inicial permite
+   reconocer esa l\u00ednea para sustituirla en vez de acumular varias. */
+const MARCA_ENCUADRE = "[Encuadre]";
+const ENCUADRE_POR_DEFECTO = "completo";
+const ENCUADRES = {
+  prenda: {
+    label: "Solo la prenda, sin modelo",
+    instruccion: MARCA_ENCUADRE + " La fotograf\u00eda debe mostrar \u00fanicamente la prenda, sin ninguna persona ni parte del cuerpo humano: fotograf\u00eda de producto sobre fondo limpio o con maniqu\u00ed invisible, con la prenda colocada de forma que se aprecien claramente su dise\u00f1o y su construcci\u00f3n."
+  },
+  parcial: {
+    label: "Con modelo, solo la zona de la prenda",
+    instruccion: MARCA_ENCUADRE + " La fotograf\u00eda debe mostrar la prenda puesta sobre una persona, pero encuadrada \u00fanicamente en la zona del cuerpo que ocupa la prenda (por ejemplo, de los hombros a la cadera para un top, o de la cintura a los pies para un pantal\u00f3n), recortando el resto del cuerpo. La prenda debe verse completa y apreciarse con claridad su dise\u00f1o y su construcci\u00f3n."
+  },
+  completo: {
+    label: "Con modelo, cuerpo entero",
+    instruccion: MARCA_ENCUADRE + " La fotograf\u00eda debe mostrar la prenda puesta sobre una persona a cuerpo completo, de la cabeza a los pies, y permitir apreciar claramente su dise\u00f1o y su construcci\u00f3n."
+  }
+};
+/* Devuelve el encuadre activo, con respaldo si el valor guardado ya no existe. */
+function getEncuadre() {
+  const sel = document.getElementById("encuadre");
+  const v = sel ? sel.value : ENCUADRE_POR_DEFECTO;
+  return ENCUADRES[v] ? v : ENCUADRE_POR_DEFECTO;
+}
+/* Quita del texto la l\u00ednea de encuadre que a\u00f1ade la aplicaci\u00f3n. */
+function limpiarMarcas(texto) {
+  return String(texto || "").split("\n")
+    .filter((l) => l.indexOf(MARCA_ENCUADRE) !== 0)
+    .join("\n").replace(/\s+$/, "");
+}
+/* Identifica qu\u00e9 encuadre lleva incrustado un texto guardado en el historial. */
+function encuadreDeTexto(texto) {
+  const linea = String(texto || "").split("\n").find((l) => l.indexOf(MARCA_ENCUADRE) === 0);
+  if (!linea) return "";
+  return Object.keys(ENCUADRES).find((k) => ENCUADRES[k].instruccion === linea.trim()) || "";
+}
+/* Instrucciones que se env\u00edan realmente: las del cuadro de texto m\u00e1s la l\u00ednea
+   del encuadre elegido. */
+function systemPromptEfectivo() {
+  const base = limpiarMarcas(document.getElementById("systemPrompt").value);
+  return [base, ENCUADRES[getEncuadre()].instruccion].filter(Boolean).join("\n");
+}
+
 /* Prompt del sistema predeterminado para Claude. */
 const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotograf\u00eda comercial de moda, direcci\u00f3n de arte, fotograf\u00eda de producto y descripci\u00f3n de materiales y texturas.
-
 Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generaci\u00f3n de im\u00e1genes FLUX.
-
-La imagen solicitada debe representar una prenda de moda mediante una fotograf\u00eda comercial hiperrealista de cuerpo completo.
-
+La imagen solicitada debe representar una prenda de moda mediante una fotograf\u00eda comercial hiperrealista.
 Describe de forma precisa y visualmente \u00fatil:
-
 * La prenda y su construcci\u00f3n.
 * Silueta, corte y proporciones.
 * Materiales y tejidos.
@@ -561,8 +618,6 @@ Describe de forma precisa y visualmente \u00fatil:
 * Pliegues, arrugas y tensi\u00f3n del tejido.
 * Microdetalles visibles.
 * Ca\u00edda natural de la prenda.
-* Relaci\u00f3n entre la prenda y el cuerpo.
-* Pose y postura del modelo cuando sea relevante.
 * Iluminaci\u00f3n.
 * Sombras y reflejos.
 * Entorno y fondo.
@@ -572,17 +627,11 @@ Describe de forma precisa y visualmente \u00fatil:
 * Profundidad de campo.
 * Apertura aproximada, por ejemplo f/1.4, cuando resulte apropiada.
 * Calidad y caracter\u00edsticas propias de una fotograf\u00eda comercial real.
-
 No utilices palabras vac\u00edas o gen\u00e9ricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripci\u00f3n visual concreta.
-
 En su lugar, describe los elementos f\u00edsicos, \u00f3pticos, materiales y fotogr\u00e1ficos que hacen que la imagen resulte cre\u00edble.
-
-La fotograf\u00eda debe mostrar la prenda de cuerpo completo y permitir apreciar claramente su dise\u00f1o y construcci\u00f3n.
-
+La fotograf\u00eda debe permitir apreciar con claridad el dise\u00f1o y la construcci\u00f3n de la prenda.
 El prompt final debe estar optimizado para FLUX.
-
 Devuelve \u00daNICAMENTE el prompt final en espa\u00f1ol.
-
 No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
 
 /* Claves de localStorage (las API keys usan exactamente estos nombres). */
@@ -599,6 +648,7 @@ const STORAGE = {
   steps: "genimod_alumnos_inference_steps_v2",
   imageSize: "genimod_alumnos_image_size",
   safetyTolerance: "genimod_alumnos_safety_tolerance",
+  encuadre: "genimod_alumnos_encuadre",
   exportFormat: "genimod_alumnos_export_format",
   jpegQuality: "genimod_alumnos_jpeg_quality"
 };
@@ -704,11 +754,22 @@ function fillTextModels(preferred) {
   $("textModel").value = cfg.models.some((m) => m.id === preferred) ? preferred : cfg.defaultModel;
 }
 
+/* Muestra el estado de la tolerancia seg\u00fan la admita o no el modelo elegido. */
+function actualizarUiTolerancia() {
+  const modelo = $("falModel").value;
+  const admite = (FAL_MODELS[modelo] ? FAL_MODELS[modelo].params : CUSTOM_FAL_PARAMS).indexOf("safety_tolerance") !== -1;
+  $("selSafetyTolerance").disabled = !admite;
+  $("hintSafety").textContent = admite
+    ? "1 bloquea m\u00e1s contenido sensible; 6 es el m\u00e1s permisivo. Define el par\u00e1metro safety_tolerance de fal.ai."
+    : "El modelo de imagen elegido no admite este par\u00e1metro: no se env\u00eda y la elecci\u00f3n no tiene efecto. fal.ai aplica igualmente su propio filtro al texto del prompt.";
+}
+
 function refreshImageSizes(preferred) {
   const sel = $("falModel").value;
   const sizes = FAL_MODELS[sel].imageSizes;
+  const previo = $("imageSize").value;
   fillSelect($("imageSize"), sizes.map((s) => ({ value: s.value, label: s.label })));
-  const wanted = preferred || $("imageSize").value;
+  const wanted = preferred || previo;
   if (sizes.some((s) => s.value === wanted)) $("imageSize").value = wanted;
   else $("imageSize").value = sizes.some((s) => s.value === APP_CONFIG.fal.defaultImageSize) ? APP_CONFIG.fal.defaultImageSize : sizes[0].value;
 }
@@ -758,7 +819,7 @@ function wantsImprove() { return $("improvePrompt").checked; }
 function updateImproveUi() {
   const on = wantsImprove();
   document.querySelectorAll(".claude-only").forEach((el) => el.classList.toggle("inactive", !on));
-  ["textProvider", "textModel", "maxTokens", "systemPrompt", "systemClear", "systemRestore"].forEach((id) => { $(id).disabled = !on; });
+  ["textProvider", "textModel", "maxTokens", "encuadre", "systemPrompt", "systemClear", "systemRestore"].forEach((id) => { $(id).disabled = !on; });
   validateForm();
 }
 
@@ -1093,7 +1154,8 @@ function buildFalBody(model, prompt, steps, imageSize, safety) {
     num_images: APP_CONFIG.fal.numImages,
     output_format: APP_CONFIG.fal.outputFormat,   // Siempre PNG
     image_size: imageSize,
-    safety_tolerance: safety
+    // fal.ai declara safety_tolerance como enumeraci\u00f3n de texto ("1".."6").
+    safety_tolerance: String(safety)
   };
   const body = {};
   allowed.forEach((k) => { if (k in all) body[k] = all[k]; });
@@ -1380,7 +1442,6 @@ async function generar() {
   if (!validateForm()) { showError("Completa todos los campos obligatorios antes de generar."); return; }
 
   const improve = wantsImprove();
-  const systemPrompt = $("systemPrompt").value;
   const idea = $("idea").value.trim();
   const textProvider = getTextProvider();
   const textModel = improve ? getActiveModel("text") : "";
@@ -1394,7 +1455,7 @@ async function generar() {
 
     if (improve) {
       showStatus(`Mejorando la idea con ${providerLabel}\u2026`, "info");
-      const resultado = await mejorarIdeaConIA(systemPrompt, idea, textProvider, textModel, maxTokens);
+      const resultado = await mejorarIdeaConIA(systemPromptEfectivo(), idea, textProvider, textModel, maxTokens);
       promptFinal = resultado.text;
       usage = resultado.usage;
       const truncated = resultado.stopReason === "max_tokens"
@@ -1409,7 +1470,7 @@ async function generar() {
     }
 
     state.lastPrompt = promptFinal;
-    state.lastSystem = systemPrompt;
+    state.lastSystem = systemPromptEfectivo();
     state.lastIdea = idea;
     $("h-claude").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
@@ -1430,7 +1491,6 @@ async function estimarTokens() {
     if (!wantsImprove()) throw new AppError("Marca antes \"Mejorar el prompt con IA\": si no, no hay ninguna llamada a un proveedor de texto que estimar.");
     const provider = getTextProvider();
     if (provider !== "anthropic" && provider !== "gemini") throw new AppError("La estimación de tokens de entrada solo está disponible con los proveedores Anthropic (Claude) y Google (Gemini); OpenAI no ofrece aquí un conteo de tokens de entrada equivalente.");
-    const systemPrompt = $("systemPrompt").value;
     const idea = $("idea").value.trim();
     const model = getActiveModel("text");
     const maxTokens = getMaxTokens();
@@ -1438,7 +1498,7 @@ async function estimarTokens() {
     if (!idea) throw new AppError("Describe antes la idea inicial.");
     if (!model) throw new AppError("Indica un identificador de modelo válido.");
     if (!Number.isFinite(maxTokens)) throw new AppError(provider === "anthropic" ? `Indica un máximo de tokens válido (1-${APP_CONFIG.anthropic.maxAllowedTokens}).` : "Indica un máximo de tokens válido (entero positivo).");
-    const entrada = await contarTokensEntrada(systemPrompt, idea, provider, model);
+    const entrada = await contarTokensEntrada(systemPromptEfectivo(), idea, provider, model);
     out.textContent = formatearEstimacionTokens(entrada, maxTokens, provider, model);
     out.className = "status show ok";
   } catch (err) {
@@ -1724,7 +1784,9 @@ function loadFromHistory(rec) {
   $("improvePrompt").checked = rec.improved !== false;
   updateImproveUi();
   $("idea").value = rec.idea;
-  $("systemPrompt").value = rec.systemPrompt;
+  $("systemPrompt").value = limpiarMarcas(rec.systemPrompt);
+  const encRec = encuadreDeTexto(rec.systemPrompt);
+  if (encRec) $("encuadre").value = encRec;
   // Compatibilidad con el historial anterior (solo Claude): si el registro no
   // tiene textProvider pero sí claudeModel, se asume Anthropic.
   const recProvider = TEXT_PROVIDERS[rec.textProvider] ? rec.textProvider : "anthropic";
@@ -1734,6 +1796,7 @@ function loadFromHistory(rec) {
   if (recModel) fillTextModels(recModel);
   setModelSelect("falModel", Object.keys(FAL_MODELS), rec.falModel);
   refreshImageSizes(rec.imageSize);
+  actualizarUiTolerancia();
   if (INFERENCE_STEP_OPTIONS.includes(rec.steps)) $("steps").value = String(rec.steps);
   if (APP_CONFIG.fal.safetyToleranceOpciones.includes(Number(rec.safety))) $("selSafetyTolerance").value = String(Number(rec.safety));
   persistPreferences();
@@ -1779,7 +1842,8 @@ async function renderComparison() {
   if (chosen.length < 2) return;
   compareObjectUrls = revokeUrls(compareObjectUrls);
 
-  const sizeLabel = (v) => { const f = CUSTOM_FAL_IMAGE_SIZES.find((s) => s.value === v); return f ? f.label : v; };
+  const todosLosTamanos = Object.values(FAL_MODELS).reduce((acc, m) => acc.concat(m.imageSizes), CUSTOM_FAL_IMAGE_SIZES.slice());
+  const sizeLabel = (v) => { const f = todosLosTamanos.find((s) => s.value === v); return f ? f.label : v; };
   const rows = [
     ["Mejorado con IA", (r) => (r.improved ? "S\u00ed" : "No")],
     ["Proveedor de IA", (r) => (r.improved ? (TEXT_PROVIDERS[r.textProvider] ? TEXT_PROVIDERS[r.textProvider].label : "Anthropic (Claude)") : "\u2014")],
@@ -1788,7 +1852,8 @@ async function renderComparison() {
     ["Pasos", (r) => String(r.steps)],
     ["Tama\u00f1o", (r) => sizeLabel(r.imageSize)],
     ["Filtro activado", (r) => (r.nsfw ? "S\u00ed (imagen marcada)" : "No")],
-    ["Instrucciones", (r) => (r.systemPrompt === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
+    ["Encuadre", (r) => { const k = encuadreDeTexto(r.systemPrompt); return k ? ENCUADRES[k].label : "no registrado"; }],
+    ["Instrucciones", (r) => (limpiarMarcas(r.systemPrompt) === DEFAULT_SYSTEM_PROMPT ? "Predeterminadas" : "Modificadas")],
     ["Idea inicial", (r) => r.idea]
   ];
 
@@ -1889,6 +1954,12 @@ function loadSettings() {
   fillSelect($("selSafetyTolerance"), APP_CONFIG.fal.safetyToleranceOpciones.map((n) => ({ value: String(n), label: String(n) })));
   const savedSafety = storageGet(STORAGE.safetyTolerance);
   $("selSafetyTolerance").value = APP_CONFIG.fal.safetyToleranceOpciones.includes(Number(savedSafety)) ? savedSafety : String(APP_CONFIG.fal.safetyToleranceDefecto);
+  actualizarUiTolerancia();
+
+  // Encuadre de la imagen
+  fillSelect($("encuadre"), Object.keys(ENCUADRES).map((k) => ({ value: k, label: ENCUADRES[k].label })));
+  const savedEnc = storageGet(STORAGE.encuadre);
+  $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
 
   const savedImprove = storageGet(STORAGE.improvePrompt);
   $("improvePrompt").checked = savedImprove === "" ? true : savedImprove === "1";
@@ -1918,6 +1989,7 @@ function persistPreferences() {
   storageSet(STORAGE.steps, $("steps").value);
   storageSet(STORAGE.imageSize, $("imageSize").value);
   storageSet(STORAGE.safetyTolerance, $("selSafetyTolerance").value);
+  storageSet(STORAGE.encuadre, getEncuadre());
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
   if (Number.isInteger(q) && q >= 1 && q <= 100) storageSet(STORAGE.jpegQuality, String(q));
@@ -1946,7 +2018,8 @@ function initializeApp() {
     validateForm();
   });
   $("textModel").addEventListener("change", () => { updateMaxTokensUI(); persistPreferences(); validateForm(); });
-  $("falModel").addEventListener("change", () => { refreshImageSizes(); persistPreferences(); validateForm(); });
+  $("falModel").addEventListener("change", () => { refreshImageSizes(); actualizarUiTolerancia(); persistPreferences(); validateForm(); });
+  $("encuadre").addEventListener("change", persistPreferences);
   $("steps").addEventListener("change", persistPreferences);
   $("imageSize").addEventListener("change", persistPreferences);
   $("selSafetyTolerance").addEventListener("change", persistPreferences);

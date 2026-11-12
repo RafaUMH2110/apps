@@ -375,7 +375,7 @@
 
 <footer>
   GenPatMod &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 05/11/2026 18:29
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 01:20
 </footer>
 
 
@@ -917,11 +917,34 @@ function extraerJSON(texto){
   return null;
 }
 
+// En estos SVG 1 unidad de usuario = 1 cm. Algunos modelos (p. ej. Haiku 4.5)
+// escriben el tamaño de letra CON unidad, normalmente en un bloque <style>
+// ("font-size: 0.6cm"). Pero 0.6cm equivale a 0.6 x 37.8 = 22.7 unidades, es
+// decir, un texto de 22 cm de alto: la pieza se mide enorme, se reduce hasta
+// quedar diminuta en la hoja y los textos salen gigantes y solapados. Esta
+// función convierte esas unidades a unidades de usuario (px = 1 unidad) y, si
+// aun así el tamaño es absurdo (> FONT_SIZE_MAX_CM), lo sustituye por el
+// tamaño estándar del system prompt (0.45–0.7).
+const CM_POR_UNIDAD_CSS = {cm: 1, mm: 0.1, in: 2.54, pt: 2.54 / 72, pc: 2.54 / 6};
+const FONT_SIZE_MAX_CM = 2;
+const FONT_SIZE_DEFECTO_CM = 0.6;
+function normalizarTamanosTexto(svg){
+  return svg.replace(/(font-size\s*[:=]\s*["']?\s*)(\d*\.?\d+)\s*(cm|mm|in|pt|pc|px|em|rem|%)?/gi, (m, pre, num, unidad) => {
+    const u = (unidad || "").toLowerCase();
+    if (u === "em" || u === "rem" || u === "%") return m; // tamaños relativos: no se tocan
+    let v = parseFloat(num);
+    if (!isFinite(v) || v <= 0) return m;
+    if (u in CM_POR_UNIDAD_CSS) v *= CM_POR_UNIDAD_CSS[u];
+    if (v > FONT_SIZE_MAX_CM) v = FONT_SIZE_DEFECTO_CM;
+    return pre + parseFloat(v.toFixed(3)) + "px";
+  });
+}
+
 function extraerSVG(texto){
   let m = /```(?:xml|svg)?\s*(<svg[\s\S]*?<\/svg>)\s*```/i.exec(texto);
-  if (m) return m[1];
+  if (m) return normalizarTamanosTexto(m[1]);
   m = /(<svg[\s\S]*?<\/svg>)/i.exec(texto);
-  return m ? m[1] : "";
+  return m ? normalizarTamanosTexto(m[1]) : "";
 }
 
 /* ============================================================================

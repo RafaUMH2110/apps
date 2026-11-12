@@ -194,6 +194,14 @@
   .progress-fill { height: 100%; background: var(--blue-600); width: 0%; transition: width .3s; }
   .progress-label { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--muted); margin-top: .4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .3rem; }
 
+  details.guia-modelos { margin-top: .6rem; border: 1px solid var(--border); border-radius: 10px; padding: .6rem .9rem; background: var(--blue-50); }
+  details.guia-modelos summary { cursor: pointer; font-weight: 600; color: var(--blue-700); font-size: .92rem; }
+  details.guia-modelos[open] summary { margin-bottom: .6rem; }
+  .tabla-guia { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .tabla-guia th, .tabla-guia td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tabla-guia th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .tabla-guia tr:last-child td { border-bottom: 0; }
+
   .hidden { display: none !important; }
 
   kbd {
@@ -340,7 +348,24 @@
         <div class="field">
           <label for="falModel">Modelo de generaci&#243;n de imagen</label>
           <select id="falModel"></select>
+          <p class="hint" id="falModelGuia"></p>
         </div>
+        <details class="guia-modelos">
+          <summary>&#191;Qu&#233; modelo elijo?</summary>
+          <table class="tabla-guia">
+            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro de fal.ai</th></tr></thead>
+            <tbody>
+              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia y verificador desactivable</td></tr>
+              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Solo tolerancia: el verificador no se puede desactivar</td></tr>
+              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites 2K o 4K: imprimir una l&#225;mina o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;an los dos; alguno puede fallar</td></tr>
+            </tbody>
+          </table>
+          <p class="hint">Consejo para moda: el <b>encuadre</b> y la <b>prudencia</b> de arriba influyen m&#225;s en el resultado que el modelo. Cambia una sola cosa cada vez y compara en el historial.</p>
+          <p class="hint">El cat&#225;logo de fal.ai cambia con frecuencia; si sale un modelo nuevo, puedes probarlo con &#171;Otro&#8230;&#187; escribiendo su identificador.</p>
+        </details>
         <div class="field hidden" id="falCustomWrap">
           <label for="falCustom">Identificador del modelo de fal.ai</label>
           <input type="text" id="falCustom" autocomplete="off" spellcheck="false" placeholder="p. ej. fal-ai/flux-pro/v1.1">
@@ -355,6 +380,7 @@
       <div>
         <label for="steps">N&#250;mero de pasos de inferencia</label>
         <select id="steps"></select>
+        <p class="hint" id="hint-steps"></p>
       </div>
       <div>
         <label for="formatFixed">Formato de generaci&#243;n</label>
@@ -558,7 +584,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 03:25</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 03:46</p>
   </footer>
 </div>
 
@@ -582,7 +608,7 @@ const APP_CONFIG = {
   },
   fal: {
     baseUrl: "https://fal.run/",                  // El endpoint final es baseUrl + identificador del modelo
-    defaultModel: "fal-ai/flux-pro/v1.1",
+    defaultModel: "fal-ai/flux-2-pro",
     defaultInferenceSteps: 2,
     defaultImageSize: "portrait_4_3",
     defaultSafetyTolerance: "2",                  // 1 = m\u00e1s estricto, 6 = m\u00e1s permisivo
@@ -687,39 +713,69 @@ const TEXT_PROVIDERS = {
 /* Modelos de fal.ai configurados y par\u00e1metros que admite cada uno.
    Para a\u00f1adir otro modelo, agrega una entrada con su esquema real. */
 const FAL_MODELS = {
+  "fal-ai/flux-2-pro": {
+    label: "FLUX.2 [pro] \u2014 fotorrealismo de estudio",
+    guia: "La mejor opci\u00f3n por defecto para moda: luz, piel y ca\u00edda de tejido de calidad de estudio. Admite tanto la tolerancia como desactivar el verificador.",
+    params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"],
+    imageSizes: [
+      { value: "square_hd",      label: "Cuadrada (alta)" },
+      { value: "square",         label: "Cuadrada" },
+      { value: "portrait_4_3",   label: "Retrato 4:3" },
+      { value: "portrait_16_9",  label: "Retrato 16:9" },
+      { value: "landscape_4_3",  label: "Apaisada 4:3" },
+      { value: "landscape_16_9", label: "Apaisada 16:9" }
+    ]
+  },
   "fal-ai/flux-pro/v1.1": {
-    label: "FLUX 1.1 [pro] (fal-ai/flux-pro/v1.1)",
+    label: "FLUX 1.1 [pro] \u2014 la de siempre",
+    guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena calidad y r\u00e1pida, pero su verificador de imagen no se puede desactivar.",
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"],
     imageSizes: [
       { value: "portrait_4_3",  label: "Retrato 4:3" },
       { value: "portrait_16_9", label: "Retrato 16:9" }
     ]
   },
+  "fal-ai/bytedance/seedream/v4.5/text-to-image": {
+    label: "Seedream 4.5 \u2014 m\u00e1xima resoluci\u00f3n",
+    guia: "Resoluci\u00f3n 2K o 4K de una pasada, buena para imprimir o proyectar en grande. M\u00e1s lenta que FLUX.",
+    params: ["prompt", "num_images", "image_size", "enable_safety_checker"],
+    imageSizes: [
+      { value: "auto_2K",        label: "autom\u00e1tica 2K" },
+      { value: "auto_4K",        label: "autom\u00e1tica 4K" },
+      { value: "square_hd",      label: "Cuadrada (alta)" },
+      { value: "portrait_4_3",   label: "Retrato 4:3" },
+      { value: "portrait_16_9",  label: "Retrato 16:9" },
+      { value: "landscape_4_3",  label: "Apaisada 4:3" }
+    ]
+  },
   "fal-ai/flux/dev": {
-    label: "FLUX.1 [dev] (fal-ai/flux/dev) \u2014 filtro desactivable",
+    label: "FLUX.1 [dev] \u2014 abierta, filtro desactivable",
+    guia: "Modelo abierto de calidad notable. Permite desactivar el verificador de imagen y ajustar los pasos de inferencia.",
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
     imageSizes: [
-      { value: "square_hd",     label: "Cuadrada (alta)" },
-      { value: "square",        label: "Cuadrada" },
-      { value: "portrait_4_3",  label: "Retrato 4:3" },
-      { value: "portrait_16_9", label: "Retrato 16:9" },
-      { value: "landscape_4_3", label: "Apaisada 4:3" },
-      { value: "landscape_16_9",label: "Apaisada 16:9" }
+      { value: "square_hd",      label: "Cuadrada (alta)" },
+      { value: "square",         label: "Cuadrada" },
+      { value: "portrait_4_3",   label: "Retrato 4:3" },
+      { value: "portrait_16_9",  label: "Retrato 16:9" },
+      { value: "landscape_4_3",  label: "Apaisada 4:3" },
+      { value: "landscape_16_9", label: "Apaisada 16:9" }
     ]
   },
   "fal-ai/flux/schnell": {
-    label: "FLUX.1 [schnell] (fal-ai/flux/schnell) \u2014 r\u00e1pido, filtro desactivable",
+    label: "FLUX.1 [schnell] \u2014 r\u00e1pida y barata",
+    guia: "La m\u00e1s r\u00e1pida y econ\u00f3mica: ideal para que el alumnado pruebe muchas ideas. Menos detalle de tejido que las Pro.",
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"],
     imageSizes: [
-      { value: "square_hd",     label: "Cuadrada (alta)" },
-      { value: "square",        label: "Cuadrada" },
-      { value: "portrait_4_3",  label: "Retrato 4:3" },
-      { value: "portrait_16_9", label: "Retrato 16:9" },
-      { value: "landscape_4_3", label: "Apaisada 4:3" },
-      { value: "landscape_16_9",label: "Apaisada 16:9" }
+      { value: "square_hd",      label: "Cuadrada (alta)" },
+      { value: "square",         label: "Cuadrada" },
+      { value: "portrait_4_3",   label: "Retrato 4:3" },
+      { value: "portrait_16_9",  label: "Retrato 16:9" },
+      { value: "landscape_4_3",  label: "Apaisada 4:3" },
+      { value: "landscape_16_9", label: "Apaisada 16:9" }
     ]
   }
 };
+
 
 /* Par\u00e1metros enviados a un modelo introducido manualmente ("Otro\u2026"). */
 const CUSTOM_FAL_PARAMS = ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"];
@@ -732,7 +788,7 @@ const SAFETY_TOLERANCE_OPTIONS = [
   { value: "5", label: "5 - Muy permisivo" },
   { value: "6", label: "6 - El m\u00e1s permisivo" }
 ];
-const CUSTOM_FAL_IMAGE_SIZES = FAL_MODELS[APP_CONFIG.fal.defaultModel].imageSizes;
+const CUSTOM_FAL_IMAGE_SIZES = FAL_MODELS["fal-ai/flux/dev"].imageSizes;
 const INFERENCE_STEP_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /* Exportaci\u00f3n de la imagen descargada. La generaci\u00f3n siempre se solicita en PNG;
@@ -1062,7 +1118,15 @@ function refreshImageSizes(preferred) {
    el que corresponda, para no ofrecer un ajuste que el modelo ignora. */
 function actualizarControlesSeguridad() {
   const sel = $("falModel").value;
-  const params = FAL_MODELS[sel] ? FAL_MODELS[sel].params : CUSTOM_FAL_PARAMS;
+  const info = FAL_MODELS[sel];
+  const params = info ? info.params : CUSTOM_FAL_PARAMS;
+  // Nota de ayuda del modelo activo y pasos de inferencia solo si los admite.
+  $("falModelGuia").textContent = info ? info.guia
+    : "Identificador escrito a mano: la aplicaci\u00f3n env\u00eda los par\u00e1metros habituales y ser\u00e1 fal.ai quien rechace los que ese modelo no admita.";
+  const hayPasos = params.indexOf("num_inference_steps") !== -1;
+  $("steps").disabled = !hayPasos;
+  const notaPasos = document.getElementById("hint-steps");
+  if (notaPasos) notaPasos.textContent = hayPasos ? "" : "Este modelo no usa pasos de inferencia: el ajuste no se env\u00eda.";
   const hayTolerancia = params.indexOf("safety_tolerance") !== -1;
   const hayVerificador = params.indexOf("enable_safety_checker") !== -1;
   $("zona-safety").classList.toggle("hidden", !hayTolerancia);

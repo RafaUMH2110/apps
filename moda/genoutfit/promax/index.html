@@ -355,6 +355,13 @@
     border: 1px solid var(--blue-100); border-bottom-width: 2px; border-radius: 5px; padding: .05em .4em;
   }
   select:disabled { opacity: .55; cursor: not-allowed; }
+  details.guia-modelos { margin-top: .6rem; border: 1px solid var(--border); border-radius: 10px; padding: .6rem .9rem; background: var(--blue-50); }
+  details.guia-modelos summary { cursor: pointer; font-weight: 600; color: var(--blue-700); font-size: .92rem; }
+  details.guia-modelos[open] summary { margin-bottom: .6rem; }
+  .tabla-guia { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .tabla-guia th, .tabla-guia td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tabla-guia th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .tabla-guia tr:last-child td { border-bottom: 0; }
 </style>
 </head>
 <body
@@ -476,6 +483,30 @@
       </div>
       <div class="setup-block">
         <h3>Par&#225;metros de imagen</h3>
+        <div class="field">
+          <label for="sel-modelo-imagen">Modelo de imagen (piezas del outfit)</label>
+          <select id="sel-modelo-imagen"></select>
+          <p class="hint" id="modelo-imagen-guia"></p>
+        </div>
+        <div class="field hidden" id="zona-modelo-otro">
+          <label for="input-modelo-imagen-otro">Identificador del modelo de fal.ai</label>
+          <input type="text" id="input-modelo-imagen-otro" placeholder="p. ej. fal-ai/flux-2-pro" autocomplete="off" spellcheck="false">
+        </div>
+        <details class="guia-modelos">
+          <summary>&#191;Qu&#233; modelo elijo?</summary>
+          <table class="tabla-guia">
+            <thead><tr><th>Modelo</th><th>Para qu&#233;</th><th>Coste y velocidad</th><th>Filtro de fal.ai</th></tr></thead>
+            <tbody>
+              <tr><td><b>FLUX.2 [pro]</b></td><td>Opci&#243;n por defecto para moda: fotograf&#237;a de estudio, piel y tejidos cre&#237;bles.</td><td>Media</td><td>Tolerancia y verificador desactivable</td></tr>
+              <tr><td><b>FLUX 1.1 [pro]</b></td><td>La que usaba la app hasta ahora; sigue dando buen resultado.</td><td>Media, r&#225;pida</td><td>Solo tolerancia: el verificador no se puede desactivar</td></tr>
+              <tr><td><b>Seedream 4.5</b></td><td>Cuando necesites mucha resoluci&#243;n: imprimir o proyectar en grande.</td><td>Alta, m&#225;s lenta</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>FLUX.1 [dev]</b></td><td>Modelo abierto de calidad notable, con pasos de inferencia ajustables.</td><td>Baja</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>FLUX.1 [schnell]</b></td><td>Pruebas r&#225;pidas y clases con muchos alumnos generando a la vez.</td><td>La m&#225;s barata y r&#225;pida</td><td>Verificador desactivable</td></tr>
+              <tr><td><b>Otro&#8230;</b></td><td>Cualquier otro identificador de fal.ai, bajo tu responsabilidad.</td><td>&#8212;</td><td>Se env&#237;an los dos; alguno puede fallar</td></tr>
+            </tbody>
+          </table>
+          <p class="hint">Solo afecta a las im&#225;genes de cada pieza. La foto de modelo se sigue haciendo con FLUX Kontext, que es quien conserva las prendas y el rostro.</p>
+        </details>
         <div class="grid2" id="grid-piezas-flux">
       <div class="field">
         <label for="sel-pasos-inferencia">Pasos de inferencia (FLUX)</label>
@@ -494,7 +525,7 @@
         </select>
         <p class="hint">Más pasos = más detalle pero más lento y más caro en fal.ai.</p>
       </div>
-      <div class="field">
+      <div class="field" id="zona-safety">
         <label for="sel-safety-tolerance">Tolerancia del filtro de seguridad (FLUX)</label>
         <select id="sel-safety-tolerance">
           <option value="1">1 — más estricto</option>
@@ -506,6 +537,10 @@
         </select>
         <p class="hint">1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro <code>safety_tolerance</code> de fal.ai.</p>
       </div>
+        <div class="field hidden" id="zona-safety-checker">
+          <label class="pick-row" style="margin:0" for="chk-safety-checker"><input type="checkbox" id="chk-safety-checker" checked><span>Verificador de seguridad de fal.ai sobre las im&#225;genes generadas</span></label>
+          <p class="hint" id="hint-safety-checker"></p>
+        </div>
         </div>
       </div>
       <div class="setup-block">
@@ -636,7 +671,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 02:51
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 03:46
 </footer>
 
 <script>
@@ -925,9 +960,79 @@ function actualizarResumenConfig(){
   resumen.textContent = [
     etiquetas[proveedorActivo()] || proveedorActivo(),
     modeloActivo() || "sin modelo",
+    (FAL_MODELS_IMG[modeloImagenActivo()] ? modeloImagenActivo().split("/").pop() : modeloImagenActivo()),
     selPasosInferencia.value + " pasos",
     faltan.length ? "faltan claves: " + faltan.join(" y ") : "claves \u2713"
   ].join("  \u00b7  ");
+}
+
+
+/* ---- ProMax: cat\u00e1logo de modelos de imagen de fal.ai ----
+   Solo afecta a las im\u00e1genes de cada pieza del outfit. La foto de modelo
+   sigue haci\u00e9ndose con FLUX Kontext multi-imagen, que es quien conserva las
+   prendas y el rostro, y no tiene alternativa equivalente. */
+const FAL_MODELS_IMG = {
+  "fal-ai/flux-2-pro": {
+    label: "FLUX.2 [pro] \u2014 fotorrealismo de estudio",
+    guia: "La mejor opci\u00f3n por defecto para moda: luz, piel y ca\u00edda de tejido de calidad de estudio. Admite la tolerancia y desactivar el verificador.",
+    params: ["prompt", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"]
+  },
+  "fal-ai/flux-pro/v1.1": {
+    label: "FLUX 1.1 [pro] \u2014 la de siempre",
+    guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena y r\u00e1pida, pero su verificador de imagen no se puede desactivar.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"]
+  },
+  "fal-ai/bytedance/seedream/v4.5/text-to-image": {
+    label: "Seedream 4.5 \u2014 m\u00e1xima resoluci\u00f3n",
+    guia: "Resoluci\u00f3n alta de una pasada, buena para imprimir o proyectar. M\u00e1s lenta que FLUX.",
+    params: ["prompt", "num_images", "image_size", "enable_safety_checker"]
+  },
+  "fal-ai/flux/dev": {
+    label: "FLUX.1 [dev] \u2014 abierta, filtro desactivable",
+    guia: "Modelo abierto de calidad notable, con pasos de inferencia ajustables y verificador desactivable.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"]
+  },
+  "fal-ai/flux/schnell": {
+    label: "FLUX.1 [schnell] \u2014 r\u00e1pida y barata",
+    guia: "La m\u00e1s r\u00e1pida y econ\u00f3mica: ideal para que el alumnado pruebe muchas ideas.",
+    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"]
+  }
+};
+const FAL_IMG_PARAMS_OTRO = ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance", "enable_safety_checker"];
+const CLAVE_MODELO_IMG = "genoutfit_modelo_imagen";
+const CLAVE_MODELO_OTRO = "genoutfit_modelo_imagen_otro";
+const CLAVE_VERIFICADOR = "genoutfit_verificador";
+
+function modeloImagenActivo(){
+  const sel = document.getElementById("sel-modelo-imagen");
+  if (!sel) return APP_CONFIG.fal.defaultModel;
+  if (sel.value === "__otro__") {
+    const v = (document.getElementById("input-modelo-imagen-otro").value || "").trim();
+    return v || APP_CONFIG.fal.defaultModel;
+  }
+  return sel.value;
+}
+function verificadorActivo(){
+  const c = document.getElementById("chk-safety-checker");
+  return c ? c.checked : true;
+}
+/* Muestra solo los ajustes que admite el modelo elegido. */
+function actualizarControlesImagen(){
+  const sel = document.getElementById("sel-modelo-imagen");
+  const esOtro = sel.value === "__otro__";
+  const info = FAL_MODELS_IMG[sel.value];
+  const params = info ? info.params : FAL_IMG_PARAMS_OTRO;
+  document.getElementById("zona-modelo-otro").classList.toggle("hidden", !esOtro);
+  document.getElementById("modelo-imagen-guia").textContent = info ? info.guia
+    : "Identificador escrito a mano: se env\u00edan los par\u00e1metros habituales y ser\u00e1 fal.ai quien rechace los que ese modelo no admita.";
+  document.getElementById("zona-safety").classList.toggle("hidden", params.indexOf("safety_tolerance") === -1);
+  document.getElementById("zona-safety-checker").classList.toggle("hidden", params.indexOf("enable_safety_checker") === -1);
+  const hayPasos = params.indexOf("num_inference_steps") !== -1;
+  const campoPasos = document.getElementById("input-pasos-inferencia") || document.getElementById("sel-pasos-inferencia");
+  if (campoPasos) campoPasos.disabled = !hayPasos;
+  document.getElementById("hint-safety-checker").textContent = verificadorActivo()
+    ? "Si lo desmarcas, fal.ai no revisa la imagen generada y deja de devolverla en negro."
+    : "Desactivado: fal.ai no revisar\u00e1 las im\u00e1genes generadas.";
 }
 
 function proveedorActivo(){ return selProveedor.value; }
@@ -1510,8 +1615,10 @@ function obtenerSafetyTolerance(){
 async function generarImagenFal(prompt){
   const key = inputApiKeyFal.value.trim() || localStorage.getItem(CLAVE_FAL) || "";
   const headers = {"Authorization": "Key " + key, "Content-Type": "application/json"};
-  const url = APP_CONFIG.fal.baseUrl + APP_CONFIG.fal.defaultModel;
-  const body = {
+  const modelo = modeloImagenActivo();
+  const url = APP_CONFIG.fal.baseUrl + modelo;
+  const permitidos = FAL_MODELS_IMG[modelo] ? FAL_MODELS_IMG[modelo].params : FAL_IMG_PARAMS_OTRO;
+  const todos = {
     prompt,
     num_inference_steps: obtenerPasosInferencia(),
     num_images: APP_CONFIG.fal.numImages,
@@ -1519,6 +1626,13 @@ async function generarImagenFal(prompt){
     image_size: APP_CONFIG.fal.imageSize,
     safety_tolerance: obtenerSafetyTolerance()
   };
+  const body = {};
+  permitidos.forEach(k => { if (k in todos) body[k] = todos[k]; });
+  // enable_safety_checker solo se env\u00eda al desactivarlo: su valor por defecto
+  // en fal.ai ya es true y as\u00ed no se manda a un modelo que no lo admita.
+  if (permitidos.indexOf("enable_safety_checker") !== -1 && !verificadorActivo()) {
+    body.enable_safety_checker = false;
+  }
   const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
   let data; try { data = await resp.json(); } catch(e){ data = {}; }
   if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
@@ -1988,7 +2102,7 @@ function calcularCacheKeyIndividual(){
     proveedor: proveedorActivo(), modelo: modeloActivo(),
     systemPrompt: systemPromptEfectivo(),
     numPiezas, incluirModelo: chkIncluirModelo.checked,
-    pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(),
+    pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(), modeloImg: modeloImagenActivo(), verificador: verificadorActivo(),
     imgBase64: imagenBase64
   });
 }
@@ -2066,7 +2180,7 @@ function huellaImagen(base64){
   return base64.length + ":" + fnv1a(muestra);
 }
 function calcularCacheKey(p){
-  return "c_" + fnv1a([p.proveedor, p.modelo, p.systemPrompt, p.numPiezas, p.incluirModelo, p.pasos, p.safety, huellaImagen(p.imgBase64)].join("||"));
+  return "c_" + fnv1a([p.proveedor, p.modelo, p.systemPrompt, p.numPiezas, p.incluirModelo, p.pasos, p.safety, p.modeloImg, p.verificador, huellaImagen(p.imgBase64)].join("||"));
 }
 async function buscarEnCacheHistorial(cacheKey){
   if (!cacheKey) return null;
@@ -2213,7 +2327,7 @@ async function ejecutarLote(){
     it.estado = "procesando"; pintarListaLote();
     const claveLote = calcularCacheKey({
       proveedor: proveedorActivo(), modelo: modeloActivo(), systemPrompt,
-      numPiezas, incluirModelo, pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(),
+      numPiezas, incluirModelo, pasos: obtenerPasosInferencia(), safety: obtenerSafetyTolerance(), modeloImg: modeloImagenActivo(), verificador: verificadorActivo(),
       imgBase64: it.base64
     });
     try {
@@ -2282,6 +2396,28 @@ $("btn-descargar-lote-pdf").addEventListener("click", descargarLotePdfs);
  * INICIALIZACIÓN
  * ==========================================================================*/
 inputSystemPrompt.value = SYSTEM_PROMPT_OUTFIT;
+
+(function(){
+  const sel = document.getElementById("sel-modelo-imagen");
+  Object.keys(FAL_MODELS_IMG).forEach(k => {
+    const o = document.createElement("option"); o.value = k; o.textContent = FAL_MODELS_IMG[k].label; sel.appendChild(o);
+  });
+  const otro = document.createElement("option"); otro.value = "__otro__"; otro.textContent = "Otro\u2026"; sel.appendChild(otro);
+  const guardado = storageGet(CLAVE_MODELO_IMG);
+  sel.value = (FAL_MODELS_IMG[guardado] || guardado === "__otro__") ? guardado : "fal-ai/flux-2-pro";
+  const otroGuardado = storageGet(CLAVE_MODELO_OTRO);
+  if (otroGuardado) document.getElementById("input-modelo-imagen-otro").value = otroGuardado;
+  document.getElementById("chk-safety-checker").checked = storageGet(CLAVE_VERIFICADOR) !== "0";
+  sel.addEventListener("change", () => { storageSet(CLAVE_MODELO_IMG, sel.value); actualizarControlesImagen(); actualizarResumenConfig(); });
+  document.getElementById("input-modelo-imagen-otro").addEventListener("input", function(){
+    storageSet(CLAVE_MODELO_OTRO, this.value.trim()); actualizarResumenConfig();
+  });
+  document.getElementById("chk-safety-checker").addEventListener("change", function(){
+    storageSet(CLAVE_VERIFICADOR, this.checked ? "1" : "0");
+    actualizarControlesImagen();
+  });
+  actualizarControlesImagen();
+})();
 
 rellenarDesplegable($("encuadre"), ENCUADRES, storageGet(CLAVE_ENCUADRE) || ENCUADRE_POR_DEFECTO);
 rellenarDesplegable($("prudencia"), PRUDENCIAS, storageGet(CLAVE_PRUDENCIA) || PRUDENCIA_POR_DEFECTO);

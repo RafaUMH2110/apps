@@ -637,7 +637,7 @@
 
 <footer>
   GenPatMod ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:05
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:40
 </footer>
 
 
@@ -2182,7 +2182,8 @@ async function renderHistorial(){
 
     const info = document.createElement("p");
     info.className = "hist-info";
-    info.textContent = `${formatearFechaHist(rec.createdAt)} · ${rec.numPiezas} pieza(s) · ${rec.proveedor}/${rec.modelo}`;
+    info.textContent = `${formatearFechaHist(rec.createdAt)} · ${rec.numPiezas} pieza(s) · ${rec.proveedor}/${rec.modelo}`
+      + (rec.modeloImagen ? ` · imagen: ${rec.modeloImagen}` : "");
     item.appendChild(info);
 
     const idea = document.createElement("p");
@@ -2249,10 +2250,14 @@ async function renderComparacionHistorial(){
   const elegidos = todos.filter(r => historySelection.has(r.id)).sort((a,b) => a.createdAt - b.createdAt);
   if (elegidos.length < 2) return;
 
+  const ultimaVariante = r => ((r.variantes && r.variantes.length) ? r.variantes[r.variantes.length - 1] : null);
   const filas = [
     ["Prenda", r => r.plan.prenda || "—"],
     ["Nº de piezas", r => String(r.numPiezas)],
-    ["Proveedor / modelo", r => `${r.proveedor} / ${r.modelo}`],
+    ["Proveedor / modelo de texto", r => `${r.proveedor} / ${r.modelo}`],
+    ["Modelo de imagen", r => r.modeloImagen || "sin imagen"],
+    ["Materiales de la imagen", r => { const v = ultimaVariante(r); return (v && v.materiales) || "—"; }],
+    ["Variantes de imagen", r => String((r.variantes || []).length)],
     ["Idea inicial", r => r.idea]
   ];
 
@@ -2266,6 +2271,18 @@ async function renderComparacionHistorial(){
     const h = document.createElement("h4");
     h.textContent = formatearFechaHist(rec.createdAt);
     col.appendChild(h);
+
+    // La imagen de cada generación, para poder compararlas de un vistazo.
+    if (rec.imagenBlob){
+      const mini = document.createElement("img");
+      mini.className = "hist-miniatura";
+      mini.alt = "Imagen generada de " + (rec.plan.prenda || "la prenda");
+      mini.loading = "lazy";
+      mini.src = URL.createObjectURL(rec.imagenBlob);
+      mini.addEventListener("load", () => URL.revokeObjectURL(mini.src), { once: true });
+      if (rec.promptImagen) mini.title = rec.promptImagen;
+      col.appendChild(mini);
+    }
 
     const dl = document.createElement("dl");
     filas.forEach(([etiqueta, obtener]) => {

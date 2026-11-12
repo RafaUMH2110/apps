@@ -313,6 +313,9 @@
   .pieza-card .img-wrap img { display: block; width: 100%; height: auto; }
   .pieza-card .img-wrap .placeholder { color: var(--muted); font-size: .82rem; padding: 1rem; }
   .pieza-card .meta-pieza { font-size: .8rem; color: var(--muted); margin-top: .4rem; }
+  .pieza-card details.prompt-enviado { margin-top: .4rem; font-size: .78rem; color: var(--muted); text-align: left; }
+  .pieza-card details.prompt-enviado summary { cursor: pointer; }
+  .pieza-card details.prompt-enviado p { margin: .3rem 0 0; white-space: pre-wrap; }
 
   /* Badge de tipo de foto de persona / motor de generación usado */
   .badge { display: inline-block; font-size: .76rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; margin-left: .4rem; vertical-align: middle; }
@@ -616,6 +619,10 @@
           <label class="pick-row" style="margin:0" for="chk-safety-checker"><input type="checkbox" id="chk-safety-checker" checked><span>Verificador de seguridad de fal.ai sobre las im&#225;genes generadas</span></label>
           <p class="hint" id="hint-safety-checker"></p>
         </div>
+        <div class="field">
+          <label class="pick-row" style="margin:0" for="chk-traducir"><input type="checkbox" id="chk-traducir" checked><span>Traducir los prompts al ingl&#233;s antes de enviarlos a FLUX</span></label>
+          <p class="hint">FLUX se entren&#243; casi solo con descripciones en ingl&#233;s y sigue bastante peor un prompt en espa&#241;ol. Los cuadros de prompt se quedan en espa&#241;ol; la traducci&#243;n se hace al generar y cada tarjeta muestra el texto con el que se pidi&#243; la imagen.</p>
+        </div>
         </div>
     <div class="field">
       <label for="sel-formato-imagen">Formato de salida de las imágenes</label>
@@ -812,7 +819,7 @@
 
 <footer>
   GenOutFitFaceM ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 04:02
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 05:00
 </footer>
 
 <script>
@@ -1573,6 +1580,58 @@ function requiereMaxCompletionTokens(cuerpo){
 
 // userPrompt: texto. imagenes: array de {mediaType, base64} opcional (solo en
 // la 1ª llamada), o un único objeto {mediaType, base64} por compatibilidad.
+/* FLUX se entrenó casi solo con descripciones en inglés y sigue bastante peor
+   un prompt en español, así que las imágenes se piden con la traducción. Los
+   cuadros de prompt de arriba se quedan en español: la traducción se hace al
+   generar y no toca lo que se ve ni lo que se edita. */
+const SYSTEM_TRADUCCION = `Eres un traductor técnico especializado en moda, tejidos y fotografía de producto.
+Traduces al inglés prompts de generación de imágenes escritos en español.
+Mantienes el mismo orden, la misma estructura y aproximadamente la misma longitud: no añades ni quitas elementos.
+Usas el término inglés habitual en moda para cada prenda, tejido, costura y acabado, en vez de una traducción literal.
+Devuelves ÚNICAMENTE la traducción, en un solo párrafo, sin explicaciones, comentarios, comillas ni bloques Markdown.`;
+
+function traduccionActiva(){
+  const c = document.getElementById("chk-traducir");
+  return !!(c && c.checked);
+}
+function opcionesTexto(){
+  const prov = proveedorActivo();
+  return {
+    proveedor: prov,
+    modelo: modeloActivo(),
+    apiKey: (inputApiKey.value.trim() || localStorage.getItem(CLAVES_LOCALSTORAGE[prov]) || ""),
+    maxTokens: obtenerMaxTokens()
+  };
+}
+/* Traduce varios prompts a la vez, en paralelo. Si uno falla se queda en
+   español: más vale una imagen con peor adherencia que ninguna imagen. */
+async function traducirPrompts(textos){
+  const opts = opcionesTexto();
+  if (!traduccionActiva() || !opts.apiKey || !opts.modelo) return textos.slice();
+  return Promise.all(textos.map(async (t) => {
+    if (!t || !String(t).trim()) return t;
+    try {
+      const r = await llamarIA(SYSTEM_TRADUCCION, "Traduce al inglés este prompt:\n\n" + t, opts);
+      return String(r && r.texto || "").trim() || t;
+    } catch(e){ return t; }
+  }));
+}
+function seVaATraducir(){
+  const opts = opcionesTexto();
+  return traduccionActiva() && !!opts.apiKey && !!opts.modelo;
+}
+/* Deja en la tarjeta el texto exacto con el que se ha pedido la imagen. */
+function ponerPromptEnviado(card, texto, traducido){
+  const d = card.querySelector("details.prompt-enviado");
+  if (!d) return;
+  if (!texto){ d.classList.add("hidden"); return; }
+  d.classList.remove("hidden");
+  d.querySelector("summary").textContent = traducido
+    ? "Prompt enviado a FLUX (traducido al inglés)"
+    : "Prompt enviado a FLUX (en español)";
+  d.querySelector("p").textContent = texto;
+}
+
 async function llamarIA(systemPrompt, userPrompt, opts, imagenes){
   const {proveedor, modelo, apiKey, maxTokens} = opts;
   const listaImagenes = !imagenes ? [] : (Array.isArray(imagenes) ? imagenes : [imagenes]);
@@ -2086,6 +2145,7 @@ function pintarImagenPlaceholder(nombre, esModelo, usaPersona){
   card.innerHTML = `<h3>${escapeHTML(nombre)}${badge}</h3>
     <div class="img-wrap"><span class="placeholder">Generando…</span></div>
     <div class="meta-pieza"></div>
+    <details class="prompt-enviado hidden"><summary></summary><p></p></details>
     <div class="botones">
       <div class="campo-nombre-archivo">
         <input type="text" class="input-nombre-archivo" value="${escapeHTML(sugerirNombreArchivo(nombre))}" aria-label="Nombre del fichero para ${escapeHTML(nombre)} (sin extensión)">
@@ -2202,6 +2262,16 @@ async function generarTodasLasImagenes(){
 
   const total = tareas.length;
   mostrarProgresoImagenes(total);
+  // Los prompts se traducen todos de una vez, en paralelo, antes de empezar:
+  // así no se encadena una llamada de texto por pieza en mitad del proceso.
+  const seTraduce = seVaATraducir();
+  if (seTraduce && total){
+    actualizarProgresoImagenes(0, total, "Traduciendo los prompts al inglés…");
+    const enviados = await traducirPrompts(tareas.map(t => t.prompt));
+    tareas.forEach((t, i) => { t.promptEnviado = enviados[i]; });
+  } else {
+    tareas.forEach((t) => { t.promptEnviado = t.prompt; });
+  }
   let cancelada = false;
   let hechos = 0;
   for (const tarea of tareas){
@@ -2215,10 +2285,11 @@ async function generarTodasLasImagenes(){
       : `Generando imagen: ${tarea.nombre}…`);
     try {
       const urlRemota = tarea.modelo
-        ? await generarImagenModeloFal(tarea.prompt, tarea.soloRostro, tarea.imagenReferenciaUrl)
-        : await generarImagenFal(tarea.prompt);
+        ? await generarImagenModeloFal(tarea.promptEnviado, tarea.soloRostro, tarea.imagenReferenciaUrl)
+        : await generarImagenFal(tarea.promptEnviado);
       const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
       actualizarTarjetaImagen(card, dataUrl, null, tarea.modelo);
+      ponerPromptEnviado(card, tarea.promptEnviado, seTraduce);
       const mime = (/^data:([^;]+);/.exec(dataUrl) || [])[1] || "image/jpeg";
       imagenesGeneradas.push({nombre: tarea.nombre, dataUrl, mime});
     } catch(err){

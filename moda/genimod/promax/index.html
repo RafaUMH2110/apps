@@ -505,12 +505,24 @@
     <textarea id="generatedPrompt" class="tall" aria-label="Prompt generado por Claude (editable)" placeholder="El prompt generado por Claude aparecer&#225; aqu&#237;. Puedes editarlo antes de generar la imagen."></textarea>
     <p class="hint" style="margin-top:.4rem">Puedes modificar este prompt a mano; la imagen se generar&#225; con el texto que haya aqu&#237; en el momento de pulsar el bot&#243;n.</p>
     <p class="hint" id="promptLargo"></p>
+    <div class="field">
+      <label class="pick-row" for="traducirPrompt">
+        <input type="checkbox" id="traducirPrompt" checked>
+        <span>Traducir el prompt al ingl&#233;s antes de enviarlo a FLUX</span>
+      </label>
+      <p class="hint">FLUX se entren&#243; casi solo con descripciones en ingl&#233;s y sigue bastante peor un prompt en espa&#241;ol. El cuadro de arriba se queda en espa&#241;ol; la traducci&#243;n se hace al pulsar el bot&#243;n, se muestra debajo y es la que se env&#237;a. Necesita la API key del proveedor de texto.</p>
+    </div>
     <div class="row">
       <button type="button" id="generateFromPrompt" class="primary" disabled>
         <span class="spinner" aria-hidden="true"></span><span id="generateFromPromptLabel">Generar imagen con este prompt</span>
       </button>
     </div>
     <p class="hint" id="generateFromPromptHint"></p>
+    <div class="field hidden" id="zonaPromptEnviado">
+      <label for="promptEnviado">Prompt enviado a FLUX</label>
+      <textarea id="promptEnviado" readonly aria-readonly="true"></textarea>
+      <p class="hint" id="promptEnviadoNota"></p>
+    </div>
     <div class="row">
       <button type="button" id="copyPrompt" disabled>Copiar prompt</button>
       <button type="button" id="downloadPrompt" disabled>Descargar prompt</button>
@@ -586,7 +598,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:45</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 05:00</p>
   </footer>
 </div>
 
@@ -967,6 +979,7 @@ const STORAGE = {
   safetyChecker: "genimod_safety_checker",
   exportFormat: "genimod_export_format",
   encuadre: "genimod_encuadre",
+  traducir: "genimod_traducir",
   prudencia: "genimod_prudencia",
   jpegQuality: "genimod_jpeg_quality"
 };
@@ -1383,7 +1396,24 @@ ${prudenciaAplica() && PRUDENCIAS[getPrudencia()].requisito ? "- Lenguaje: " + P
 /* Llamada unificada al proveedor de texto activo (Anthropic, OpenAI o Gemini)
    para mejorar la idea inicial y obtener el prompt destinado a FLUX. */
 async function mejorarIdeaConIA(systemPrompt, idea, provider, model, maxTokens) {
-  const userMessage = buildUserMessage(idea);
+  return llamarProveedorTexto(systemPrompt, buildUserMessage(idea), provider, model, maxTokens);
+}
+
+/* Instrucciones para traducir al inglés el prompt ya escrito. FLUX se entrenó
+   casi solo con descripciones en inglés y sigue bastante peor un prompt en
+   español, así que la imagen se pide con la versión inglesa. */
+const SYSTEM_TRADUCCION = `Eres un traductor técnico especializado en moda, tejidos y fotografía de producto.
+Traduces al inglés prompts de generación de imágenes escritos en español.
+Mantienes el mismo orden, la misma estructura y aproximadamente la misma longitud: no añades ni quitas elementos.
+Usas el término inglés habitual en moda para cada prenda, tejido, costura y acabado, en vez de una traducción literal.
+Devuelves ÚNICAMENTE la traducción, en un solo párrafo, sin explicaciones, comentarios, comillas ni bloques Markdown.`;
+
+async function traducirPromptAIngles(texto, provider, model, maxTokens) {
+  const r = await llamarProveedorTexto(SYSTEM_TRADUCCION, "Traduce al inglés este prompt:\n\n" + texto, provider, model, maxTokens);
+  return String(r && r.text || "").trim();
+}
+
+async function llamarProveedorTexto(systemPrompt, userMessage, provider, model, maxTokens) {
 
   if (provider === "openai") {
     const messages = [];
@@ -1552,6 +1582,13 @@ function extractFalImage(data) {
 /* ==========================================================================
    VISUALIZACI\u00d3N
    ========================================================================== */
+/* Muestra, bajo el botón, el texto exacto que se ha enviado a FLUX. */
+function mostrarPromptEnviado(texto, nota) {
+  $("zonaPromptEnviado").classList.toggle("hidden", !texto);
+  $("promptEnviado").value = texto || "";
+  $("promptEnviadoNota").textContent = nota || "";
+}
+
 /* FLUX solo atiende al principio del prompt: su codificador de texto admite
    unas 512 unidades en FLUX.1 [pro] y la mitad en [schnell], y el español gasta
    bastante más de una por palabra. Este aviso avisa antes de que el final del
@@ -1570,6 +1607,7 @@ function actualizarLargoPrompt() {
 function displayGeneratedPrompt(text, usage, provider, model, note) {
   $("generatedPrompt").value = text;
   actualizarLargoPrompt();
+  mostrarPromptEnviado("", "");
   ["copyPrompt", "downloadPrompt", "clearPrompt", "downloadTxt"].forEach((id) => { $(id).disabled = !text; });
   updateGenerateFromPromptButton();
   const meta = $("claudeMeta");
@@ -1897,7 +1935,8 @@ async function generarImagenDesdePrompt() {
   state.lastPrompt = prompt;
 
   // PRO: caché de resultados (paso 2 de 2 — prompt → imagen).
-  const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador);
+  const traducir = $("traducirPrompt").checked;
+  const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador, traducir);
   if ($("chk-cache-resultados").checked) {
     const previo = await buscarEnCacheHistorial("cacheKeyImagen", cacheKeyImagen);
     if (previo) {
@@ -1912,8 +1951,26 @@ async function generarImagenDesdePrompt() {
 
   showLoading(true, "Generando…");
   try {
-    showStatus("Generando imagen con FLUX a partir del prompt editado…", "info");
-    const image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety, verificador);
+    // FLUX sigue bastante peor un prompt en español, así que la imagen se pide
+    // con la traducción al inglés, que es la que se muestra y se guarda.
+    let promptEnviado = prompt;
+    let nota = "Se ha enviado el prompt en español, tal cual.";
+    const proveedorTexto = getTextProvider();
+    const hayClaveTexto = !!storageGet(TEXT_PROVIDERS[proveedorTexto].keyStorage);
+    if (traducir && hayClaveTexto) {
+      showStatus("Traduciendo el prompt al inglés…", "info");
+      const tope = Number.isFinite(getMaxTokens()) ? getMaxTokens() : APP_CONFIG.anthropic.maxTokens;
+      const traducido = await traducirPromptAIngles(prompt, proveedorTexto, getActiveModel("text"), tope);
+      if (traducido) {
+        promptEnviado = traducido;
+        nota = "Traducido al inglés con " + TEXT_PROVIDERS[proveedorTexto].label + ". El cuadro de arriba sigue en español: edita ahí y se traduce de nuevo en cada generación.";
+      }
+    } else if (traducir && !hayClaveTexto) {
+      nota = "Se ha enviado en español: falta la API key de " + TEXT_PROVIDERS[proveedorTexto].label + " para traducirlo.";
+    }
+    mostrarPromptEnviado(promptEnviado, nota);
+    showStatus("Generando imagen con FLUX…", "info");
+    const image = await generarImagenConFal(promptEnviado, falModel, steps, imageSize, safety, verificador);
     displayGeneratedImage(image, falModel, steps);
     if (image.nsfw) {
       showStatus("Aviso: fal.ai ha marcado la imagen con su verificador de seguridad y probablemente sea negra. Sube la tolerancia (máx. 6) o reformula el prompt con lenguaje más técnico y menos centrado en el cuerpo.", "error");
@@ -1921,7 +1978,7 @@ async function generarImagenDesdePrompt() {
       showStatus("Imagen generada correctamente.", "ok");
     }
     await guardarEnHistorial({
-      idea: state.lastIdea, systemPrompt: state.lastSystem, prompt, textProvider: getTextProvider(), textModel: getActiveModel("text"),
+      idea: state.lastIdea, systemPrompt: state.lastSystem, prompt, promptEnviado, textProvider: getTextProvider(), textModel: getActiveModel("text"),
       falModel, steps, imageSize, safety, image, usage: null,
       cacheKeyIdea: state.cacheKeyIdea, cacheKeyImagen
     });
@@ -2012,8 +2069,8 @@ function fnv1a(str) {
 function calcularCacheKeyIdea(systemPrompt, idea, textProvider, textModel, maxTokens) {
   return "ci_" + fnv1a([systemPrompt, idea, textProvider, textModel, maxTokens].join("||"));
 }
-function calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador) {
-  return "cm_" + fnv1a([prompt, falModel, steps, imageSize, safety, verificador === false ? "sinverif" : "verif"].join("||"));
+function calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador, traducir) {
+  return "cm_" + fnv1a([prompt, falModel, steps, imageSize, safety, verificador === false ? "sinverif" : "verif", traducir ? "en" : "es"].join("||"));
 }
 async function buscarEnCacheHistorial(campo, cacheKey) {
   if (!cacheKey) return null;
@@ -2414,6 +2471,8 @@ function loadSettings() {
   fillSelect($("encuadre"), Object.keys(ENCUADRES).map((k) => ({ value: k, label: ENCUADRES[k].label })));
   const savedEnc = storageGet(STORAGE.encuadre);
   $("encuadre").value = ENCUADRES[savedEnc] ? savedEnc : ENCUADRE_POR_DEFECTO;
+  const savedTrad = storageGet(STORAGE.traducir);
+  $("traducirPrompt").checked = savedTrad === "" ? true : savedTrad === "1";
 
   $("chk-safety-checker").checked = storageGet(STORAGE.safetyChecker) !== "0";
 
@@ -2437,6 +2496,7 @@ function persistPreferences() {
   storageSet(STORAGE.safety, $("safety").value);
   storageSet(STORAGE.safetyChecker, $("chk-safety-checker").checked ? "1" : "0");
   storageSet(STORAGE.encuadre, getEncuadre());
+  storageSet(STORAGE.traducir, $("traducirPrompt").checked ? "1" : "0");
   storageSet(STORAGE.prudencia, getPrudencia());
   storageSet(STORAGE.exportFormat, getExportFormat());
   const q = Number($("jpegQuality").value);
@@ -2565,6 +2625,8 @@ async function ejecutarLote() {
   const verificador = $("chk-safety-checker").checked;
   const usarCache = $("chk-cache-resultados").checked && !saltarCacheUnaVez;
   saltarCacheUnaVez = false;
+  const traducirLote = $("traducirPrompt").checked;
+  const hayClaveTextoLote = !!storageGet(TEXT_PROVIDERS[textProvider].keyStorage);
 
   for (const it of loteIdeas) {
     if (loteDetener) { if (it.estado === "pendiente") continue; }
@@ -2580,14 +2642,17 @@ async function ejecutarLote() {
       }
       it.prompt = prompt; pintarListaLote();
 
-      const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador);
+      const cacheKeyImagen = calcularCacheKeyImagen(prompt, falModel, steps, imageSize, safety, verificador, traducirLote);
       let image, cacheoImagen = false;
       const previoImagen = usarCache ? await buscarEnCacheHistorial("cacheKeyImagen", cacheKeyImagen) : null;
       if (previoImagen) {
         image = { url: previoImagen.url, width: previoImagen.width, height: previoImagen.height, nsfw: !!previoImagen.nsfw, blob: previoImagen.blob || null };
         cacheoImagen = true;
       } else {
-        image = await generarImagenConFal(prompt, falModel, steps, imageSize, safety, verificador);
+        const promptFal = (traducirLote && hayClaveTextoLote)
+          ? (await traducirPromptAIngles(prompt, textProvider, textModel, maxTokens) || prompt)
+          : prompt;
+        image = await generarImagenConFal(promptFal, falModel, steps, imageSize, safety, verificador);
       }
       it.image = image;
       it.estado = (cacheoIdea || cacheoImagen) ? "cache" : "hecho";
@@ -2672,6 +2737,7 @@ function initializeApp() {
   $("safety").addEventListener("change", persistPreferences);
   $("chk-safety-checker").addEventListener("change", () => { actualizarControlesSeguridad(); persistPreferences(); });
   $("encuadre").addEventListener("change", () => { actualizarPrudenciaUi(); persistPreferences(); });
+  $("traducirPrompt").addEventListener("change", persistPreferences);
   $("prudencia").addEventListener("change", persistPreferences);
   $("exportFormat").addEventListener("change", () => { updateExportUi(); persistPreferences(); });
   $("jpegQuality").addEventListener("input", persistPreferences);

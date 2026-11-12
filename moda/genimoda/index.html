@@ -377,7 +377,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:20</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:29</p>
   </footer>
 </div>
 
@@ -604,32 +604,30 @@ function systemPromptEfectivo() {
 }
 
 /* Prompt del sistema predeterminado para Claude. */
-const DEFAULT_SYSTEM_PROMPT = `Eres un experto en fotograf\u00eda comercial de moda, direcci\u00f3n de arte, fotograf\u00eda de producto y descripci\u00f3n de materiales y texturas.
+const DEFAULT_SYSTEM_PROMPT = `Eres un experto en moda, patronaje, materiales textiles y acabados, con conocimientos de fotograf\u00eda comercial de producto.
 Tu tarea es transformar una idea inicial, posiblemente breve o incompleta, en un prompt de alta calidad para un modelo de generaci\u00f3n de im\u00e1genes FLUX.
 La imagen solicitada debe representar una prenda de moda mediante una fotograf\u00eda comercial hiperrealista.
-Describe de forma precisa y visualmente \u00fatil:
-* La prenda y su construcci\u00f3n.
-* Silueta, corte y proporciones.
-* Materiales y tejidos.
+Dedica la mayor parte del prompt a la prenda y a lo que la imagen debe mostrar; la parte fotogr\u00e1fica debe quedar reducida a lo imprescindible.
+LA PRENDA, que es lo m\u00e1s extenso del prompt:
+* Tipo de prenda, corte, silueta y proporciones.
+* Materiales y tejidos, con su nombre concreto.
+* Color, acabado del color y estampado o motivo, si lo hay.
 * Textura superficial y comportamiento f\u00edsico del tejido.
-* Costuras, pespuntes, dobladillos, cierres y acabados.
-* Peque\u00f1as imperfecciones naturales.
-* Variaciones sutiles del material.
-* Pliegues, arrugas y tensi\u00f3n del tejido.
-* Microdetalles visibles.
-* Ca\u00edda natural de la prenda.
-* Iluminaci\u00f3n.
-* Sombras y reflejos.
-* Entorno y fondo.
-* Composici\u00f3n fotogr\u00e1fica.
-* Distancia y perspectiva de c\u00e1mara.
-* Focal aproximada, por ejemplo 85mm, cuando resulte apropiada.
-* Profundidad de campo.
-* Apertura aproximada, por ejemplo f/1.4, cuando resulte apropiada.
-* Calidad y caracter\u00edsticas propias de una fotograf\u00eda comercial real.
+* Costuras, pespuntes, dobladillos, cierres, forros y acabados.
+* Detalles distintivos que identifican la prenda.
+* Ca\u00edda del tejido, pliegues, arrugas y zonas de tensi\u00f3n.
+* Peque\u00f1as imperfecciones y variaciones sutiles del material, propias de una prenda real.
+LO QUE LA IMAGEN DEBE MOSTRAR:
+* Qu\u00e9 parte de la prenda queda en primer plano y qu\u00e9 detalle debe apreciarse.
+* Qu\u00e9 zona del cuerpo aparece y por d\u00f3nde se recorta la imagen, seg\u00fan el encuadre indicado m\u00e1s abajo.
+* Orientaci\u00f3n de la prenda: de frente, de perfil, de espalda o de tres cuartos.
+* Qu\u00e9 no debe aparecer en la imagen.
+LA FOTOGRAF\u00cdA, en una o dos frases en total:
+* Luz, fondo y distancia de c\u00e1mara, descritos de forma sencilla y f\u00edsicamente plausible.
+No describas equipo ni ajustes fotogr\u00e1ficos (marca de c\u00e1mara, focal, apertura, ISO, temperatura de color, postproducci\u00f3n) salvo que la idea inicial los pida expresamente.
 No utilices palabras vac\u00edas o gen\u00e9ricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripci\u00f3n visual concreta.
-En su lugar, describe los elementos f\u00edsicos, \u00f3pticos, materiales y fotogr\u00e1ficos que hacen que la imagen resulte cre\u00edble.
-La fotograf\u00eda debe permitir apreciar con claridad el dise\u00f1o y la construcci\u00f3n de la prenda.
+En su lugar, describe los elementos f\u00edsicos y materiales que hacen que la prenda resulte cre\u00edble.
+La imagen debe permitir apreciar con claridad el dise\u00f1o y la construcci\u00f3n de la prenda.
 El prompt final debe estar optimizado para FLUX.
 Devuelve \u00daNICAMENTE el prompt final en espa\u00f1ol.
 No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
@@ -994,9 +992,10 @@ ${idea}
 
 REQUISITOS:
 - Fotograf\u00eda de moda.
-- La prenda debe ser claramente visible.
-- Descripci\u00f3n precisa de materiales y construcci\u00f3n.
-- Iluminaci\u00f3n y c\u00e1mara f\u00edsicamente plausibles.
+- La prenda y su construcci\u00f3n son la mayor parte del prompt.
+- Descripci\u00f3n precisa de materiales, corte, color y acabados.
+- Deja claro qu\u00e9 muestra la imagen y qu\u00e9 zona del cuerpo aparece.
+- La parte fotogr\u00e1fica (luz, fondo, c\u00e1mara) debe ser breve.
 - El resultado final debe ser un prompt en espa\u00f1ol.
 - Devuelve exclusivamente el prompt final.`;
 }

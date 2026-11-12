@@ -637,7 +637,7 @@
 
 <footer>
   GenPatMod ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:40
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 09:30
 </footer>
 
 
@@ -1315,6 +1315,60 @@ function extraerSVG(texto){
   return m ? normalizarTamanosTexto(m[1]) : "";
 }
 
+/* ---- Validación y reparación del SVG que devuelve el modelo ------------------
+ * Los modelos a veces dejan XML mal formado (un "&" suelto, un "<" dentro de un
+ * texto como "tiro < 22 cm", entidades HTML como &nbsp; o &deg;, una etiqueta
+ * sin cerrar, un atributo repetido...). El navegador es estricto con SVG/XML y
+ * en ese caso pinta un recuadro de error en lugar de la pieza. Por eso cada SVG
+ * se valida al recibirlo y, si falla, se repara de forma determinista; solo si
+ * no hay manera se le pide al modelo que lo corrija indicándole el error. */
+function errorXMLdelSVG(svg){
+  try{
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    const pe = doc.querySelector("parsererror");
+    if (pe){
+      const t = (pe.textContent || "").replace(/\s+/g, " ").trim();
+      const m = /error on line \d+ at column \d+:[^]*?(?= Below is a rendering|$)/i.exec(t);
+      return (m ? m[0] : t).slice(0, 300) || "XML mal formado";
+    }
+    if (!doc.documentElement || doc.documentElement.nodeName.toLowerCase() !== "svg") return "el elemento raíz no es <svg>";
+    return "";
+  } catch(e){ return String((e && e.message) || e); }
+}
+
+const ENTIDADES_HTML_A_XML = {nbsp:"&#160;", deg:"&#176;", times:"&#215;", plusmn:"&#177;", frac12:"&#189;", frac14:"&#188;",
+  frac34:"&#190;", sup2:"&#178;", sup3:"&#179;", middot:"&#183;", ndash:"&#8211;", mdash:"&#8212;", hellip:"&#8230;",
+  laquo:"&#171;", raquo:"&#187;", rarr:"&#8594;", larr:"&#8592;", uarr:"&#8593;", darr:"&#8595;", prime:"&#8242;",
+  Prime:"&#8243;", asymp:"&#8776;", ne:"&#8800;", le:"&#8804;", ge:"&#8805;", micro:"&#181;", copy:"&#169;", reg:"&#174;"};
+
+function repararSVG(svg){
+  if (!svg) return null;
+  if (!errorXMLdelSVG(svg)) return svg;
+
+  // 1) Arreglos textuales de los fallos más frecuentes.
+  let t = svg.replace(/^\uFEFF/, "")
+    .replace(/<\?xml[\s\S]*?\?>/gi, "").replace(/<!DOCTYPE[\s\S]*?>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")                                  // "--" dentro de un comentario es XML inválido
+    .replace(/&([A-Za-z][A-Za-z0-9]*);/g, (m, n) => ["amp","lt","gt","quot","apos"].includes(n) ? m : (ENTIDADES_HTML_A_XML[n] || m))
+    .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;") // "&" suelto
+    .replace(/<(?![A-Za-z\/!?])/g, "&lt;");                            // "<" que no abre una etiqueta (p. ej. "< 22 cm")
+  if (!errorXMLdelSVG(t)) return t;
+
+  // 2) Reconstrucción tolerante: el analizador HTML admite etiquetas sin cerrar,
+  //    atributos repetidos o sin comillas; luego se serializa como XML bien formado.
+  try{
+    const doc = new DOMParser().parseFromString(t, "text/html");
+    const el = doc.querySelector("svg");
+    if (el){
+      el.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      el.querySelectorAll("script, foreignObject").forEach(n => n.remove());
+      const salida = new XMLSerializer().serializeToString(el);
+      if (!errorXMLdelSVG(salida)) return salida;
+    }
+  } catch(e){ /* se devuelve null más abajo */ }
+  return null;
+}
+
 /* ============================================================================
  * PASO 1 — PLANIFICAR LAS PIEZAS DE LA PRENDA
  * ==========================================================================*/
@@ -1364,8 +1418,20 @@ Descripción: ${descripcion}`;
 
   if (resp.truncado && avisosTruncado) avisosTruncado.push(`la pieza "${nombre}"`);
 
-  if (!svg) throw new Error(`No se ha podido generar un SVG válido para la pieza "${nombre}".`);
-  return svg;
+  // Si el XML no es válido se repara; si ni así se puede, se le devuelve al modelo con el error exacto.
+  let reparado = svg ? repararSVG(svg) : null;
+  if (svg && !reparado){
+    const detalle = errorXMLdelSVG(svg);
+    const userFix = "El SVG que devolviste NO es XML válido (" + detalle + "). Corrígelo: escapa los caracteres especiales " +
+      "(& como &amp;, < como &lt;), no uses entidades HTML como &nbsp;, cierra todas las etiquetas y no repitas atributos. " +
+      "Devuelve ÚNICAMENTE el SVG completo y corregido dentro de un bloque de código.\n\n" + userPrompt + "\n\nSVG a corregir:\n" + svg;
+    resp = await llamarIA(SYSTEM_PROMPT_PATRON, userFix, {...opts, maxTokens: Math.round(maxTokensBase * 1.6)});
+    const svg2 = extraerSVG(resp.texto);
+    reparado = svg2 ? repararSVG(svg2) : null;
+  }
+
+  if (!reparado) throw new Error(`El SVG generado para la pieza "${nombre}" no es válido y no se ha podido reparar. Vuelve a generar.`);
+  return reparado;
 }
 
 /* ============================================================================
@@ -1638,6 +1704,9 @@ async function construirPDF(piezas, nombrePrenda, textoResumen){
  * ==========================================================================*/
 function svgParaPreview(svgString){
   try{
+    const valido = repararSVG(svgString);
+    if (!valido) return '<p class="hint">No se puede mostrar la vista previa de esta pieza (SVG no válido).</p>';
+    svgString = valido;
     const doc = new DOMParser().parseFromString(svgString, "image/svg+xml").documentElement;
     doc.removeAttribute("width");
     doc.removeAttribute("height");
@@ -1821,7 +1890,7 @@ async function generarPiezasYPDF(plan, opts, ideaParaExportar, promptsPrevios, a
     const pieza = plan.piezas[i];
     // PRO: caché de resultados (paso 2 — una clave por cada pieza).
     const cacheKeyPieza = calcularCacheKeyPieza(pieza.nombre, pieza.descripcion, opts.proveedor, opts.modelo, maxTokensActual);
-    let svg = usarCache ? await cacheGet(cacheKeyPieza) : null;
+    let svg = usarCache ? repararSVG(await cacheGet(cacheKeyPieza)) : null;
     if (svg){
       estadoPiezas.fijar(`⚡ Pieza "${pieza.nombre}" obtenida de la caché (${i+1}/${plan.piezas.length}).`, "busy");
     } else {
@@ -2465,7 +2534,7 @@ async function ejecutarLote(){
       const piezasGeneradas = [];
       for (const pieza of plan.piezas){
         const cacheKeyPieza = calcularCacheKeyPieza(pieza.nombre, pieza.descripcion, proveedor, modelo, maxTokensActual);
-        let svg = usarCache ? await cacheGet(cacheKeyPieza) : null;
+        let svg = usarCache ? repararSVG(await cacheGet(cacheKeyPieza)) : null;
         if (svg) { huboCache = true; }
         else {
           svg = await generarSVGPieza(pieza.nombre, pieza.descripcion, opts, avisosTruncado);

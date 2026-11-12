@@ -819,7 +819,7 @@
 
 <footer>
   GenOutFitFaceM ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 05:00
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 05:10
 </footer>
 
 <script>
@@ -1759,7 +1759,7 @@ ${bloqueComplementos}
 
 FORMATO DE RESPUESTA (obligatorio):
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comentarios y sin bloques de código, con este esquema EXACTO:
-{"pieces": [{"name": "<nombre breve de la pieza, en español>", "prompt": "<prompt descriptivo en español para FLUX>"}]${incluirModelo ? `, "model_shot_prompt": "<prompt en español para la foto del modelo con el outfit completo>"` : ""}${hayComplementos ? `, "accessories": [{"name": "<nombre EXACTO del complemento, igual al indicado por el usuario>", "prompt": "<prompt descriptivo en español para FLUX>"}]` : ""}${hayPersona ? `, "person_analysis": {"photo_type": "<\"full_body\" o \"face\">", "facial_features": "<rasgos faciales relevantes, en español>", "physical_characteristics": "<estimación visual de complexión/proporciones en español, SOLO si photo_type es \"full_body\"; si no, cadena vacía>"}` : ""}}
+{"pieces": [{"name": "<nombre breve de la pieza, en español>", "prompt": "<prompt descriptivo en español para FLUX>", "prompt_en": "<ese mismo prompt en inglés, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el término inglés habitual en moda para cada prenda, tejido, costura y acabado>"}]${incluirModelo ? `, "model_shot_prompt": "<prompt en español para la foto del modelo con el outfit completo>"` : ""}${hayComplementos ? `, "accessories": [{"name": "<nombre EXACTO del complemento, igual al indicado por el usuario>", "prompt": "<prompt descriptivo en español para FLUX>", "prompt_en": "<ese mismo prompt en inglés, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el término inglés habitual en moda para cada prenda, tejido, costura y acabado>"}]` : ""}${hayPersona ? `, "person_analysis": {"photo_type": "<\"full_body\" o \"face\">", "facial_features": "<rasgos faciales relevantes, en español>", "physical_characteristics": "<estimación visual de complexión/proporciones en español, SOLO si photo_type es \"full_body\"; si no, cadena vacía>"}` : ""}}
 
 Cada "prompt" debe estar íntegramente en español y seguir las instrucciones del sistema (imperfecciones, texturas táctiles, micro-detalles, configuración de cámara, iluminación natural, estilo documental, sin palabras vacías).`;
 }
@@ -1815,7 +1815,7 @@ async function analizarYGenerarPrompts(){
     avisoTruncadoDiv.style.display = "none";
   }
 
-  piezasActuales = datos.pieces.map(p => ({nombre: p.name, prompt: p.prompt}));
+  piezasActuales = datos.pieces.map(p => ({nombre: p.name, prompt: p.prompt, promptEn: p.prompt_en || "", promptEsBase: p.prompt}));
   complementosActuales = Array.isArray(datos.accessories) ? datos.accessories.map(a => ({nombre: a.name, prompt: a.prompt})) : [];
   modeloShotPrompt = incluirModelo ? (datos.model_shot_prompt || null) : null;
   if (hayPersona && analisisPersonaValido(datos)){
@@ -2240,7 +2240,8 @@ async function generarTodasLasImagenes(){
   const usaPersonaParaModelo = !!(personaBase64 && modeloShotPrompt);
   const soloRostro = usaPersonaParaModelo && personaAnalisis && personaAnalisis.tipoFoto === "rostro";
   const numPrendas = imagenBase64_2 ? 2 : 1;
-  const tareas = piezasActuales.map(p => ({nombre: p.nombre, prompt: p.prompt, modelo: false, usaPersona: false}));
+  const tareas = piezasActuales.map(p => ({nombre: p.nombre, prompt: p.prompt,
+    promptEnListo: (p.prompt === p.promptEsBase ? (p.promptEn || "") : ""), modelo: false, usaPersona: false}));
   complementosActuales.forEach(c => tareas.push({nombre: c.nombre, prompt: c.prompt, modelo: false, usaPersona: false}));
   if (modeloShotPrompt){
     // El prompt del modelo siempre lleva, además de lo redactado por la IA,
@@ -2266,9 +2267,14 @@ async function generarTodasLasImagenes(){
   // así no se encadena una llamada de texto por pieza en mitad del proceso.
   const seTraduce = seVaATraducir();
   if (seTraduce && total){
-    actualizarProgresoImagenes(0, total, "Traduciendo los prompts al inglés…");
-    const enviados = await traducirPrompts(tareas.map(t => t.prompt));
-    tareas.forEach((t, i) => { t.promptEnviado = enviados[i]; });
+    // Cada pieza ya trae su versión inglesa, devuelta por el modelo de texto en
+    // la misma llamada que la española. Solo se vuelve a pedir la traducción de
+    // las que se hayan editado a mano y la del prompt de la foto de modelo, al
+    // que la aplicación añade avisos propios en español.
+    const pendientes = tareas.map(t => (t.promptEnListo ? "" : t.prompt));
+    if (pendientes.some(t => t)) actualizarProgresoImagenes(0, total, "Traduciendo los prompts al inglés…");
+    const traducidos = await traducirPrompts(pendientes);
+    tareas.forEach((t, i) => { t.promptEnviado = t.promptEnListo || traducidos[i] || t.prompt; });
   } else {
     tareas.forEach((t) => { t.promptEnviado = t.prompt; });
   }

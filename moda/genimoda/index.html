@@ -390,7 +390,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 04:43</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 05:10</p>
   </footer>
 </div>
 
@@ -628,8 +628,12 @@ LONGITUD: el prompt final no debe pasar de 130 palabras. Si no cabe todo, conser
 Describe solo lo que se ve en el encuadre pedido. No menciones etiquetas interiores, forros ocultos, refuerzos internos, composiciones impresas ni t\u00e9cnicas de fabricaci\u00f3n que no dejen una marca visible en la imagen.
 No describas equipo ni ajustes fotogr\u00e1ficos (marca de c\u00e1mara, focal, apertura, ISO, temperatura de color, postproducci\u00f3n) salvo que la idea inicial los pida expresamente.
 No utilices palabras vac\u00edas o gen\u00e9ricas como \u201cphotorealistic\u201d, \u201chyperrealistic\u201d, \u201cultra-detailed\u201d o \u201chyperdetailed\u201d como sustituto de una descripci\u00f3n visual concreta.
-Devuelve \u00daNICAMENTE el prompt final en espa\u00f1ol, en un solo p\u00e1rrafo.
-No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown.`;
+Devuelve el prompt final DOS VECES, en este formato exacto y sin nada m\u00e1s:
+[ES]
+el prompt en espa\u00f1ol, en un solo p\u00e1rrafo
+[EN]
+el mismo prompt en ingl\u00e9s, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el t\u00e9rmino ingl\u00e9s habitual en moda para cada prenda, tejido, costura y acabado
+No a\u00f1adas explicaciones, introducciones, comentarios, encabezados, listas, comillas ni bloques Markdown, ni antes ni despu\u00e9s de esas dos marcas.`;
 
 /* Claves de localStorage (las API keys usan exactamente estos nombres). */
 const STORAGE = {
@@ -658,6 +662,8 @@ const $ = (id) => document.getElementById(id);
 const state = {
   busy: false,
   lastPrompt: "",
+  promptEsBase: "",
+  promptEn: "",
   lastSystem: "",
   lastIdea: "",
   imageUrl: "",
@@ -996,8 +1002,8 @@ REQUISITOS:
 - Sigue con la prenda: materiales, corte, color, costuras y acabados visibles.
 - Termina con una frase breve de luz, fondo y distancia de c\u00e1mara.
 - M\u00e1ximo 130 palabras, en un solo p\u00e1rrafo.
-- El resultado final debe ser un prompt en espa\u00f1ol.
-- Devuelve exclusivamente el prompt final.`;
+- Devuelve las dos versiones, [ES] y [EN], tal como piden las instrucciones del sistema.
+- Nada m\u00e1s: ni explicaciones ni comentarios.`;
 }
 
 /* Llamada unificada al proveedor de texto activo (Anthropic, OpenAI o Gemini)
@@ -1255,6 +1261,16 @@ function actualizarLargoPrompt() {
     : n + " palabras. FLUX lee el prompt de principio a fin y pierde fuerza seg\u00fan avanza: por encima de unas " + PALABRAS_RECOMENDADAS + " el final (encuadre, luz, fondo) puede quedarse sin efecto. Recorta detalles de construcci\u00f3n y deja al principio el tipo de prenda y el encuadre.";
 }
 
+/* El modelo devuelve el prompt dos veces, marcado con [ES] y [EN]. Si no
+   respeta el formato, todo el texto se toma como la versi\u00f3n espa\u00f1ola y la
+   traducci\u00f3n se pide aparte al generar la imagen. */
+function partirVersiones(texto) {
+  const t = String(texto || "");
+  const m = /\[ES\]([\s\S]*?)\[EN\]([\s\S]*)$/i.exec(t);
+  if (!m) return { es: t.trim(), en: "" };
+  return { es: m[1].trim(), en: m[2].trim() };
+}
+
 function displayGeneratedPrompt(text, usage, provider, model, note) {
   $("generatedPrompt").value = text;
   actualizarLargoPrompt();
@@ -1496,7 +1512,10 @@ async function generar() {
     if (improve) {
       showStatus(`Mejorando la idea con ${providerLabel}\u2026`, "info");
       const resultado = await mejorarIdeaConIA(systemPromptEfectivo(), idea, textProvider, textModel, maxTokens);
-      promptFinal = resultado.text;
+      const versiones = partirVersiones(resultado.text);
+      promptFinal = versiones.es;
+      state.promptEsBase = versiones.es;
+      state.promptEn = versiones.en;
       usage = resultado.usage;
       const truncated = resultado.stopReason === "max_tokens"
         ? "Aviso: la respuesta se ha cortado al alcanzar el l\u00edmite de tokens. Sube el m\u00e1ximo de tokens o simplifica la idea inicial y vuelve a generar."
@@ -1505,6 +1524,8 @@ async function generar() {
       showStatus(`Prompt generado por ${providerLabel}. Rev\u00edsalo o edita, y pulsa \u00abGenerar imagen con este prompt\u00bb cuando quieras continuar.`, "ok");
     } else {
       promptFinal = idea;
+      state.promptEsBase = "";
+      state.promptEn = "";
       displayGeneratedPrompt(promptFinal, null, "", "", "");
       showStatus("Prompt sin mejorar: se usar\u00e1 la idea inicial tal cual. Pulsa \u00abGenerar imagen con este prompt\u00bb cuando quieras continuar.", "info");
     }
@@ -1571,17 +1592,27 @@ async function generarImagenDesdePrompt() {
     let promptEnviado = prompt;
     let nota = "Se ha enviado el prompt en espa\u00f1ol, tal cual.";
     const proveedorTexto = getTextProvider();
+    const etiquetaTexto = TEXT_PROVIDERS[proveedorTexto].label;
     const hayClaveTexto = !!storageGet(TEXT_PROVIDERS[proveedorTexto].keyStorage);
-    if ($("traducirPrompt").checked && hayClaveTexto) {
+    const quiereIngles = $("traducirPrompt").checked;
+    const editadoAMano = prompt !== state.promptEsBase;
+    if (quiereIngles && !editadoAMano && state.promptEn) {
+      // La versi\u00f3n inglesa vino en la misma llamada que la espa\u00f1ola: no hay
+      // que volver a pedirla mientras el cuadro de arriba no se toque.
+      promptEnviado = state.promptEn;
+      nota = "Versi\u00f3n en ingl\u00e9s devuelta por " + etiquetaTexto + " en la misma llamada que la espa\u00f1ola, sin coste adicional.";
+    } else if (quiereIngles && hayClaveTexto) {
       showStatus("Traduciendo el prompt al ingl\u00e9s\u2026", "info");
       const tope = Number.isFinite(getMaxTokens()) ? getMaxTokens() : APP_CONFIG.anthropic.maxTokens;
       const traducido = await traducirPromptAIngles(prompt, proveedorTexto, getActiveModel("text"), tope);
       if (traducido) {
         promptEnviado = traducido;
-        nota = "Traducido al ingl\u00e9s con " + TEXT_PROVIDERS[proveedorTexto].label + ". El cuadro de arriba sigue en espa\u00f1ol: edita ah\u00ed y se traduce de nuevo en cada generaci\u00f3n.";
+        nota = editadoAMano
+          ? "Traducido al ingl\u00e9s con " + etiquetaTexto + ": el prompt se ha editado a mano desde que se gener\u00f3."
+          : "Traducido al ingl\u00e9s con " + etiquetaTexto + ".";
       }
-    } else if ($("traducirPrompt").checked && !hayClaveTexto) {
-      nota = "Se ha enviado en espa\u00f1ol: falta la API key de " + TEXT_PROVIDERS[proveedorTexto].label + " para traducirlo.";
+    } else if (quiereIngles && !hayClaveTexto) {
+      nota = "Se ha enviado en espa\u00f1ol: falta la API key de " + etiquetaTexto + " para traducirlo.";
     }
     mostrarPromptEnviado(promptEnviado, nota);
     showStatus("Generando imagen con FLUX\u2026", "info");
@@ -1861,6 +1892,8 @@ function loadFromHistory(rec) {
 
   mostrarPromptEnviado(rec.promptEnviado || "", rec.promptEnviado && rec.promptEnviado !== rec.prompt ? "Prompt en ingl\u00e9s con el que se gener\u00f3 esta imagen." : "");
   state.lastPrompt = rec.prompt;
+  state.promptEsBase = rec.prompt || "";
+  state.promptEn = (rec.promptEnviado && rec.promptEnviado !== rec.prompt) ? rec.promptEnviado : "";
   state.lastSystem = rec.systemPrompt;
   state.lastIdea = rec.idea;
   displayGeneratedPrompt(rec.prompt, rec.usage, recProvider, recModel);

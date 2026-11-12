@@ -776,7 +776,7 @@
 
 <footer>
   GenOutFitFaceM ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 02:28
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 02:39
 </footer>
 
 <script>
@@ -798,13 +798,14 @@ const PRUDENCIAS = {
   ninguno: { label: "Sin filtro", instruccion: "" },
   intermedio: {
     label: "Filtro intermedio",
-    instruccion: MARCA_PRUDENCIA + " En el prompt de la foto de modelo, describe a la persona de forma profesional y no sexualizada: nada de t\u00e9rminos sensuales o er\u00f3ticos, nada de descripciones anat\u00f3micas expl\u00edcitas y nada de poses insinuantes. Si el outfit incluye ropa interior o de ba\u00f1o, tr\u00e1talo como prenda t\u00e9cnica de cat\u00e1logo."
+    instruccion: MARCA_PRUDENCIA + " REGLA OBLIGATORIA, por encima de cualquier otra indicaci\u00f3n anterior: en el prompt de la foto de modelo (\"model_shot_prompt\"), describe a la persona de forma profesional y no sexualizada. PROHIBIDO usar estas palabras o sus variantes: sensual, er\u00f3tico, seductor, insinuante, provocativo, sexy, voluptuoso, piel desnuda, desnudo, lencer\u00eda. Prohibido describir pose insinuante, escote, transparencias o partes del cuerpo por separado. Sustituye \u00ablencer\u00eda\u00bb por \u00abropa interior\u00bb y trata esas prendas como piezas t\u00e9cnicas de cat\u00e1logo. Ese prompt debe poder publicarse tal cual en un cat\u00e1logo comercial."
   },
   restrictivo: {
     label: "Restrictivo",
-    instruccion: MARCA_PRUDENCIA + " En el prompt de la foto de modelo, describe a la persona con la m\u00e1xima contenci\u00f3n, en lenguaje de ficha t\u00e9cnica: sin ninguna referencia sensual, er\u00f3tica o anat\u00f3mica, con pose neutra y erguida y expresi\u00f3n serena. Evita por completo palabras como \u00ablencer\u00eda\u00bb, \u00absensual\u00bb, \u00abseductor\u00bb o \u00abpiel desnuda\u00bb, y cubre con prendas b\u00e1sicas neutras las zonas del cuerpo que no formen parte del outfit."
+    instruccion: MARCA_PRUDENCIA + " REGLA OBLIGATORIA, por encima de cualquier otra indicaci\u00f3n anterior: el prompt de la foto de modelo (\"model_shot_prompt\") debe estar redactado en lenguaje de ficha t\u00e9cnica, con la m\u00e1xima contenci\u00f3n. PROHIBIDO usar estas palabras o sus variantes: sensual, er\u00f3tico, seductor, insinuante, provocativo, sexy, voluptuoso, piel desnuda, desnudo, lencer\u00eda, escote, transparencia, ajustado al cuerpo, curvas, muslo, gl\u00fateo. La persona debe aparecer de pie, en pose neutra y erguida, mirada tranquila y expresi\u00f3n serena, sin contacto de las manos con el cuerpo. Las zonas del cuerpo que no formen parte del outfit deben ir cubiertas con prendas b\u00e1sicas neutras. Describe las prendas por su construcci\u00f3n, su tejido y sus acabados, nunca por el efecto que producen en quien las lleva."
   }
 };
+
 
 const SYSTEM_PROMPT_OUTFIT = `Eres un director de arte y experto en moda, con amplio conocimiento de tejidos, patronaje, texturas y fotografía documental de producto. Tu tarea es analizar la(s) prenda(s) principal(es) que aparece(n) en la(s) fotografía(s) adjuntas (puede ser una sola prenda, o dos prendas que el usuario quiere combinar en un mismo outfit) y, a partir de sus características (tipo de prenda, tejido, color, corte, herrajes, estado de desgaste y estilo), proponer un outfit completo y coherente formado por exactamente el número de piezas adicionales que indique el usuario.
 Si se te adjuntan DOS prendas principales, trátalas como el núcleo de un mismo conjunto: identifica cómo combinarlas de forma coherente entre sí (mismo registro de estilo, paleta de color y nivel de formalidad) antes de proponer las piezas adicionales, que deben ser afines a AMBAS, no solo a una de ellas.

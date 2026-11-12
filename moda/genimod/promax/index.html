@@ -446,6 +446,11 @@
       </button>
       <p class="hint">Cada idea del lote se procesa de principio a fin (mejora del prompt + imagen con FLUX) una detrás de otra, para no saturar los límites de tasa del proveedor ni de fal.ai. Necesitas ambas API keys (texto y fal.ai) guardadas.</p>
     </div>
+    <div class="row" id="acciones-cache">
+      <button type="button" id="btn-regenerar">Generar de nuevo, sin usar la cach&#233;</button>
+      <button type="button" id="btn-vaciar-cache-gen">Vaciar cach&#233; (<span id="cache-contador-gen">0</span>)</button>
+    </div>
+    <p class="hint" id="hint-cache-gen">Con la cach&#233; activada, repetir la misma idea con los mismos ajustes devuelve el prompt ya generado. El primer bot&#243;n salta la cach&#233; solo esta vez; el segundo borra el historial entero de este navegador.</p>
         <p class="hint">Atajo: <kbd>Ctrl</kbd> + <kbd>Intro</kbd> (o <kbd>&#8984;</kbd> + <kbd>Intro</kbd>) lanza la generaci&#243;n sin tocar el rat&#243;n.</p>
     <div class="feedback">
     <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -549,7 +554,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:01</p>
+    <p>&#218;ltima modificaci&#243;n: 12/11/2026 02:39</p>
   </footer>
 </div>
 
@@ -792,19 +797,34 @@ const PRUDENCIAS = {
   ninguno: {
     label: "Sin filtro",
     requisito: "",
-    instruccion: ""
+    instruccion: "",
+    vetadas: []
   },
   intermedio: {
     label: "Filtro intermedio",
-    requisito: "profesional y no sexualizado, apto para un catálogo comercial.",
-    instruccion: MARCA_PRUDENCIA + " Describe a la persona de forma profesional y no sexualizada: nada de términos sensuales o eróticos, nada de descripciones anatómicas explícitas y nada de poses insinuantes. Si la prenda es ropa interior, baño o lencería, trátala como prenda técnica de catálogo y describe el resto con lenguaje neutro. El prompt debe poder publicarse tal cual en un catálogo comercial."
+    requisito: "profesional y no sexualizado, apto para un cat\u00e1logo comercial.",
+    instruccion: MARCA_PRUDENCIA + " REGLA OBLIGATORIA, por encima de cualquier otra indicaci\u00f3n anterior: el prompt final debe describir a la persona de forma profesional y no sexualizada. PROHIBIDO usar estas palabras o sus variantes: sensual, er\u00f3tico, seductor, insinuante, provocativo, sexy, voluptuoso, piel desnuda, desnudo, lencer\u00eda. Prohibido describir pose insinuante, escote, transparencias o partes del cuerpo por separado. Sustituye \u00ablencer\u00eda\u00bb por \u00abropa interior\u00bb y describe la prenda como pieza t\u00e9cnica de cat\u00e1logo. El prompt resultante debe poder publicarse tal cual en un cat\u00e1logo comercial.",
+    vetadas: ["sensual", "er\u00f3tic", "seductor", "insinuante", "provocativ", "sexy", "voluptuos", "piel desnuda", "desnud", "lencer\u00eda", "escote", "transparenc"]
   },
   restrictivo: {
     label: "Restrictivo",
-    requisito: "máxima contención, lenguaje de ficha técnica y cuerpo cubierto fuera de la prenda.",
-    instruccion: MARCA_PRUDENCIA + " Describe a la persona con la máxima contención, en lenguaje de ficha técnica: sin ninguna referencia sensual, erótica o anatómica, con pose neutra y erguida, expresión serena y mirada tranquila. Evita por completo palabras como «lencería», «sensual», «seductor», «insinuante» o «piel desnuda». Cubre con prendas básicas neutras las zonas del cuerpo que no formen parte de la prenda descrita, sin taparla ni restarle protagonismo."
+    requisito: "m\u00e1xima contenci\u00f3n, lenguaje de ficha t\u00e9cnica y cuerpo cubierto fuera de la prenda.",
+    instruccion: MARCA_PRUDENCIA + " REGLA OBLIGATORIA, por encima de cualquier otra indicaci\u00f3n anterior: el prompt final debe estar redactado en lenguaje de ficha t\u00e9cnica, con la m\u00e1xima contenci\u00f3n. PROHIBIDO usar estas palabras o sus variantes: sensual, er\u00f3tico, seductor, insinuante, provocativo, sexy, voluptuoso, piel desnuda, desnudo, lencer\u00eda, escote, transparencia, ajustado al cuerpo, curvas, muslo, pecho, gl\u00fateo, cadera. La persona debe aparecer de pie, en pose neutra y erguida, mirada tranquila y expresi\u00f3n serena, sin contacto de las manos con el cuerpo. Las zonas del cuerpo que no formen parte de la prenda descrita deben ir cubiertas con prendas b\u00e1sicas neutras (camiseta lisa, pantal\u00f3n liso o similar). Describe la prenda por su construcci\u00f3n, su tejido y sus acabados, nunca por el efecto que produce en quien la lleva.",
+    vetadas: ["sensual", "er\u00f3tic", "seductor", "insinuante", "provocativ", "sexy", "voluptuos", "piel desnuda", "desnud", "lencer\u00eda", "escote", "transparenc", "curvas", "muslo", "gl\u00fateo", "ajustado al cuerpo"]
   }
 };
+
+/* Comprueba si un prompt generado incumple el nivel de prudencia elegido.
+   Es una revisi&#243;n determinista sobre el texto, no una opini&#243;n del modelo: si
+   aparece alguna palabra vetada, el prompt se reescribe una sola vez. */
+function palabrasVetadasEn(texto, nivel) {
+  const cfg = PRUDENCIAS[nivel];
+  if (!cfg || !cfg.vetadas.length) return [];
+  const t = String(texto || "").toLowerCase();
+  return cfg.vetadas.filter((w) => t.indexOf(w) !== -1);
+}
+
+
 
 /* Devuelve el encuadre activo, con respaldo si el valor guardado ya no existe. */
 function getEncuadre() {
@@ -1633,6 +1653,10 @@ async function copyToClipboard(text) {
    resultante. La ejecuci\u00f3n se detiene aqu\u00ed a prop\u00f3sito: no se llama a FLUX
    todav\u00eda, para que el usuario pueda revisar o editar el prompt antes de
    generar la imagen pulsando "Generar imagen con este prompt". */
+/* Cuando se pulsa \u00abGenerar de nuevo, sin usar la cach\u00e9\u00bb, esta bandera hace
+   que la siguiente generaci\u00f3n ignore el prompt ya guardado sin borrar nada. */
+let saltarCacheUnaVez = false;
+
 async function generar() {
   clearError();
   if (!validateForm()) { showError("Completa todos los campos obligatorios antes de generar."); return; }
@@ -1651,7 +1675,9 @@ async function generar() {
   // PRO: cach\u00e9 de resultados (paso 1 de 2 \u2014 idea \u2192 prompt).
   const cacheKeyIdea = calcularCacheKeyIdea(systemPrompt, idea, textProvider, textModel, maxTokens);
   state.cacheKeyIdea = cacheKeyIdea;
-  if ($("chk-cache-resultados").checked) {
+  const saltarCache = saltarCacheUnaVez;
+  saltarCacheUnaVez = false;
+  if ($("chk-cache-resultados").checked && !saltarCache) {
     const previo = await buscarEnCacheHistorial("cacheKeyIdea", cacheKeyIdea);
     if (previo) {
       state.lastPrompt = previo.prompt;
@@ -1667,7 +1693,27 @@ async function generar() {
   showLoading(true, "Generando\u2026");
   try {
     showStatus(`Mejorando la idea con ${providerLabel}\u2026`, "info");
-    const resultado = await mejorarIdeaConIA(systemPrompt, idea, textProvider, textModel, maxTokens);
+    let resultado = await mejorarIdeaConIA(systemPrompt, idea, textProvider, textModel, maxTokens);
+
+    // Revisi\u00f3n del nivel de prudencia: si el prompt trae palabras vetadas, se
+    // pide una \u00fanica reescritura en vez de darlo por bueno.
+    let reescrito = false;
+    if (prudenciaAplica()) {
+      const vetadas = palabrasVetadasEn(resultado.text, getPrudencia());
+      if (vetadas.length) {
+        showStatus(`Ajustando el prompt al nivel de prudencia \u00ab${PRUDENCIAS[getPrudencia()].label}\u00bb\u2026`, "info");
+        const reescritura = "El siguiente prompt incumple la regla de prudencia porque contiene: " + vetadas.join(", ") +
+          ".\n\nReesc\u0072\u00edbelo entero respetando esa regla: conserva la prenda, los materiales, la luz y la c\u00e1mara, y cambia solo lo que la incumple. " +
+          "Devuelve \u00daNICAMENTE el prompt corregido, sin explicaciones.\n\nPROMPT:\n" + resultado.text;
+        try {
+          const segundo = await mejorarIdeaConIA(systemPrompt, reescritura, textProvider, textModel, maxTokens);
+          if (segundo.text && !palabrasVetadasEn(segundo.text, getPrudencia()).length) {
+            resultado = segundo;
+            reescrito = true;
+          }
+        } catch (e) { /* si la reescritura falla, se conserva el prompt original */ }
+      }
+    }
     state.lastPrompt = resultado.text;
     state.lastSystem = systemPrompt;
     state.lastIdea = idea;
@@ -1675,7 +1721,10 @@ async function generar() {
       ? "Aviso: la respuesta se ha cortado al alcanzar el l\u00edmite de tokens. Aumenta el m\u00e1ximo de tokens y vuelve a generar."
       : "";
     displayGeneratedPrompt(resultado.text, resultado.usage, textProvider, textModel, truncated);
-    showStatus(`Prompt generado por ${providerLabel}. Rev\u00edsalo o edita, y pulsa \u00abGenerar imagen con este prompt\u00bb cuando quieras continuar.`, "ok");
+    const notaPrudencia = prudenciaAplica() && getPrudencia() !== "ninguno"
+      ? ` Prudencia aplicada: ${PRUDENCIAS[getPrudencia()].label}${reescrito ? " (el prompt se reescribi\u00f3 para cumplirla)" : ""}.`
+      : "";
+    showStatus(`Prompt generado por ${providerLabel}.${notaPrudencia} Rev\u00edsalo o edita, y pulsa \u00abGenerar imagen con este prompt\u00bb cuando quieras continuar.`, "ok");
     mostrarPanelResultado();
   } catch (err) {
     $("status").className = "status";
@@ -1832,7 +1881,8 @@ async function actualizarContadorCache() {
     const todos = await historyGetAll();
     const n = todos.filter((r) => r.cacheKeyIdea || r.cacheKeyImagen).length;
     $("cache-contador").textContent = String(n);
-  } catch (e) { $("cache-contador").textContent = "0"; }
+    $("cache-contador-gen").textContent = String(n);
+  } catch (e) { $("cache-contador").textContent = "0"; $("cache-contador-gen").textContent = "0"; }
 }
 /* Aviso orientativo junto al interruptor de caché de prompts: solo tiene
    efecto con Anthropic, y solo ahorra si el bloque de sistema supera el
@@ -2362,7 +2412,8 @@ async function ejecutarLote() {
   const steps = Number($("steps").value);
   const imageSize = $("imageSize").value;
   const safety = $("safety").value;
-  const usarCache = $("chk-cache-resultados").checked;
+  const usarCache = $("chk-cache-resultados").checked && !saltarCacheUnaVez;
+  saltarCacheUnaVez = false;
 
   for (const it of loteIdeas) {
     if (loteDetener) { if (it.estado === "pendiente") continue; }
@@ -2495,12 +2546,20 @@ function initializeApp() {
   $("modepicker").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => cambiarModo(b.dataset.modo)));
 
   // PRO — caché de resultados y caché de prompts (Anthropic)
+  $("btn-regenerar").addEventListener("click", () => {
+    saltarCacheUnaVez = true;
+    const boton = modoActual === "lote" ? $("btn-lanzar-lote") : $("generate");
+    if (boton.disabled) { saltarCacheUnaVez = false; showError("Completa los campos obligatorios antes de generar."); return; }
+    boton.click();
+  });
+  $("btn-vaciar-cache-gen").addEventListener("click", () => $("btn-vaciar-cache").click());
   $("btn-vaciar-cache").addEventListener("click", async () => {
     if (!window.confirm("¿Vaciar la caché de resultados? Esto borra TODO el historial de generaciones de este navegador (la caché reutiliza el historial como almacén), no solo las entradas cacheadas.")) return;
     try { await idbTx("readwrite", (s) => s.clear()); } catch (e) { showError("No se ha podido vaciar la caché."); return; }
     historySelection.clear();
     closeComparison();
     await renderHistory();
+    await actualizarContadorCache();
     showStatus("Caché de resultados vaciada.", "info");
   });
   $("textProvider").addEventListener("change", actualizarNotaPromptCaching);

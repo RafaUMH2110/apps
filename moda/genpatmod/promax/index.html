@@ -637,7 +637,7 @@
 
 <footer>
   GenPatMod ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el patrón antes de cortar tela<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 09:30
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 00:55
 </footer>
 
 
@@ -1004,7 +1004,7 @@ async function fetchConTimeout(url, opciones, timeoutMs = 60000){
     return await fetch(url, {...opciones, signal: controlador.signal});
   } catch(e){
     if (senalCancelacion && senalCancelacion.aborted) throw new OperacionCancelada("Generación detenida por el usuario.");
-    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (60 s). Inténtalo de nuevo.");
+    if (e.name === "AbortError") throw new Error(`La petición ha superado el tiempo máximo de espera (${Math.round(timeoutMs / 1000)} s). Inténtalo de nuevo.`);
     throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
   } finally {
     clearTimeout(id);

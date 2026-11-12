@@ -347,12 +347,20 @@
   .workspace { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
   .workspace > .panel { margin-bottom: 0; }
   section.panel h2 { scroll-margin-top: 1rem; }
-  @media (min-width: 1100px) {
-    .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-    .card-entrada { grid-column: 1; grid-row: 1 / span 2; }
-    .card-prompts { grid-column: 2; grid-row: 1; }
-    .card-salida  { grid-column: 2; grid-row: 2; }
-  }
+  /* Una sola columna, en el orden en que se trabaja (fotos → generar →
+     prompts → resultado), en vez de entradas a la izquierda y resultados a
+     la derecha: con dos columnas el orden de lectura saltaba de un lado a
+     otro y la columna de resultados acababa el doble de larga. Los prompts y
+     las imágenes se reparten en rejilla para no obligar a desplazarse tanto. */
+  #lista-prompts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 1rem; margin-bottom: 1rem; }
+  #lista-prompts .pieza-card { margin-bottom: 0; display: flex; flex-direction: column; }
+  #lista-prompts .pieza-card textarea { flex: 1; }
+  #lista-prompts .pieza-card.persona, #lista-prompts .pieza-card.modelo, #lista-prompts .pieza-card.analisis { grid-column: 1 / -1; }
+  #resultado { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1rem; align-items: start; }
+  #resultado .pieza-card { margin-bottom: 0; }
+  #resultado .pieza-card .botones { flex-wrap: wrap; }
+  #input-num-piezas { max-width: 180px; }
+  .panel > .botones > .campo-nombre-archivo { flex: 0 1 340px; }
   kbd {
     font-family: 'JetBrains Mono', monospace; font-size: .8em; background: var(--blue-50);
     border: 1px solid var(--blue-100); border-bottom-width: 2px; border-radius: 5px; padding: .05em .4em;
@@ -679,7 +687,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 12/11/2026 08:05
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 00:55
 </footer>
 
 <script>
@@ -1246,8 +1254,8 @@ async function fetchConTimeout(url, opciones, timeoutMs = APP_CONFIG.requestTime
   try{
     return await fetch(url, {...opciones, signal: controlador.signal});
   } catch(e){
-    if (e.name === "AbortError") throw new Error("La petición ha superado el tiempo máximo de espera (60 s). Inténtalo de nuevo.");
-    throw new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión.");
+    if (e.name === "AbortError") throw Object.assign(new Error(`La petición ha superado el tiempo máximo de espera (${Math.round(timeoutMs / 1000)} s). Inténtalo de nuevo.`), {tipo: "timeout"});
+    throw Object.assign(new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión."), {tipo: "red"});
   } finally { clearTimeout(id); }
 }
 /* fal.ai revisa el texto del prompt ANTES de generar y, si lo rechaza, devuelve
@@ -1684,21 +1692,91 @@ function extraerImagenFal(data){
   if (data && Array.isArray(data.images) && data.images[0] && data.images[0].url) return data.images[0].url;
   throw new Error("fal.ai no ha devuelto ninguna imagen en la respuesta.");
 }
-async function esperarColaFal(encolado, headers){
-  const inicio = Date.now();
-  let statusUrl = encolado.status_url;
-  let responseUrl = encolado.response_url;
-  while (Date.now() - inicio < APP_CONFIG.fal.queueMaxWaitMs){
-    await new Promise(r => setTimeout(r, APP_CONFIG.fal.queuePollIntervalMs));
-    const r = await fetchConTimeout(statusUrl, {headers});
-    const d = await r.json().catch(() => ({}));
-    if (d && d.status === "COMPLETED"){
-      const r2 = await fetchConTimeout(responseUrl, {headers});
-      return await r2.json().catch(() => ({}));
-    }
-    if (d && d.status === "ERROR") throw new Error("fal.ai ha devuelto un error al procesar la imagen.");
+/* ----------------------------------------------------------------------------
+ * fal.ai POR COLA
+ * ----------------------------------------------------------------------------
+ * Las imágenes se piden a la cola de fal.ai (queue.fal.run) en vez de al
+ * endpoint síncrono (fal.run). En el síncrono la conexión queda abierta hasta
+ * que la imagen está terminada, y con FLUX Kontext y fotos de referencia eso
+ * pasaba a menudo del límite por petición y cortaba la generación con "ha
+ * superado el tiempo máximo de espera (60 s)". En la cola cada petición es
+ * corta: se envía el trabajo, fal.ai indica dónde consultar su estado y la
+ * imagen se recoge al terminar (ver esperarColaFal). Si la cola no responde
+ * por un error de red (por ejemplo, un bloqueo del navegador), se repite la
+ * petición contra el endpoint síncrono con un margen de tiempo amplio.
+ * --------------------------------------------------------------------------*/
+const FAL_COLA = {
+  envioMs: 120000,         // envío del trabajo (incluye subir las fotos de referencia)
+  sincronoMs: 300000,      // respaldo síncrono si la cola no responde
+  esperaMaxMs: 300000,     // espera máxima total de una imagen en cola
+  sondeoInicialMs: 1500,
+  sondeoMaxMs: 4000,
+  ladoMaxReferencia: 1536  // lado mayor de las fotos que se envían a FLUX Kontext
+};
+async function fetchFalCola(url, opciones){
+  const urlCola = String(url).replace(/^https:\/\/fal\.run\//, "https://queue.fal.run/");
+  try {
+    return await fetchConTimeout(urlCola, opciones, FAL_COLA.envioMs);
+  } catch(e){
+    if (!e || e.tipo !== "red" || urlCola === url) throw e;
+    return await fetchConTimeout(url, opciones, FAL_COLA.sincronoMs);
   }
-  throw new Error("Tiempo de espera agotado mientras fal.ai procesaba la imagen en cola.");
+}
+function falComprobarCancelacion(){
+  if (typeof controladorOperacion !== "undefined" && controladorOperacion && controladorOperacion.signal.aborted){
+    throw (typeof OperacionCanceladaError === "function" ? new OperacionCanceladaError() : new Error("Operación cancelada."));
+  }
+}
+// Reduce una foto (data URL) antes de enviarla a fal.ai: FLUX Kontext trabaja
+// en torno a un megapíxel, así que mandar la foto original del móvil (varios
+// MB en base64) solo alarga la subida sin mejorar el resultado. Se escala
+// para que su lado mayor no pase de FAL_COLA.ladoMaxReferencia y se
+// recodifica en JPEG sobre fondo blanco (por si era un PNG con
+// transparencia). Las URL remotas, las fotos ya pequeñas o cualquier fallo
+// devuelven la imagen tal cual.
+async function reducirImagenParaFal(url){
+  if (typeof url !== "string" || !url.startsWith("data:image/")) return url;
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const lado = Math.max(img.naturalWidth, img.naturalHeight);
+    if (!lado || (lado <= FAL_COLA.ladoMaxReferencia && url.length < 1500000)) return url;
+    const k = Math.min(1, FAL_COLA.ladoMaxReferencia / lado);
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * k));
+    c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.9);
+  } catch(e){ return url; }
+}
+async function esperarColaFal(encolado, headers){
+  const statusUrl = encolado && encolado.status_url;
+  const responseUrl = encolado && encolado.response_url;
+  if (!statusUrl || !responseUrl) throw new Error("fal.ai no ha indicado dónde consultar el estado de la imagen.");
+  const cabeceras = {"Authorization": headers["Authorization"]};
+  const inicio = Date.now();
+  let espera = FAL_COLA.sondeoInicialMs;
+  while (Date.now() - inicio < FAL_COLA.esperaMaxMs){
+    falComprobarCancelacion();
+    await new Promise(r => setTimeout(r, espera));
+    espera = Math.min(FAL_COLA.sondeoMaxMs, espera + 500);
+    falComprobarCancelacion();
+    const r = await fetchConTimeout(statusUrl, {headers: cabeceras});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok && r.status !== 202) throw new Error(mensajeErrorHttp(r.status, d));
+    const estado = String((d && d.status) || "").toUpperCase();
+    if (estado === "COMPLETED"){
+      const r2 = await fetchConTimeout(responseUrl, {headers: cabeceras});
+      const d2 = await r2.json().catch(() => ({}));
+      if (!r2.ok) throw new Error(mensajeErrorHttp(r2.status, d2));
+      return d2;
+    }
+    if (estado === "ERROR" || estado === "FAILED") throw new Error("fal.ai ha devuelto un error al procesar la imagen.");
+  }
+  throw new Error(`fal.ai no ha terminado la imagen en ${Math.round(FAL_COLA.esperaMaxMs / 1000)} s. Inténtalo de nuevo; si se repite, prueba con menos piezas.`);
 }
 function obtenerPasosInferencia(){
   const v = parseInt(selPasosInferencia.value, 10);
@@ -1729,7 +1807,7 @@ async function generarImagenFal(prompt){
   if (permitidos.indexOf("enable_safety_checker") !== -1 && !verificadorActivo()) {
     body.enable_safety_checker = false;
   }
-  const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  const resp = await fetchFalCola(url, {method:"POST", headers, body: JSON.stringify(body)});
   let data; try { data = await resp.json(); } catch(e){ data = {}; }
   if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
   if (!Array.isArray(data.images) && (data.status_url || data.response_url)){
@@ -1753,6 +1831,7 @@ function imagenOriginalDataUrl(){
 // devuelve fal.ai al generar cada pieza o esta misma función) como data
 // URIs (la prenda original subida localmente).
 async function generarImagenModeloFal(prompt, imageUrls){
+  imageUrls = await Promise.all(imageUrls.map(reducirImagenParaFal));
   const key = inputApiKeyFal.value.trim() || localStorage.getItem(CLAVE_FAL) || "";
   const headers = {"Authorization": "Key " + key, "Content-Type": "application/json"};
   const url = APP_CONFIG.fal.baseUrl + APP_CONFIG.fal.multiModel;
@@ -1765,7 +1844,7 @@ async function generarImagenModeloFal(prompt, imageUrls){
     guidance_scale: APP_CONFIG.fal.guidanceScaleModelo,
     aspect_ratio: ASPECT_RATIO_POR_IMAGE_SIZE[APP_CONFIG.fal.imageSize] || "3:4"
   };
-  const resp = await fetchConTimeout(url, {method:"POST", headers, body: JSON.stringify(body)});
+  const resp = await fetchFalCola(url, {method:"POST", headers, body: JSON.stringify(body)});
   let data; try { data = await resp.json(); } catch(e){ data = {}; }
   if (!resp.ok) throw new Error(mensajeErrorHttp(resp.status, data));
   if (!Array.isArray(data.images) && (data.status_url || data.response_url)){

@@ -598,7 +598,7 @@
 
   <footer>
     <p>Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>)</p>
-    <p>&#218;ltima modificaci&#243;n: 12/11/2026 08:05</p>
+    <p>&#218;ltima modificaci&#243;n: 13/11/2026 00:55</p>
   </footer>
 </div>
 
@@ -612,7 +612,7 @@
 const APP_CONFIG = {
   name: "GenImOd",
   requestTimeoutMs: 60000,        // Tiempo m\u00e1ximo por solicitud (60 s)
-  queueMaxWaitMs: 120000,         // Tiempo m\u00e1ximo total si fal.ai responde con cola
+  queueMaxWaitMs: 240000,         // Tiempo m\u00e1ximo total de una imagen en la cola de fal.ai
   queuePollIntervalMs: 2000,
   anthropic: {
     endpoint: "https://api.anthropic.com/v1/messages",
@@ -1352,7 +1352,7 @@ async function fetchJson(url, options) {
     response = await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err && err.name === "AbortError") throw new AppError("La operaci\u00f3n ha superado el tiempo m\u00e1ximo de espera.");
-    throw new AppError("No se ha podido establecer conexi\u00f3n con el servicio.");
+    throw Object.assign(new AppError("No se ha podido establecer conexi\u00f3n con el servicio."), { sinConexion: true });
   } finally {
     clearTimeout(timer);
   }
@@ -1550,10 +1550,21 @@ async function generarImagenConFal(prompt, model, steps, imageSize, safety, veri
     "Content-Type": "application/json"
   };
   const url = APP_CONFIG.fal.baseUrl + model;   // p. ej. https://fal.run/fal-ai/flux-pro/v1.1
-  let data = await fetchJson(url, {
+  const opcionesFal = {
     method: "POST", headers,
     body: JSON.stringify(buildFalBody(model, prompt, steps, imageSize, safety, verificador))
-  });
+  };
+  // Se pide a la cola de fal.ai (queue.fal.run): cada petici\u00f3n es corta y la
+  // imagen se recoge al terminar (esperarColaFal), as\u00ed que los modelos lentos
+  // no chocan con el l\u00edmite por petici\u00f3n. Si la cola no responde por un
+  // fallo de conexi\u00f3n, se repite contra el endpoint s\u00edncrono de siempre.
+  let data;
+  try {
+    data = await fetchJson(url.replace(/^https:\/\/fal\.run\//, "https://queue.fal.run/"), opcionesFal);
+  } catch (e) {
+    if (!(e && e.sinConexion)) throw e;
+    data = await fetchJson(url, opcionesFal);
+  }
 
   // Si el servicio responde con un flujo de cola en lugar del resultado final, se sigue el flujo documentado.
   const hasImages = data && Array.isArray(data.images);

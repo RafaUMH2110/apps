@@ -207,6 +207,38 @@
   button .spinner { border-color: rgba(255,255,255,.4); border-top-color: #fff; display: none; }
   button.busy .spinner { display: inline-block; }
   @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* Indicador de progreso de la generación de imágenes (mismo diseño que
+     GenOutFitFace ProMax). */
+  #progreso-imagenes {
+    display: none; margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 10px;
+    background: var(--blue-50); color: var(--blue-700); font-size: .9rem;
+    align-items: center; gap: .9rem; border: 1px solid var(--blue-100);
+  }
+  #progreso-imagenes.visible { display: flex; }
+  #progreso-imagenes.error { background: var(--err-bg); color: var(--err); border-color: #f3c6c2; }
+  #progreso-imagenes.detenida { background: #eee; color: var(--muted); border-color: var(--border); }
+  #progreso-imagenes.error .progreso-imagenes-info, #progreso-imagenes.detenida .progreso-imagenes-info {
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .anillo-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+  .anillo-progreso { transform: rotate(-90deg); }
+  .anillo-fondo { fill: none; stroke: var(--blue-100); stroke-width: 6; }
+  #progreso-imagenes.error .anillo-fondo { stroke: #f3c6c2; }
+  #progreso-imagenes.detenida .anillo-fondo { stroke: var(--border); }
+  .anillo-barra { fill: none; stroke: var(--blue-700); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset .35s ease; }
+  #progreso-imagenes.error .anillo-barra { stroke: var(--err); }
+  #progreso-imagenes.detenida .anillo-barra { stroke: var(--muted); }
+  /* Mientras se trabaja, un arco gira sobre el anillo: el avance entre una
+     imagen y la siguiente puede tardar más de un minuto (FLUX Kontext). */
+  .anillo-actividad { fill: none; stroke: var(--blue-500); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 22 154; opacity: .55; transform-origin: 32px 32px; animation: girar 1.4s linear infinite; display: none; }
+  #progreso-imagenes.trabajando .anillo-actividad { display: inline; }
+  .anillo-numero { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700; }
+  .progreso-imagenes-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; }
+  .progreso-imagenes-info span { flex: 1; min-width: 0; }
+  .progreso-imagenes-info small { display: block; font-weight: 400; opacity: .85; }
+  #btn-detener-imagenes { flex-shrink: 0; padding: .3rem .8rem; font-size: .82rem; }
+  @media (prefers-reduced-motion: reduce) { .anillo-actividad { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 
   /* Zona de subida de imagen */
@@ -673,6 +705,20 @@
   </section>
   <section class="panel card-salida" id="panel-imagenes" style="display:none;" aria-labelledby="h-imagenes">
     <h2 id="h-imagenes">4. Resultado — outfit generado</h2>
+    <div id="progreso-imagenes" role="status" aria-live="polite">
+      <div class="anillo-wrap">
+        <svg class="anillo-progreso" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+          <circle class="anillo-fondo" cx="32" cy="32" r="28"></circle>
+          <circle class="anillo-barra" id="anillo-barra" cx="32" cy="32" r="28"></circle>
+          <circle class="anillo-actividad" cx="32" cy="32" r="28"></circle>
+        </svg>
+        <span class="anillo-numero" id="progreso-imagenes-numero">0/0</span>
+      </div>
+      <div class="progreso-imagenes-info">
+        <span id="progreso-imagenes-texto"></span>
+        <button type="button" class="peligro hidden" id="btn-detener-imagenes">Detener</button>
+      </div>
+    </div>
     <div id="resultado"></div>
     <div class="field">
       <label for="input-nombre-pdf">Nombre del PDF a exportar</label>
@@ -700,7 +746,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 01:38
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:18
 </footer>
 
 <script>
@@ -1273,15 +1319,39 @@ $("btn-restaurar-system").addEventListener("click", () => { inputSystemPrompt.va
 /* ============================================================================
  * LLAMADA UNIFICADA A LA IA DE TEXTO/VISIÓN (Anthropic / OpenAI / Gemini)
  * ==========================================================================*/
+/* Cancelación de la generación de imágenes (botón "Detener" del indicador de
+   progreso): mientras dura, todas las peticiones escuchan este controlador.
+   Se declaran con var y function para que existan desde el arranque. */
+var controladorOperacion = null;
+var notificarEstadoFal = null; // avisa al indicador de si fal.ai tiene la imagen en cola o procesándose
+function OperacionCanceladaError(){
+  const e = new Error("Operación detenida por el usuario.");
+  e.name = "OperacionCanceladaError";
+  Object.setPrototypeOf(e, OperacionCanceladaError.prototype);
+  return e;
+}
+OperacionCanceladaError.prototype = Object.create(Error.prototype);
+OperacionCanceladaError.prototype.constructor = OperacionCanceladaError;
+
 async function fetchConTimeout(url, opciones, timeoutMs = APP_CONFIG.requestTimeoutMs){
   const controlador = new AbortController();
   const id = setTimeout(() => controlador.abort(), timeoutMs);
+  const externo = controladorOperacion ? controladorOperacion.signal : null;
+  const alDetener = () => controlador.abort();
+  if (externo){
+    if (externo.aborted){ clearTimeout(id); throw new OperacionCanceladaError(); }
+    externo.addEventListener("abort", alDetener, {once: true});
+  }
   try{
     return await fetch(url, {...opciones, signal: controlador.signal});
   } catch(e){
+    if (e.name === "AbortError" && externo && externo.aborted) throw new OperacionCanceladaError();
     if (e.name === "AbortError") throw Object.assign(new Error(`La petición ha superado el tiempo máximo de espera (${Math.round(timeoutMs / 1000)} s). Inténtalo de nuevo.`), {tipo: "timeout"});
     throw Object.assign(new Error("Error de red: no se ha podido contactar con el servidor de la IA. Revisa tu conexión."), {tipo: "red"});
-  } finally { clearTimeout(id); }
+  } finally {
+    clearTimeout(id);
+    if (externo) externo.removeEventListener("abort", alDetener);
+  }
 }
 /* fal.ai revisa el texto del prompt ANTES de generar y, si lo rechaza, devuelve
    un 422 de tipo content_policy_violation. Es un filtro distinto del verificador
@@ -1798,6 +1868,7 @@ async function esperarColaFal(encolado, headers){
     const d = await r.json().catch(() => ({}));
     if (!r.ok && r.status !== 202) throw new Error(mensajeErrorHttp(r.status, d));
     const estado = String((d && d.status) || "").toUpperCase();
+    if (typeof notificarEstadoFal === "function") notificarEstadoFal(estado, d && d.queue_position);
     if (estado === "COMPLETED"){
       const r2 = await fetchConTimeout(responseUrl, {headers: cabeceras});
       const d2 = await r2.json().catch(() => ({}));
@@ -2017,7 +2088,10 @@ async function guardarArchivo(nombreArchivo, contenido, tipoMime){
   a.click();
 }
 
-async function generarTodasLasImagenes(){
+// opciones.enLote: dentro del modo por lotes el indicador no muestra
+// "Detener", porque el lote tiene su propio botón para pararlo.
+async function generarTodasLasImagenes(opciones){
+  opciones = opciones || {};
   resultadoDiv.innerHTML = "";
   imagenesGeneradas = [];
 
@@ -2031,6 +2105,11 @@ async function generarTodasLasImagenes(){
   const textosOriginales = piezasAGenerar.map(p => p.prompt);
   const hayModelo = !!(modeloShotPrompt && modeloSeleccionado);
   if (hayModelo) textosOriginales.push(modeloShotPrompt + (modoLenceriaActivo() ? AVISO_CATALOGO_LENCERIA : ""));
+  const totalImagenes = piezasAGenerar.length + (hayModelo ? 1 : 0);
+  panelImagenes.style.display = "block";
+  mostrarProgresoImagenes(totalImagenes, !opciones.enLote);
+  let hechas = 0, fallidas = 0, cancelada = false;
+  try {
   const seTraduce = seVaATraducir();
   // Cada pieza ya trae su versión inglesa, devuelta por el modelo de texto en
   // la misma llamada que la española. Solo se vuelve a pedir la traducción de
@@ -2040,7 +2119,7 @@ async function generarTodasLasImagenes(){
   let textosEnviados = textosOriginales.slice();
   if (seTraduce){
     const pendientes = textosOriginales.map((t, i) => (yaEnIngles[i] ? "" : t));
-    if (pendientes.some(t => t)) estadoTexto.textContent = "Traduciendo los prompts al inglés…";
+    if (pendientes.some(t => t)) pasoProgresoImagenes(0, "Traduciendo los prompts al inglés");
     const traducidos = await traducirPrompts(pendientes);
     textosEnviados = textosOriginales.map((t, i) => yaEnIngles[i] || traducidos[i] || t);
   }
@@ -2066,8 +2145,9 @@ async function generarTodasLasImagenes(){
   for (let idxPieza = 0; idxPieza < piezasAGenerar.length; idxPieza++){
     const pieza = piezasAGenerar[idxPieza];
     const promptPieza = textosEnviados[idxPieza];
+    if (detencionPedida()){ cancelada = true; break; }
     const card = pintarImagenPlaceholder(pieza.nombre, false);
-    estadoTexto.textContent = `Generando imagen: ${pieza.nombre}…`;
+    pasoProgresoImagenes(hechas + fallidas, `«${pieza.nombre}» · imagen ${hechas + fallidas + 1} de ${totalImagenes}`);
     try {
       const urlRemota = await generarImagenFal(promptPieza);
       const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
@@ -2075,31 +2155,137 @@ async function generarTodasLasImagenes(){
       ponerPromptEnviado(card, promptPieza, seTraduce);
       imagenesGeneradas.push({nombre: pieza.nombre, dataUrl});
       imagenesReferenciaModelo.push(urlRemota);
+      hechas++;
     } catch(err){
+      if (err instanceof OperacionCanceladaError){
+        actualizarTarjetaImagen(card, null, "Detenida por el usuario: esta imagen no se ha generado.", false);
+        cancelada = true; break;
+      }
       actualizarTarjetaImagen(card, null, err.message || String(err), false);
+      fallidas++;
     }
   }
 
-  if (modeloShotPrompt && modeloSeleccionado){
+  if (hayModelo && !cancelada && !detencionPedida()){
     const nombreModelo = "Modelo con el outfit completo";
     const card = pintarImagenPlaceholder(nombreModelo, true);
-    estadoTexto.textContent = imagenesReferenciaModelo.length > FAL_KONTEXT_MAX_IMAGES
-      ? `Generando imagen: ${nombreModelo} (en varios pasos, ${imagenesReferenciaModelo.length} prendas de referencia)…`
-      : `Generando imagen: ${nombreModelo}…`;
+    pasoProgresoImagenes(hechas + fallidas, `«${nombreModelo}» · imagen ${hechas + fallidas + 1} de ${totalImagenes}`
+      + (imagenesReferenciaModelo.length > FAL_KONTEXT_MAX_IMAGES ? `, en varios pasos (${imagenesReferenciaModelo.length} prendas de referencia)` : "")
+      + "<small>FLUX Kontext compone la foto con las prendas de referencia: suele tardar uno o dos minutos.</small>");
     try {
       const urlRemota = await generarFotoModeloConReferencias(promptModeloEnviado || modeloShotPrompt, imagenesReferenciaModelo);
       const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
       actualizarTarjetaImagen(card, dataUrl, null, true);
       ponerPromptEnviado(card, promptModeloEnviado || modeloShotPrompt, seTraduce);
       imagenesGeneradas.push({nombre: nombreModelo, dataUrl});
+      hechas++;
     } catch(err){
-      actualizarTarjetaImagen(card, null, err.message || String(err), true);
+      if (err instanceof OperacionCanceladaError){
+        actualizarTarjetaImagen(card, null, "Detenida por el usuario: esta imagen no se ha generado.", true);
+        cancelada = true;
+      } else {
+        actualizarTarjetaImagen(card, null, err.message || String(err), true);
+        fallidas++;
+      }
     }
+  } else if (hayModelo) cancelada = true;
+  } catch(err){
+    btnExportarPdf.disabled = imagenesGeneradas.length === 0;
+    if (err instanceof OperacionCanceladaError) finProgresoImagenes("detenida", "Generación detenida antes de empezar las imágenes.");
+    else finProgresoImagenes("error", "Error: " + (err && err.message ? err.message : String(err)));
+    throw err;
   }
 
   btnExportarPdf.disabled = imagenesGeneradas.length === 0;
   panelImagenes.style.display = "block";
+  const tiempo = formatearDuracion(Date.now() - progresoImagenes.inicioTotal);
+  progresoImagenes.hechas = hechas;
+  if (cancelada){
+    finProgresoImagenes("detenida", `Generación detenida por el usuario: ${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} (${tiempo}). Las ya generadas se conservan.`);
+  } else if (fallidas){
+    finProgresoImagenes(hechas ? "ok" : "error", `${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} en ${tiempo}; ${fallidas === 1 ? "1 ha fallado" : fallidas + " han fallado"} (el motivo está en su tarjeta).`);
+  } else {
+    finProgresoImagenes("ok", `✓ ${totalImagenes === 1 ? "1 imagen generada" : totalImagenes + " imágenes generadas"} en ${tiempo}.`);
+  }
+  return cancelada;
 }
+
+/* ============================================================================
+ * INDICADOR DE PROGRESO DE LAS IMÁGENES
+ * ----------------------------------------------------------------------------
+ * Anillo con las imágenes hechas sobre el total, la imagen en curso, el estado
+ * que informa fal.ai (en cola o procesando), un cronómetro y el botón
+ * "Detener", que para la generación conservando lo ya hecho.
+ * ==========================================================================*/
+const ANILLO_CIRCUNFERENCIA = 2 * Math.PI * 28;
+const progresoImagenes = {total: 0, hechas: 0, etiqueta: "", estadoFal: "", inicioTotal: 0, inicioPaso: 0, reloj: null};
+function formatearDuracion(ms){
+  const s = Math.max(0, Math.round(ms / 1000));
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+function pintarAnilloImagenes(hechas, total){
+  $("anillo-barra").style.strokeDasharray = String(ANILLO_CIRCUNFERENCIA);
+  $("anillo-barra").style.strokeDashoffset = String(ANILLO_CIRCUNFERENCIA * (1 - (total > 0 ? hechas / total : 0)));
+  $("progreso-imagenes-numero").textContent = `${hechas}/${total}`;
+}
+function pintarTextoProgresoImagenes(){
+  const p = progresoImagenes;
+  const partes = p.etiqueta.split("<small>");
+  const detalle = [p.estadoFal, formatearDuracion(Date.now() - p.inicioPaso)].filter(Boolean).join(" · ");
+  const span = $("progreso-imagenes-texto");
+  span.textContent = "";
+  span.append(document.createTextNode(partes[0] + "… "), Object.assign(document.createElement("b"), {textContent: detalle}));
+  if (partes[1]) span.append(Object.assign(document.createElement("small"), {textContent: partes[1].replace("</small>", "")}));
+}
+function mostrarProgresoImagenes(total, conDetener){
+  const div = $("progreso-imagenes"), btn = $("btn-detener-imagenes");
+  Object.assign(progresoImagenes, {total, hechas: 0, etiqueta: "Preparando la generación", estadoFal: "", inicioTotal: Date.now(), inicioPaso: Date.now()});
+  div.classList.remove("error", "detenida");
+  div.classList.add("visible", "trabajando");
+  pintarAnilloImagenes(0, total);
+  pintarTextoProgresoImagenes();
+  controladorOperacion = new AbortController();
+  btn.classList.toggle("hidden", !conDetener);
+  btn.disabled = false;
+  btn.textContent = "Detener";
+  clearInterval(progresoImagenes.reloj);
+  progresoImagenes.reloj = setInterval(pintarTextoProgresoImagenes, 1000);
+  notificarEstadoFal = (estado, posicion) => {
+    progresoImagenes.estadoFal = estado === "IN_QUEUE"
+      ? ("en cola en fal.ai" + (Number.isFinite(posicion) && posicion > 0 ? ` (posición ${posicion})` : ""))
+      : estado === "IN_PROGRESS" ? "procesando en fal.ai" : "";
+    pintarTextoProgresoImagenes();
+  };
+  const rect = div.getBoundingClientRect();
+  if (rect.top < 0 || rect.bottom > window.innerHeight) div.scrollIntoView({behavior: "smooth", block: "center"});
+}
+function pasoProgresoImagenes(hechas, etiqueta){
+  Object.assign(progresoImagenes, {hechas, etiqueta, estadoFal: "", inicioPaso: Date.now()});
+  pintarAnilloImagenes(hechas, progresoImagenes.total);
+  pintarTextoProgresoImagenes();
+}
+function finProgresoImagenes(tipo, texto){
+  const div = $("progreso-imagenes"), btn = $("btn-detener-imagenes");
+  clearInterval(progresoImagenes.reloj);
+  progresoImagenes.reloj = null;
+  notificarEstadoFal = null;
+  controladorOperacion = null;
+  div.classList.remove("trabajando", "error", "detenida");
+  if (tipo === "error") div.classList.add("error");
+  if (tipo === "detenida") div.classList.add("detenida");
+  div.classList.add("visible");
+  pintarAnilloImagenes(progresoImagenes.hechas, progresoImagenes.total);
+  $("progreso-imagenes-texto").textContent = texto;
+  btn.classList.add("hidden");
+}
+function detencionPedida(){ return !!(controladorOperacion && controladorOperacion.signal.aborted); }
+$("btn-detener-imagenes").addEventListener("click", () => {
+  if (!controladorOperacion) return;
+  const btn = $("btn-detener-imagenes");
+  btn.disabled = true;
+  btn.textContent = "Deteniendo…";
+  controladorOperacion.abort();
+});
 
 /* ============================================================================
  * EXPORTAR TODAS LAS IMÁGENES EN UN PDF
@@ -2389,14 +2575,19 @@ btnContinuar.addEventListener("click", async () => {
     alert("No has seleccionado ningún prompt: marca al menos una casilla antes de continuar.");
     return;
   }
-  mostrarCargando(btnContinuar, "Generando imágenes con FLUX…");
+  // El avance se muestra en el indicador de progreso del resultado.
+  btnContinuar.classList.add("busy");
+  btnContinuar.disabled = true;
+  estadoGeneracion.classList.remove("visible");
   try {
     await generarTodasLasImagenes();
-    ocultarCargando(btnContinuar);
     await guardarEnHistorial($("chk-cache-resultados").checked ? cacheKeyActual : null);
   } catch(err){
-    mostrarError(btnContinuar, err);
+    if (!$("progreso-imagenes").classList.contains("error") && !$("progreso-imagenes").classList.contains("detenida")){
+      finProgresoImagenes("error", "Error: " + (err && err.message ? err.message : String(err)));
+    }
   } finally {
+    btnContinuar.classList.remove("busy");
     actualizarBotonContinuar();
   }
 });
@@ -2588,7 +2779,7 @@ async function ejecutarLote(){
         // analizarYGenerarPrompts()/generarTodasLasImagenes() tal cual.
         imagenBase64 = it.base64; imagenMediaType = it.mediaType;
         await analizarYGenerarPrompts();
-        await generarTodasLasImagenes();
+        await generarTodasLasImagenes({enLote: true});
         pintarPrompts();
         await guardarEnHistorial(usarCache ? claveLote : null);
         it.imagenes = imagenesGeneradas.slice();

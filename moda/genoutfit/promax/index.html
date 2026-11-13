@@ -360,6 +360,9 @@
   #resultado .pieza-card { margin-bottom: 0; }
   #resultado .pieza-card .botones { flex-wrap: wrap; }
   #input-num-piezas { max-width: 180px; }
+  .modo-lenceria { border: 1px solid var(--border); border-radius: 12px; padding: .8rem 1rem; background: var(--blue-50); }
+  .modo-lenceria.activo { border-color: var(--blue-700); }
+  .modo-lenceria .hint { margin-bottom: 0; }
   .panel > .botones > .campo-nombre-archivo { flex: 0 1 340px; }
   kbd {
     font-family: 'JetBrains Mono', monospace; font-size: .8em; background: var(--blue-50);
@@ -415,6 +418,7 @@
     </ol>
     <p><strong>Novedades Pro:</strong></p>
     <ul>
+      <li><strong>Modo catálogo de lencería y baño:</strong> para ropa interior, ropa de dormir o baño. La IA redacta los prompts como fichas de producto (construcción de la prenda, pose neutra de catálogo, modelo adulto/a, sin lenguaje sugerente), propone piezas a juego y la aplicación elige un modelo de imagen cuyo verificador de seguridad se puede desactivar. Pensado para modelos generados por la IA, nunca para fotos de personas reales.</li>
       <li><strong>Caché de resultados:</strong> antes de generar, comprueba si ya existe en el historial de este navegador una generación con la misma imagen de prenda y los mismos parámetros; si la hay, la recupera al instante sin gastar nada. Se puede desactivar o vaciar desde el panel "Pro" de arriba.</li>
       <li><strong>Caché de prompts de Anthropic:</strong> con proveedor Anthropic, marca las instrucciones del sistema con <code>cache_control</code> para abaratar llamadas consecutivas con el mismo bloque.</li>
       <li><strong>Modo por lotes:</strong> sube varias prendas a la vez; cada una genera su propio outfit completo, de principio a fin y sin pausa de revisión, con una lista de progreso y descarga conjunta en ZIP o un PDF por outfit.</li>
@@ -601,6 +605,13 @@
       <div class="batch-grid" id="grid-lote"></div>
       <p class="hint" id="contador-lote" style="margin-top:.6rem">Ninguna prenda añadida todavía.</p>
     </div>
+      <div class="field modo-lenceria" id="zona-modo-lenceria">
+        <label class="pick-row" style="margin-top:0" for="chk-modo-lenceria">
+          <input type="checkbox" id="chk-modo-lenceria">
+          <span><b>Modo catálogo de lencería y baño</b></span>
+        </label>
+        <p class="hint" id="hint-modo-lenceria"></p>
+      </div>
       <div class="field">
         <label for="input-num-piezas" id="label-num-piezas">Nº de piezas del outfit (sin contar la prenda original, máximo 4)</label>
         <input type="number" id="input-num-piezas" min="1" max="4" step="1" value="2">
@@ -689,7 +700,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 01:11
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 01:38
 </footer>
 
 <script>
@@ -708,6 +719,12 @@ const MARCA_ENCUADRE = "[Encuadre de la foto de modelo]";
 const MARCA_PRUDENCIA = "[Prudencia]";
 const ENCUADRE_POR_DEFECTO = "completo";
 const PRUDENCIA_POR_DEFECTO = "ninguno";
+// Modo catálogo de lencería y baño: sus reglas sustituyen a la prudencia,
+// porque esta prohíbe nombrar la lencería, que aquí es la propia prenda.
+const MARCA_LENCERIA = "[Catálogo de lencería]";
+const INSTRUCCION_LENCERIA = MARCA_LENCERIA + " MODO CATÁLOGO DE LENCERÍA Y BAÑO. REGLAS OBLIGATORIAS, por encima de cualquier otra indicación anterior: la prenda es lencería, ropa interior, ropa de dormir o de baño, y las imágenes son para un catálogo de comercio electrónico. (1) Piezas del outfit: propón las que completan el conjunto en un catálogo del género, empezando por la pieza a juego si la hay (sujetador con braguita o culotte, parte de arriba y de abajo del bikini) y siguiendo con prendas afines coherentes con su estilo y su gama de color (bata o kimono, body, liguero, medias, pijama, pareo, sandalias o chanclas). (2) Prompts de cada pieza: fotografía de producto de la prenda sola, sobre fondo liso claro, en plano cenital o sobre maniquí invisible, nunca puesta sobre una persona; describe su construcción con vocabulario técnico de corsetería y baño: tipo de copa (moldeada, triangular, balconette, push-up, sin aros), aros, tirantes (ajustables, convertibles, de silicona), cierre, bandas elásticas, tipo de encaje (Leavers, Chantilly, guipur), tul, microfibra, satén, forro, costuras planas, remates y acabados. (3) Prompt de la foto de modelo: una persona adulta, de más de 25 años, en pose neutra de catálogo (de pie, de frente o de tres cuartos, brazos relajados), con expresión natural, luz de estudio suave y uniforme y fondo liso claro; redáctalo como una ficha técnica centrada en cómo sienta la prenda (ajuste, dónde quedan costuras, tirantes y bandas). Se pueden y se deben nombrar las prendas por su nombre (lencería, sujetador, braguita, culotte, body, bañador, bikini). PROHIBIDO usar estas palabras o sus variantes: sensual, erótico, seductor, insinuante, provocativo, sexy, voluptuoso, boudoir, desnudo, piel desnuda; PROHIBIDAS las poses tumbada, en la cama o de espaldas mirando por encima del hombro, la mirada sugerente, los ambientes de dormitorio o íntimos y la piel mojada. Si la prenda es de talla infantil o juvenil, el prompt de la foto de modelo debe mostrarla sobre maniquí invisible, nunca puesta sobre una persona.";
+// Se añade siempre al prompt de la foto de modelo antes de enviarlo a FLUX.
+const AVISO_CATALOGO_LENCERIA = "\n\nFotografía de catálogo de comercio electrónico de moda íntima: modelo adulto o adulta, de más de 25 años, de pie en pose neutra de catálogo, expresión natural, luz de estudio suave y uniforme y fondo liso claro; la imagen se centra en cómo sienta la prenda, sin ninguna intención sugerente.";
 const ENCUADRES = {
   completo: {
     label: "Cuerpo entero",
@@ -915,6 +932,8 @@ function storageRemove(k){ try { localStorage.removeItem(k); } catch(e){} }
 /* ---- ProMax: encuadre y prudencia de la foto de modelo ---- */
 const CLAVE_ENCUADRE = "genoutfit_encuadre_modelo";
 const CLAVE_PRUDENCIA = "genoutfit_prudencia";
+const CLAVE_MODO_LENCERIA = "genoutfit_modo_lenceria";
+function modoLenceriaActivo(){ const c = $("chk-modo-lenceria"); return !!(c && c.checked); }
 
 /* Solo hay persona en la imagen si se pide la foto de modelo. */
 function opcionesModeloAplican(){ return chkIncluirModelo.checked; }
@@ -930,7 +949,7 @@ function getPrudencia(){
 /* Quita del texto las l\u00edneas que a\u00f1ade la aplicaci\u00f3n. */
 function limpiarMarcas(texto){
   return String(texto || "").split("\n")
-    .filter(l => l.indexOf(MARCA_ENCUADRE) !== 0 && l.indexOf(MARCA_PRUDENCIA) !== 0)
+    .filter(l => l.indexOf(MARCA_ENCUADRE) !== 0 && l.indexOf(MARCA_PRUDENCIA) !== 0 && l.indexOf(MARCA_LENCERIA) !== 0)
     .join("\n").replace(/\s+$/, "");
 }
 
@@ -941,8 +960,9 @@ function systemPromptEfectivo(){
   const lineas = [base];
   if (opcionesModeloAplican()){
     lineas.push(ENCUADRES[getEncuadre()].instruccion);
-    if (PRUDENCIAS[getPrudencia()].instruccion) lineas.push(PRUDENCIAS[getPrudencia()].instruccion);
+    if (PRUDENCIAS[getPrudencia()].instruccion && !modoLenceriaActivo()) lineas.push(PRUDENCIAS[getPrudencia()].instruccion);
   }
+  if (modoLenceriaActivo()) lineas.push(INSTRUCCION_LENCERIA);
   return lineas.filter(Boolean).join("\n");
 }
 
@@ -961,8 +981,10 @@ function rellenarDesplegable(sel, catalogo, valor){
 function actualizarOpcionesModeloUi(){
   const aplica = opcionesModeloAplican();
   $("encuadre").disabled = !aplica;
-  $("prudencia").disabled = !aplica;
-  $("modelo-opciones-hint").textContent = aplica
+  $("prudencia").disabled = !aplica || modoLenceriaActivo();
+  $("modelo-opciones-hint").textContent = aplica && modoLenceriaActivo()
+    ? "El encuadre afecta solo a la foto de modelo. La prudencia no se aplica en el modo catálogo de lencería: lo sustituyen sus propias reglas de redacción."
+    : aplica
     ? "Afectan solo al prompt de la foto de modelo. Un prompt demasiado expl\u00edcito hace que el filtro de seguridad de fal.ai marque la imagen y la devuelva en negro."
     : "No se aplican: sin la foto de modelo no aparece ninguna persona en las im\u00e1genes.";
 }
@@ -2008,7 +2030,7 @@ async function generarTodasLasImagenes(){
   const piezasAGenerar = piezasActuales.filter(p => p.seleccionada !== false);
   const textosOriginales = piezasAGenerar.map(p => p.prompt);
   const hayModelo = !!(modeloShotPrompt && modeloSeleccionado);
-  if (hayModelo) textosOriginales.push(modeloShotPrompt);
+  if (hayModelo) textosOriginales.push(modeloShotPrompt + (modoLenceriaActivo() ? AVISO_CATALOGO_LENCERIA : ""));
   const seTraduce = seVaATraducir();
   // Cada pieza ya trae su versión inglesa, devuelta por el modelo de texto en
   // la misma llamada que la española. Solo se vuelve a pedir la traducción de
@@ -2650,6 +2672,53 @@ $("encuadre").addEventListener("change", () => storageSet(CLAVE_ENCUADRE, getEnc
 $("prudencia").addEventListener("change", () => storageSet(CLAVE_PRUDENCIA, getPrudencia()));
 chkIncluirModelo.addEventListener("change", actualizarOpcionesModeloUi);
 actualizarOpcionesModeloUi();
+
+/* ---- Modo catálogo de lencería y baño ----
+   Al activarlo, si el modelo de imagen elegido no deja desactivar su
+   verificador (FLUX 1.1 [pro]) se cambia a FLUX.2 [pro], y la tolerancia se
+   sube al máximo que admita el modelo: con lencería, los verificadores dan
+   muchos falsos positivos y devuelven la imagen en negro. Al desactivarlo se
+   recuperan los valores anteriores de esta sesión. */
+let ajustesPreviosLenceria = null;
+function actualizarModoLenceriaUi(){
+  const activo = modoLenceriaActivo();
+  $("zona-modo-lenceria").classList.toggle("activo", activo);
+  $("hint-modo-lenceria").textContent = activo
+    ? "Activado: los prompts se redactan como fichas de producto (construcción de la prenda, pose neutra de catálogo, modelo adulto/a, sin lenguaje sugerente) y se proponen piezas a juego. Modelo de imagen: " + modeloImagenActivo().split("/").slice(1).join("/") + ", tolerancia " + obtenerSafetyTolerance() + ". Si alguna imagen sale en negro, desmarca «Verificador de seguridad de fal.ai» en Configuración. Úsalo con modelos generados por la IA, nunca con fotos de personas reales."
+    : "Para ropa interior, ropa de dormir o baño: prompts en registro de ficha de producto, piezas a juego y un modelo de imagen con el verificador desactivable, para evitar las imágenes en negro.";
+  actualizarOpcionesModeloUi();
+}
+function aplicarAjustesImagenLenceria(activar){
+  const sel = $("sel-modelo-imagen"), tol = $("sel-safety-tolerance");
+  if (activar){
+    ajustesPreviosLenceria = {modelo: sel.value, tolerancia: tol.value};
+    const info = FAL_MODELS_IMG[sel.value];
+    if (info && info.params.indexOf("enable_safety_checker") === -1){
+      sel.value = "fal-ai/flux-2-pro";
+      sel.dispatchEvent(new Event("change"));
+    }
+    const infoNuevo = FAL_MODELS_IMG[sel.value];
+    const tope = Math.min(5, (infoNuevo && infoNuevo.maxTolerancia) || 5);
+    if (Number(tol.value) < tope){ tol.value = String(tope); tol.dispatchEvent(new Event("change")); }
+  } else if (ajustesPreviosLenceria){
+    sel.value = ajustesPreviosLenceria.modelo;
+    sel.dispatchEvent(new Event("change"));
+    tol.value = ajustesPreviosLenceria.tolerancia;
+    tol.dispatchEvent(new Event("change"));
+    ajustesPreviosLenceria = null;
+  }
+}
+$("chk-modo-lenceria").checked = storageGet(CLAVE_MODO_LENCERIA) === "1";
+$("chk-modo-lenceria").addEventListener("change", () => {
+  storageSet(CLAVE_MODO_LENCERIA, modoLenceriaActivo() ? "1" : "0");
+  aplicarAjustesImagenLenceria(modoLenceriaActivo());
+  actualizarModoLenceriaUi();
+  actualizarResumenConfig();
+});
+$("sel-modelo-imagen").addEventListener("change", actualizarModoLenceriaUi);
+$("sel-safety-tolerance").addEventListener("change", actualizarModoLenceriaUi);
+if (modoLenceriaActivo()) aplicarAjustesImagenLenceria(true);
+actualizarModoLenceriaUi();
 
 // La configuraci\u00f3n arranca desplegada solo si falta alguna clave por guardar.
 $("panel-config").open = !localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || !localStorage.getItem(CLAVE_FAL);

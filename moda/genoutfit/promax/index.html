@@ -572,20 +572,8 @@
         <div class="grid2" id="grid-piezas-flux">
       <div class="field">
         <label for="sel-pasos-inferencia">Pasos de inferencia (FLUX)</label>
-        <select id="sel-pasos-inferencia">
-          <option value="2" selected>2 — por defecto</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-          <option value="11">11</option>
-          <option value="12">12 — más detalle</option>
-        </select>
-        <p class="hint">Más pasos = más detalle pero más lento y más caro en fal.ai.</p>
+        <select id="sel-pasos-inferencia"></select>
+        <p class="hint" id="hint-pasos-inferencia">Más pasos = más detalle pero más lento y más caro en fal.ai.</p>
       </div>
       <div class="field" id="zona-safety">
         <label for="sel-safety-tolerance">Tolerancia del filtro de seguridad (FLUX)</label>
@@ -768,7 +756,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 23:09
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 23:17
 </footer>
 
 <script>
@@ -874,8 +862,10 @@ const APP_CONFIG = {
     // prioriza seguir fielmente el prompt y las imágenes de referencia sobre
     // la creatividad, para que el modelo vista las prendas tal cual son.
     guidanceScaleModelo: 4.5,
-    inferenceStepsDefecto: 2,
-    inferenceStepsOpciones: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    // Pasos de inferencia por defecto para un modelo escrito a mano ("Otro…").
+    // Cada modelo del catálogo trae su propio rango en FAL_MODELS_IMG[...].pasos.
+    inferenceStepsDefecto: 28,
+    inferenceStepsOpciones: [1, 50],
     imageSize: "portrait_4_3",
     safetyTolerance: "3",
     outputFormat: "png",
@@ -1085,7 +1075,7 @@ function actualizarResumenConfig(){
     etiquetas[proveedorActivo()] || proveedorActivo(),
     modeloActivo() || "sin modelo",
     (FAL_MODELS_IMG[modeloImagenActivo()] ? modeloImagenActivo().split("/").pop() : modeloImagenActivo()),
-    selPasosInferencia.value + " pasos",
+    obtenerPasosInferencia() ? obtenerPasosInferencia() + " pasos" : "pasos fijos",
     faltan.length ? "faltan claves: " + faltan.join(" y ") : "claves \u2713"
   ].join("  \u00b7  ");
 }
@@ -1105,9 +1095,9 @@ const FAL_MODELS_IMG = {
   },
   "fal-ai/flux-pro/v1.1": {
     label: "FLUX 1.1 [pro] \u2014 la de siempre",
-    guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena y r\u00e1pida, pero su verificador de imagen no se puede desactivar.",
+    guia: "La que usaba la aplicaci\u00f3n hasta ahora. Buena y r\u00e1pida, pero su verificador de imagen no se puede desactivar. Sus pasos son fijos: no se pueden ajustar.",
     maxTolerancia: 6,
-    params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "safety_tolerance"]
+    params: ["prompt", "num_images", "output_format", "image_size", "safety_tolerance"]
   },
   "fal-ai/bytedance/seedream/v4.5/text-to-image": {
     label: "Seedream 4.5 \u2014 m\u00e1xima resoluci\u00f3n",
@@ -1116,12 +1106,15 @@ const FAL_MODELS_IMG = {
   },
   "fal-ai/flux/dev": {
     label: "FLUX.1 [dev] \u2014 abierta, filtro desactivable",
-    guia: "Modelo abierto de calidad notable, con pasos de inferencia ajustables y verificador desactivable.",
+    guia: "Modelo abierto de calidad notable, con pasos de inferencia ajustables y verificador desactivable. Necesita unos 28 pasos: con muy pocos la imagen sale borrosa.",
+    // Rango que admite fal.ai y valor recomendado (el de fal.ai por defecto).
+    pasos: {min: 10, max: 50, defecto: 28, opciones: [10, 15, 20, 24, 28, 32, 36, 40, 50]},
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"]
   },
   "fal-ai/flux/schnell": {
     label: "FLUX.1 [schnell] \u2014 r\u00e1pida y barata",
-    guia: "La m\u00e1s r\u00e1pida y econ\u00f3mica: ideal para que el alumnado pruebe muchas ideas.",
+    guia: "La m\u00e1s r\u00e1pida y econ\u00f3mica: ideal para que el alumnado pruebe muchas ideas. Est\u00e1 destilada para pocos pasos (4 por defecto).",
+    pasos: {min: 1, max: 12, defecto: 4, opciones: [1, 2, 3, 4, 5, 6, 8, 10, 12]},
     params: ["prompt", "num_inference_steps", "num_images", "output_format", "image_size", "enable_safety_checker"]
   }
 };
@@ -1130,6 +1123,37 @@ const CLAVE_MODELO_IMG = "genoutfit_modelo_imagen";
 const CLAVE_MODELO_OTRO = "genoutfit_modelo_imagen_otro";
 const CLAVE_VERIFICADOR = "genoutfit_verificador";
 const CLAVE_TOLERANCIA = "genoutfit_safety_tolerance";
+// Los pasos se guardan por modelo: 28 son lo normal en FLUX.1 [dev] y
+// demasiados para FLUX.1 [schnell], que está pensada para 1-4.
+const CLAVE_PASOS_PREFIJO = "genoutfit_pasos_";
+const PASOS_OTRO = {min: 1, max: 50, defecto: 28, opciones: [4, 8, 12, 20, 28, 36, 50]};
+function rangoPasosModelo(id){
+  const info = FAL_MODELS_IMG[id];
+  if (info) return info.params.indexOf("num_inference_steps") !== -1 ? (info.pasos || PASOS_OTRO) : null;
+  return PASOS_OTRO;
+}
+function rellenarPasosInferencia(){
+  const id = modeloImagenActivo();
+  const rango = rangoPasosModelo(id);
+  const sel = selPasosInferencia;
+  const hint = $("hint-pasos-inferencia");
+  sel.innerHTML = "";
+  if (!rango){
+    const o = document.createElement("option"); o.value = ""; o.textContent = "No ajustable en este modelo";
+    sel.appendChild(o); sel.disabled = true;
+    hint.textContent = "Este modelo usa un número de pasos fijo: no se envía este ajuste.";
+    return;
+  }
+  rango.opciones.forEach(n => {
+    const o = document.createElement("option"); o.value = String(n);
+    o.textContent = n === rango.defecto ? `${n} — recomendado` : String(n);
+    sel.appendChild(o);
+  });
+  const guardado = parseInt(storageGet(CLAVE_PASOS_PREFIJO + id), 10);
+  sel.value = String(rango.opciones.includes(guardado) ? guardado : rango.defecto);
+  sel.disabled = false;
+  hint.textContent = `Más pasos = más detalle pero más lento y más caro en fal.ai. Para este modelo se recomiendan ${rango.defecto}; con muchos menos la imagen sale borrosa o sin terminar. Se recuerda por modelo.`;
+}
 // FLUX Kontext (foto del modelo) admite safety_tolerance de 1 a 6.
 const KONTEXT_MAX_TOLERANCIA = 6;
 function modeloPiezasAdmite(param){
@@ -1181,9 +1205,7 @@ function actualizarControlesImagen(){
     if (Number(selTol.value) > topeTol) selTol.value = String(topeTol); // se queda en el máximo que admite, no vuelve a 3
   }
   document.getElementById("zona-safety-checker").classList.toggle("hidden", params.indexOf("enable_safety_checker") === -1);
-  const hayPasos = params.indexOf("num_inference_steps") !== -1;
-  const campoPasos = document.getElementById("input-pasos-inferencia") || document.getElementById("sel-pasos-inferencia");
-  if (campoPasos) campoPasos.disabled = !hayPasos;
+  rellenarPasosInferencia();
   document.getElementById("hint-safety-checker").textContent = verificadorActivo()
     ? "Si lo desmarcas, fal.ai no revisa la imagen generada y deja de devolverla en negro."
     : "Desactivado: fal.ai no revisar\u00e1 las im\u00e1genes generadas.";
@@ -1971,9 +1993,12 @@ async function esperarColaFal(encolado, headers){
   }
   throw new Error(`fal.ai no ha terminado la imagen en ${Math.round(FAL_COLA.esperaMaxMs / 1000)} s. Inténtalo de nuevo; si se repite, prueba con menos piezas.`);
 }
+// Pasos que se envían al modelo de las piezas, o null si ese modelo no los admite.
 function obtenerPasosInferencia(){
+  const rango = rangoPasosModelo(modeloImagenActivo());
+  if (!rango) return null;
   const v = parseInt(selPasosInferencia.value, 10);
-  return APP_CONFIG.fal.inferenceStepsOpciones.includes(v) ? v : APP_CONFIG.fal.inferenceStepsDefecto;
+  return (v >= rango.min && v <= rango.max) ? v : rango.defecto;
 }
 function obtenerSafetyTolerance(){
   const opciones = ["1","2","3","4","5","6"];
@@ -2733,7 +2758,7 @@ async function renderHistorial(){
     div.innerHTML = `
       <label class="hist-sel"><input type="checkbox" ${histSeleccionados.has(rec.id) ? "checked" : ""}><span>Seleccionar</span></label>
       <h4>${rec.numPiezas} pieza(s)${rec.incluirModelo ? " + modelo" : ""}</h4>
-      <p>${formatearFechaHist(rec.createdAt)} · ${rec.pasosInferencia || "?"} pasos · seg. ${rec.safetyTolerance || "?"}</p>
+      <p>${formatearFechaHist(rec.createdAt)}${rec.pasosInferencia ? ` · ${rec.pasosInferencia} pasos` : ""} · seg. ${rec.safetyTolerance || "?"}</p>
       <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0;">${miniaturas}</div>
       <div class="botones">
         <button type="button" class="secundario btn-cargar-hist">Ver / recuperar</button>
@@ -3196,6 +3221,7 @@ actualizarModoLenceriaUi();
 // La configuraci\u00f3n arranca desplegada solo si falta alguna clave por guardar.
 $("panel-config").open = !localStorage.getItem(CLAVES_LOCALSTORAGE[proveedorActivo()]) || !localStorage.getItem(CLAVE_FAL);
 [selProveedor, selModelo, selPasosInferencia].forEach(el => el.addEventListener("change", actualizarResumenConfig));
+selPasosInferencia.addEventListener("change", () => { if (selPasosInferencia.value) storageSet(CLAVE_PASOS_PREFIJO + modeloImagenActivo(), selPasosInferencia.value); });
 
 // Atajo de teclado: Ctrl/\u2318 + Intro lanza la generaci\u00f3n del modo activo.
 document.addEventListener("keydown", (e) => {

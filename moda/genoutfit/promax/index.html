@@ -624,6 +624,7 @@
       <button type="button" class="primario grande" id="btn-generar" disabled>
         <span class="spinner"></span><span id="btn-generar-texto">Generar Outfit</span>
       </button>
+      <button type="button" class="secundario hidden" id="btn-generar-sin-cache" disabled title="Analiza de nuevo la prenda y redacta prompts nuevos aunque haya un resultado guardado en la caché">Generar sin caché</button>
       <button type="button" class="secundario" id="btn-estimar-tokens" disabled>Estimar tokens de entrada</button>
     </div>
     <p class="hint" id="hint-estimar-tokens">La estimación consulta solo el conteo de tokens de ENTRADA (gratuito en los proveedores que lo ofrecen) con el mismo texto/imagen que se enviaría; los tokens de SALIDA nunca se pueden conocer antes de generar, solo se puede mostrar el techo configurado.</p>
@@ -657,6 +658,7 @@
       <button type="button" class="primario grande" id="btn-continuar" disabled>Continuar: generar imágenes con FLUX</button>
       <button type="button" class="secundario" id="btn-descargar-prompts" disabled>Descargar prompts (TXT)</button>
     </div>
+    <p class="hint">Las imágenes se generan siempre de nuevo, con los prompts marcados tal como estén en este paso: la caché de resultados solo se consulta al pulsar «Generar Outfit». Para rehacer solo algunas imágenes, deja marcadas únicamente sus casillas.</p>
   </section>
   <section class="panel card-salida" id="panel-imagenes" style="display:none;" aria-labelledby="h-imagenes">
     <h2 id="h-imagenes">4. Resultado — outfit generado</h2>
@@ -687,7 +689,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 00:55
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 01:11
 </footer>
 
 <script>
@@ -1223,6 +1225,7 @@ function actualizarBotonGenerar(){
   })();
   btnGenerar.disabled = !(hayKeyTexto && hayKeyFal && hayImagen && numPiezasOk);
   btnEstimarTokens.disabled = !(hayKeyTexto && hayImagen && numPiezasOk);
+  sincronizarBotonSinCache();
 }
 // El máximo de piezas cambia según si se va a incluir la foto del modelo
 // (ver numPiezasMaxActual): actualiza el atributo "max" del campo, su
@@ -1643,6 +1646,11 @@ function actualizarBotonContinuar(){
   const haySeleccion = (piezasActuales || []).some(p => p.seleccionada !== false)
     || (modeloShotPrompt !== null && modeloSeleccionado);
   btnContinuar.disabled = !haySeleccion;
+  // Con imágenes ya generadas (o recuperadas de la caché/historial),
+  // "Continuar" pasa a ser "volver a generar": nunca se sirven de la caché.
+  btnContinuar.textContent = resultadoDiv.querySelector(".pieza-card")
+    ? "↻ Volver a generar las imágenes marcadas (sin caché)"
+    : "Continuar: generar imágenes con FLUX";
 }
 // Delegación de eventos: al marcar/desmarcar cualquier casilla de selección,
 // se actualiza al instante el estado guardado y el botón "Continuar".
@@ -2219,6 +2227,7 @@ function cargarDesdeHistorial(rec){
   const caja = panelImagenes.getBoundingClientRect();
   const alto = window.innerHeight || document.documentElement.clientHeight;
   if (caja.top < 0 || caja.top > alto - 80) panelImagenes.scrollIntoView({behavior: "smooth", block: "start"});
+  actualizarBotonContinuar();
 }
 async function renderHistorial(){
   const lista = $("historial-lista");
@@ -2308,11 +2317,11 @@ function calcularCacheKeyIndividual(){
   });
 }
 
-btnGenerar.addEventListener("click", async () => {
+async function generarOutfit(usarCache){
   panelResultado.style.display = "none";
   panelImagenes.style.display = "none";
   cacheKeyActual = calcularCacheKeyIndividual();
-  if ($("chk-cache-resultados").checked){
+  if (usarCache && $("chk-cache-resultados").checked){
     mostrarCargando(btnGenerar, "Comprobando la caché de resultados…");
     const previo = await buscarEnCacheHistorial(cacheKeyActual);
     if (previo){
@@ -2335,7 +2344,22 @@ btnGenerar.addEventListener("click", async () => {
     mostrarError(btnGenerar, err);
     btnGenerar.disabled = false;
   }
-});
+}
+// "Generar sin caché": mismo análisis que "Generar", pero sin buscar antes
+// un resultado guardado; solo se muestra con la caché de resultados activada.
+btnGenerar.addEventListener("click", () => ejecutarGenerarOutfit(true));
+$("btn-generar-sin-cache").addEventListener("click", () => ejecutarGenerarOutfit(false));
+async function ejecutarGenerarOutfit(usarCache){
+  $("btn-generar-sin-cache").disabled = true;
+  try { await generarOutfit(usarCache); } finally { sincronizarBotonSinCache(); }
+}
+function sincronizarBotonSinCache(){
+  const b = $("btn-generar-sin-cache"); if (!b) return;
+  b.classList.toggle("hidden", !$("chk-cache-resultados").checked);
+  b.disabled = btnGenerar.disabled || btnGenerar.classList.contains("busy");
+}
+$("chk-cache-resultados").addEventListener("change", sincronizarBotonSinCache);
+sincronizarBotonSinCache();
 
 btnContinuar.addEventListener("click", async () => {
   recogerPromptsEditados();

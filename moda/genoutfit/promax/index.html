@@ -597,7 +597,8 @@
           <option value="5">5</option>
           <option value="6">6 — más permisivo</option>
         </select>
-        <p class="hint">1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro <code>safety_tolerance</code> de fal.ai.</p>
+        <p class="hint">1 bloquea más contenido sensible; 6 es el más permisivo. Define el parámetro <code>safety_tolerance</code> de fal.ai. Si no lo cambias, se usa 3 (el valor por defecto de la aplicación); lo que elijas se guarda en este navegador.</p>
+        <p class="hint" id="hint-safety-alcance"></p>
       </div>
         <div class="field hidden" id="zona-safety-checker">
           <label class="pick-row" style="margin:0" for="chk-safety-checker"><input type="checkbox" id="chk-safety-checker" checked><span>Verificador de seguridad de fal.ai sobre las im&#225;genes generadas</span></label>
@@ -767,7 +768,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:41
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 23:09
 </footer>
 
 <script>
@@ -1128,6 +1129,13 @@ const FAL_IMG_PARAMS_OTRO = ["prompt", "num_inference_steps", "num_images", "out
 const CLAVE_MODELO_IMG = "genoutfit_modelo_imagen";
 const CLAVE_MODELO_OTRO = "genoutfit_modelo_imagen_otro";
 const CLAVE_VERIFICADOR = "genoutfit_verificador";
+const CLAVE_TOLERANCIA = "genoutfit_safety_tolerance";
+// FLUX Kontext (foto del modelo) admite safety_tolerance de 1 a 6.
+const KONTEXT_MAX_TOLERANCIA = 6;
+function modeloPiezasAdmite(param){
+  const info = FAL_MODELS_IMG[modeloImagenActivo()];
+  return (info ? info.params : FAL_IMG_PARAMS_OTRO).indexOf(param) !== -1;
+}
 
 function modeloImagenActivo(){
   const sel = document.getElementById("sel-modelo-imagen");
@@ -1152,17 +1160,25 @@ function actualizarControlesImagen(){
   document.getElementById("modelo-imagen-guia").textContent = info ? info.guia
     : "Identificador escrito a mano: se env\u00edan los par\u00e1metros habituales y ser\u00e1 fal.ai quien rechace los que ese modelo no admita.";
   const admiteTolerancia = params.indexOf("safety_tolerance") !== -1;
-  document.getElementById("zona-safety").classList.toggle("hidden", !admiteTolerancia);
-  if (admiteTolerancia){
+  // La foto del modelo se genera siempre con FLUX Kontext, que sí usa la
+  // tolerancia: el selector se muestra también cuando solo la usa esa foto
+  // (antes quedaba oculto y se enviaba en silencio el 3 por defecto).
+  const conModelo = !!(window.chkIncluirModelo ? chkIncluirModelo.checked : document.getElementById("chk-incluir-modelo").checked);
+  document.getElementById("zona-safety").classList.toggle("hidden", !admiteTolerancia && !conModelo);
+  const alcance = document.getElementById("hint-safety-alcance");
+  if (alcance) alcance.textContent = admiteTolerancia && conModelo ? "Se aplica a las imágenes de las piezas y a la foto del modelo (FLUX Kontext)."
+    : admiteTolerancia ? "Se aplica a las imágenes de las piezas."
+    : "El modelo elegido para las piezas no usa este ajuste (tiene su propio verificador): solo se aplica a la foto del modelo (FLUX Kontext).";
+  if (admiteTolerancia || conModelo){
     // Cada modelo admite un rango distinto: FLUX.2 [pro] llega a 5 y devuelve un
-    // 422 con 6, mientras que FLUX 1.1 [pro] sí acepta 6.
-    const topeTol = (info && info.maxTolerancia) || 6;
+    // 422 con 6, mientras que FLUX 1.1 [pro] y FLUX Kontext sí aceptan 6.
+    const topeTol = admiteTolerancia ? ((info && info.maxTolerancia) || 6) : KONTEXT_MAX_TOLERANCIA;
     const selTol = document.getElementById("sel-safety-tolerance");
     Array.from(selTol.options).forEach(o => {
       const fuera = Number(o.value) > topeTol;
       o.hidden = fuera; o.disabled = fuera;
     });
-    if (Number(selTol.value) > topeTol) selTol.value = String(Math.min(3, topeTol));
+    if (Number(selTol.value) > topeTol) selTol.value = String(topeTol); // se queda en el máximo que admite, no vuelve a 3
   }
   document.getElementById("zona-safety-checker").classList.toggle("hidden", params.indexOf("enable_safety_checker") === -1);
   const hayPasos = params.indexOf("num_inference_steps") !== -1;
@@ -2017,7 +2033,7 @@ async function generarImagenModeloFal(prompt, imageUrls){
     image_urls: imageUrls,
     num_images: APP_CONFIG.fal.numImages,
     output_format: APP_CONFIG.fal.outputFormat,
-    safety_tolerance: obtenerSafetyTolerance(),
+    safety_tolerance: String(Math.min(KONTEXT_MAX_TOLERANCIA, Number(obtenerSafetyTolerance()))),
     guidance_scale: APP_CONFIG.fal.guidanceScaleModelo,
     aspect_ratio: ASPECT_RATIO_POR_IMAGE_SIZE[APP_CONFIG.fal.imageSize] || "3:4"
   };
@@ -2151,13 +2167,24 @@ function actualizarTarjetaImagen(card, dataUrl, error, esModelo){
   }
   wrap.innerHTML = `<img src="${dataUrl}" alt="${escapeHTML(card.dataset.nombre)}">`;
   meta.textContent = esModelo
-    ? `Formato PNG · fal.ai / FLUX Kontext (multi-imagen, a partir de la prenda original y las piezas generadas) · tolerancia de seguridad ${obtenerSafetyTolerance()}`
-    : `Formato PNG · fal.ai / FLUX · ${obtenerPasosInferencia()} pasos · tolerancia de seguridad ${obtenerSafetyTolerance()}`;
+    ? `Formato PNG · fal.ai / FLUX Kontext (multi-imagen, a partir de la prenda original y las piezas generadas) · tolerancia de seguridad ${Math.min(KONTEXT_MAX_TOLERANCIA, Number(obtenerSafetyTolerance()))}`
+    : descripcionAjustesPieza();
   btn.disabled = false;
   btn.addEventListener("click", () => {
     const nombreArchivo = card.dataset.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_") + ".png";
     guardarArchivo(nombreArchivo, dataUrlABlob(dataUrl), "image/png");
   });
+}
+// Describe solo los ajustes que admite (y por tanto recibe) el modelo de las piezas.
+function descripcionAjustesPieza(){
+  const id = modeloImagenActivo();
+  const info = FAL_MODELS_IMG[id];
+  const nombre = info ? info.label.split(" \u2014 ")[0] : id;
+  const partes = ["Formato PNG", "fal.ai / " + nombre];
+  if (modeloPiezasAdmite("num_inference_steps")) partes.push(`${obtenerPasosInferencia()} pasos`);
+  if (modeloPiezasAdmite("safety_tolerance")) partes.push(`tolerancia de seguridad ${obtenerSafetyTolerance()}`);
+  if (modeloPiezasAdmite("enable_safety_checker")) partes.push(verificadorActivo() ? "verificador de seguridad activado" : "verificador de seguridad desactivado");
+  return partes.join(" · ");
 }
 function dataUrlABlob(dataUrl){
   const [cab, datos] = dataUrl.split(",");
@@ -3097,6 +3124,10 @@ inputSystemPrompt.value = SYSTEM_PROMPT_OUTFIT;
   const otroGuardado = storageGet(CLAVE_MODELO_OTRO);
   if (otroGuardado) document.getElementById("input-modelo-imagen-otro").value = otroGuardado;
   document.getElementById("chk-safety-checker").checked = storageGet(CLAVE_VERIFICADOR) !== "0";
+  const tolGuardada = storageGet(CLAVE_TOLERANCIA);
+  if (/^[1-6]$/.test(tolGuardada || "")) selSafetyTolerance.value = tolGuardada;
+  selSafetyTolerance.addEventListener("change", () => storageSet(CLAVE_TOLERANCIA, selSafetyTolerance.value));
+  chkIncluirModelo.addEventListener("change", actualizarControlesImagen);
   sel.addEventListener("change", () => { storageSet(CLAVE_MODELO_IMG, sel.value); actualizarControlesImagen(); actualizarResumenConfig(); });
   document.getElementById("input-modelo-imagen-otro").addEventListener("input", function(){
     storageSet(CLAVE_MODELO_OTRO, this.value.trim()); actualizarResumenConfig();

@@ -285,6 +285,10 @@
   .hist-item { border: 1px solid var(--border); border-radius: 12px; padding: .8rem; background: #fff; }
   .hist-item h4 { margin: 0 0 .3rem; font-size: .95rem; color: var(--blue-700); }
   .hist-item p { margin: 0; font-size: .8rem; color: var(--muted); }
+  .hist-toolbar label { display: flex; align-items: center; gap: .4rem; font-weight: 600; cursor: pointer; margin: 0; font-size: .9rem; }
+  .hist-toolbar input[type="checkbox"], .hist-item .hist-sel input { width: 1.1rem; height: 1.1rem; }
+  .hist-item .hist-sel { display: flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 600; margin: 0 0 .4rem; cursor: pointer; }
+  .hist-item.seleccionado { outline: 2px solid var(--blue-500); outline-offset: -2px; }
   .hist-vacio { grid-column: 1 / -1; color: var(--muted); padding: 1rem; text-align: center; background: var(--blue-50); border: 2px dashed var(--border-strong); border-radius: 12px; }
 
   .hidden { display: none !important; }
@@ -749,9 +753,11 @@
   <section class="panel" aria-labelledby="h-historial">
     <h2 id="h-historial">Historial de generaciones</h2>
     <p class="hint" style="margin-top:0">Cada outfit generado se guarda automáticamente en este navegador (IndexedDB), con sus prompts y las imágenes generadas. No incluye API keys.</p>
-    <p class="hint"><strong>Aviso:</strong> al pulsar "Ver / recuperar" en cualquier generación, el panel de resultado se sustituye por esa generación y sus imágenes ya no se pueden descargar como PNG ni exportar a PDF — tampoco las que tengas ahora mismo en pantalla sin descargar, aunque sean las últimas generadas. Descarga antes lo que necesites.</p>
+    <p class="hint"><strong>Aviso:</strong> al pulsar "Ver / recuperar" en cualquier generación, el panel de resultado se sustituye por esa generación; descarga antes lo que necesites de las imágenes que tengas ahora en pantalla. Marca la casilla de varias generaciones para eliminarlas de una sola vez.</p>
     <div class="hist-toolbar">
+      <label for="historial-sel-todos"><input type="checkbox" id="historial-sel-todos" disabled><span>Seleccionar todos</span></label>
       <span class="hist-contador" id="historial-contador" aria-live="polite">0 generaciones</span>
+      <button type="button" class="peligro" id="historial-eliminar-sel" disabled>Eliminar seleccionados (0)</button>
       <button type="button" class="peligro" id="historial-vaciar" disabled>Vaciar historial</button>
     </div>
     <div id="historial-lista" class="hist-grid"></div>
@@ -761,7 +767,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:25
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:29
 </footer>
 
 <script>
@@ -2529,9 +2535,42 @@ function formatearFechaHist(ts){
   return new Date(ts).toLocaleString("es-ES", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
 }
 async function eliminarDeHistorial(id){
-  await historyTx("readwrite", s => s.delete(id));
-  await renderHistorial();
+  await eliminarVariosDeHistorial([id]);
 }
+// Generaciones marcadas con su casilla en el historial (se conservan al repintar la lista).
+const histSeleccionados = new Set();
+async function eliminarVariosDeHistorial(ids){
+  await historyTx("readwrite", s => { ids.forEach(id => s.delete(id)); });
+  ids.forEach(id => histSeleccionados.delete(id));
+  if (ids.includes(registroActualId)) registroActualId = null; // lo que hay en pantalla ya no está en el historial
+  await renderHistorial();
+  if (typeof actualizarContadorCache === "function") await actualizarContadorCache();
+}
+function actualizarSeleccionHistorial(){
+  const items = [...document.querySelectorAll("#historial-lista .hist-item")];
+  const n = items.filter(d => d.querySelector(".hist-sel input").checked).length;
+  items.forEach(d => d.classList.toggle("seleccionado", d.querySelector(".hist-sel input").checked));
+  const todos = $("historial-sel-todos");
+  todos.disabled = items.length === 0;
+  todos.checked = items.length > 0 && n === items.length;
+  todos.indeterminate = n > 0 && n < items.length;
+  const b = $("historial-eliminar-sel");
+  b.textContent = `Eliminar seleccionados (${n})`;
+  b.disabled = n === 0;
+}
+$("historial-sel-todos").addEventListener("change", (e) => {
+  document.querySelectorAll("#historial-lista .hist-item").forEach(d => {
+    const k = d.querySelector(".hist-sel input"); k.checked = e.target.checked;
+    if (k.checked) histSeleccionados.add(d.dataset.id); else histSeleccionados.delete(d.dataset.id);
+  });
+  actualizarSeleccionHistorial();
+});
+$("historial-eliminar-sel").addEventListener("click", async () => {
+  const ids = [...document.querySelectorAll("#historial-lista .hist-item")].filter(d => d.querySelector(".hist-sel input").checked).map(d => d.dataset.id);
+  if (!ids.length) return;
+  if (!confirm(`¿Eliminar ${ids.length === 1 ? "la generación seleccionada" : "las " + ids.length + " generaciones seleccionadas"} del historial? Esta acción no se puede deshacer.`)) return;
+  await eliminarVariosDeHistorial(ids);
+});
 function blobADataUrl(blob){
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
 }
@@ -2590,6 +2629,7 @@ async function renderHistorial(){
     lista.innerHTML = '<div class="hist-vacio">El historial no está disponible en este navegador.</div>';
     contador.textContent = "0 generaciones";
     btnVaciar.disabled = true;
+    actualizarSeleccionHistorial();
     return;
   }
   contador.textContent = `${registros.length} generación(es)`;
@@ -2597,15 +2637,19 @@ async function renderHistorial(){
   lista.innerHTML = "";
   if (registros.length === 0){
     lista.innerHTML = `<div class="hist-vacio">Todavía no has generado ningún outfit en este navegador.</div>`;
+    histSeleccionados.clear();
+    actualizarSeleccionHistorial();
     return;
   }
   registros.forEach(rec => {
     const div = document.createElement("div");
     div.className = "hist-item";
+    div.dataset.id = rec.id;
     const miniaturas = rec.items.slice(0, 4).map(it =>
       `<img src="${URL.createObjectURL(it.blob)}" alt="${escapeHTML(it.nombre)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`
     ).join("");
     div.innerHTML = `
+      <label class="hist-sel"><input type="checkbox" ${histSeleccionados.has(rec.id) ? "checked" : ""}><span>Seleccionar</span></label>
       <h4>${rec.numPiezas} pieza(s)${rec.incluirModelo ? " + modelo" : ""}</h4>
       <p>${formatearFechaHist(rec.createdAt)} · ${rec.pasosInferencia || "?"} pasos · seg. ${rec.safetyTolerance || "?"}</p>
       <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0;">${miniaturas}</div>
@@ -2620,13 +2664,20 @@ async function renderHistorial(){
     div.querySelector(".btn-eliminar-hist").addEventListener("click", () => {
       if (confirm("¿Eliminar esta generación del historial?")) eliminarDeHistorial(rec.id);
     });
+    div.querySelector(".hist-sel input").addEventListener("change", (e) => {
+      if (e.target.checked) histSeleccionados.add(rec.id); else histSeleccionados.delete(rec.id);
+      actualizarSeleccionHistorial();
+    });
     lista.appendChild(div);
   });
+  actualizarSeleccionHistorial();
 }
 $("historial-vaciar").addEventListener("click", async () => {
   if (!confirm("¿Vaciar todo el historial de este navegador? Esta acción no se puede deshacer.")) return;
   const registros = await historyGetAll();
   await historyTx("readwrite", s => { registros.forEach(r => s.delete(r.id)); });
+  histSeleccionados.clear();
+  registroActualId = null;
   await renderHistorial();
 });
 

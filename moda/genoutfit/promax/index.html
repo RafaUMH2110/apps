@@ -767,7 +767,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:29
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:41
 </footer>
 
 <script>
@@ -792,16 +792,32 @@ const MARCA_LENCERIA = "[Catálogo de lencería]";
 const INSTRUCCION_LENCERIA = MARCA_LENCERIA + " MODO CATÁLOGO DE LENCERÍA Y BAÑO. REGLAS OBLIGATORIAS, por encima de cualquier otra indicación anterior: la prenda es lencería, ropa interior, ropa de dormir o de baño, y las imágenes son para un catálogo de comercio electrónico. (1) Piezas del outfit: propón las que completan el conjunto en un catálogo del género, empezando por la pieza a juego si la hay (sujetador con braguita o culotte, parte de arriba y de abajo del bikini) y siguiendo con prendas afines coherentes con su estilo y su gama de color (bata o kimono, body, liguero, medias, pijama, pareo, sandalias o chanclas). (2) Prompts de cada pieza: fotografía de producto de la prenda sola, sobre fondo liso claro, en plano cenital o sobre maniquí invisible, nunca puesta sobre una persona; describe su construcción con vocabulario técnico de corsetería y baño: tipo de copa (moldeada, triangular, balconette, push-up, sin aros), aros, tirantes (ajustables, convertibles, de silicona), cierre, bandas elásticas, tipo de encaje (Leavers, Chantilly, guipur), tul, microfibra, satén, forro, costuras planas, remates y acabados. (3) Prompt de la foto de modelo: una persona adulta, de más de 25 años, en pose neutra de catálogo (de pie, de frente o de tres cuartos, brazos relajados), con expresión natural, luz de estudio suave y uniforme y fondo liso claro; redáctalo como una ficha técnica centrada en cómo sienta la prenda (ajuste, dónde quedan costuras, tirantes y bandas). Se pueden y se deben nombrar las prendas por su nombre (lencería, sujetador, braguita, culotte, body, bañador, bikini). PROHIBIDO usar estas palabras o sus variantes: sensual, erótico, seductor, insinuante, provocativo, sexy, voluptuoso, boudoir, desnudo, piel desnuda; PROHIBIDAS las poses tumbada, en la cama o de espaldas mirando por encima del hombro, la mirada sugerente, los ambientes de dormitorio o íntimos y la piel mojada. Si la prenda es de talla infantil o juvenil, el prompt de la foto de modelo debe mostrarla sobre maniquí invisible, nunca puesta sobre una persona.";
 // Se añade siempre al prompt de la foto de modelo antes de enviarlo a FLUX.
 const AVISO_CATALOGO_LENCERIA = "\n\nFotografía de catálogo de comercio electrónico de moda íntima: modelo adulto o adulta, de más de 25 años, de pie en pose neutra de catálogo, expresión natural, luz de estudio suave y uniforme y fondo liso claro; la imagen se centra en cómo sienta la prenda, sin ninguna intención sugerente.";
+// Cada encuadre aporta: la línea del sistema, el texto del mensaje del usuario
+// (antes este decía siempre «encuadre de cuerpo entero» y contradecía la
+// opción «Solo la zona del outfit», así que la IA seguía escribiendo un plano
+// de cuerpo entero o dejaba sin redactar el prompt del modelo) y una
+// directiva que se añade siempre al prompt de la foto de modelo antes de
+// enviarlo a FLUX Kontext, para que el encuadre elegido se respete aunque el
+// prompt se haya editado a mano o se haya redactado con otro encuadre.
 const ENCUADRES = {
   completo: {
     label: "Cuerpo entero",
-    instruccion: MARCA_ENCUADRE + " En el prompt de la foto de modelo (\"model_shot_prompt\"), el encuadre debe ser de cuerpo entero, de la cabeza a los pies."
+    instruccion: MARCA_ENCUADRE + " En el prompt de la foto de modelo (\"model_shot_prompt\"), el encuadre debe ser de cuerpo entero, de la cabeza a los pies.",
+    usuario: "encuadre de cuerpo entero, de la cabeza a los pies",
+    directiva: "\n\nEncuadre obligatorio, por encima de cualquier indicación anterior: plano de cuerpo entero, de la cabeza a los pies, con todas las prendas y complementos del outfit visibles."
   },
   recorte: {
     label: "Solo la zona del outfit",
-    instruccion: MARCA_ENCUADRE + " En el prompt de la foto de modelo (\"model_shot_prompt\"), encuadra solo la zona del cuerpo que ocupan las prendas del outfit, recortando el resto; el conjunto debe verse completo."
+    instruccion: MARCA_ENCUADRE + " REGLA OBLIGATORIA, por encima de cualquier otra indicación anterior: el prompt de la foto de modelo (\"model_shot_prompt\") debe pedir un plano recortado que muestre solo la zona del cuerpo que ocupan las prendas del outfit (por ejemplo, de los hombros a la cadera si todas son prendas de arriba, o de la cintura a los pies si son de abajo y calzado), con todas esas prendas completas dentro del encuadre y dejando fuera el resto del cuerpo. No escribas «cuerpo entero» ni «de la cabeza a los pies» salvo que el outfit incluya a la vez prendas o complementos de cabeza y calzado. Encuadrar así la zona del outfit no es describir partes del cuerpo por separado: es un plano de producto puesto. El \"model_shot_prompt\" es obligatorio aunque el plano sea recortado.",
+    usuario: "encuadre recortado que muestre solo la zona del cuerpo que ocupan las prendas del outfit (con todas ellas completas dentro del plano), NO de cuerpo entero",
+    directiva: "\n\nEncuadre obligatorio, por encima de cualquier indicación anterior: plano recortado que muestra solo la zona del cuerpo que ocupan las prendas y complementos del outfit, con todos ellos completos dentro del encuadre; deja fuera del plano el resto del cuerpo (no es un plano de cuerpo entero)."
   }
 };
+// Prompt de reserva para la foto del modelo, si la IA no lo devuelve.
+function promptModeloReserva(){
+  return "Fotografía editorial de moda de una persona adulta que lleva puesto exactamente el outfit de las imágenes de referencia (la prenda original y cada pieza generada), sin ningún cambio en sus colores, tejidos, formas ni detalles, combinadas en un único conjunto coherente. Pose natural y relajada, de pie, de frente o de tres cuartos, expresión serena; "
+    + ENCUADRES[getEncuadre()].usuario + "; fondo de estudio liso y neutro, luz natural direccional suave, cámara de 85 mm a f/2.8, estilo documental.";
+}
 const PRUDENCIAS = {
   ninguno: { label: "Sin filtro", instruccion: "" },
   intermedio: {
@@ -1052,7 +1068,7 @@ function actualizarOpcionesModeloUi(){
   $("modelo-opciones-hint").textContent = aplica && modoLenceriaActivo()
     ? "El encuadre afecta solo a la foto de modelo. La prudencia no se aplica en el modo catálogo de lencería: lo sustituyen sus propias reglas de redacción."
     : aplica
-    ? "Afectan solo al prompt de la foto de modelo. Un prompt demasiado expl\u00edcito hace que el filtro de seguridad de fal.ai marque la imagen y la devuelva en negro."
+    ? "Afectan solo al prompt de la foto de modelo. El encuadre se aplica también al generar la imagen: puedes cambiarlo y regenerar la foto del modelo sin volver a analizar la prenda. Un prompt demasiado expl\u00edcito hace que el filtro de seguridad de fal.ai marque la imagen y la devuelva en negro."
     : "No se aplican: sin la foto de modelo no aparece ninguna persona en las im\u00e1genes.";
 }
 
@@ -1657,11 +1673,11 @@ function construirMensajeUsuario(numPiezas, incluirModelo){
   return `Analiza la prenda que aparece en la imagen adjunta.
 
 Genera un outfit completo compuesto por ${numPiezas} prenda(s) afines a la prenda de la imagen (sin incluir la propia prenda de la imagen), siguiendo tu rol y reglas del sistema.
-${incluirModelo ? "Incluye además un prompt adicional para una fotografía de un/a modelo vistiendo el outfit completo (la prenda original más las piezas generadas). Esa foto se generará por imagen-a-imagen usando como referencia la prenda original y cada pieza ya generada, así que ese prompt no debe volver a describir el aspecto de las prendas: debe dar por sentado que el modelo lleva EXACTAMENTE esas prendas, sin cambios, y centrarse en pose, actitud, encuadre de cuerpo entero, entorno, cámara y luz." : "No generes ningún prompt de modelo: el usuario no lo ha solicitado."}
+${incluirModelo ? "Incluye además un prompt adicional para una fotografía de un/a modelo vistiendo el outfit completo (la prenda original más las piezas generadas). Esa foto se generará por imagen-a-imagen usando como referencia la prenda original y cada pieza ya generada, así que ese prompt no debe volver a describir el aspecto de las prendas: debe dar por sentado que el modelo lleva EXACTAMENTE esas prendas, sin cambios, y centrarse en pose, actitud, ${ENCUADRES[getEncuadre()].usuario}, entorno, cámara y luz. El campo \"model_shot_prompt\" es obligatorio y va fuera de \"pieces\": no añadas la foto del modelo como una pieza más." : "No generes ningún prompt de modelo: el usuario no lo ha solicitado."}
 
 FORMATO DE RESPUESTA (obligatorio):
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comentarios y sin bloques de código, con este esquema EXACTO:
-{"pieces": [{"name": "<nombre breve de la pieza, en español>", "prompt": "<prompt descriptivo en español para FLUX>", "prompt_en": "<ese mismo prompt en inglés, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el término inglés habitual en moda para cada prenda, tejido, costura y acabado>"}]${incluirModelo ? `, "model_shot_prompt": "<prompt en español para la foto del modelo con el outfit completo, sin describir de nuevo las prendas: centrado en pose, actitud, encuadre, entorno, cámara y luz>"` : ""}}
+{"pieces": [{"name": "<nombre breve de la pieza, en español>", "prompt": "<prompt descriptivo en español para FLUX>", "prompt_en": "<ese mismo prompt en inglés, con la misma estructura, el mismo orden y aproximadamente la misma longitud, usando el término inglés habitual en moda para cada prenda, tejido, costura y acabado>"}]${incluirModelo ? `, "model_shot_prompt": "<prompt en español para la foto del modelo con el outfit completo, sin describir de nuevo las prendas: centrado en pose, actitud, ${ENCUADRES[getEncuadre()].usuario}, entorno, cámara y luz>"` : ""}}
 
 Cada "prompt" debe estar íntegramente en español y seguir las instrucciones del sistema (imperfecciones, texturas táctiles, micro-detalles, configuración de cámara, iluminación natural, estilo documental, sin palabras vacías).`;
 }
@@ -1707,10 +1723,49 @@ async function analizarYGenerarPrompts(){
     avisoTruncadoDiv.style.display = "none";
   }
 
-  piezasActuales = datos.pieces.map(p => ({nombre: p.name, prompt: p.prompt, promptEn: p.prompt_en || "", promptEsBase: p.prompt, seleccionada: true}));
-  modeloShotPrompt = incluirModelo ? (datos.model_shot_prompt || null) : null;
+  let avisoModelo = "";
+  let promptModelo = incluirModelo ? extraerPromptModelo(datos, numPiezas) : null;
+  if (incluirModelo && !promptModelo){
+    // La IA no ha devuelto el prompt de la foto del modelo: se le pide solo ese.
+    estadoTexto.textContent = "Falta el prompt de la foto del modelo — pidiéndolo a la IA…";
+    try {
+      const piezasTxt = datos.pieces.map(p => "- " + p.name).join("\n");
+      const r2 = await llamarIA(systemPrompt, `Has propuesto este outfit (además de la prenda original de la imagen):\n${piezasTxt}\n\nFalta el prompt de la foto del modelo. Redáctalo en español, sin volver a describir el aspecto de las prendas (se tomarán de las imágenes de referencia), centrado en pose, actitud, ${ENCUADRES[getEncuadre()].usuario}, entorno, cámara y luz. Responde ÚNICAMENTE con este JSON: {"model_shot_prompt": "<prompt>"}`, opts);
+      const d2 = extraerJSON(r2.texto || "");
+      promptModelo = (d2 && typeof d2.model_shot_prompt === "string" && d2.model_shot_prompt.trim()) || null;
+    } catch(e){ promptModelo = null; }
+    if (!promptModelo){
+      promptModelo = promptModeloReserva();
+      avisoModelo = "La IA no ha devuelto el prompt de la foto del modelo: se ha puesto uno genérico con el encuadre elegido. Revísalo o edítalo antes de continuar.";
+    }
+  }
+  piezasActuales = datos.pieces.slice(0, numPiezas).map(p => ({nombre: p.name, prompt: p.prompt, promptEn: p.prompt_en || "", promptEsBase: p.prompt, seleccionada: true}));
+  modeloShotPrompt = incluirModelo ? promptModelo : null;
   modeloSeleccionado = true;
   promptAnalisisImagen = userPrompt;
+  if (avisoModelo){
+    avisoTruncadoDiv.style.display = "block";
+    avisoTruncadoDiv.textContent = (resp.truncado ? avisoTruncadoDiv.textContent + " " : "") + avisoModelo;
+  }
+}
+// Busca el prompt de la foto del modelo aunque la IA lo haya devuelto con otro
+// nombre de campo o como una pieza más al final de "pieces" (en ese caso se
+// saca de la lista de piezas).
+function extraerPromptModelo(datos, numPiezas){
+  const texto = v => (typeof v === "string" && v.trim()) ? v.trim() : null;
+  for (const k of ["model_shot_prompt", "modelShotPrompt", "model_prompt", "model_shot", "modelo_prompt", "prompt_modelo"]){
+    const v = texto(datos[k]) || (datos[k] && typeof datos[k] === "object" ? texto(datos[k].prompt) : null);
+    if (v) return v;
+  }
+  const pieces = datos.pieces || [];
+  const esModelo = p => /\b(modelo|model)\b/i.test(p.name || "") && /(outfit|completo|vistiendo|wearing|look|shot|foto)/i.test(p.name || "");
+  const i = pieces.findIndex((p, idx) => esModelo(p) || (idx >= numPiezas && /\b(modelo|model)\b/i.test(p.name || "")));
+  if (i >= 0){
+    const v = texto(pieces[i].prompt);
+    pieces.splice(i, 1);
+    if (v) return v;
+  }
+  return null;
 }
 
 /* ============================================================================
@@ -2197,7 +2252,7 @@ async function generarImagenesInterno(opciones){
   if (parcial && !piezasAGenerar.length && !hayModelo) throw new Error("Ya no hay ningún prompt en el paso 3 para las imágenes seleccionadas.");
   if (parcial && hayModelo && !imagenOriginalDataUrl() && !imagenesGeneradas.some(i => i.esOriginal)) throw new Error("Para rehacer la foto del modelo hace falta la foto de la prenda original: súbela de nuevo en el paso 2.");
   const erroresParciales = [];
-  if (hayModelo) textosOriginales.push(modeloShotPrompt + (modoLenceriaActivo() ? AVISO_CATALOGO_LENCERIA : ""));
+  if (hayModelo) textosOriginales.push(modeloShotPrompt + (modoLenceriaActivo() ? AVISO_CATALOGO_LENCERIA : "") + ENCUADRES[getEncuadre()].directiva);
   const totalImagenes = piezasAGenerar.length + (hayModelo ? 1 : 0);
   panelImagenes.style.display = "block";
   mostrarProgresoImagenes(totalImagenes, !opciones.enLote);

@@ -391,6 +391,16 @@
   #resultado { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1rem; align-items: start; }
   #resultado .pieza-card { margin-bottom: 0; }
   #resultado .pieza-card .botones { flex-wrap: wrap; }
+  /* Selección de imágenes del resultado para volver a generarlas */
+  #barra-regenerar { display: none; align-items: center; gap: .8rem; flex-wrap: wrap; margin: 0 0 .9rem; padding: .6rem .9rem; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+  #barra-regenerar.visible { display: flex; }
+  #barra-regenerar label { display: flex; align-items: center; gap: .4rem; font-weight: 600; cursor: pointer; margin: 0; }
+  #barra-regenerar input { width: 1.1rem; height: 1.1rem; }
+  #barra-regenerar .hint { flex-basis: 100%; margin: 0; }
+  #resultado .pieza-card .sel-regenerar { margin: 0 0 .4rem; font-size: .88rem; }
+  #resultado .pieza-card .sel-regenerar input { width: 1.05rem; height: 1.05rem; margin: 0; }
+  #resultado .pieza-card.seleccionada { outline: 2px solid var(--blue-500); outline-offset: -2px; }
+  #resultado.ocupado .sel-regenerar, #resultado.ocupado .btn-regenerar-imagen { opacity: .45; pointer-events: none; }
   #input-num-piezas { max-width: 180px; }
   .modo-lenceria { border: 1px solid var(--border); border-radius: 12px; padding: .8rem 1rem; background: var(--blue-50); }
   .modo-lenceria.activo { border-color: var(--blue-700); }
@@ -719,6 +729,11 @@
         <button type="button" class="peligro hidden" id="btn-detener-imagenes">Detener</button>
       </div>
     </div>
+    <div id="barra-regenerar">
+      <label for="chk-sel-todas"><input type="checkbox" id="chk-sel-todas"><span>Seleccionar todas</span></label>
+      <button type="button" class="primario" id="btn-regenerar-sel" disabled>↻ Regenerar seleccionadas (0)</button>
+      <p class="hint">Marca las imágenes que quieras rehacer (o usa «↻ Regenerar» en su tarjeta). Se vuelven a generar con los prompts del paso 3 tal como estén ahora, editados o no, sin usar la caché; las demás imágenes no se tocan. Si la foto del modelo no se marca, se conserva tal cual aunque cambies alguna prenda.</p>
+    </div>
     <div id="resultado"></div>
     <div class="field">
       <label for="input-nombre-pdf">Nombre del PDF a exportar</label>
@@ -746,7 +761,7 @@
 
 <footer>
   GenOutFit ProMax &middot; Generado con ayuda de IA &middot; Revisa siempre el resultado antes de usarlo profesionalmente<br>
-  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:18
+  Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) &middot; &Uacute;ltima modificaci&oacute;n: 13/11/2026 22:25
 </footer>
 
 <script>
@@ -2003,17 +2018,66 @@ async function dataUrlDesdeImagenUrl(url){
   });
 }
 
-function pintarImagenPlaceholder(nombre, esModelo){
+function pintarImagenPlaceholder(nombre, esModelo, esOriginal){
   const card = document.createElement("div");
   card.className = "pieza-card" + (esModelo ? " modelo" : "");
   card.dataset.nombre = nombre;
+  if (esOriginal) card.dataset.original = "1";
   card.innerHTML = `<h3>${escapeHTML(nombre)}</h3>
+    ${esOriginal ? "" : `<label class="pick-row sel-regenerar"><input type="checkbox" class="chk-regenerar"><span>Seleccionar para regenerar</span></label>`}
     <div class="img-wrap"><span class="placeholder">Generando…</span></div>
     <div class="meta-pieza"></div>
     <details class="prompt-enviado hidden"><summary></summary><p></p></details>
-    <div class="botones"><button type="button" class="secundario btn-descargar-png" disabled>Descargar PNG</button></div>`;
+    <div class="botones"><button type="button" class="secundario btn-descargar-png" disabled>Descargar PNG</button>
+    ${esOriginal ? "" : `<button type="button" class="secundario btn-regenerar-imagen" title="Vuelve a generar solo esta imagen con su prompt del paso 3 (tal como esté editado), sin usar la caché">↻ Regenerar</button>`}</div>`;
+  const b = card.querySelector(".btn-regenerar-imagen");
+  if (b) b.addEventListener("click", () => regenerarImagenes([card.dataset.nombre]));
   resultadoDiv.appendChild(card);
+  actualizarBarraRegenerar();
   return card;
+}
+/* ---------- selección de imágenes para volver a generarlas ---------- */
+function tarjetasRegenerables(){ return [...resultadoDiv.querySelectorAll(".pieza-card:not([data-original])")]; }
+function nombresSeleccionados(){
+  return tarjetasRegenerables().filter(c => c.querySelector(".chk-regenerar")?.checked).map(c => c.dataset.nombre);
+}
+function actualizarBarraRegenerar(){
+  const todas = tarjetasRegenerables();
+  const sel = nombresSeleccionados();
+  $("barra-regenerar").classList.toggle("visible", todas.length > 0);
+  todas.forEach(c => c.classList.toggle("seleccionada", !!c.querySelector(".chk-regenerar")?.checked));
+  const btn = $("btn-regenerar-sel");
+  btn.textContent = `↻ Regenerar seleccionadas (${sel.length})`;
+  btn.disabled = sel.length === 0 || generandoImagenes;
+  const chk = $("chk-sel-todas");
+  chk.checked = todas.length > 0 && sel.length === todas.length;
+  chk.indeterminate = sel.length > 0 && sel.length < todas.length;
+  chk.disabled = generandoImagenes;
+}
+resultadoDiv.addEventListener("change", (e) => { if (e.target.classList && e.target.classList.contains("chk-regenerar")) actualizarBarraRegenerar(); });
+$("chk-sel-todas").addEventListener("change", (e) => {
+  tarjetasRegenerables().forEach(c => { const k = c.querySelector(".chk-regenerar"); if (k) k.checked = e.target.checked; });
+  actualizarBarraRegenerar();
+});
+$("btn-regenerar-sel").addEventListener("click", () => regenerarImagenes(nombresSeleccionados()));
+// Vuelve a generar solo las imágenes indicadas (por nombre de tarjeta) con los
+// prompts actuales del paso 3 y las sustituye en su sitio; nunca usa la caché
+// y actualiza la misma entrada del historial en vez de crear otra.
+async function regenerarImagenes(nombres){
+  if (generandoImagenes || !nombres || !nombres.length) return;
+  recogerPromptsEditados();
+  btnContinuar.disabled = true;
+  estadoGeneracion.classList.remove("visible");
+  try {
+    await generarTodasLasImagenes({soloNombres: nombres});
+    if (imagenesGeneradas.some(i => !i.esOriginal)) await guardarEnHistorial($("chk-cache-resultados").checked ? cacheKeyActual : null, registroActualId);
+  } catch(err){
+    const d = $("progreso-imagenes");
+    if (!d.classList.contains("error") && !d.classList.contains("detenida")) finProgresoImagenes("error", "Error: " + (err && err.message ? err.message : String(err)));
+  } finally {
+    actualizarBotonContinuar();
+    actualizarBarraRegenerar();
+  }
 }
 function actualizarTarjetaImagen(card, dataUrl, error, esModelo){
   const wrap = card.querySelector(".img-wrap");
@@ -2090,10 +2154,30 @@ async function guardarArchivo(nombreArchivo, contenido, tipoMime){
 
 // opciones.enLote: dentro del modo por lotes el indicador no muestra
 // "Detener", porque el lote tiene su propio botón para pararlo.
+// opciones.soloNombres: lista de nombres de tarjeta; solo se rehacen esas
+// imágenes (con los prompts actuales) y se sustituyen en su sitio sin tocar
+// las demás ni la prenda original.
+let generandoImagenes = false;
 async function generarTodasLasImagenes(opciones){
-  opciones = opciones || {};
-  resultadoDiv.innerHTML = "";
-  imagenesGeneradas = [];
+  if (generandoImagenes) throw new Error("Ya hay una generación de imágenes en curso.");
+  generandoImagenes = true;
+  resultadoDiv.classList.add("ocupado");
+  actualizarBarraRegenerar();
+  try { return await generarImagenesInterno(opciones || {}); }
+  finally {
+    generandoImagenes = false;
+    resultadoDiv.classList.remove("ocupado");
+    actualizarBarraRegenerar();
+  }
+}
+const NOMBRE_MODELO = "Modelo con el outfit completo";
+async function generarImagenesInterno(opciones){
+  const parcial = Array.isArray(opciones.soloNombres);
+  const soloNombres = parcial ? new Set(opciones.soloNombres) : null;
+  if (!parcial){
+    resultadoDiv.innerHTML = "";
+    imagenesGeneradas = [];
+  }
 
   // Imágenes de referencia para la foto del modelo: la prenda original (data
   // URI, subida por el usuario) más la URL remota de cada pieza a medida que
@@ -2101,9 +2185,12 @@ async function generarTodasLasImagenes(opciones){
   // estas imágenes reales, en vez de reinterpretarlas de nuevo solo con texto.
   // Los prompts se traducen todos de una vez, en paralelo, antes de empezar:
   // así no se encadena una llamada de texto por pieza en mitad del proceso.
-  const piezasAGenerar = piezasActuales.filter(p => p.seleccionada !== false);
+  const piezasAGenerar = piezasActuales.filter(p => parcial ? soloNombres.has(p.nombre) : p.seleccionada !== false);
   const textosOriginales = piezasAGenerar.map(p => p.prompt);
-  const hayModelo = !!(modeloShotPrompt && modeloSeleccionado);
+  const hayModelo = parcial ? (soloNombres.has(NOMBRE_MODELO) && !!modeloShotPrompt) : !!(modeloShotPrompt && modeloSeleccionado);
+  if (parcial && !piezasAGenerar.length && !hayModelo) throw new Error("Ya no hay ningún prompt en el paso 3 para las imágenes seleccionadas.");
+  if (parcial && hayModelo && !imagenOriginalDataUrl() && !imagenesGeneradas.some(i => i.esOriginal)) throw new Error("Para rehacer la foto del modelo hace falta la foto de la prenda original: súbela de nuevo en el paso 2.");
+  const erroresParciales = [];
   if (hayModelo) textosOriginales.push(modeloShotPrompt + (modoLenceriaActivo() ? AVISO_CATALOGO_LENCERIA : ""));
   const totalImagenes = piezasAGenerar.length + (hayModelo ? 1 : 0);
   panelImagenes.style.display = "block";
@@ -2126,14 +2213,16 @@ async function generarTodasLasImagenes(opciones){
   const promptModeloEnviado = hayModelo ? textosEnviados[textosEnviados.length - 1] : null;
 
   const imagenesReferenciaModelo = [];
-  const original = imagenOriginalDataUrl();
-  if (original){
+  const urlsNuevas = {};
+  const original = imagenOriginalDataUrl() || (parcial ? (imagenesGeneradas.find(i => i.esOriginal) || {}).dataUrl : null);
+  if (original && parcial) imagenesReferenciaModelo.push(original);
+  else if (original){
     imagenesReferenciaModelo.push(original);
     // La prenda original también se incluye como una tarjeta más: así queda
     // en el PDF exportado y en el historial de generaciones, junto al resto
     // de piezas y a la foto del modelo.
     const nombreOriginal = "Prenda original";
-    const cardOriginal = pintarImagenPlaceholder(nombreOriginal, false);
+    const cardOriginal = pintarImagenPlaceholder(nombreOriginal, false, true);
     actualizarTarjetaImagen(cardOriginal, original, null, false);
     cardOriginal.querySelector(".meta-pieza").textContent = "Imagen original subida por el usuario";
     imagenesGeneradas.push({nombre: nombreOriginal, dataUrl: original, esOriginal: true});
@@ -2146,29 +2235,39 @@ async function generarTodasLasImagenes(opciones){
     const pieza = piezasAGenerar[idxPieza];
     const promptPieza = textosEnviados[idxPieza];
     if (detencionPedida()){ cancelada = true; break; }
-    const card = pintarImagenPlaceholder(pieza.nombre, false);
+    const card = prepararTarjetaNueva(pieza.nombre, false, parcial);
     pasoProgresoImagenes(hechas + fallidas, `«${pieza.nombre}» · imagen ${hechas + fallidas + 1} de ${totalImagenes}`);
     try {
       const urlRemota = await generarImagenFal(promptPieza);
       const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
       actualizarTarjetaImagen(card, dataUrl, null, false);
       ponerPromptEnviado(card, promptPieza, seTraduce);
-      imagenesGeneradas.push({nombre: pieza.nombre, dataUrl});
+      guardarImagenGenerada(pieza.nombre, dataUrl);
       imagenesReferenciaModelo.push(urlRemota);
+      urlsNuevas[pieza.nombre] = urlRemota;
       hechas++;
     } catch(err){
-      if (err instanceof OperacionCanceladaError){
-        actualizarTarjetaImagen(card, null, "Detenida por el usuario: esta imagen no se ha generado.", false);
-        cancelada = true; break;
-      }
-      actualizarTarjetaImagen(card, null, err.message || String(err), false);
+      const cancel = err instanceof OperacionCanceladaError;
+      const msg = cancel ? "Detenida por el usuario: esta imagen no se ha generado." : (err.message || String(err));
+      if (!restaurarTarjetaAnterior(card)) actualizarTarjetaImagen(card, null, msg, false);
+      else erroresParciales.push(`«${pieza.nombre}»: ${cancel ? "detenida" : msg}`);
+      if (cancel){ cancelada = true; break; }
       fallidas++;
     }
   }
 
+  if (parcial && hayModelo){
+    // Las piezas que no se han rehecho aportan su imagen actual como referencia.
+    imagenesReferenciaModelo.length = original ? 1 : 0;
+    piezasActuales.forEach(pz => {
+      if (urlsNuevas[pz.nombre]){ imagenesReferenciaModelo.push(urlsNuevas[pz.nombre]); return; }
+      const ex = imagenesGeneradas.find(i => !i.esOriginal && i.nombre === pz.nombre);
+      if (ex) imagenesReferenciaModelo.push(ex.dataUrl);
+    });
+  }
   if (hayModelo && !cancelada && !detencionPedida()){
-    const nombreModelo = "Modelo con el outfit completo";
-    const card = pintarImagenPlaceholder(nombreModelo, true);
+    const nombreModelo = NOMBRE_MODELO;
+    const card = prepararTarjetaNueva(nombreModelo, true, parcial);
     pasoProgresoImagenes(hechas + fallidas, `«${nombreModelo}» · imagen ${hechas + fallidas + 1} de ${totalImagenes}`
       + (imagenesReferenciaModelo.length > FAL_KONTEXT_MAX_IMAGES ? `, en varios pasos (${imagenesReferenciaModelo.length} prendas de referencia)` : "")
       + "<small>FLUX Kontext compone la foto con las prendas de referencia: suele tardar uno o dos minutos.</small>");
@@ -2177,16 +2276,14 @@ async function generarTodasLasImagenes(opciones){
       const dataUrl = await dataUrlDesdeImagenUrl(urlRemota);
       actualizarTarjetaImagen(card, dataUrl, null, true);
       ponerPromptEnviado(card, promptModeloEnviado || modeloShotPrompt, seTraduce);
-      imagenesGeneradas.push({nombre: nombreModelo, dataUrl});
+      guardarImagenGenerada(nombreModelo, dataUrl);
       hechas++;
     } catch(err){
-      if (err instanceof OperacionCanceladaError){
-        actualizarTarjetaImagen(card, null, "Detenida por el usuario: esta imagen no se ha generado.", true);
-        cancelada = true;
-      } else {
-        actualizarTarjetaImagen(card, null, err.message || String(err), true);
-        fallidas++;
-      }
+      const cancel = err instanceof OperacionCanceladaError;
+      const msg = cancel ? "Detenida por el usuario: esta imagen no se ha generado." : (err.message || String(err));
+      if (!restaurarTarjetaAnterior(card)) actualizarTarjetaImagen(card, null, msg, true);
+      else erroresParciales.push(`«${nombreModelo}»: ${cancel ? "detenida" : msg}`);
+      if (cancel) cancelada = true; else fallidas++;
     }
   } else if (hayModelo) cancelada = true;
   } catch(err){
@@ -2200,14 +2297,43 @@ async function generarTodasLasImagenes(opciones){
   panelImagenes.style.display = "block";
   const tiempo = formatearDuracion(Date.now() - progresoImagenes.inicioTotal);
   progresoImagenes.hechas = hechas;
+  const detalleParcial = erroresParciales.length ? ` ${erroresParciales.join(" · ")}. Se conserva la imagen anterior.` : "";
   if (cancelada){
-    finProgresoImagenes("detenida", `Generación detenida por el usuario: ${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} (${tiempo}). Las ya generadas se conservan.`);
+    finProgresoImagenes("detenida", `Generación detenida por el usuario: ${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} (${tiempo}). Las ya generadas se conservan.${detalleParcial}`);
   } else if (fallidas){
-    finProgresoImagenes(hechas ? "ok" : "error", `${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} en ${tiempo}; ${fallidas === 1 ? "1 ha fallado" : fallidas + " han fallado"} (el motivo está en su tarjeta).`);
+    finProgresoImagenes(hechas ? "ok" : "error", `${hechas} de ${totalImagenes} ${totalImagenes === 1 ? "imagen generada" : "imágenes generadas"} en ${tiempo}; ${fallidas === 1 ? "1 ha fallado" : fallidas + " han fallado"}${erroresParciales.length ? "." : " (el motivo está en su tarjeta)."}${detalleParcial}`);
   } else {
     finProgresoImagenes("ok", `✓ ${totalImagenes === 1 ? "1 imagen generada" : totalImagenes + " imágenes generadas"} en ${tiempo}.`);
   }
   return cancelada;
+}
+
+// En una regeneración parcial, la tarjeta nueva ocupa el sitio de la anterior
+// (que se guarda para poder volver a ponerla si la nueva falla).
+const tarjetasAnteriores = new WeakMap();
+function prepararTarjetaNueva(nombre, esModelo, parcial){
+  const anterior = parcial ? [...resultadoDiv.querySelectorAll(".pieza-card")].find(c => c.dataset.nombre === nombre) : null;
+  const card = pintarImagenPlaceholder(nombre, esModelo);
+  if (anterior){
+    anterior.replaceWith(card);
+    if (anterior.querySelector(".img-wrap img")) tarjetasAnteriores.set(card, anterior);
+  }
+  return card;
+}
+function restaurarTarjetaAnterior(card){
+  const anterior = tarjetasAnteriores.get(card);
+  if (!anterior) return false;
+  card.replaceWith(anterior);
+  actualizarBarraRegenerar();
+  return true;
+}
+// Sustituye (o añade) la imagen de ese nombre manteniendo el orden de las tarjetas.
+function guardarImagenGenerada(nombre, dataUrl){
+  const i = imagenesGeneradas.findIndex(x => x.nombre === nombre);
+  if (i >= 0) imagenesGeneradas[i] = {nombre, dataUrl};
+  else imagenesGeneradas.push({nombre, dataUrl});
+  const orden = [...resultadoDiv.querySelectorAll(".pieza-card")].map(c => c.dataset.nombre);
+  imagenesGeneradas.sort((a, b) => orden.indexOf(a.nombre) - orden.indexOf(b.nombre));
 }
 
 /* ============================================================================
@@ -2356,7 +2482,8 @@ async function historyGetAll(){
   const todos = await historyTx("readonly", s => s.getAll());
   return (todos || []).sort((a, b) => b.createdAt - a.createdAt);
 }
-async function guardarEnHistorial(cacheKey){
+let registroActualId = null; // entrada del historial que corresponde a lo que hay en pantalla
+async function guardarEnHistorial(cacheKey, reemplazarId){
   // imagenesGeneradas: [{nombre, dataUrl, esOriginal?}] ya generadas (o, para
   // la prenda original, ya subida) en este turno.
   // PRO: "cacheKey" (opcional) identifica la combinación exacta de prenda +
@@ -2377,7 +2504,7 @@ async function guardarEnHistorial(cacheKey){
     };
   });
   const registro = {
-    id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    id: reemplazarId || (Date.now() + "-" + Math.random().toString(36).slice(2, 8)),
     createdAt: Date.now(),
     numPiezas: piezasActuales.length,
     incluirModelo: !!modeloShotPrompt,
@@ -2385,9 +2512,13 @@ async function guardarEnHistorial(cacheKey){
     pasosInferencia: obtenerPasosInferencia(),
     safetyTolerance: obtenerSafetyTolerance(),
     cacheKey: cacheKey || null,
+    // Todos los prompts intentados, también los de imágenes que fallaron, para
+    // poder regenerarlas al recuperar esta generación.
+    prompts: {piezas: (piezasActuales || []).filter(p => p.seleccionada !== false || imagenesGeneradas.some(i => i.nombre === p.nombre)).map(p => ({nombre: p.nombre, prompt: p.prompt})), modelo: modeloShotPrompt},
     items
   };
   await historyTx("readwrite", s => s.put(registro));
+  registroActualId = registro.id;
   const todos = await historyGetAll();
   const extra = todos.slice(HISTORIAL_MAX);
   if (extra.length) await historyTx("readwrite", s => { extra.forEach(r => s.delete(r.id)); });
@@ -2401,36 +2532,48 @@ async function eliminarDeHistorial(id){
   await historyTx("readwrite", s => s.delete(id));
   await renderHistorial();
 }
-function cargarDesdeHistorial(rec){
+function blobADataUrl(blob){
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+}
+async function cargarDesdeHistorial(rec){
   // Vuelca las imágenes y prompts guardados en el panel de resultado, sin
   // volver a llamar a ninguna API: permite revisar una generación anterior
   // (y continuar/editar sus prompts), aunque no descargar sus imágenes ni
   // exportarlas a PDF — ver el aviso que se pinta más abajo.
-  piezasActuales = rec.items.filter(it => !it.esModelo && !it.esOriginal).map(it => ({nombre: it.nombre, prompt: it.prompt, seleccionada: true}));
-  modeloShotPrompt = rec.incluirModelo ? (rec.items.find(it => it.esModelo)?.prompt || null) : null;
+  if (rec.prompts){
+    piezasActuales = (rec.prompts.piezas || []).map(p => ({nombre: p.nombre, prompt: p.prompt, seleccionada: true}));
+    modeloShotPrompt = rec.prompts.modelo != null ? rec.prompts.modelo : null;
+  } else {
+    piezasActuales = rec.items.filter(it => !it.esModelo && !it.esOriginal).map(it => ({nombre: it.nombre, prompt: it.prompt, seleccionada: true}));
+    modeloShotPrompt = rec.incluirModelo ? (rec.items.find(it => it.esModelo)?.prompt || null) : null;
+  }
   modeloSeleccionado = true;
+  registroActualId = rec.id;
+  cacheKeyActual = rec.cacheKey || null;
   promptAnalisisImagen = rec.promptAnalisis || null; // ausente en generaciones guardadas antes de añadir esta visualización
   pintarPrompts();
 
   resultadoDiv.innerHTML = "";
   imagenesGeneradas = [];
-  const avisoHist = document.createElement("p");
-  avisoHist.className = "hint";
-  avisoHist.textContent = "Estás viendo una generación recuperada del historial: estas imágenes no se pueden descargar como PNG ni exportar a PDF (vuelve a generarlas si las necesitas en esos formatos).";
-  resultadoDiv.appendChild(avisoHist);
-  rec.items.forEach(it => {
-    const card = pintarImagenPlaceholder(it.nombre, it.esModelo);
-    const dataUrl = URL.createObjectURL(it.blob);
+  // Las imágenes guardadas se convierten a data URL: así se pueden descargar,
+  // exportar a PDF y usar como referencia al regenerar la foto del modelo.
+  const cargadas = await Promise.all(rec.items.map(async it => ({it, dataUrl: await blobADataUrl(it.blob)})));
+  cargadas.forEach(({it, dataUrl}) => {
+    const card = pintarImagenPlaceholder(it.nombre, it.esModelo, it.esOriginal);
     actualizarTarjetaImagen(card, dataUrl, null, it.esModelo);
     if (it.esOriginal) card.querySelector(".meta-pieza").textContent = "Imagen original subida por el usuario";
-    // Las imágenes recuperadas del historial usan URLs "blob:" (no "data:"),
-    // que ni la descarga de PNG ni jsPDF saben procesar: se deshabilitan sus
-    // botones de descarga para no ofrecer una acción que fallaría.
-    const btnPng = card.querySelector(".btn-descargar-png");
-    if (btnPng) btnPng.disabled = true;
     imagenesGeneradas.push({nombre: it.nombre, dataUrl, esOriginal: !!it.esOriginal});
   });
-  btnExportarPdf.disabled = true;
+  // Prompts sin imagen guardada (fallaron o no llegaron a generarse): tarjeta
+  // con su casilla y su botón "↻ Regenerar".
+  const conImagen = new Set(rec.items.map(it => it.nombre));
+  const sinImagen = piezasActuales.map(p => ({nombre: p.nombre, modelo: false}));
+  if (modeloShotPrompt !== null) sinImagen.push({nombre: NOMBRE_MODELO, modelo: true});
+  sinImagen.filter(x => !conImagen.has(x.nombre)).forEach(x => {
+    const card = pintarImagenPlaceholder(x.nombre, x.modelo, false);
+    actualizarTarjetaImagen(card, null, "Esta imagen no llegó a generarse o falló. Pulsa «↻ Regenerar» para crearla con su prompt.", x.modelo);
+  });
+  btnExportarPdf.disabled = imagenesGeneradas.length === 0;
   panelImagenes.style.display = "block";
   const caja = panelImagenes.getBoundingClientRect();
   const alto = window.innerHeight || document.documentElement.clientHeight;
@@ -2471,7 +2614,7 @@ async function renderHistorial(){
         <button type="button" class="peligro btn-eliminar-hist">Eliminar</button>
       </div>`;
     div.querySelector(".btn-cargar-hist").addEventListener("click", () => {
-      const aviso = "Al recuperar esta generación, sus imágenes no se podrán descargar como PNG ni exportar a PDF — tampoco las que tengas ahora mismo en pantalla sin descargar, aunque sean las últimas generadas. ¿Continuar?";
+      const aviso = "Al recuperar esta generación se sustituirán las imágenes que tienes ahora en pantalla (las que no hayas descargado). ¿Continuar?";
       if (confirm(aviso)) cargarDesdeHistorial(rec);
     });
     div.querySelector(".btn-eliminar-hist").addEventListener("click", () => {
@@ -2528,6 +2671,7 @@ function calcularCacheKeyIndividual(){
 async function generarOutfit(usarCache){
   panelResultado.style.display = "none";
   panelImagenes.style.display = "none";
+  registroActualId = null;
   cacheKeyActual = calcularCacheKeyIndividual();
   if (usarCache && $("chk-cache-resultados").checked){
     mostrarCargando(btnGenerar, "Comprobando la caché de resultados…");
@@ -2535,7 +2679,7 @@ async function generarOutfit(usarCache){
     if (previo){
       ocultarCargando(btnGenerar);
       btnGenerar.disabled = false;
-      cargarDesdeHistorial(previo);
+      await cargarDesdeHistorial(previo);
       estadoGeneracion.classList.remove("error");
       estadoGeneracion.classList.add("visible");
       estadoTexto.textContent = "⚡ Resultado obtenido de la caché (historial de este navegador): misma prenda y mismos parámetros, sin llamar a ninguna API.";
@@ -2589,6 +2733,7 @@ btnContinuar.addEventListener("click", async () => {
   } finally {
     btnContinuar.classList.remove("busy");
     actualizarBotonContinuar();
+    actualizarBarraRegenerar();
   }
 });
 

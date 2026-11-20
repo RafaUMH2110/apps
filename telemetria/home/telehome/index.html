@@ -357,8 +357,8 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
 <footer class="pie">
   <div id="footExtra">
     <form id="connForm" class="conn" autocomplete="off">
-      <label for="connBase">Servicio TeleHome en este servidor</label>
-      <input id="connBase" placeholder="(esta misma ruta) o /rafa/telehome/" spellcheck="false" size="34">
+      <label for="connBase">Servicio TeleHome</label>
+      <input id="connBase" placeholder="(esta misma ruta), /rafa/telehome/ o http://127.0.0.1:8765/" spellcheck="false" size="46">
       <button class="btn" type="submit">Conectar</button>
       <button class="btn" type="button" id="connDemo">Modo demostración</button>
       <button class="btn" type="button" id="connReset" title="Borra los datos de la demostración guardados en este navegador">Reiniciar demo</button>
@@ -367,7 +367,7 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
   </div>
   <p>TeleHome · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-20 14:29</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-20 15:02</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -867,6 +867,7 @@ async function serverApi(path, opt) {
   if (CONN.flavor === "enchufes") { const t = LEGACY.path(path, opt); p = t[0]; o = t[1]; }
   const init = { method: o.method || "GET", headers: { "X-TeleHome": "1" } };
   if (o.body !== undefined) { init.body = JSON.stringify(o.body); init.headers["Content-Type"] = "application/json"; }
+  if (/^https?:/i.test(CONN.base)) init.credentials = "include";     // servicio en otro origen (--allow-origin)
   const res = await fetch(CONN.base + p, init);
   let data = null;
   try { data = await res.json(); } catch (e) { /* respuesta no JSON */ }
@@ -876,7 +877,7 @@ async function serverApi(path, opt) {
 async function probe(base) {            // ¿hay un servicio TeleHome en esta ruta de este mismo servidor?
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
   try {
-    const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal });
+    const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
     const j = await res.json();
     if (!res.ok || !j || typeof j.app !== "string") return null;
     /* «api: telehome» es el saludo del protocolo genérico: lo anuncian tanto el servicio
@@ -887,10 +888,14 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
     return null;
   } catch (e) { return null; } finally { clearTimeout(to); }
 }
-function normBase(v) {                  // solo rutas del mismo servidor (el servicio no admite otros orígenes)
+function normBase(v) {                  // ruta del mismo servidor (/ruta/) o URL completa de un servicio que admita este origen
   v = (v || "").trim();
   if (!v) return "";
-  if (!v.startsWith("/")) throw new Error("Escribe una ruta de este servidor que empiece por «/» (p. ej. /rafa/telehome/).");
+  if (/^https?:\/\//i.test(v)) {
+    let u; try { u = new URL(v); } catch (e) { throw new Error("La dirección del servicio no es válida."); }
+    return u.origin + (u.pathname.endsWith("/") ? u.pathname : u.pathname + "/");
+  }
+  if (!v.startsWith("/")) throw new Error("Escribe una ruta de este servidor (/rafa/telehome/) o una dirección completa (http://127.0.0.1:8765/).");
   return v.endsWith("/") ? v : v + "/";
 }
 const q = (s) => document.querySelector(s);

@@ -123,6 +123,7 @@ Opciones del instalador:
 | `--puerto N` | Puerto distinto de 8765 |
 | `--host DIR` | Dirección de escucha (por defecto `127.0.0.1`) |
 | `--allow-host NOMBRE` | Admite ese nombre de host (necesario tras proxy inverso) |
+| `--allow-origin ORIGEN` | Autoriza a una web externa (CORS), p. ej. `https://rafaumh2110.github.io` |
 | `--quitar` | Desinstala el servicio |
 
 Gestión del servicio:
@@ -164,7 +165,7 @@ Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome-ench
 | Linux (servicio) | `sudo systemctl start telehome-enchufes` |
 | **Sin hardware (simulado)** | `.venv/bin/python -m telehome_enchufes serve --simulate 4` |
 
-Opciones de `serve`: `--host`, `--port` (por defecto 8765), `--no-browser`, `--simulate N`, `--allow-host NOMBRE`, `--data-dir RUTA`. También se puede fijar la carpeta de datos con la variable `TELEHOME_ENCHUFES_DIR`.
+Opciones de `serve`: `--host`, `--port` (por defecto 8765), `--no-browser`, `--simulate N`, `--allow-host NOMBRE`, `--allow-origin ORIGEN`, `--data-dir RUTA`. También se puede fijar la carpeta de datos con la variable `TELEHOME_ENCHUFES_DIR`.
 
 El modo `--simulate` usa una carpeta de datos aparte, así que no mezcla datos de prueba con los reales.
 
@@ -232,14 +233,25 @@ Notas:
 
 - **Modo demostración** (sin nada instalado): abre `index.html` (desde el repo `apps`, GitHub Pages, o el archivo local). Si no encuentra servicio, arranca en demostración.
 - **Con el servicio local:** abre <http://127.0.0.1:8765/> (el servicio también sirve la interfaz de TeleHome Enchufes).
-- **Con la app TeleHome desplegada junto al servicio (Apache de `isa.umh.es`):** la app solo acepta **rutas del mismo servidor que empiecen por `/`** (no direcciones completas como `http://127.0.0.1:8765/`). Pasos:
-  1. Proxy en una subruta del mismo dominio: `ProxyPass /rafa/telehome-api/ http://127.0.0.1:8765/` y `ProxyPassReverse` equivalente.
-  2. Instala el servicio con `--allow-host isa.umh.es` y ponle contraseña.
-  3. Copia `index.html` a `/var/www/htdocs/rafa/telehome/`.
-  4. En *Ajustes → Servicio TeleHome en este servidor* escribe `/rafa/telehome-api/`. Con el campo vacío usa el servicio que sirve esa misma página.
-- **GitHub Pages:** solo modo demostración (no comparte origen con el servicio).
+- **Servicio en otra dirección u origen (p. ej. app en GitHub Pages y servicio en tu máquina):** en *Ajustes → Servicio TeleHome* escribe la dirección completa, p. ej. `http://127.0.0.1:8765/`. El servicio debe autorizar el origen de la web con `--allow-origin` (ver 7.1.1). Sin eso el navegador bloquea la conexión.
+- **App y servicio bajo el mismo servidor (Apache de `isa.umh.es`):** copia `index.html` a `/var/www/htdocs/rafa/telehome/`, define un proxy en la misma web (`ProxyPass /rafa/telehome-api/ http://127.0.0.1:8765/`), instala con `--allow-host isa.umh.es` y escribe en el campo la ruta `/rafa/telehome-api/` (no hace falta `--allow-origin`).
+- Con el campo **vacío** usa el servicio que sirve esa misma página.
 
-> Antes de conectar, la app consulta `api/health` en esa ruta (2,5 s de espera). Si no hay servicio TeleHome o TeleHome Enchufes, sigue en demostración.
+> Antes de conectar, la app consulta `api/health` en esa dirección (2,5 s de espera). Si no hay servicio TeleHome o TeleHome Enchufes, sigue en demostración.
+
+#### 7.1.1. Autorizar una web externa: `--allow-origin` (servicio 0.5.0 con este cambio)
+
+```bash
+# macOS / manual
+.venv/bin/python -m telehome_enchufes serve --allow-origin https://rafaumh2110.github.io
+# Linux (servicio systemd)
+sudo ./linux/instalar-linux.sh --allow-origin https://rafaumh2110.github.io
+```
+
+- Es el **origen** (esquema + dominio, sin ruta ni barra final). Repetible. Si no se indica, el servicio no admite ningún otro origen (comportamiento por defecto, el más seguro).
+- Solo ese origen puede leer y escribir en la API; el servicio responde a su *preflight* (`OPTIONS`) y rechaza los demás. Siguen exigiéndose `Host` válido, cabecera `X-TeleHome` y la contraseña si la hay.
+- Desde una web HTTPS (GitHub Pages), el navegador solo permite conectar sin avisos con `http://127.0.0.1` / `localhost`. Para un servicio en otra máquina hace falta HTTPS (proxy).
+- Autorizar un origen equivale a confiar en esa web: cualquier página publicada allí podrá controlar tus dispositivos mientras tengas el navegador abierto. Usa contraseña y no autorices dominios que no controles.
 
 ### 7.2. Qué muestra
 
@@ -316,7 +328,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | Nube: error 28841105 | Dispositivo virtual `vdevo…`: no admite órdenes, quitarlo |
 | Error 403 / «Host no permitido» tras proxy | Reinstalar o ejecutar con `--allow-host tu-dominio` |
 | `python3 -m pytest` → `No module named pytest` | pytest solo es necesario para desarrollar; ver apartado 12 |
-| No conecta desde GitHub Pages o con una URL completa | La app solo admite rutas del mismo servidor (`/ruta/`): publícala junto al servicio (Apache) y usa el proxy |
+| No conecta desde GitHub Pages o con una URL completa | Arranca el servicio con `--allow-origin https://rafaumh2110.github.io` (sin barra final) y escribe la dirección completa; revisa la consola del navegador (CORS) |
 
 ---
 
@@ -326,7 +338,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 cd telemetria/home/telehome-enchufes
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt pytest
-.venv/bin/python -m pytest -q          # 33 tests
+.venv/bin/python -m pytest -q          # 34 tests
 ```
 
 pytest **no** es necesario para ejecutar el servicio, solo para las pruebas.

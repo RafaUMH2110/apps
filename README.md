@@ -57,6 +57,8 @@ persona que la usa.
 
 **Portal: áreas Meteo y Hogar, navegación y fichas de altura fija (20 nov 2026).** Los dos portales (`appindex/` y `appindex/temas/`) muestran primero las **áreas** (Moda, Telemetría y, bajo ella, Meteo y Hogar, que el generador asigna por carpeta: `telemetria/meteo/` y `telemetria/home/`) y después el resto de categorías. Ambos llevan una barra *Inicio · Catálogo completo · Agrupado por tema* que conserva el filtro y la búsqueda (`#cat=…&q=…`), así que se puede ir y volver entre vistas o enlazar directamente a un área (p. ej. `appindex/temas/#cat=hogar`). En la vista por tema, Telemetría se divide en «Estación meteorológica» y «Hogar», las fichas tienen altura fija con barra de desplazamiento en la descripción y hay modo oscuro. La raíz del repo tiene una página de entrada (`index.html`). El workflow regenera y sube las dos versiones del portal, también al cambiar los scripts del generador.
 
+**Portal: versiones y controles para plegar (20 nov 2026).** Los filtros de los dos portales tienen ahora tres grupos: **Áreas**, **Versiones** (Normales, Lite, Pro, ProMax y Para el aula; se combinan con el área o la categoría y quedan en la URL como `#v=pro`) y **Categorías**. Cada grupo se puede plegar, el panel de filtros se puede ocultar entero («Ocultar filtros») y cada sección (versión en el catálogo completo, tema en la vista por tema) se pliega con su flecha o con «Plegar todo»; estas preferencias se recuerdan en el navegador. Los contadores tienen en cuenta los demás filtros y las opciones sin resultados se desactivan. El título de la cabecera usa Plus Jakarta Sans.
+
 ## Estructura del repositorio
 
 ```

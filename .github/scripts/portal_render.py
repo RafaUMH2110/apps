@@ -190,12 +190,18 @@ GROUP_ORDER_DEFAULT = ["consultar", "pdfs", "moda", "telemetria"]
 # Clases de app: el portal principal agrupa las fichas por clase, en este
 # orden. La clase sale del atributo data-app-class de la propia app y, si no
 # lo lleva, se deduce de su ruta y de su título (ver clase_de_app).
-CLASE_ORDER = ["normal", "pro", "promax", "alumnos"]
+CLASE_ORDER = ["normal", "lite", "pro", "promax", "alumnos"]
 CLASE_INFO = {
     "normal": {
-        "label": "Aplicaciones",
+        "label": "Normales",
         "icon": "layout-grid",
         "blurb": "Versiones de referencia de cada herramienta, con todas sus opciones a la vista.",
+    },
+    "lite": {
+        "label": "Lite",
+        "icon": "feather",
+        "icon_temas": "feather",
+        "blurb": "Versiones reducidas: solo lo esencial, menos opciones y menor consumo (de datos o de tokens).",
     },
     "pro": {
         "label": "Pro",
@@ -231,11 +237,15 @@ def clase_de_app(rel, meta):
         return "promax"
     if "pro" in partes:
         return "pro"
+    if "lite" in partes:
+        return "lite"
     titulo = meta.get("title", "").strip().lower()
     if titulo.endswith("promax"):
         return "promax"
     if titulo.endswith(" pro"):
         return "pro"
+    if titulo.endswith("lite"):
+        return "lite"
     texto = titulo + " " + meta.get("description", "").lower()
     if "alumno" in texto or "para el aula" in texto:
         return "alumnos"
@@ -259,7 +269,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <script src="https://unpkg.com/lucide@0.400.0"></script>
 <style>
   :root {
@@ -283,6 +293,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     --font-display: "Fraunces", Georgia, "Times New Roman", serif;
     --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --font-hero: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
     --radius: 16px;
     --radius-sm: 10px;
   }
@@ -327,6 +338,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   .gutter { padding-left: 16px; padding-right: 16px; }
@@ -335,7 +347,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .hero-logo { flex-shrink: 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.2)); }
   .hero-text { flex: 1; min-width: 260px; }
   .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; opacity: .78; margin-bottom: 10px; }
-  .hero h1 { font-size: 1.9rem; font-weight: 600; line-height: 1.15; margin-bottom: 10px; }
+  .hero h1 { font-family: var(--font-hero); font-size: 2.15rem; font-weight: 800; line-height: 1.1; letter-spacing: -.025em; margin-bottom: 10px; }
+  .hero h1 .hl { color: #fbd38d; }
   .hero p.lede { max-width: 54ch; margin: 0; opacity: .88; line-height: 1.55; font-size: .98rem; }
   .hero-stats { display: flex; gap: 28px; flex-shrink: 0; flex-wrap: wrap; }
   .hero-stat { text-align: left; }
@@ -367,7 +380,35 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .searchbar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 4px 4px 16px; display: flex; align-items: center; gap: 10px; }
   .searchbar svg { color: var(--muted); flex-shrink: 0; }
   .searchbar input { flex: 1; border: none; outline: none; font-size: .98rem; font-family: var(--font-body); padding: 12px 4px; color: var(--ink); background: transparent; min-width: 0; }
-  .results-line { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); margin-top: -16px; }
+  .results-line { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: -14px; }
+  .toolbar .results-line { flex: 1; min-width: 160px; }
+  .tbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: 600 .8rem var(--font-body); cursor: pointer; }
+  .tbtn:hover { border-color: var(--blue-600); color: var(--blue-700); }
+  .tbtn[aria-pressed="true"] { background: var(--blue-700); border-color: var(--blue-700); color: #fff; }
+  .tbtn svg { width: 15px; height: 15px; }
+  .tbtn.reset { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+  .fhead { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 6px 10px; }
+  .fhead b { font-family: var(--font-display); font-size: 1rem; }
+  .fhead button { border: none; background: transparent; color: var(--blue-700); font: 600 .78rem var(--font-body); cursor: pointer; padding: 6px 8px; border-radius: 8px; }
+  .fhead button:hover { background: var(--surface-sunk); }
+  .fg-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; border: none; background: transparent; cursor: pointer; font-family: var(--font-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-radius: 8px; }
+  .fg-toggle:hover { background: var(--surface-sunk); color: var(--ink); }
+  .fg-toggle .chev { width: 14px; height: 14px; transition: transform .15s; }
+  .fgroup + .fgroup { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
+  .fgroup.folded .fg-body { display: none; }
+  .fgroup.folded .chev { transform: rotate(-90deg); }
+  .fg-body { display: flex; flex-direction: column; gap: 2px; }
+  .cat-btn:disabled { opacity: .4; cursor: default; }
+  .cat-btn:disabled:hover { background: transparent; }
+  .layout.no-filters { grid-template-columns: 1fr; }
+  .layout.no-filters .sidebar, .layout.no-filters .filter-row { display: none !important; }
+  .group-head { width: 100%; border: none; background: transparent; padding: 0; cursor: pointer; color: inherit; text-align: left; align-items: center !important; }
+  .group-head .chev { width: 18px; height: 18px; color: var(--muted); margin-left: auto; transition: transform .15s; }
+  .group-section.folded .chev { transform: rotate(-90deg); }
+  .group-section.folded .group-blurb, .group-section.folded .grid { display: none; }
+  .group-head:hover h2 { color: var(--blue-700); }
+  .badge.ver { background: var(--blue-700); color: #fff; border-color: var(--blue-700); font-weight: 700; }
   .filter-row { display: none; }
   .group-section { display: flex; flex-direction: column; gap: 14px; }
   .group-head { display: flex; align-items: baseline; gap: 10px; }
@@ -418,9 +459,12 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
     .filter-row::-webkit-scrollbar { display: none; }
     .filter-row .cat-btn { width: auto; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
-    .filter-row .cat-btn.active { border-color: var(--blue-700); }
+    .filter-row .cat-btn.active { background: var(--blue-700); border-color: var(--blue-700); color: #fff; }
+    .viewnav { display: grid; grid-template-columns: repeat(3, auto); width: 100%; }
+    .viewnav a { justify-content: center; padding: 7px 8px; font-size: .8rem; }
     .filter-row .cat-btn.sub { padding-left: 10px; }
     .filter-row .fsep { flex: none; width: 1px; background: var(--border-strong); margin: 6px 2px; }
+    .filter-row .flabel { flex: none; align-self: center; font-family: var(--font-mono); font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   }
 </style>
 </head>
@@ -461,7 +505,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
       </svg>
       <div class="hero-text">
         <div class="eyebrow">__EYEBROW__</div>
-        <h1>__TITLE__</h1>
+        <h1>__TITLE_HTML__</h1>
         <p class="lede">__SUBTITLE__</p>
         <nav class="viewnav" aria-label="Vistas del portal">
           <a href="../"><i data-lucide="house"></i>Inicio</a>
@@ -489,7 +533,12 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 
       <div class="filter-row" id="filter-row"></div>
 
-      <div class="results-line" id="results-line"></div>
+      <div class="toolbar">
+        <div class="results-line" id="results-line" role="status"></div>
+        <button class="tbtn reset" id="btn-reset" type="button" hidden>Quitar filtros</button>
+        <button class="tbtn" id="btn-filtros" type="button" aria-pressed="true"><i data-lucide="sliders-horizontal"></i><span>Filtros</span></button>
+        <button class="tbtn" id="btn-plegar" type="button"><i data-lucide="chevrons-down-up"></i><span>Plegar todo</span></button>
+      </div>
 
       <div id="sections"></div>
 
@@ -520,28 +569,41 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   const CLASE_META = JSON.parse(document.getElementById('clase-meta').textContent);
   const CLASE_ORDER = JSON.parse(document.getElementById('clase-order').textContent);
 
-  let activeCategory = 'all';
+  // ---------- estado ----------
+  let activeCategory = 'all';   // área o categoría
+  let activeClase = 'all';      // versión: normal, lite, pro, promax, alumnos
   let query = '';
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('hiad.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('hiad.' + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  // Grupos de filtros y secciones plegados, y panel de filtros oculto (se recuerdan en este navegador).
+  const plegados = new Set(store.get('plegados', []));
+  let filtrosVisibles = store.get('filtrosVisibles', true);
+  const guardarPlegados = () => store.set('plegados', [...plegados]);
 
   function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
-  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
-  // Estado en la URL (#cat=...&q=...): se conserva al recargar, al volver
+  // Estado en la URL (#cat=...&v=...&q=...): se conserva al recargar, al volver
   // atrás y al cambiar entre «Catálogo completo» y «Agrupado por tema».
   function leerEstado() {
     const h = new URLSearchParams(location.hash.slice(1));
-    const cat = h.get('cat');
+    const cat = h.get('cat'), v = h.get('v');
     activeCategory = cat && CATALOG.some(a => a.categories.includes(cat)) ? cat : 'all';
-    query = norm((h.get('q') || '').trim());
+    activeClase = v && CATALOG.some(a => a.clase_app === v) ? v : 'all';
     const input = document.getElementById('search');
     input.value = h.get('q') || '';
+    query = norm(input.value.trim());
     input.parentElement.classList.toggle('has-text', !!input.value);
   }
   function guardarEstado() {
     const h = new URLSearchParams();
     if (activeCategory !== 'all') h.set('cat', activeCategory);
+    if (activeClase !== 'all') h.set('v', activeClase);
     const q = document.getElementById('search').value.trim();
     if (q) h.set('q', q);
     const hash = h.toString();
@@ -551,54 +613,81 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     });
   }
 
-  function matches(app) {
-    const inCategory = activeCategory === 'all' || app.categories.includes(activeCategory);
-    if (!inCategory) return false;
+  const okCat = (app, cat = activeCategory) => cat === 'all' || app.categories.includes(cat);
+  const okClase = (app, v = activeClase) => v === 'all' || app.clase_app === v;
+  function okQuery(app) {
     if (!query) return true;
-    const haystack = norm([
+    return norm([
       app.title, app.description,
       ...app.categories.map(c => (CATEGORY_META[c] || {}).label || c),
+      ((CLASE_META[app.clase_app] || {}).label || ''),
       ...app.tags,
-    ].join(' '));
-    return haystack.includes(query);
+    ].join(' ')).includes(query);
   }
+  const matches = (app) => okCat(app) && okClase(app) && okQuery(app);
 
-  function renderCategoryList(targetId, variant) {
+  // ---------- filtros ----------
+  function renderFilters(targetId, variant) {
+    // Los contadores tienen en cuenta los demás filtros activos.
+    const baseCat = CATALOG.filter(a => okClase(a) && okQuery(a));
+    const baseVer = CATALOG.filter(a => okCat(a) && okQuery(a));
     const counts = {};
-    CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
+    baseCat.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
+    CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = counts[c] || 0; }));
+    const vcounts = {};
+    CLASE_ORDER.forEach(c => { vcounts[c] = baseVer.filter(a => a.clase_app === c).length; });
+
     const label = (s) => (CATEGORY_META[s] || {}).label || s;
     const isArea = (s) => CATEGORY_META[s] && CATEGORY_META[s].area !== undefined;
     const areas = Object.keys(counts).filter(isArea).sort((a, b) => CATEGORY_META[a].area - CATEGORY_META[b].area);
     const resto = Object.keys(counts).filter(s => !isArea(s)).sort((a, b) => label(a).localeCompare(label(b), 'es'));
 
-    const btn = (slug, meta, count) => {
-      const active = activeCategory === slug ? 'active' : '';
+    const btn = (attr, val, meta, count, activo) => {
       const sub = meta.parent ? ' sub' : '';
-      return `<button class="cat-btn${sub} ${active}" data-cat="${slug}" aria-pressed="${activeCategory === slug}">
+      const dis = !count && !activo ? ' disabled' : '';
+      return `<button class="cat-btn${sub} ${activo ? 'active' : ''}" data-${attr}="${val}" aria-pressed="${activo}"${dis}>
           <i data-lucide="${meta.icon}"></i><span class="cname">${escapeHtml(meta.label)}</span><span class="ccount">${count}</span>
         </button>`;
     };
-    const allBtn = btn('all', { label: 'Todas', icon: 'layout-grid' }, CATALOG.length);
-    const lista = (slugs) => slugs.map(s => btn(s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s])).join('');
+    const catBtn = (s) => btn('cat', s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s], activeCategory === s);
+    const htmlAreas = btn('cat', 'all', { label: 'Todas', icon: 'layout-grid' }, baseCat.length, activeCategory === 'all') + areas.map(catBtn).join('');
+    const htmlVers = btn('ver', 'all', { label: 'Todas', icon: 'layers' }, baseVer.length, activeClase === 'all') +
+      CLASE_ORDER.map(c => btn('ver', c, CLASE_META[c] || { label: c, icon: 'folder' }, vcounts[c], activeClase === c)).join('');
+    const htmlCats = resto.map(catBtn).join('');
 
     const el = document.getElementById(targetId);
-    el.innerHTML = variant === 'sidebar'
-      ? '<div class="sidebar-label">Áreas</div>' + allBtn + lista(areas) +
-        '<div class="sidebar-label sep">Categorías</div>' + lista(resto)
-      : allBtn + lista(areas) + '<span class="fsep" aria-hidden="true"></span>' + lista(resto);
-    el.querySelectorAll('.cat-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        activeCategory = b.dataset.cat;
-        renderAll();
-      });
-    });
+    if (variant === 'sidebar') {
+      const grupo = (key, titulo, cuerpo) => {
+        const pleg = plegados.has('f:' + key);
+        return `<div class="fgroup${pleg ? ' folded' : ''}">
+            <button class="fg-toggle" type="button" data-fold="f:${key}" aria-expanded="${!pleg}">${titulo}${CHEV}</button>
+            <div class="fg-body">${cuerpo}</div>
+          </div>`;
+      };
+      el.innerHTML = `<div class="fhead"><b>Filtros</b><button type="button" data-hide-filters>Ocultar</button></div>` +
+        grupo('areas', 'Áreas', htmlAreas) + grupo('versiones', 'Versiones', htmlVers) + grupo('categorias', 'Categorías', htmlCats);
+    } else {
+      const sep = '<span class="fsep" aria-hidden="true"></span>';
+      el.innerHTML = htmlAreas + sep + '<span class="flabel">Versión</span>' + htmlVers + sep + htmlCats;
+    }
+    el.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { activeCategory = b.dataset.cat; renderAll(); }));
+    el.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => { activeClase = b.dataset.ver; renderAll(); }));
+    el.querySelectorAll('[data-fold]').forEach(b => b.addEventListener('click', () => alternarPliegue(b.dataset.fold)));
+    el.querySelectorAll('[data-hide-filters]').forEach(b => b.addEventListener('click', () => { filtrosVisibles = false; store.set('filtrosVisibles', false); renderAll(); document.getElementById('btn-filtros').focus(); }));
+  }
+
+  function alternarPliegue(key) {
+    plegados.has(key) ? plegados.delete(key) : plegados.add(key);
+    guardarPlegados(); renderAll();
   }
 
   function cardHtml(app) {
     const primaryCat = app.categories[0];
     const meta = CATEGORY_META[primaryCat] || { label: primaryCat, icon: 'sparkles' };
     const fam = GROUP_META[app.group];
-    const badges = (fam ? `<span class="badge fam">${escapeHtml(fam.label)}</span>` : '') +
+    const ver = app.clase_app && app.clase_app !== 'normal' ? CLASE_META[app.clase_app] : null;
+    const badges = (ver ? `<span class="badge ver">${escapeHtml(ver.label)}</span>` : '') +
+      (fam ? `<span class="badge fam">${escapeHtml(fam.label)}</span>` : '') +
       app.categories.map(c => {
         const m = CATEGORY_META[c] || { label: c };
         return `<span class="badge">${escapeHtml(m.label)}</span>`;
@@ -614,6 +703,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
       </div>`;
   }
 
+  let clasesVisibles = [];
   function renderSections() {
     const filtered = CATALOG.filter(matches);
     const sectionsEl = document.getElementById('sections');
@@ -622,17 +712,18 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
 
     resultsLine.textContent = filtered.length === CATALOG.length
       ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'}`
-      : `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
+      : `${filtered.length} de ${CATALOG.length} herramientas`;
 
     if (filtered.length === 0) {
       sectionsEl.innerHTML = '';
       emptyEl.style.display = 'block';
+      clasesVisibles = [];
       return;
     }
     emptyEl.style.display = 'none';
 
-    // Las fichas se agrupan por clase de app (normales, pro, promax y, al
-    // final, las del aula). Dentro de cada clase van por familia y t\u00edtulo.
+    // Las fichas se agrupan por versión (normales, lite, pro, promax y las
+    // del aula). Dentro de cada versión van por familia y título.
     const porClase = {};
     filtered.forEach(app => {
       const c = app.clase_app || 'normal';
@@ -645,26 +736,46 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     Object.keys(porClase).forEach(c => porClase[c].sort((a, b) =>
       posFamilia(a) - posFamilia(b) || a.title.localeCompare(b.title, 'es')));
 
+    clasesVisibles = CLASE_ORDER.filter(c => porClase[c] && porClase[c].length);
     sectionsEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:34px;">` +
-      CLASE_ORDER.filter(c => porClase[c] && porClase[c].length).map(c => {
+      clasesVisibles.map(c => {
         const meta = CLASE_META[c] || { label: c, icon: 'folder', blurb: '' };
         const apps = porClase[c];
-        return `<section class="group-section">
-            <div class="group-head">
+        // Con una búsqueda activa se muestran todas las secciones aunque estén plegadas.
+        const pleg = plegados.has('s:' + c) && !query;
+        return `<section class="group-section${pleg ? ' folded' : ''}">
+            <button class="group-head" type="button" data-fold="s:${c}" aria-expanded="${!pleg}">
               <div class="gicon"><i data-lucide="${meta.icon}"></i></div>
               <h2>${escapeHtml(meta.label)}</h2>
               <span class="gcount">${apps.length}</span>
-            </div>
+              ${CHEV}
+            </button>
             <p class="group-blurb">${escapeHtml(meta.blurb)}</p>
             <div class="grid">${apps.map(cardHtml).join('')}</div>
           </section>`;
       }).join('') + `</div>`;
+    sectionsEl.querySelectorAll('[data-fold]').forEach(b => b.addEventListener('click', () => alternarPliegue(b.dataset.fold)));
+  }
+
+  function renderToolbar() {
+    const hayFiltro = activeCategory !== 'all' || activeClase !== 'all' || !!query;
+    document.getElementById('btn-reset').hidden = !hayFiltro;
+    const bf = document.getElementById('btn-filtros');
+    bf.setAttribute('aria-pressed', String(filtrosVisibles));
+    bf.querySelector('span').textContent = filtrosVisibles ? 'Ocultar filtros' : 'Mostrar filtros';
+    document.querySelector('.layout').classList.toggle('no-filters', !filtrosVisibles);
+    const todasPlegadas = clasesVisibles.length && clasesVisibles.every(c => plegados.has('s:' + c));
+    const bp = document.getElementById('btn-plegar');
+    bp.hidden = !clasesVisibles.length;
+    bp.querySelector('span').textContent = todasPlegadas ? 'Desplegar todo' : 'Plegar todo';
+    bp.dataset.accion = todasPlegadas ? 'desplegar' : 'plegar';
   }
 
   function renderAll() {
-    renderCategoryList('sidebar', 'sidebar');
-    renderCategoryList('filter-row', 'row');
+    renderFilters('sidebar', 'sidebar');
+    renderFilters('filter-row', 'row');
     renderSections();
+    renderToolbar();
     guardarEstado();
     if (window.lucide) lucide.createIcons();
   }
@@ -677,6 +788,18 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   });
   searchEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); } });
   document.getElementById('clear').addEventListener('click', () => { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); searchEl.focus(); });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    activeCategory = 'all'; activeClase = 'all'; searchEl.value = ''; query = '';
+    searchEl.parentElement.classList.remove('has-text'); renderAll();
+  });
+  document.getElementById('btn-filtros').addEventListener('click', () => {
+    filtrosVisibles = !filtrosVisibles; store.set('filtrosVisibles', filtrosVisibles); renderAll();
+  });
+  document.getElementById('btn-plegar').addEventListener('click', (e) => {
+    const plegar = e.currentTarget.dataset.accion === 'plegar';
+    clasesVisibles.forEach(c => plegar ? plegados.add('s:' + c) : plegados.delete('s:' + c));
+    guardarPlegados(); renderAll();
+  });
   addEventListener('hashchange', () => { leerEstado(); renderAll(); });
 
   leerEstado();
@@ -727,6 +850,7 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
         stat_pct_label = "Herramientas sin backend"
 
     out = PORTAL_TEMPLATE
+    out = out.replace("__TITLE_HTML__", html.escape(title).replace(" IA ", ' <span class="hl">IA</span> ', 1))
     out = out.replace("__TITLE__", html.escape(title))
     out = out.replace("__SUBTITLE__", html.escape(subtitle))
     out = out.replace("__EYEBROW__", html.escape(eyebrow))
@@ -817,6 +941,9 @@ THEME_INFO = {
 # orden alfabético de su etiqueta.
 THEME_ORDER = ["moda", "telemetria", "pdfs", "consultar"]
 
+# Iconos del sprite propio para cada versión (clase) de app.
+CLASE_ICON_TEMAS = {"normal": "grid", "lite": "feather", "pro": "zap", "promax": "rocket", "alumnos": "cap"}
+
 
 def theme_info(slug):
     if slug in THEME_INFO:
@@ -854,6 +981,12 @@ ICON_SPRITE = """<svg style="display:none" aria-hidden="true">
 <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></symbol>
 <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5M2 12l10 5 10-5"></path></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+<symbol id="i-feather" viewBox="0 0 24 24"><path d="M20.2 12.2A6 6 0 0 0 11.8 3.8L5 10.6V19h8.4z"></path><path d="M16 8 2 22M17.5 15H9"></path></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"></path></symbol>
+<symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 0 1-4 2z"></path><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"></path></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"></path></symbol>
+<symbol id="i-fold" viewBox="0 0 24 24"><path d="m7 20 5-5 5 5M7 4l5 5 5-5"></path></symbol>
 <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></symbol>
 </svg>"""
 
@@ -869,7 +1002,7 @@ PORTAL_TEMPLATE_TEMAS = r"""<!DOCTYPE html>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E4572E'/%3E%3Cstop offset='1' stop-color='%230E7C6B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath d='M20 9 11 14l9 5 9-5Z' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M14 16v4c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3v-4' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --tinta:#0F2237; --acero:#2E4B6B; --acero-claro:#7C93AC; --gris:#5D7691;
@@ -891,7 +1024,7 @@ PORTAL_TEMPLATE_TEMAS = r"""<!DOCTYPE html>
     --brasa:#EE6A43; --brasa-osc:#D9552F; --brasa-suave:#3A2018;
     --sombra:0 1px 0 rgba(0,0,0,.3), 0 14px 34px -22px rgba(0,0,0,.8);
     --sombra-alta:0 2px 0 rgba(0,0,0,.3), 0 22px 50px -24px rgba(0,0,0,.9);
-    --chip:#13233A; --chip-on:#E8EEF5;
+    --chip:#13233A; --chip-on:#E8EEF5; --forjado-suave:#0F3029;
   }
   .topbar,.hero{background:#081320 !important}
   .hero{border:1px solid var(--linea)}
@@ -900,6 +1033,7 @@ PORTAL_TEMPLATE_TEMAS = r"""<!DOCTYPE html>
   .chip[aria-pressed="true"] .count{background:rgba(11,22,36,.15) !important}
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;padding:0}
 body{background:var(--papel);color:var(--tinta);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
 a{color:var(--acero)}
@@ -929,7 +1063,7 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 .hero>*{position:relative;z-index:1}
 @media(max-width:600px){.hero{padding:30px 22px;border-radius:18px}}
 .eyebrow{font:600 11.5px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:#8FA7BE;margin:0 0 14px}
-.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,4.6vw,46px);line-height:1.04;letter-spacing:-.03em;margin:0 auto 16px;max-width:22ch}
+.hero h1{font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;font-size:clamp(30px,4.6vw,48px);line-height:1.06;letter-spacing:-.035em;margin:0 auto 16px;max-width:22ch}
 .hero h1 em{font-style:normal;color:var(--brasa)}
 .hero p.lede{max-width:62ch;font-size:17px;color:#C3D3E2;margin:0 auto 26px}
 .draft{display:inline-flex;gap:22px;flex-wrap:wrap;justify-content:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:14px 26px}
@@ -947,7 +1081,7 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 .searchwrap.has-text .clear{display:grid}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:26px 0 6px}
-.chips-label{width:100%;text-align:center;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--acero-claro);margin:6px 0 -2px}
+
 .chip{background:var(--chip);border:1.5px solid var(--linea);border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--acero);cursor:pointer;display:inline-flex;align-items:center;gap:7px;line-height:1.25}
 .chip:hover{border-color:var(--acero-claro)}
 .chip[aria-pressed="true"]{background:var(--chip-on);border-color:var(--chip-on);color:#fff}
@@ -955,7 +1089,29 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 .chip .count{background:rgba(15,34,55,.08);border-radius:999px;padding:1px 8px;font-size:11.5px}
 .chip[aria-pressed="true"] .count{background:rgba(255,255,255,.22)}
 
-.results-line{text-align:center;color:var(--gris);font-size:13.5px;margin:16px 0 30px}
+.results-line{text-align:center;color:var(--gris);font-size:13.5px}
+.toolbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 30px}
+.tbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 13px;border-radius:10px;border:1.5px solid var(--linea);background:var(--chip);color:var(--acero);font:600 13px var(--texto);cursor:pointer}
+.tbtn:hover{border-color:var(--acero-claro)}
+.tbtn[aria-pressed="true"]{border-color:var(--acero)}
+.tbtn.reset{color:var(--brasa);border-color:var(--brasa)}
+.filters.is-hidden{display:none}
+.cgroup{margin:10px 0 4px}
+.cgroup .chips{margin:8px 0 0}
+.cg-toggle{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto;border:0;background:transparent;cursor:pointer;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--acero-claro);padding:6px 10px;border-radius:8px}
+.cg-toggle:hover{color:var(--tinta);background:var(--linea-2)}
+.cg-toggle svg{width:14px;height:14px;transition:transform .15s}
+.cgroup.folded .chips{display:none}
+.cgroup.folded .cg-toggle svg{transform:rotate(-90deg)}
+.chip:disabled{opacity:.4;cursor:default}
+.sh-fold{margin-left:auto;align-self:center;border:1.5px solid var(--linea);background:var(--chip);color:var(--acero);width:40px;height:40px;border-radius:11px;display:grid;place-items:center;cursor:pointer;flex:none}
+.sh-fold:hover{border-color:var(--acero-claro)}
+.sh-fold svg{width:18px;height:18px;transition:transform .15s}
+.theme-block.folded .sh-fold svg{transform:rotate(-90deg)}
+.theme-block.folded .tb-body{display:none}
+.ver-badge{flex:none;margin-left:auto;align-self:flex-start;font:700 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:7px;background:var(--brasa-suave);color:var(--brasa)}
+.ver-badge.alumnos{background:var(--forjado-suave);color:var(--forjado)}
+.ver-badge.lite{background:var(--linea-2);color:var(--acero)}
 
 .theme-block{margin-bottom:40px}
 .theme-block.is-hidden{display:none}
@@ -1032,8 +1188,13 @@ __ICON_SPRITE__
     <button class="clear" id="clear" type="button" aria-label="Borrar búsqueda"><svg class="i"><use href="#i-x"></use></svg></button>
   </div>
 
-  <div id="categories" class="chips"></div>
-  <div id="results-line" class="results-line"></div>
+  <div id="filters" class="filters"></div>
+  <div class="toolbar">
+    <span id="results-line" class="results-line" role="status"></span>
+    <button class="tbtn reset" id="btn-reset" type="button" hidden>Quitar filtros</button>
+    <button class="tbtn" id="btn-filtros" type="button" aria-pressed="true"><svg class="i"><use href="#i-sliders"></use></svg><span>Ocultar filtros</span></button>
+    <button class="tbtn" id="btn-plegar" type="button"><svg class="i"><use href="#i-fold"></use></svg><span>Plegar todo</span></button>
+  </div>
   <div id="groups"></div>
   <div id="empty" class="empty-state" style="display:none;">No se encontraron aplicaciones con ese criterio.</div>
 </main>
@@ -1049,22 +1210,41 @@ __ICON_SPRITE__
 <script id="theme-meta" type="application/json">__THEME_META_JSON__</script>
 <script id="theme-order" type="application/json">__THEME_ORDER_JSON__</script>
 <script id="subgroup-meta" type="application/json">__SUBGROUP_META_JSON__</script>
+<script id="clase-meta" type="application/json">__CLASE_META_JSON__</script>
+<script id="clase-order" type="application/json">__CLASE_ORDER_JSON__</script>
 <script>
   const CATALOG = JSON.parse(document.getElementById('catalog-data').textContent);
   const CATEGORY_META = JSON.parse(document.getElementById('category-meta').textContent);
   const THEME_META = JSON.parse(document.getElementById('theme-meta').textContent);
   const THEME_ORDER = JSON.parse(document.getElementById('theme-order').textContent);
   const SUBGROUP_META = JSON.parse(document.getElementById('subgroup-meta').textContent);
+  const CLASE_META = JSON.parse(document.getElementById('clase-meta').textContent);
+  const CLASE_ORDER = JSON.parse(document.getElementById('clase-order').textContent);
 
-  let activeCategory = 'all';
-  let query = '';
-  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // ---------- estado ----------
+  let activeCategory = 'all', activeClase = 'all', query = '';
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('hiad.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('hiad.' + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  const plegados = new Set(store.get('plegados', []));        // compartido con el catálogo completo
+  let filtrosVisibles = store.get('filtrosVisibles', true);
+  const guardarPlegados = () => store.set('plegados', [...plegados]);
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-  // Estado en la URL (#cat=...&q=...), compartido con el catálogo completo.
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function iconSymbol(name) {
+    return '<svg class="i"><use href="#i-' + name + '"></use></svg>';
+  }
+
+  // Estado en la URL (#cat=...&v=...&q=...), compartido con el catálogo completo.
   function leerEstado() {
     const h = new URLSearchParams(location.hash.slice(1));
-    const cat = h.get('cat');
+    const cat = h.get('cat'), v = h.get('v');
     activeCategory = cat && CATALOG.some(a => a.categories.includes(cat)) ? cat : 'all';
+    activeClase = v && CATALOG.some(a => a.clase_app === v) ? v : 'all';
     const input = document.getElementById('search');
     input.value = h.get('q') || '';
     query = norm(input.value.trim());
@@ -1073,6 +1253,7 @@ __ICON_SPRITE__
   function guardarEstado() {
     const h = new URLSearchParams();
     if (activeCategory !== 'all') h.set('cat', activeCategory);
+    if (activeClase !== 'all') h.set('v', activeClase);
     const q = document.getElementById('search').value.trim();
     if (q) h.set('q', q);
     const hash = h.toString();
@@ -1082,53 +1263,62 @@ __ICON_SPRITE__
     });
   }
 
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function matches(app) {
-    const inCategory = activeCategory === 'all' || app.categories.includes(activeCategory);
-    if (!inCategory) return false;
+  const okCat = (app) => activeCategory === 'all' || app.categories.includes(activeCategory);
+  const okClase = (app) => activeClase === 'all' || app.clase_app === activeClase;
+  function okQuery(app) {
     if (!query) return true;
-    const haystack = norm([
+    return norm([
       app.title, app.description,
       ...app.categories.map(c => (CATEGORY_META[c] || {}).label || c),
+      ((CLASE_META[app.clase_app] || {}).label || ''),
       ...app.tags,
-    ].join(' '));
-    return haystack.includes(query);
+    ].join(' ')).includes(query);
   }
+  const matches = (app) => okCat(app) && okClase(app) && okQuery(app);
 
-  function iconSymbol(name) {
-    return '<svg class="i"><use href="#i-' + name + '"></use></svg>';
-  }
-
-  function renderCategories() {
+  // ---------- filtros: áreas, versiones y categorías (cada grupo se puede plegar) ----------
+  function renderFilters() {
+    const baseCat = CATALOG.filter(a => okClase(a) && okQuery(a));
+    const baseVer = CATALOG.filter(a => okCat(a) && okQuery(a));
     const counts = {};
-    CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
+    CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = 0; }));
+    baseCat.forEach(app => app.categories.forEach(c => { counts[c]++; }));
     const label = (s) => (CATEGORY_META[s] || {}).label || s;
     const isArea = (s) => CATEGORY_META[s] && CATEGORY_META[s].area !== undefined;
     const areas = Object.keys(counts).filter(isArea).sort((a, b) => CATEGORY_META[a].area - CATEGORY_META[b].area);
     const resto = Object.keys(counts).filter(s => !isArea(s)).sort((a, b) => label(a).localeCompare(label(b), 'es'));
 
-    const chip = (slug, meta, count) => `<button class="chip${meta.parent ? ' sub' : ''}" aria-pressed="${activeCategory === slug}" data-cat="${slug}">
+    const chip = (attr, val, meta, count, activo) => `<button class="chip${meta.parent ? ' sub' : ''}" data-${attr}="${val}" aria-pressed="${activo}"${!count && !activo ? ' disabled' : ''}>
           ${iconSymbol(meta.icon)} ${escapeHtml(meta.label)} <span class="count">${count}</span>
         </button>`;
-    const lista = (slugs) => slugs.map(s => chip(s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s])).join('');
-
-    document.getElementById('categories').innerHTML =
-      '<div class="chips-label">Áreas</div>' + chip('all', { label: 'Todas', icon: 'grid' }, CATALOG.length) + lista(areas) +
-      '<div class="chips-label">Categorías</div>' + lista(resto);
-    document.querySelectorAll('.chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        activeCategory = btn.dataset.cat;
-        renderAll();
-      });
-    });
+    const catChip = (s) => chip('cat', s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s], activeCategory === s);
+    const grupo = (key, titulo, cuerpo) => {
+      const pleg = plegados.has('f:' + key);
+      return `<div class="cgroup${pleg ? ' folded' : ''}">
+          <button class="cg-toggle" type="button" data-fold="f:${key}" aria-expanded="${!pleg}">${titulo} ${iconSymbol('chev')}</button>
+          <div class="chips">${cuerpo}</div>
+        </div>`;
+    };
+    const el = document.getElementById('filters');
+    el.classList.toggle('is-hidden', !filtrosVisibles);
+    el.innerHTML =
+      grupo('areas', 'Áreas', chip('cat', 'all', { label: 'Todas', icon: 'grid' }, baseCat.length, activeCategory === 'all') + areas.map(catChip).join('')) +
+      grupo('versiones', 'Versiones', chip('ver', 'all', { label: 'Todas', icon: 'layers' }, baseVer.length, activeClase === 'all') +
+        CLASE_ORDER.map(c => chip('ver', c, { label: CLASE_META[c].label, icon: CLASE_META[c].icon_temas }, baseVer.filter(a => a.clase_app === c).length, activeClase === c)).join('')) +
+      grupo('categorias', 'Categorías', resto.map(catChip).join(''));
+    el.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { activeCategory = b.dataset.cat; renderAll(); }));
+    el.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => { activeClase = b.dataset.ver; renderAll(); }));
+    el.querySelectorAll('[data-fold]').forEach(b => b.addEventListener('click', () => alternarPliegue(b.dataset.fold)));
+  }
+  function alternarPliegue(key) {
+    plegados.has(key) ? plegados.delete(key) : plegados.add(key);
+    guardarPlegados(); renderAll();
   }
 
   function appCardHtml(app) {
     const primaryCat = app.categories[0];
     const meta = CATEGORY_META[primaryCat] || { label: primaryCat, icon: 'tag' };
+    const ver = app.clase_app && app.clase_app !== 'normal' ? CLASE_META[app.clase_app] : null;
     const badges = app.categories.map(c => {
       const m = CATEGORY_META[c] || { label: c };
       return `<span class="app-badge">${escapeHtml(m.label)}</span>`;
@@ -1137,6 +1327,7 @@ __ICON_SPRITE__
         <div class="app-card-top">
           <div class="app-icon">${iconSymbol(meta.icon)}</div>
           <h3>${escapeHtml(app.title)}</h3>
+          ${ver ? `<span class="ver-badge ${app.clase_app}">${escapeHtml(ver.label)}</span>` : ''}
         </div>
         <p class="desc" tabindex="0" aria-label="Descripción de ${escapeHtml(app.title)}">${escapeHtml(app.description)}</p>
         <div class="app-badges">${badges}</div>
@@ -1144,32 +1335,39 @@ __ICON_SPRITE__
       </div>`;
   }
 
-  // Si un tema tiene subgrupos (p. ej. telemetría: meteo y hogar), cada uno
-  // va en su propia subsección; si no, una sola cuadrícula.
+  // Dentro de cada (sub)sección, las fichas van agrupadas por versión
+  // (normales, lite, pro, promax, aula) y, dentro de cada versión, por título.
+  const posClase = (a) => { const i = CLASE_ORDER.indexOf(a.clase_app); return i === -1 ? 99 : i; };
+  const ordenar = (lista) => lista.slice().sort((a, b) => posClase(a) - posClase(b) || a.title.localeCompare(b.title, 'es'));
+
   function gridConSubgrupos(apps, meta) {
     const subs = [...new Set(apps.map(a => a.subgroup || ''))];
-    if (subs.length === 1 && !subs[0]) return `<div class="app-grid">${apps.map(appCardHtml).join('')}</div>`;
+    if (subs.length === 1 && !subs[0]) return `<div class="app-grid">${ordenar(apps).map(appCardHtml).join('')}</div>`;
     const orden = Object.keys(SUBGROUP_META);
     subs.sort((a, b) => (orden.indexOf(a) + 1 || 99) - (orden.indexOf(b) + 1 || 99));
     return subs.map(sg => {
       const lista = apps.filter(a => (a.subgroup || '') === sg);
       const sm = SUBGROUP_META[sg] || { label: sg || 'Otras', icon_temas: 'tag' };
       return `<h3 class="subhead" style="--c:${meta.color}"><span class="si">${iconSymbol(sm.icon_temas)}</span>${escapeHtml(sm.label)} <span class="sn">${lista.length}</span></h3>
-        <div class="app-grid">${lista.map(appCardHtml).join('')}</div>`;
+        <div class="app-grid">${ordenar(lista).map(appCardHtml).join('')}</div>`;
     }).join('');
   }
 
+  let temasVisibles = [];
   function renderGroups() {
     const groups = document.getElementById('groups');
     let totalFiltered = 0;
     let html = '';
+    temasVisibles = [];
 
     THEME_ORDER.forEach(slug => {
       const apps = CATALOG.filter(app => app.group === slug && matches(app));
       if (apps.length === 0) return;
       totalFiltered += apps.length;
+      temasVisibles.push(slug);
       const meta = THEME_META[slug] || { label: slug, icon: 'tag', color: '#2E4B6B', lede: '' };
-      html += `<section class="theme-block">
+      const pleg = plegados.has('t:' + slug) && !query;
+      html += `<section class="theme-block${pleg ? ' folded' : ''}">
           <header class="sh" style="--c:${meta.color}">
             <div class="sh-ico">${iconSymbol(meta.icon)}</div>
             <div>
@@ -1177,25 +1375,39 @@ __ICON_SPRITE__
               <h2>${escapeHtml(meta.label)}</h2>
               ${meta.lede ? `<p class="sh-lede">${escapeHtml(meta.lede)}</p>` : ''}
             </div>
+            <button class="sh-fold" type="button" data-fold="t:${slug}" aria-expanded="${!pleg}" aria-label="${pleg ? 'Desplegar' : 'Plegar'} ${escapeHtml(meta.label)}" title="${pleg ? 'Desplegar' : 'Plegar'}">${iconSymbol('chev')}</button>
           </header>
-          ${gridConSubgrupos(apps, meta)}
+          <div class="tb-body">${gridConSubgrupos(apps, meta)}</div>
         </section>`;
     });
 
     groups.innerHTML = html;
+    groups.querySelectorAll('[data-fold]').forEach(b => b.addEventListener('click', () => alternarPliegue(b.dataset.fold)));
 
     const resultsLine = document.getElementById('results-line');
     const empty = document.getElementById('empty');
-    resultsLine.style.display = totalFiltered === 0 ? 'none' : 'block';
     resultsLine.textContent = totalFiltered === CATALOG.length
-      ? `${CATALOG.length} herramienta${CATALOG.length === 1 ? '' : 's'} disponible${CATALOG.length === 1 ? '' : 's'} en ${THEME_ORDER.length} tema${THEME_ORDER.length === 1 ? '' : 's'}`
-      : `${totalFiltered} resultado${totalFiltered === 1 ? '' : 's'}`;
+      ? `${CATALOG.length} herramientas en ${THEME_ORDER.length} temas`
+      : `${totalFiltered} de ${CATALOG.length} herramientas`;
     empty.style.display = totalFiltered === 0 ? 'block' : 'none';
   }
 
+  function renderToolbar() {
+    document.getElementById('btn-reset').hidden = !(activeCategory !== 'all' || activeClase !== 'all' || query);
+    const bf = document.getElementById('btn-filtros');
+    bf.setAttribute('aria-pressed', String(filtrosVisibles));
+    bf.querySelector('span').textContent = filtrosVisibles ? 'Ocultar filtros' : 'Mostrar filtros';
+    const todas = temasVisibles.length && temasVisibles.every(t => plegados.has('t:' + t));
+    const bp = document.getElementById('btn-plegar');
+    bp.hidden = !temasVisibles.length;
+    bp.querySelector('span').textContent = todas ? 'Desplegar todo' : 'Plegar todo';
+    bp.dataset.accion = todas ? 'desplegar' : 'plegar';
+  }
+
   function renderAll() {
-    renderCategories();
+    renderFilters();
     renderGroups();
+    renderToolbar();
     guardarEstado();
   }
 
@@ -1207,6 +1419,18 @@ __ICON_SPRITE__
   });
   searchEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); } });
   document.getElementById('clear').addEventListener('click', () => { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); searchEl.focus(); });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    activeCategory = 'all'; activeClase = 'all'; searchEl.value = ''; query = '';
+    searchEl.parentElement.classList.remove('has-text'); renderAll();
+  });
+  document.getElementById('btn-filtros').addEventListener('click', () => {
+    filtrosVisibles = !filtrosVisibles; store.set('filtrosVisibles', filtrosVisibles); renderAll();
+  });
+  document.getElementById('btn-plegar').addEventListener('click', (e) => {
+    const plegar = e.currentTarget.dataset.accion === 'plegar';
+    temasVisibles.forEach(t => plegar ? plegados.add('t:' + t) : plegados.delete('t:' + t));
+    guardarPlegados(); renderAll();
+  });
   addEventListener('hashchange', () => { leerEstado(); renderAll(); });
 
   leerEstado();
@@ -1271,6 +1495,10 @@ def render_portal_html_temas(catalog, title, subtitle, eyebrow, contact_name="",
     out = out.replace("__THEME_META_JSON__", json.dumps(theme_meta, ensure_ascii=False))
     out = out.replace("__THEME_ORDER_JSON__", json.dumps(theme_order, ensure_ascii=False))
     out = out.replace("__SUBGROUP_META_JSON__", json.dumps(SUBGROUP_INFO, ensure_ascii=False))
+    clase_order = [c for c in CLASE_ORDER if any(app.get("clase_app") == c for app in catalog)]
+    clase_meta = {c: dict(clase_info(c), icon_temas=CLASE_ICON_TEMAS.get(c, "tag")) for c in clase_order}
+    out = out.replace("__CLASE_META_JSON__", json.dumps(clase_meta, ensure_ascii=False))
+    out = out.replace("__CLASE_ORDER_JSON__", json.dumps(clase_order, ensure_ascii=False))
     out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
     out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
     out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))

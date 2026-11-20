@@ -2,8 +2,8 @@
 
 Manual for the installation, use, configuration and internals of **TeleMet Collector**, the Python program that keeps a history of the last 24 hours (configurable) of your weather station on the Linux server and makes it available to the **TeleMet History** app.
 
-- **Code:** `RafaUMH2110/apps` → `telemetria/telemetcollector/`
-- **Companion apps:** `telemetria/telemet/history/index.html` (TeleMet History, one station) and `telemetria/telemet/multistation/index.html` (TeleMet MultiStation, several stations; the Spanish version is `telemetria/telemet/multi/`)
+- **Code:** `RafaUMH2110/apps` → `telemetria/meteo/telemetcollector/`
+- **Companion apps:** `telemetria/meteo/telemet/history/index.html` (TeleMet History, one station) and `telemetria/meteo/telemet/multistation/index.html` (TeleMet MultiStation, several stations; the Spanish version is `telemetria/meteo/telemet/multi/`)
 - **Program version:** 1.1 · **JSON format:** 1
 
 ---
@@ -107,7 +107,7 @@ Key design points:
 ## 4. Package contents
 
 ```
-telemetria/telemetcollector/
+telemetria/meteo/telemetcollector/
 ├── telemet_collector.py         ← the program
 ├── config.example.ini           ← commented configuration template
 ├── telemet-collector.service    ← systemd unit
@@ -119,10 +119,10 @@ telemetria/telemetcollector/
 Plus the apps that consume the data:
 
 ```
-telemetria/telemet/history/
+telemetria/meteo/telemet/history/
 ├── index.html                   ← TeleMet History, one station (already reads the JSON)
 └── apple-touch-icon.png
-telemetria/telemet/multistation/
+telemetria/meteo/telemet/multistation/
 ├── index.html                   ← TeleMet MultiStation, several stations (reads one JSON per station)
 ├── README.md
 └── apple-touch-icon.png
@@ -140,7 +140,7 @@ From GitHub (on your computer or on the server):
 
 ```bash
 git clone https://github.com/RafaUMH2110/apps.git
-cd apps/telemetria/telemetcollector
+cd apps/telemetria/meteo/telemetcollector
 ```
 
 or copy the `telemet-collector/` folder from the downloaded `.zip` to the server (for example with `scp -r`).
@@ -279,7 +279,7 @@ You will see one log line per reading. Stop it with `Ctrl+C` (it closes the data
 ### 7.1. Installation
 
 ```bash
-sudo cp /home/<your-user>/apps/telemetria/telemetcollector/telemet-collector.service /etc/systemd/system/
+sudo cp /home/<your-user>/apps/telemetria/meteo/telemetcollector/telemet-collector.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now telemet-collector
 ```
@@ -369,7 +369,7 @@ Copy `index.html` and `apple-touch-icon.png` to the app folder on the server:
 
 ```bash
 sudo mkdir -p /var/www/htdocs/rafa/telemethistory
-sudo cp telemetria/telemet/history/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemethistory/
+sudo cp telemetria/meteo/telemet/history/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemethistory/
 ```
 
 ### 8.2. How the app and the JSON are linked
@@ -418,7 +418,7 @@ Enabling compression of the JSON (`mod_deflate`, type `application/json`) reduce
 
 TeleMet MultiStation follows the same mechanism, but for all the stations at once: for each station registered it reads `<folder>/history_<ID>.json` (or `historial_<ID>.json`) and, if it does not exist, `history.json` / `historial.json` when its `stationId` matches. It only adds the readings that are missing; it never deletes anything local. (The Spanish version, TeleMet Multi, works the same way.)
 
-1. Copy the app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmultistation && sudo cp telemetria/telemet/multistation/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmultistation/`.
+1. Copy the app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmultistation && sudo cp telemetria/meteo/telemet/multistation/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmultistation/`.
 2. Tell the app where the JSON files are. Two options:
    - **Option A (simplest, one data folder):** keep the collector writing to `/var/www/htdocs/rafa/telemethistory/data/` and, in the app, section **“07 · Data and server”**, set the folder to `../telemethistory/data/`.
    - **Option B:** set `json_path` to `…/telemetmultistation/data/history.json` (the collector adds the ID to each name) and set the folder in the app to `data/` (its default).
@@ -771,7 +771,7 @@ All instants are **epoch in milliseconds (UTC)**. The time zone only comes into 
 
 ## 13. How the app side works
 
-Everything is in `telemetria/telemet/history/index.html`, in the “SERVER HISTORY (TeleMet Collector)” block.
+Everything is in `telemetria/meteo/telemet/history/index.html`, in the “SERVER HISTORY (TeleMet Collector)” block.
 
 ### 13.1. Adjustable constants (in the HTML itself)
 
@@ -870,7 +870,7 @@ They are not necessary: this is a few hours of reproducible, ephemeral data. Onl
 
 ```bash
 cd ~/apps && git pull
-sudo cp telemetria/telemetcollector/telemet_collector.py /opt/telemet-collector/
+sudo cp telemetria/meteo/telemetcollector/telemet_collector.py /opt/telemet-collector/
 sudo chown telemet:telemet /opt/telemet-collector/telemet_collector.py
 sudo systemctl restart telemet-collector
 journalctl -u telemet-collector -n 20
@@ -881,7 +881,7 @@ If an update adds new parameters, compare `config.example.ini` with your `config
 ### 14.5. Updating the app
 
 ```bash
-sudo cp ~/apps/telemetria/telemet/history/index.html /var/www/htdocs/rafa/telemethistory/
+sudo cp ~/apps/telemetria/meteo/telemet/history/index.html /var/www/htdocs/rafa/telemethistory/
 ```
 
 Browsers will load the new version on reload (sometimes you have to force it with `Ctrl+Shift+R`).
@@ -1037,7 +1037,7 @@ Or without touching the file: `python3 telemet_collector.py --hours 48` (or `TEL
 ### 19.5. Complete installation in one block (to copy and paste)
 
 ```bash
-# From the apps/telemetria/telemetcollector folder of the cloned repository
+# From the apps/telemetria/meteo/telemetcollector folder of the cloned repository
 sudo useradd --system --home /opt/telemet-collector --shell /usr/sbin/nologin telemet
 sudo mkdir -p /opt/telemet-collector/data
 sudo cp telemet_collector.py /opt/telemet-collector/

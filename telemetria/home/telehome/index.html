@@ -1,0 +1,1818 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TeleHome · Demostración</title>
+<meta name="description" content="Demostración de TeleHome, la app de telemetría del hogar para varios tipos de dispositivo: enchufes Wi-Fi, sensores de temperatura y humedad, luces regulables y persianas, con histórico, gráficas y CSV.">
+<meta name="theme-color" content="#0d1b26">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231656a3'/%3E%3Cpath d='M16 6 5 15h3v11h6v-7h4v7h6V15h3z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ===================== Colores y tipografía ===================== */
+:root {
+  color-scheme: light dark;
+  --page:#eceff2; --surface:#fbfcfd; --sunk:#f1f4f6; --ink:#101c26; --ink2:#46535f; --muted:#6f7c88;
+  --grid:#e3e8ec; --axis:#c3ccd4; --border:#d6dde3; --border-strong:#bcc7d1;
+  --accent:#1d63c8; --btn:#2467cf; --on-accent:#fff;
+  --good:#128a49; --good-soft:#dff3e8; --critical:#c33a3a; --critical-soft:#fbe9e9; --warn-bg:#fff4d6; --warn-ink:#765200;
+  --meter:#0d1b26; --meter-2:#16293a; --meter-line:rgba(255,255,255,.12); --meter-ink:#eaf2fa; --meter-mut:#93a8bb;
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
+  --series-5:#e87ba4; --series-6:#008300; --series-7:#6250d6; --series-8:#0d8f9e;
+  --font: -apple-system,BlinkMacSystemFont,"Segoe UI Variable","Segoe UI",system-ui,Roboto,"Helvetica Neue",sans-serif;
+  --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page:#080f15; --surface:#101a23; --sunk:#0c141b; --ink:#e5ecf2; --ink2:#a2b0bd; --muted:#8190a0;
+    --grid:#1a2631; --axis:#2a3a49; --border:#1f2d3a; --border-strong:#2c3d4e;
+    --accent:#6aa5f5; --btn:#2467cf;
+    --good:#34c273; --good-soft:#12301f; --critical:#ef6666; --critical-soft:#3a1717; --warn-bg:#352a0c; --warn-ink:#f1cf7a;
+    --meter:#11222f; --meter-2:#1b3346; --meter-line:rgba(255,255,255,.1);
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+    --series-5:#d55181; --series-6:#0ca30c; --series-7:#9085e9; --series-8:#0f9eae;
+  }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html { -webkit-text-size-adjust:100%; }
+body { margin:0; background:var(--page); color:var(--ink); font:15px/1.5 var(--font); -webkit-font-smoothing:antialiased; }
+button, select, input { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+.num { font-variant-numeric:tabular-nums; }
+.wrap { max-width:1120px; margin:0 auto; padding:0 24px; }
+main.wrap { padding-top:22px; padding-bottom:12px; }
+
+/* ===================== Contador (parte superior) ===================== */
+.meter { background:var(--meter); color:var(--meter-ink); border:1px solid var(--meter-line); border-radius:22px; padding:22px 30px 30px; }
+.m-top { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.brand { display:flex; align-items:center; gap:16px; min-width:0; flex:1 1 auto; }
+.logo { width:52px; height:52px; border-radius:15px; background:linear-gradient(145deg,#2a78d6,#1656a3); box-shadow:inset 0 1px 0 rgba(255,255,255,.28); display:grid; place-items:center; flex:none; }
+.logo svg { width:28px; height:28px; }
+.brand .ttl { min-width:0; }
+.brand h1 { margin:0; font-size:28px; font-weight:700; letter-spacing:-.025em; line-height:1.15; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.brand .sub { font-size:14.5px; color:var(--meter-mut); line-height:1.35; margin-top:2px; }
+.mode-badge { font-size:12px; font-weight:650; color:#ffd98a; background:rgba(255,196,77,.12); border:1px solid rgba(255,196,77,.38); border-radius:999px; padding:1px 10px; }
+.status { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid var(--meter-line); border-radius:999px; background:rgba(255,255,255,.06); font-size:13.5px; line-height:1.2; white-space:nowrap; }
+.status .st { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
+.status .when { color:var(--meter-mut); font-variant-numeric:tabular-nums; padding-left:8px; border-left:1px solid var(--meter-line); }
+.status .when:empty { display:none; }
+.status .dot { box-shadow:none; }
+.hbtn { display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 16px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:var(--btn); color:#fff; font-weight:600; font-size:14px; cursor:pointer; transition:filter .15s; }
+.hbtn:hover { filter:brightness(1.12); }
+.hbtn svg { width:18px; height:18px; }
+.meter .banner { display:flex; gap:10px; align-items:flex-start; margin-top:18px; padding:9px 13px; border-radius:11px; font-size:13.5px; color:#ffdf9c; background:rgba(255,196,77,.1); border:1px solid rgba(255,196,77,.28); }
+.meter .banner svg { flex:none; width:18px; height:18px; margin-top:2px; }
+
+.m-body { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:34px 64px; margin-top:34px; align-items:end; }
+.m-label { font-size:14px; color:var(--meter-mut); margin-bottom:6px; }
+.m-num { font-size:clamp(64px,10vw,116px); font-weight:300; letter-spacing:-.045em; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.m-num small { font-size:.28em; font-weight:400; color:var(--meter-mut); margin-left:.2em; letter-spacing:0; }
+.m-split { display:flex; gap:3px; height:12px; border-radius:6px; overflow:hidden; background:rgba(255,255,255,.08); margin-top:26px; }
+.m-split i { display:block; background:var(--c); min-width:6px; transition:flex-grow .5s; }
+.m-leg { list-style:none; margin:13px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px 22px; font-size:13.5px; }
+.m-leg li { display:inline-flex; align-items:center; gap:8px; }
+.m-leg .sw { width:10px; height:10px; border-radius:3px; background:var(--c); flex:none; }
+.m-leg .mut { color:var(--meter-mut); font-variant-numeric:tabular-nums; }
+
+/* Contador de energía: las cifras decimales van invertidas, como en un contador real */
+.odo { display:inline-flex; align-items:center; gap:4px; font-size:clamp(34px,5vw,48px); }
+.odo i { font-style:normal; display:grid; place-items:center; width:.8em; height:1.3em; font-size:1em; font-weight:500; line-height:1; background:var(--meter-2); border:1px solid var(--meter-line); border-radius:6px; font-variant-numeric:tabular-nums; box-shadow:inset 0 -12px 14px -12px rgba(0,0,0,.55); }
+.odo i.d { background:#e8eff6; color:#0d1b26; border-color:transparent; }
+.odo b { font-weight:600; align-self:flex-end; margin:0 1px 6px; font-size:.7em; color:var(--meter-mut); }
+.odo .u { font-size:.34em; font-weight:500; color:var(--meter-mut); margin-left:10px; align-self:flex-end; margin-bottom:8px; }
+.m-sub { font-size:13px; color:var(--meter-mut); margin-top:10px; }
+.m-chips { display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:20px; font-size:13.5px; color:var(--meter-mut); }
+.m-chips b { color:var(--meter-ink); font-weight:600; }
+.m-chips .warn { color:#ffb4b4; }
+.m-chips .warn:empty { display:none; }
+/* Destacados: una cifra por grupo de dispositivos (ambiente, luces, persianas…) */
+.m-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:22px; }
+.m-card { background:rgba(255,255,255,.055); border:1px solid var(--meter-line); border-radius:13px; padding:11px 14px; min-width:0; }
+.m-card .k { font-size:12.5px; color:var(--meter-mut); display:flex; align-items:center; gap:7px; }
+.m-card .k svg { width:14px; height:14px; flex:none; }
+.m-card .v { font-size:25px; font-weight:350; letter-spacing:-.02em; margin-top:4px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.m-card .v small { font-size:.52em; font-weight:500; color:var(--meter-mut); margin-left:3px; }
+.m-card .s { font-size:12px; color:var(--meter-mut); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ===================== Grupos y dispositivos ===================== */
+.sec-h { display:flex; align-items:baseline; justify-content:space-between; gap:4px 14px; flex-wrap:wrap; margin:40px 0 12px; }
+.sec-h h2 { margin:0; font-size:18px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; gap:9px; }
+.sec-h h2 svg { width:17px; height:17px; color:var(--ink2); flex:none; }
+.sec-h span { font-size:13px; color:var(--muted); }
+.grp-h { display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; padding:11px 24px 11px 30px; background:var(--sunk); border-bottom:1px solid var(--border); }
+.grp-h h3 { margin:0; font-size:14.5px; font-weight:700; letter-spacing:.01em; display:flex; align-items:center; gap:8px; }
+.grp-h h3 svg { width:16px; height:16px; color:var(--ink2); flex:none; }
+.grp-h .agg { font-size:13px; color:var(--ink2); margin-left:auto; font-variant-numeric:tabular-nums; }
+.grp-h .agg b { color:var(--ink); font-weight:650; }
+.devs { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.devs + .devs { margin-top:14px; }
+.dev-row { position:relative; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(130px,.85fr) 128px minmax(0,1.35fr) auto; grid-template-areas:"id val spark meta ctl";
+  align-items:center; gap:8px 26px; padding:18px 24px 18px 30px; cursor:pointer; border-top:1px solid var(--grid); }
+.devs .grp-h + .dev-row, .dev-row:first-child { border-top:none; }
+.dev-row::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--c); transition:width .15s; }
+.dev-row:hover { background:var(--sunk); }
+.dev-row.sel { background:color-mix(in srgb,var(--accent) 8%,var(--surface)); }
+.dev-row.sel::before { width:10px; }
+.d-id { grid-area:id; min-width:0; }
+.d-id h4 { margin:0; font-size:16px; font-weight:650; letter-spacing:-.01em; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.d-state { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink2); margin-top:3px; flex-wrap:wrap; }
+.d-state .on { color:var(--good); font-weight:600; }
+.d-state .room { color:var(--muted); }
+.d-val { grid-area:val; }
+.big { font-size:30px; font-weight:350; letter-spacing:-.03em; line-height:1; }
+.big small { font-size:14px; font-weight:500; color:var(--ink2); margin-left:4px; letter-spacing:0; }
+.loadbar { height:4px; border-radius:2px; background:var(--grid); margin-top:10px; overflow:hidden; }
+.loadbar i { display:block; height:100%; background:var(--c); width:var(--w,0%); transition:width .5s; }
+.d-spark { grid-area:spark; }
+.spark { width:128px; height:36px; display:block; overflow:visible; }
+.d-meta { grid-area:meta; display:flex; gap:4px 22px; flex-wrap:wrap; font-size:13px; color:var(--ink2); }
+.d-meta b { color:var(--ink); font-weight:600; }
+.d-ctl { grid-area:ctl; justify-self:end; display:flex; align-items:center; gap:10px; }
+.dev-row .err { grid-column:1/-1; margin:0; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--good); display:inline-block; box-shadow:0 0 0 3px var(--good-soft); flex:none; }
+.dot.off { background:var(--critical); box-shadow:0 0 0 3px var(--critical-soft); }
+.dot.wait { background:var(--muted); box-shadow:none; }
+.dot.idle { background:var(--muted); box-shadow:0 0 0 3px var(--grid); }
+.err { color:var(--critical); font-size:12.5px; margin-top:8px; line-height:1.4; max-height:4.2em; overflow:auto; }
+.err:empty { display:none; }
+.tag { font-size:11.5px; font-weight:650; color:var(--ink2); background:var(--sunk); border:1px solid var(--border); border-radius:999px; padding:0 8px; line-height:18px; white-space:nowrap; }
+
+/* ----- controles ----- */
+/* Interruptor: área táctil ampliada con borde transparente */
+.switch { box-sizing:content-box; width:46px; height:26px; border:6px solid transparent; background-clip:padding-box; margin:-6px; border-radius:19px; background-color:var(--axis); position:relative; cursor:pointer; padding:0; flex:none; transition:background-color .18s; }
+.switch::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .18s; }
+.switch[aria-checked="true"] { background-color:var(--good); }
+.switch[aria-checked="true"]::after { left:23px; }
+.switch:disabled { opacity:.4; cursor:not-allowed; }
+.switch.busy::after { animation:pulse .8s ease-in-out infinite alternate; }
+@keyframes pulse { to { transform:scale(.8); } }
+.level { display:flex; align-items:center; gap:9px; }
+.level input[type=range] { width:104px; accent-color:var(--c); background:transparent; }
+.level .pc { font-size:13px; color:var(--ink2); font-variant-numeric:tabular-nums; min-width:34px; text-align:right; }
+.pos { display:inline-flex; gap:2px; background:var(--sunk); border:1px solid var(--border); border-radius:11px; padding:3px; }
+.pos button { border:none; background:transparent; width:32px; height:30px; border-radius:8px; cursor:pointer; display:grid; place-items:center; color:var(--ink2); }
+.pos button:hover { background:var(--surface); color:var(--ink); }
+.pos button:disabled { opacity:.35; cursor:not-allowed; }
+.pos svg { width:15px; height:15px; }
+.ro { font-size:12.5px; color:var(--muted); white-space:nowrap; }
+.empty-card { text-align:center; padding:44px 20px; color:var(--ink2); }
+.empty-card h3 { margin:0 0 6px; color:var(--ink); font-size:18px; }
+
+/* ===================== Paneles ===================== */
+.panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px 22px; margin-top:20px; }
+.panel-h { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.panel-h h2 { font-size:17px; margin:0; font-weight:650; letter-spacing:-.01em; flex:1; min-width:180px; }
+.panel-h h2 small { font-weight:500; color:var(--ink2); font-size:14px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--border); background:var(--surface); border-radius:10px; min-height:36px; padding:0 14px; cursor:pointer; font-weight:600; font-size:14px; }
+.btn:hover { background:var(--sunk); border-color:var(--border-strong); }
+.btn svg { width:16px; height:16px; }
+.btn.primary { background:var(--btn); color:#fff; border-color:transparent; }
+.btn.primary:hover { filter:brightness(1.1); background:var(--btn); }
+.btn.danger { color:var(--critical); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.seg { display:inline-flex; background:var(--sunk); border:1px solid var(--border); border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap; }
+.seg button { border:none; background:transparent; padding:0 12px; min-height:30px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--ink2); }
+.seg button:hover { color:var(--ink); }
+.seg button[aria-pressed="true"] { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(15,34,64,.18); }
+.toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px; }
+.legend { display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 10px; }
+.legend button { background:var(--sunk); border:1px solid var(--border); border-radius:999px; padding:3px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--ink); min-height:30px; }
+.legend button[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
+.key { width:16px; height:0; border-top:3px solid; border-radius:2px; flex:none; display:inline-block; }
+#chartWrap { position:relative; }
+#chart { width:100%; height:330px; display:block; touch-action:pan-y; }
+#chart text { fill:var(--muted); font-size:11.5px; font-family:var(--font); font-variant-numeric:tabular-nums; }
+.tip { position:absolute; pointer-events:none; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 11px; font-size:13px; box-shadow:0 8px 24px rgba(15,34,64,.18); min-width:180px; z-index:3; }
+.tip .t { color:var(--ink2); font-size:12px; margin-bottom:4px; }
+.tip .r { display:flex; align-items:center; gap:8px; padding:1px 0; }
+.tip .r b { font-weight:650; min-width:70px; text-align:right; font-variant-numeric:tabular-nums; }
+.tip .r span.n { color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chart-empty { padding:56px 10px; text-align:center; color:var(--ink2); }
+.note { font-size:13px; color:var(--ink2); margin:0 0 6px; padding:7px 12px; background:var(--sunk); border-radius:9px; }
+.note:empty { display:none; }
+.hint { color:var(--ink2); font-size:13px; margin:6px 0 0; }
+.tbl { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { text-align:right; padding:11px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+th:first-child, td:first-child { text-align:left; }
+th { color:var(--ink2); font-weight:600; font-size:13px; }
+tbody tr { cursor:pointer; }
+tbody tr:hover td { background:var(--sunk); }
+tbody tr.sel td { background:color-mix(in srgb,var(--accent) 9%,transparent); }
+tfoot td { font-weight:700; border-bottom:none; border-top:2px solid var(--border); }
+.bar { display:inline-block; vertical-align:middle; height:6px; border-radius:3px; background:var(--c); margin-left:8px; opacity:.85; }
+
+/* ===================== Pie ===================== */
+footer.pie { color:var(--muted); font-size:12.5px; text-align:center; padding:30px 24px calc(env(safe-area-inset-bottom) + 30px); line-height:1.7; }
+footer.pie a { color:inherit; }
+footer.pie p { margin:0; }
+footer.pie .conn { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin:0 auto 16px; padding:12px; max-width:860px; background:var(--surface); border:1px solid var(--border); border-radius:14px; color:var(--ink2); font-size:13px; }
+footer.pie .conn input { border:1px solid var(--border); background:var(--page); color:var(--ink); border-radius:9px; padding:7px 10px; min-width:0; }
+#connState { width:100%; font-weight:600; }
+
+/* ===================== Ajustes ===================== */
+dialog { border:1px solid var(--border); border-radius:18px; background:var(--surface); color:var(--ink); width:min(860px,95vw); padding:0; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+dialog::backdrop { background:rgba(8,16,30,.5); backdrop-filter:blur(2px); }
+.dlg-h { display:flex; align-items:center; gap:12px; padding:16px 20px 0; }
+.dlg-h h2 { margin:0; flex:1; font-size:19px; font-weight:750; letter-spacing:-.01em; }
+.tabs { display:flex; gap:4px; padding:12px 20px 0; border-bottom:1px solid var(--border); overflow-x:auto; }
+.tabs button { border:none; background:transparent; padding:9px 12px; border-bottom:2px solid transparent; cursor:pointer; font-weight:600; color:var(--ink2); white-space:nowrap; }
+.tabs button[aria-selected="true"] { color:var(--accent); border-bottom-color:var(--accent); }
+.dlg-b { padding:18px 20px 22px; max-height:68vh; overflow:auto; }
+.dlg-b section { margin-bottom:22px; }
+.dlg-b section:last-child { margin-bottom:0; }
+.dlg-b h3 { font-size:15px; margin:0 0 4px; font-weight:700; }
+.dlg-b p.desc { color:var(--ink2); font-size:13.5px; margin:0 0 12px; }
+.dev { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:8px; background:var(--sunk); flex-wrap:wrap; }
+.dev .n { flex:1; min-width:140px; font-weight:600; }
+.dev .n small { color:var(--ink2); display:block; font-weight:400; font-family:var(--mono); font-size:12px; overflow:hidden; text-overflow:ellipsis; }
+form.f { display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+form.f label { display:flex; flex-direction:column; font-size:12.5px; color:var(--ink2); gap:4px; font-weight:600; }
+form.f input, form.f select { background:var(--page); border:1px solid var(--border); border-radius:9px; padding:9px 10px; color:var(--ink); font-weight:400; font-size:14.5px; }
+form.f input:focus, form.f select:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent); }
+form.f .full { grid-column:1/-1; }
+.actions { display:flex; gap:8px; flex-wrap:wrap; }
+details summary { cursor:pointer; color:var(--ink2); font-size:13.5px; font-weight:600; }
+details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px; }
+.msg { font-size:13.5px; margin-top:8px; min-height:1.2em; }
+.msg.bad { color:var(--critical); }
+.msg.ok { color:var(--ink2); }
+.found { display:flex; align-items:center; gap:10px; padding:8px 10px; font-size:13.5px; border:1px solid var(--border); border-radius:10px; margin-top:6px; }
+.found code { flex:1; font-family:var(--mono); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; }
+/* Selector de tipo de dispositivo */
+.types { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:10px; }
+.types button { display:flex; flex-direction:column; gap:5px; align-items:flex-start; text-align:left; padding:13px 14px; border:1px solid var(--border); border-radius:13px; background:var(--surface); cursor:pointer; }
+.types button:hover { border-color:var(--border-strong); background:var(--sunk); }
+.types button[aria-pressed="true"] { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent); }
+.types button:disabled { opacity:.55; cursor:not-allowed; }
+.types .ic { width:30px; height:30px; border-radius:9px; background:var(--sunk); display:grid; place-items:center; color:var(--accent); }
+.types .ic svg { width:17px; height:17px; }
+.types .nm { font-weight:700; font-size:14px; }
+.types .de { font-size:12.5px; color:var(--ink2); font-weight:400; line-height:1.35; }
+.types .so { font-size:11.5px; color:var(--muted); font-weight:600; }
+/* Catálogo de tipos (pestaña informativa) */
+.cat { width:100%; font-size:13.5px; }
+.cat td, .cat th { vertical-align:top; white-space:normal; text-align:left; }
+.cat .mg { color:var(--ink2); }
+
+.fgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+.fgrid > details { grid-column:1/-1; }
+@media (max-width:640px) { .fgrid { grid-template-columns:1fr; } }
+
+/* Aviso flotante */
+.toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 22px); transform:translateX(-50%); z-index:50; max-width:min(560px,calc(100vw - 32px));
+  background:#16202f; color:#fff; border-radius:14px; padding:12px 16px; font-size:14px; box-shadow:0 12px 32px rgba(0,0,0,.3); display:flex; gap:12px; align-items:flex-start; }
+.toast.bad { background:#7f1d1d; }
+.toast button { border:none; background:transparent; color:#fff; opacity:.8; cursor:pointer; font-size:18px; line-height:1; padding:0 2px; }
+
+@media (max-width:900px) {
+  .m-body { grid-template-columns:1fr; gap:30px; }
+}
+@media (max-width:760px) {
+  .dev-row { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"id ctl" "val spark" "meta meta"; gap:12px 16px; padding:16px 16px 16px 22px; }
+  .spark { width:112px; }
+  .d-spark { justify-self:end; }
+  .grp-h { padding:10px 16px 10px 22px; }
+}
+@media (max-width:640px) {
+  .wrap { padding:0 12px; }
+  main.wrap { padding-top:12px; }
+  .meter { padding:16px 16px 24px; border-radius:18px; }
+  .brand { gap:12px; } .brand h1 { font-size:22px; } .brand .sub { display:none; } .logo { width:42px; height:42px; border-radius:12px; } .logo svg { width:24px; height:24px; }
+  .brand { flex:1 1 0; } .hbtn { order:2; } .status { order:3; flex:1 0 100%; padding:0; border:none; background:none; } .status .when { display:none; }
+  .hbtn span { display:none; } .hbtn { padding:0 11px; }
+  .m-body { margin-top:24px; gap:26px; }
+  .odo { gap:3px; }
+  .sec-h { margin-top:30px; }
+  form.f { grid-template-columns:1fr; } details .adv { grid-template-columns:1fr 1fr; }
+  .panel { padding:16px 14px; } #chart { height:280px; }
+  .level input[type=range] { width:78px; }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body data-app-title="TeleHome · Demostración" data-app-description="Demostración de TeleHome, la app de telemetría del hogar: una sola plantilla para varios tipos de dispositivo (enchufes Wi-Fi con potencia y energía, sensores de temperatura y humedad, luces regulables y persianas), con contador adaptativo, histórico, gráficas por magnitud, resumen y CSV. Los datos de la demostración se guardan solo en el navegador; para dispositivos reales hace falta el servicio TeleHome." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="domotica,hogar,iot,tuya,enchufes inteligentes,sensores,temperatura,humedad,luces,persianas,consumo electrico,graficas,csv,modo demostracion" data-client-only="true">
+<main class="wrap">
+  <section class="meter" aria-label="Resumen del hogar">
+    <div class="m-top">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3 2 11.3h2.6V21h5.6v-6.2h3.6V21h5.6v-9.7H22z"/></svg></span>
+        <div class="ttl">
+          <h1>TeleHome <span class="mode-badge" id="modeBadge" hidden></span></h1>
+          <div class="sub">Telemetría y control del hogar · varios tipos de dispositivo</div>
+        </div>
+      </div>
+      <div class="status" id="status" role="status">
+        <span class="st"><span class="dot wait"></span><span id="statusTxt">Conectando…</span></span>
+        <span class="when" id="statusWhen"></span>
+      </div>
+      <button class="hbtn" id="btnSettings" type="button" aria-label="Ajustes y dispositivos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        <span>Ajustes y dispositivos</span></button>
+    </div>
+    <div id="simBanner" class="banner" hidden role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg><span id="simText">Modo simulación: los datos no proceden de dispositivos reales.</span></div>
+    <div class="m-body" id="heroBody"></div>
+    <div class="m-cards" id="heroCards"></div>
+    <div class="m-chips">
+      <span id="kOnline"></span><span id="kOn"></span><span class="warn" id="kOnlineS"></span>
+    </div>
+  </section>
+
+  <div class="sec-h">
+    <h2>Dispositivos</h2>
+    <span>
+      <span class="seg" id="groupGrp" role="group" aria-label="Agrupar dispositivos por"></span>
+      <span style="margin-left:10px">Pulsa un dispositivo para verlo solo en el histórico</span>
+    </span>
+  </div>
+  <div id="groups" aria-label="Dispositivos por grupo"></div>
+
+  <section class="panel" id="chartPanel">
+    <div class="panel-h">
+      <h2 id="chartTitle">Histórico</h2>
+      <button class="btn" id="btnCsv" type="button" title="Descargar las lecturas del dispositivo seleccionado">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar CSV</button>
+    </div>
+    <div class="toolbar">
+      <div class="seg" id="rangeGrp" role="group" aria-label="Intervalo de tiempo"></div>
+      <div class="seg" id="metricGrp" role="group" aria-label="Magnitud"></div>
+    </div>
+    <div class="legend" id="legend" role="group" aria-label="Series visibles"></div>
+    <p class="note" id="chartNote"></p>
+    <div id="chartWrap">
+      <svg id="chart" tabindex="0" role="img" aria-label="Gráfica de telemetría"></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="chart-empty" id="chartEmpty" hidden>Aún no hay datos en este intervalo. Las lecturas aparecerán aquí en cuanto lleguen.</div>
+    <p class="hint">La gráfica muestra una magnitud a la vez, con los dispositivos que la miden. Pasa el ratón o el dedo por encima para ver los valores; con el teclado, usa las flechas.</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2 id="sumTitle">Resumen</h2></div>
+    <div id="sumBox"></div>
+    <p class="hint" id="sumHint"></p>
+  </section>
+</main>
+
+<footer class="pie">
+  <div id="footExtra">
+    <form id="connForm" class="conn" autocomplete="off">
+      <label for="connBase">Servicio TeleHome en este servidor</label>
+      <input id="connBase" placeholder="(esta misma ruta) o /rafa/telehome/" spellcheck="false" size="34">
+      <button class="btn" type="submit">Conectar</button>
+      <button class="btn" type="button" id="connDemo">Modo demostración</button>
+      <button class="btn" type="button" id="connReset" title="Borra los datos de la demostración guardados en este navegador">Reiniciar demo</button>
+      <span id="connState" role="status"></span>
+    </form>
+  </div>
+  <p>TeleHome · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
+  <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-20 14:12</span></p>
+</footer>
+
+<div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg-h"><h2 id="dlgTitle">Ajustes y dispositivos</h2><button class="btn" id="btnClose" type="button">Cerrar</button></div>
+  <div class="tabs" role="tablist" aria-label="Secciones de ajustes">
+    <button type="button" role="tab" data-tab="dispositivos" aria-selected="true">Dispositivos</button>
+    <button type="button" role="tab" data-tab="tipos" aria-selected="false">Tipos</button>
+    <button type="button" role="tab" data-tab="nube" aria-selected="false">Nube de Tuya</button>
+    <button type="button" role="tab" data-tab="buscar" aria-selected="false">Buscar e importar</button>
+    <button type="button" role="tab" data-tab="opciones" aria-selected="false">Opciones</button>
+  </div>
+  <div class="dlg-b">
+    <div data-panel="dispositivos" role="tabpanel">
+      <section>
+        <h3>Dispositivos configurados <span id="dlgCount" style="color:var(--ink2);font-weight:500"></span></h3>
+        <div id="devList"></div>
+      </section>
+      <section>
+        <h3 id="formTitle">Añadir dispositivo</h3>
+        <p class="desc">Elige primero el tipo: cada tipo pide sus propios datos y aporta sus magnitudes, controles y columnas de resumen.</p>
+        <div class="types" id="typePick" role="group" aria-label="Tipo de dispositivo"></div>
+        <form class="f" id="devForm" autocomplete="off" style="margin-top:16px" hidden>
+          <div class="full" id="formFields"></div>
+          <div class="full actions">
+            <button class="btn primary" type="submit" id="btnSave">Añadir</button>
+            <button class="btn" type="button" id="btnCancel" hidden>Cancelar edición</button>
+          </div>
+        </form>
+        <div class="msg" id="formMsg" role="alert"></div>
+      </section>
+    </div>
+
+    <div data-panel="tipos" role="tabpanel" hidden>
+      <section>
+        <h3>Catálogo de tipos de dispositivo</h3>
+        <p class="desc">TeleHome es una plantilla en evolución: cada tipo se declara en un único catálogo del programa y de ahí salen su formulario de alta, su tarjeta, sus magnitudes, sus controles y su simulador. Esta tabla es ese catálogo.</p>
+        <div class="tbl"><table class="cat" id="catTable">
+          <thead><tr><th>Tipo</th><th>Magnitudes</th><th>Control</th><th>Estado</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </section>
+      <section>
+        <h3>Añadir un tipo nuevo</h3>
+        <p class="desc">En el código, una entrada en <code>TYPES</code> con: nombre e icono, las magnitudes que mide (de la tabla común <code>METRICS</code>, para que dos tipos que miden lo mismo compartan gráfica), el tipo de control, los campos de alta, las columnas del resumen y una función de simulación para la demostración. El servicio solo tiene que devolver esas magnitudes en <code>reading.values</code>.</p>
+      </section>
+    </div>
+
+    <div data-panel="nube" role="tabpanel" hidden>
+      <section>
+        <h3>Credenciales del proyecto de Tuya</h3>
+        <p class="desc">Para leer y controlar los dispositivos sin estar en su red (por ejemplo, desde un servidor). Necesita un proyecto en iot.tuya.com con tu cuenta de Smart Life o Tuya Smart enlazada e IoT Core autorizado; copia aquí su Access ID y Access Secret. Para mandar órdenes, cada dispositivo debe tener <i>Device Permission</i> = <i>Controllable</i>.</p>
+        <form class="f" id="cloudForm" autocomplete="off">
+          <label>Centro de datos<select name="region" id="regionSel"></select></label>
+          <label>Access ID / Client ID<input name="api_key" maxlength="64" spellcheck="false"></label>
+          <label class="full">Access Secret / Client Secret<input name="api_secret" type="password" autocomplete="new-password" maxlength="64"></label>
+          <div class="full actions">
+            <button class="btn primary" type="submit">Guardar credenciales</button>
+            <button class="btn" type="button" id="btnCloudTest">Probar conexión</button>
+            <button class="btn" type="button" id="btnCloudList">Ver dispositivos de la nube</button>
+          </div>
+        </form>
+        <div class="msg" id="cloudMsg" role="alert"></div>
+        <div id="cloudOut"></div>
+      </section>
+    </div>
+
+    <div data-panel="buscar" role="tabpanel" hidden>
+      <section>
+        <h3>Buscar en la red local</h3>
+        <p class="desc">Encuentra dispositivos Tuya por difusión UDP (tarda unos 12 s) y rellena IP, Device ID y versión. La Local Key se obtiene con <code>python -m tinytuya wizard</code>. El tipo no se puede deducir de la difusión: elígelo tú al darlo de alta.</p>
+        <button class="btn" id="btnScan" type="button">Buscar dispositivos</button>
+        <div id="scanOut" class="msg"></div>
+      </section>
+      <section>
+        <h3>Importar devices.json (TinyTuya)</h3>
+        <p class="desc">Añade de una vez los dispositivos del fichero que genera el asistente de TinyTuya. Los que no traigan tipo se dan de alta como enchufes.</p>
+        <input type="file" id="fileImport" accept=".json,application/json">
+        <div id="importOut" class="msg"></div>
+      </section>
+    </div>
+
+    <div data-panel="opciones" role="tabpanel" hidden>
+      <section>
+        <h3>Lectura e histórico</h3>
+        <form class="f" id="optForm">
+          <label>Intervalo de lectura local (s, mín. 5)<input name="poll_interval" type="number" min="5" max="3600"></label>
+          <label>Intervalo de lectura en la nube (s, mín. 60)<input name="cloud_poll_interval" type="number" min="60" max="3600"></label>
+          <label>Conservar histórico (días)<input name="retention_days" type="number" min="1" max="3650"></label>
+          <p class="hint full" id="callEstimate"></p>
+          <div class="full"><button class="btn primary" type="submit">Guardar opciones</button></div>
+        </form>
+        <div class="msg" id="optMsg" role="alert"></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+/* =======================================================================
+   CATÁLOGO: magnitudes y tipos de dispositivo
+   -----------------------------------------------------------------------
+   Esta es la única pieza que hay que tocar para que TeleHome admita un
+   tipo nuevo. De cada entrada de TYPES salen, sin escribir interfaz:
+     · el selector y el formulario de alta (campos)
+     · la fila del dispositivo (valor grande, barra, valores secundarios)
+     · su control (interruptor, nivel, posición o solo lectura)
+     · las magnitudes de la gráfica (de METRICS, comunes a todos los tipos:
+       dos tipos que midan «t» se dibujan juntos)
+     · las columnas del resumen
+     · el simulador del modo demostración
+   El servicio solo tiene que devolver cada lectura como
+     reading = { ts, online, error, state:{…}, values:{ <magnitud>: valor } }
+   ======================================================================= */
+
+/* Magnitudes comunes. La clave es la que viaja en values y en el histórico. */
+const TELEHOME_METRICS = {
+  p:   { label: "Potencia",    unit: "W",   dec: 1, zero: true },
+  v:   { label: "Tensión",     unit: "V",   dec: 1, zero: false },
+  i:   { label: "Corriente",   unit: "A",   dec: 3, zero: true },
+  t:   { label: "Temperatura", unit: "°C",  dec: 1, zero: false },
+  h:   { label: "Humedad",     unit: "%",   dec: 0, zero: true },
+  br:  { label: "Brillo",      unit: "%",   dec: 0, zero: true },
+  pos: { label: "Apertura",    unit: "%",   dec: 0, zero: true },
+};
+
+/* ---- ayudas para declarar campos de alta ---- */
+const F = {
+  name:    { n: "name", l: "Nombre", t: "text", req: true, max: 40, ph: "Nevera" },
+  room:    { n: "room", l: "Estancia (opcional)", t: "text", max: 24, ph: "Cocina" },
+  mode:    { n: "mode", l: "Modo", t: "select", opts: [["local", "Local (misma red)"], ["nube", "Nube de Tuya"]] },
+  dev_id:  { n: "dev_id", l: "Device ID", t: "text", req: true, pat: "[A-Za-z0-9]{8,40}", ph: "bf1234…", w: "full", mono: true },
+  key:     { n: "local_key", l: "Local Key", t: "password", ph: "16 caracteres", only: "local", keep: true },
+  ip:      { n: "ip", l: "IP (o «Auto»)", t: "text", v: "Auto", ph: "Auto", only: "local" },
+  version: { n: "version", l: "Versión del protocolo", t: "select", opts: ["3.3", "3.4", "3.5", "3.2", "3.1"], only: "local" },
+};
+/* Bloque común de los dispositivos Tuya + los campos avanzados propios del tipo */
+const tuya = (adv) => [F.name, F.room, F.mode, F.dev_id, F.key, F.ip, F.version].concat(adv);
+/* dps = DPS del protocolo local; code = código de la API de la nube; scale = divisor del valor crudo */
+const dp = (n, l, v) => ({ n: "dp_" + n, l: "DPS " + l, t: "number", min: 1, max: 255, v: v, only: "local", adv: true });
+const code = (n, l, v) => ({ n: "code_" + n, l: "Código " + l, t: "text", v: v, only: "nube", adv: true, mono: true });
+const scale = (n, l, v) => ({ n: "scale_" + n, l: "÷ " + l, t: "number", step: "any", v: v, adv: true });
+
+/* ---- tipos ---- */
+const TELEHOME_TYPES = {
+
+  enchufe: {
+    label: "Enchufe", plural: "Enchufes", desc: "Enchufe Wi-Fi con medida de consumo",
+    icon: "M9 2v6M15 2v6M6 8h12v2.5a6 6 0 0 1-12 0zM12 16.5V22",
+    metrics: ["p", "v", "i"], primary: "p", meta: ["v", "i"], bar: "p",
+    control: "switch", actions: ["switch"],
+    accum: { key: "energy_today_kwh", label: "Hoy", unit: "kWh", dec: 3 },
+    hi: { kind: "sum", metric: "p", main: true, label: "Potencia ahora" },
+    summary: [
+      { key: "energy_kwh", label: "Energía", unit: "kWh", dec: 3, bar: true, total: "sum" },
+      { key: "m.p.avg", label: "Potencia media", unit: "W", dec: 1, total: "sum" },
+      { key: "m.p.max", label: "Potencia máx.", unit: "W", dec: 1 },
+      { key: "m.v.range", label: "Tensión", unit: "V", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+    note: "La energía se integra a partir de la potencia medida en cada lectura.",
+    fields: tuya([
+      dp("switch", "interruptor", 1), dp("power", "potencia", 19), dp("voltage", "tensión", 20), dp("current", "corriente", 18),
+      code("switch", "interruptor", "switch_1"), code("power", "potencia", "cur_power"), code("voltage", "tensión", "cur_voltage"), code("current", "corriente", "cur_current"),
+      scale("power", "potencia", 10), scale("voltage", "tensión", 10), scale("current", "corriente", 1000),
+    ]),
+    state: { on: true },
+    sim(d, t, st, H) {
+      const k = H.seed(d.id), cyc = 0.5 + 0.5 * Math.sin(t / (900 + 37 * (k % 11)) + k);
+      const base = d.sim_base || 120;
+      const p = Math.max(0, base * (0.55 + 0.6 * cyc) * (0.97 + 0.06 * H.hash(Math.floor(t / 10) + k)));
+      const v = 230 + 2.2 * Math.sin(t / 1700 + k) + 0.8 * (H.hash(Math.floor(t / 10) + k + 7) - 0.5);
+      if (!st.on) return { p: 0, v: +v.toFixed(1), i: 0 };
+      return { p: +p.toFixed(1), v: +v.toFixed(1), i: +(p / v).toFixed(3) };
+    },
+  },
+
+  "sensor-th": {
+    label: "Sensor T/H", plural: "Sensores de temperatura y humedad", desc: "Temperatura y humedad, solo lectura",
+    icon: "M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0zM12 9v5",
+    metrics: ["t", "h"], primary: "t", meta: ["h"],
+    control: "none", actions: [],
+    hi: { kind: "avg", metric: "t", label: "Temperatura media" },
+    summary: [
+      { key: "m.t.avg", label: "T. media", unit: "°C", dec: 1 },
+      { key: "m.t.range", label: "T. mín.–máx.", unit: "°C", dec: 1 },
+      { key: "m.h.avg", label: "Humedad media", unit: "%", dec: 0 },
+      { key: "m.h.range", label: "Humedad mín.–máx.", unit: "%", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+    note: "Corrige el error del sensor con el ajuste de temperatura si está expuesto al sol o a una fuente de calor.",
+    fields: tuya([
+      dp("temp", "temperatura", 1), dp("hum", "humedad", 2),
+      code("temp", "temperatura", "va_temperature"), code("hum", "humedad", "va_humidity"),
+      scale("temp", "temperatura", 10), scale("hum", "humedad", 1),
+      { n: "offset_temp", l: "Corrección T. (°C)", t: "number", step: "any", v: 0, adv: true },
+    ]),
+    state: {},
+    sim(d, t, st, H) {
+      const k = H.seed(d.id), day = Math.sin((t % 86400) / 86400 * 2 * Math.PI - 1.9);
+      const base = d.sim_base || 21;
+      const tv = base + 3.4 * day + 0.5 * Math.sin(t / 2300 + k) + 0.25 * (H.hash(Math.floor(t / 60) + k) - 0.5);
+      const hv = 52 - 7 * day + 2.5 * Math.sin(t / 3100 + k * 2) + 1.2 * (H.hash(Math.floor(t / 60) + k + 3) - 0.5);
+      return { t: +(tv + (+d.offset_temp || 0)).toFixed(1), h: +Math.min(99, Math.max(10, hv)).toFixed(0) };
+    },
+  },
+
+  luz: {
+    label: "Luz regulable", plural: "Luces", desc: "Encendido y nivel de brillo",
+    icon: "M9.5 18.5h5M10.5 22h3M12 2a7 7 0 0 0-4 12.8v3.7h8v-3.7A7 7 0 0 0 12 2z",
+    metrics: ["br"], primary: "br", meta: [], bar: "br",
+    control: "level", actions: ["switch", "level"],
+    hi: { kind: "count", label: "Luces encendidas" },
+    summary: [
+      { key: "m.br.avg", label: "Brillo medio", unit: "%", dec: 0 },
+      { key: "m.br.max", label: "Brillo máx.", unit: "%", dec: 0 },
+      { key: "on_ratio", label: "Tiempo encendida", pct: true },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+    note: "El brillo se guarda aunque la luz esté apagada: al encenderla vuelve al último nivel.",
+    fields: tuya([
+      dp("switch", "interruptor", 20), dp("level", "brillo", 22),
+      code("switch", "interruptor", "switch_led"), code("level", "brillo", "bright_value_v2"),
+      scale("level", "brillo (a %)", 10),
+    ]),
+    state: { on: false, br: 60 },
+    sim(d, t, st) { return { br: st.on ? Math.round(st.br) : 0 }; },
+  },
+
+  persiana: {
+    label: "Persiana", plural: "Persianas", desc: "Subir, bajar y posición de apertura",
+    icon: "M3 4h18M5 4v16h14V4M5 9h14M5 13.5h14M5 18h14",
+    metrics: ["pos"], primary: "pos", meta: [], bar: "pos",
+    control: "position", actions: ["position", "stop"],
+    hi: { kind: "avg", metric: "pos", label: "Apertura media" },
+    summary: [
+      { key: "m.pos.avg", label: "Apertura media", unit: "%", dec: 0 },
+      { key: "m.pos.range", label: "Apertura mín.–máx.", unit: "%", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+    note: "La posición es el porcentaje abierto: 100 % totalmente subida.",
+    fields: tuya([
+      dp("control", "orden (subir/parar/bajar)", 1), dp("position", "posición", 2),
+      code("control", "orden", "control"), code("position", "posición", "percent_control"),
+    ]),
+    state: { pos: 100 },
+    sim(d, t, st) { return { pos: Math.round(st.pos) }; },
+  },
+
+  /* ---- previstos: aparecen en el catálogo, todavía sin implementar ---- */
+  termostato: {
+    label: "Termostato", plural: "Termostatos", desc: "Temperatura de consigna y modo",
+    icon: "M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0zM17 7h4M17 11h4",
+    metrics: ["t"], primary: "t", meta: [], control: "setpoint", actions: ["setpoint"],
+    soon: "Pendiente: consigna, modo y calendario",
+  },
+  contador: {
+    label: "Contador general", plural: "Contadores", desc: "Consumo de toda la vivienda",
+    icon: "M12 21a9 9 0 1 0-9-9M12 12l5-4M3 12h3M12 3v3",
+    metrics: ["p"], primary: "p", meta: [], control: "none", actions: [],
+    soon: "Pendiente: lectura del contador o pinza amperimétrica",
+  },
+};
+
+window.TELEHOME_METRICS = TELEHOME_METRICS;
+window.TELEHOME_TYPES = TELEHOME_TYPES;
+/* Tipos que ya se pueden dar de alta */
+window.TELEHOME_READY = Object.keys(TELEHOME_TYPES).filter((k) => !TELEHOME_TYPES[k].soon);
+</script>
+
+<script>
+"use strict";
+/* =======================================================================
+   CONEXIÓN: servicio TeleHome real del mismo servidor, servicio TeleHome
+   Enchufes heredado (mediante adaptador) o modo demostración.
+   Esta parte solo está en la versión web del repositorio «apps»; la página
+   que sirve el propio servicio no la necesita.
+   ======================================================================= */
+(() => {
+const TYPES = window.TELEHOME_TYPES, METRICS = window.TELEHOME_METRICS, READY = window.TELEHOME_READY;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } },
+};
+const CONN = { mode: "demo", base: "", flavor: "telehome" };
+const REGIONS = { "eu": "Europa central", "eu-w": "Europa occidental", "us": "EE. UU. oeste", "us-e": "EE. UU. este", "in": "India", "sg": "Singapur", "cn": "China" };
+const MAXD = 16;
+
+/* ---------------- motor de demostración (multi-tipo) ---------------- */
+const DEMO = (() => {
+  const KEY = "telehome_demo_v1";
+  const slug = (s) => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const H = {
+    hash: (n) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); },
+    seed: (id) => String(id).split("").reduce((a, c) => a + c.charCodeAt(0), 0),
+  };
+  const SEEDS = [
+    { type: "enchufe", name: "Nevera", room: "Cocina", sim_base: 95, st: { on: true } },
+    { type: "enchufe", name: "Lavadora", room: "Cocina", sim_base: 520, st: { on: true } },
+    { type: "enchufe", name: "Equipo de trabajo", room: "Despacho", sim_base: 145, st: { on: true } },
+    { type: "sensor-th", name: "Salón", room: "Salón", sim_base: 21.5, st: {} },
+    { type: "sensor-th", name: "Terraza", room: "Terraza", sim_base: 15.5, st: {} },
+    { type: "luz", name: "Luz del salón", room: "Salón", st: { on: true, br: 72 } },
+    { type: "persiana", name: "Persiana del salón", room: "Salón", st: { pos: 100 } },
+  ];
+  let devs;
+  try { devs = JSON.parse(store.get(KEY) || "null"); } catch (e) { devs = null; }
+  if (!Array.isArray(devs) || !devs.length) devs = SEEDS.map((s, i) => Object.assign({
+    id: slug(s.name) || ("dev-" + (i + 1)), slot: i, mode: "local", dev_id: "demo0000000" + (i + 1), ip: "Auto", version: "3.3", has_key: true,
+  }, defaults(s.type), s));
+  function defaults(type) {              // valores por omisión de los campos declarados por el tipo
+    const o = {}, t = TYPES[type];
+    for (const f of (t && t.fields) || []) if (f.v !== undefined) o[f.n] = f.v;
+    return o;
+  }
+  const save = () => store.set(KEY, JSON.stringify(devs));
+  const pub = (d) => { const o = Object.assign({}, d); delete o.st; delete o.sim_base; delete o.local_key; return o; };
+  const values = (d, t) => {
+    const T = TYPES[d.type]; if (!T || !T.sim) return {};
+    return T.sim(d, t, d.st || {}, H);
+  };
+  const reading = (d, t) => ({ ts: t, online: true, error: null, state: Object.assign({}, d.st), values: values(d, t) });
+  const energyKwh = (d, t0, t1) => {     // integra la potencia simulada en el intervalo
+    if (!TYPES[d.type] || !TYPES[d.type].metrics.includes("p")) return undefined;
+    let e = 0; const n = 60, dt = (t1 - t0) / n;
+    for (let j = 0; j < n; j++) e += (values(d, t0 + (j + 0.5) * dt).p || 0) * dt;
+    return +(e / 3.6e6).toFixed(3);
+  };
+  const accum = (d, now) => {
+    const T = TYPES[d.type]; if (!T || !T.accum) return undefined;
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const o = {}; o[T.accum.key] = energyKwh(d, d0.getTime() / 1000, now); return o;
+  };
+  const range = (q) => { const t1 = Date.now() / 1000, span = Math.max(60, Math.min(+q.get("range") || 86400, 30 * 86400)); return [t1 - span, t1]; };
+  const want = (q) => q.get("dev") || q.get("plug") || "all";
+  const nope = () => { throw new Error("No disponible en la demostración: conecta con un servicio TeleHome real (pie de página)."); };
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, +v || 0));
+
+  function applyAction(d, action, value) {
+    const T = TYPES[d.type] || {}, acts = T.actions || [];
+    if (!acts.includes(action)) throw new Error("«" + (T.label || d.type) + "» no admite la orden «" + action + "».");
+    d.st = d.st || {};
+    if (action === "switch") d.st.on = !!value;
+    else if (action === "level") { d.st.br = clamp(value, 0, 100); d.st.on = d.st.br > 0; }
+    else if (action === "position") d.st.pos = clamp(value, 0, 100);
+    else if (action === "setpoint") d.st.sp = +value;
+    save();
+    return { id: d.id, online: true, error: null, state: Object.assign({}, d.st) };
+  }
+
+  return {
+    handle(path, opt) {
+      const u = new URL(path, "http://x/"), q = u.searchParams, p = u.pathname.replace(/^\//, "");
+      const m = opt.method || "GET", now = Date.now() / 1000, body = opt.body || {};
+      let r;
+      if (p === "api/health") return { app: "TeleHome", version: "0.1.0 · demo" };
+      if (p === "api/state") {
+        return {
+          app: "TeleHome", version: "0.1.0 · demo", simulate: true, max_devices: MAXD, server_time: now,
+          types: READY,
+          options: { poll_interval: 10, cloud_poll_interval: 300, retention_days: 30, cloud_region: "eu", cloud_api_key: "", cloud_secret_set: false, group_by: "tipo" },
+          regions: REGIONS, cloud: { configured: false, calls: 0 },
+          devices: devs.map((d) => Object.assign(pub(d), { reading: reading(d, now), accum: accum(d, now) })),
+        };
+      }
+      if (p === "api/history") {
+        const [t0, t1] = range(q), n = Math.max(50, Math.min(+q.get("points") || 400, 2000)), sel = want(q), series = {};
+        for (const d of devs) {
+          if (sel !== "all" && sel !== d.id) continue;
+          series[d.id] = Array.from({ length: n }, (_, j) => {
+            const t = Math.floor(t0 + (t1 - t0) * j / (n - 1));
+            return Object.assign({ t: t, online: 1 }, values(d, t));
+          });
+        }
+        return { from: t0, to: t1, series: series };
+      }
+      if (p === "api/summary") {
+        const [t0, t1] = range(q), out = {};
+        for (const d of devs) {
+          const T = TYPES[d.type]; if (!T) continue;
+          const N = 120, acc = {};
+          for (const k of T.metrics) acc[k] = [];
+          for (let j = 0; j < N; j++) {
+            const vs = values(d, t0 + (t1 - t0) * j / (N - 1));
+            for (const k of T.metrics) if (vs[k] != null) acc[k].push(vs[k]);
+          }
+          const mm = {};
+          for (const k of T.metrics) {
+            const a = acc[k]; if (!a.length) continue;
+            mm[k] = { avg: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(3), min: Math.min.apply(null, a), max: Math.max.apply(null, a) };
+          }
+          const row = { samples: N, availability: 1, m: mm };
+          if (T.accum) row.energy_kwh = energyKwh(d, t0, t1);
+          if ((T.actions || []).includes("switch")) row.on_ratio = d.st && d.st.on ? 1 : 0;
+          out[d.id] = row;
+        }
+        return { from: t0, to: t1, devices: out };
+      }
+      if (p === "api/export.csv") {
+        const d = devs.find((x) => x.id === want(q)); if (!d) throw new Error("Dispositivo no encontrado");
+        const T = TYPES[d.type], [t0, t1] = range(q), n = 300;
+        const cols = T.metrics, head = ["fecha_hora"].concat(cols.map((k) => (METRICS[k].label + "_" + METRICS[k].unit).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_")));
+        const rows = [head.join(",")];
+        for (let j = 0; j < n; j++) {
+          const t = t0 + (t1 - t0) * j / (n - 1), vs = values(d, t);
+          rows.push([new Date(t * 1000).toISOString()].concat(cols.map((k) => vs[k] == null ? "" : vs[k])).join(","));
+        }
+        return { csv: rows.join("\n") + "\n", name: "telehome-demo-" + d.id + ".csv" };
+      }
+      if ((r = /^api\/devices\/([a-z0-9-]+)\/command$/.exec(p)) && m === "POST") {
+        const d = devs.find((x) => x.id === r[1]); if (!d) throw new Error("No encontrado");
+        return applyAction(d, body.action, body.value);
+      }
+      if ((r = /^api\/plugs\/([a-z0-9-]+)\/power$/.exec(p)) && m === "POST") {   // compatibilidad
+        const d = devs.find((x) => x.id === r[1]); if (!d) throw new Error("No encontrado");
+        return applyAction(d, "switch", body.on);
+      }
+      if (p === "api/devices" && m === "POST") {
+        if (devs.length >= MAXD) throw new Error("Máximo " + MAXD + " dispositivos");
+        const type = body.type || "enchufe";
+        if (!TYPES[type] || TYPES[type].soon) throw new Error("Tipo de dispositivo no admitido todavía: " + type);
+        let id = slug(body.name) || type, n = 2; while (devs.some((x) => x.id === id)) id = (slug(body.name) || type) + "-" + n++;
+        const slot = Array.from({ length: 8 }, (_, k) => k).find((s) => !devs.some((x) => x.slot === s));
+        const d = Object.assign({ id: id, slot: slot == null ? devs.length % 8 : slot, mode: "local", ip: "Auto", version: "3.3" },
+          defaults(type), body, { has_key: !!body.local_key, st: JSON.parse(JSON.stringify(TYPES[type].state || {})) });
+        if (type === "enchufe") d.sim_base = 60 + Math.round(H.hash(id.length * 31 + id.charCodeAt(0)) * 400);
+        if (type === "sensor-th") d.sim_base = 18 + Math.round(H.hash(id.length * 17 + id.charCodeAt(0)) * 8);
+        delete d.local_key; devs.push(d); save(); return pub(d);
+      }
+      if ((r = /^api\/devices\/([a-z0-9-]+)$/.exec(p))) {
+        const i = devs.findIndex((x) => x.id === r[1]); if (i < 0) throw new Error("No encontrado");
+        if (m === "DELETE") { devs.splice(i, 1); save(); return { ok: true }; }
+        if (m === "PUT") {
+          const keep = devs[i].st, b = Object.assign({}, body); delete b.local_key; delete b.type;
+          Object.assign(devs[i], b, { st: keep, has_key: devs[i].has_key || !!body.local_key }); save(); return pub(devs[i]);
+        }
+      }
+      if (p === "api/options" && m === "PUT") return Object.assign({ poll_interval: 10, cloud_poll_interval: 300, retention_days: 30 }, body);
+      return nope();
+    },
+    reset() { try { localStorage.removeItem(KEY); } catch (e) { /* nada */ } },
+  };
+})();
+
+/* ---------------- adaptador del servicio heredado «TeleHome Enchufes» ----------------
+   Mantiene esta app funcionando contra el servicio que solo conoce enchufes:
+   traduce sus respuestas al modelo genérico y sus órdenes al endpoint antiguo. */
+const LEGACY = {
+  FIELDS: ["name", "mode", "dev_id", "ip", "version", "dp_switch", "dp_power", "dp_voltage", "dp_current",
+    "code_switch", "code_power", "code_voltage", "code_current", "scale_power", "scale_voltage", "scale_current", "local_key"],
+  dev(d) {
+    const r = d.reading || null;
+    return Object.assign({}, d, {
+      type: "enchufe",
+      reading: r ? { ts: r.ts, online: r.online, error: r.error, state: { on: !!r.on }, values: { p: r.power_w, v: r.voltage_v, i: r.current_a } } : null,
+      accum: { energy_today_kwh: d.energy_today_kwh },
+    });
+  },
+  state(s) {
+    return Object.assign({}, s, { app: "TeleHome", types: ["enchufe"], legacy: "enchufes", devices: (s.devices || []).map(LEGACY.dev) });
+  },
+  summary(s) {
+    const out = {};
+    for (const [id, p] of Object.entries(s.plugs || {})) out[id] = {
+      samples: p.samples, availability: p.availability, energy_kwh: p.energy_kwh,
+      m: { p: { avg: p.avg_w, max: p.max_w, min: null }, v: { min: p.v_min, max: p.v_max, avg: null } },
+    };
+    return { from: s.from, to: s.to, devices: out };
+  },
+  path(path, opt) {   // reescribe rutas y cuerpos del modelo genérico al heredado
+    let r;
+    if ((r = /^api\/devices\/([a-z0-9-]+)\/command$/.exec(path.split("?")[0])) && (opt.method || "GET") === "POST") {
+      const b = opt.body || {};
+      if (b.action !== "switch") throw new Error("El servicio conectado solo admite encender y apagar enchufes.");
+      return ["api/plugs/" + r[1] + "/power", { method: "POST", body: { on: !!b.value } }];
+    }
+    const o = Object.assign({}, opt);
+    if (o.body && /^api\/devices/.test(path)) {       // el servicio antiguo no conoce type ni room
+      const b = {}; for (const k of LEGACY.FIELDS) if (o.body[k] !== undefined) b[k] = o.body[k];
+      o.body = b;
+    }
+    return [path.replace(/([?&])dev=/, "$1plug="), o];
+  },
+  out(path, data) {
+    const p = path.split("?")[0];
+    if (p === "api/state") return LEGACY.state(data);
+    if (p === "api/summary") return LEGACY.summary(data);
+    return data;
+  },
+};
+
+/* ---------------- llamadas al servicio ---------------- */
+async function serverApi(path, opt) {
+  let p = path, o = opt;
+  if (CONN.flavor === "enchufes") { const t = LEGACY.path(path, opt); p = t[0]; o = t[1]; }
+  const init = { method: o.method || "GET", headers: { "X-TeleHome": "1" } };
+  if (o.body !== undefined) { init.body = JSON.stringify(o.body); init.headers["Content-Type"] = "application/json"; }
+  const res = await fetch(CONN.base + p, init);
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* respuesta no JSON */ }
+  if (!res.ok) throw new Error((data && data.error) || ("Error " + res.status));
+  return CONN.flavor === "enchufes" ? LEGACY.out(path, data) : data;
+}
+async function probe(base) {            // ¿hay un servicio TeleHome en esta ruta de este mismo servidor?
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
+  try {
+    const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal });
+    const j = await res.json();
+    if (!res.ok || !j || typeof j.app !== "string") return null;
+    if (j.app === "TeleHome") return "telehome";
+    if (j.app === "TeleHome Enchufes") return "enchufes";
+    return null;
+  } catch (e) { return null; } finally { clearTimeout(to); }
+}
+function normBase(v) {                  // solo rutas del mismo servidor (el servicio no admite otros orígenes)
+  v = (v || "").trim();
+  if (!v) return "";
+  if (!v.startsWith("/")) throw new Error("Escribe una ruta de este servidor que empiece por «/» (p. ej. /rafa/telehome/).");
+  return v.endsWith("/") ? v : v + "/";
+}
+const q = (s) => document.querySelector(s);
+function showConn() {
+  q("#connState").textContent = CONN.mode === "server"
+    ? "Conectado al servicio" + (CONN.flavor === "enchufes" ? " TeleHome Enchufes (solo enchufes)" : "") + (CONN.base ? " · " + CONN.base : "")
+    : "Modo demostración";
+}
+async function connect(base) {          // base "" = el servicio que sirve esta misma página
+  const flavor = await probe(base);
+  if (flavor) { CONN.mode = "server"; CONN.base = base; CONN.flavor = flavor; store.set("telehome_conn", base); }
+  else { CONN.mode = "demo"; CONN.base = ""; CONN.flavor = "telehome"; }
+  showConn();
+  return CONN.mode === "server";
+}
+window.TELEHOME_BACKEND = {
+  api(path, opt = {}) {
+    if (CONN.mode === "server") return serverApi(path, opt);
+    return new Promise((res, rej) => setTimeout(() => { try { res(DEMO.handle(path, opt)); } catch (e) { rej(e); } }, 30));
+  },
+  csv(id, range) {
+    const path = "api/export.csv?dev=" + encodeURIComponent(id) + "&range=" + range;
+    if (CONN.mode === "server") { location.href = CONN.base + (CONN.flavor === "enchufes" ? path.replace("?dev=", "?plug=") : path); return; }
+    const r = DEMO.handle(path, {}), a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([r.csv], { type: "text/csv;charset=utf-8" })); a.download = r.name;
+    document.body.append(a); a.click(); a.remove();
+  },
+  banner() {
+    if (CONN.mode !== "server") return "Modo demostración: dispositivos simulados de varios tipos, guardados solo en este navegador. Para ver los tuyos, conecta con el servicio TeleHome (pie de página).";
+    if (CONN.flavor === "enchufes") return "Conectado a un servicio TeleHome Enchufes: solo se ven enchufes, y los demás tipos no están disponibles hasta actualizar el servicio.";
+    return "";
+  },
+  label() { return CONN.mode === "server" ? "Conectado al servicio" : "Datos simulados"; },
+  async init(app) {
+    const saved = store.get("telehome_conn");
+    if (saved === "demo-only") { CONN.mode = "demo"; showConn(); }
+    else if (!(saved !== null && await connect(saved)) && !(saved !== "" && await connect(""))) { CONN.mode = "demo"; showConn(); }
+    q("#connForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const ok = await connect(normBase(q("#connBase").value));
+        if (!ok) q("#connState").textContent = "No hay servicio TeleHome en esa ruta: modo demostración";
+        await app.reload();
+      } catch (err) { q("#connState").textContent = err.message; }
+    });
+    q("#connDemo").addEventListener("click", async () => { CONN.mode = "demo"; CONN.base = ""; CONN.flavor = "telehome"; store.set("telehome_conn", "demo-only"); showConn(); await app.reload(); });
+    q("#connReset").addEventListener("click", async () => { DEMO.reset(); location.reload(); });
+  },
+};
+})();
+</script>
+
+<script>
+"use strict";
+/* =======================================================================
+   APP: interfaz genérica construida a partir del catálogo de tipos.
+   Si la página define window.TELEHOME_BACKEND (versión web con modo
+   demostración), las llamadas pasan por él; si no, van al servicio que
+   sirve esta página.
+   ======================================================================= */
+const BACKEND = window.TELEHOME_BACKEND || null;
+const TYPES = window.TELEHOME_TYPES, METRICS = window.TELEHOME_METRICS;
+
+const $ = (s, r = document) => r.querySelector(s);
+const nf = (d) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (v, d = 1) => (v == null || isNaN(v)) ? "—" : nf(d).format(v);
+const el = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v != null) e.setAttribute(k, v);
+  }
+  for (const c of kids) if (c != null) e.append(c);
+  return e;
+};
+const NS = "http://www.w3.org/2000/svg";
+const sv = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+/* Icono del tipo: los iconos del catálogo son trazos sobre una caja de 24 */
+const icon = (type, cls) => {
+  const t = TYPES[type]; if (!t || !t.icon) return null;
+  const s = sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.7", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+  if (cls) s.setAttribute("class", cls);
+  s.append(sv("path", { d: t.icon }));
+  return s;
+};
+
+const RANGES = [["1 h", 3600], ["6 h", 21600], ["24 h", 86400], ["7 días", 604800], ["30 días", 2592000]];
+const GROUPINGS = [["Por tipo", "tipo"], ["Por estancia", "estancia"], ["Sin agrupar", "no"]];
+const S = { state: null, range: 86400, metric: null, sel: "all", hidden: new Set(), group: "tipo",
+  hist: null, sum: null, hover: null, editing: null, pick: null, busy: new Set(), lastOk: 0 };
+
+async function api(path, opt = {}) {
+  if (BACKEND) return BACKEND.api(path, opt);
+  const init = { method: opt.method || "GET", headers: { "X-TeleHome": "1" } };
+  if (opt.body !== undefined) { init.body = JSON.stringify(opt.body); init.headers["Content-Type"] = "application/json"; }
+  const r = await fetch(path, init);
+  let data = null;
+  try { data = await r.json(); } catch (e) { /* respuesta no JSON */ }
+  if (!r.ok) throw new Error((data && data.error) || ("Error " + r.status));
+  return data;
+}
+
+/* ---------- utilidades de tipo ---------- */
+const DESCONOCIDO = { label: "Dispositivo", plural: "Otros dispositivos", metrics: [], meta: [], control: "none", actions: [], summary: [], icon: "M4 6h16v12H4zM8 10h8" };
+const T = (d) => TYPES[d && d.type] || DESCONOCIDO;
+const color = (d) => "var(--series-" + (((d.slot ?? 0) % 8) + 1) + ")";
+const vals = (d) => (d.reading && d.reading.values) || {};
+const st = (d) => (d.reading && d.reading.state) || {};
+const online = (d) => !!(d.reading && d.reading.online);
+const devs = () => (S.state && S.state.devices) || [];
+const unit = (k) => (METRICS[k] ? METRICS[k].unit : "");
+const mfmt = (k, v) => v == null ? "—" : fmt(v, METRICS[k] ? METRICS[k].dec : 1);
+/* Tipos presentes, en el orden del catálogo */
+const typesPresent = () => Object.keys(TYPES).filter((k) => devs().some((d) => d.type === k));
+/* Magnitudes que mide algún dispositivo configurado */
+const metricsPresent = () => Object.keys(METRICS).filter((k) => devs().some((d) => T(d).metrics.includes(k)));
+const hasMetric = (d, k) => T(d).metrics.includes(k);
+const fixMetric = () => { const ms = metricsPresent(); if (!ms.length) S.metric = null; else if (!ms.includes(S.metric)) S.metric = ms[0]; };
+
+/* ---------- avisos ---------- */
+let toastT = null;
+function toast(text, bad = false) {
+  $("#toastTxt").textContent = text; $("#toast").className = "toast" + (bad ? " bad" : ""); $("#toast").hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { $("#toast").hidden = true; }, bad ? 12000 : 3500);
+}
+function setStatus(ok, text, when) {
+  $("#status").querySelector(".dot").className = "dot" + (ok ? "" : " off");
+  $("#statusTxt").textContent = text;
+  $("#statusWhen").textContent = when || "";
+}
+
+/* ---------- contador adaptativo ---------- */
+function odometer(v) {
+  const box = el("div", { class: "odo", role: "img", "aria-label": fmt(v, 3) + " kilovatios hora hoy" });
+  const [ent, dec] = (Math.round(v * 1000) / 1000).toFixed(3).split(".");
+  for (const ch of ent.padStart(3, "0")) box.append(el("i", { text: ch, "aria-hidden": "true" }));
+  box.append(el("b", { text: ",", "aria-hidden": "true" }));
+  for (const ch of dec) box.append(el("i", { class: "d", text: ch, "aria-hidden": "true" }));
+  box.append(el("span", { class: "u", text: "kWh", "aria-hidden": "true" }));
+  return box;
+}
+/* Cifra destacada de un grupo de dispositivos, según el tipo la declare en hi */
+function highlight(type) {
+  const list = devs().filter((d) => d.type === type), t = TYPES[type], hi = t && t.hi;
+  if (!hi || !list.length) return null;
+  const on = list.filter(online), k = hi.metric;
+  const out = { type: type, label: hi.label || t.label, main: !!hi.main, n: list.length, nOn: on.length };
+  if (hi.kind === "count") {
+    const enc = on.filter((d) => st(d).on);
+    out.text = String(enc.length); out.unit = "de " + list.length;
+    out.sub = enc.length ? enc.map((d) => d.name).join(", ") : "ninguna encendida";
+  } else {
+    const nums = on.map((d) => vals(d)[k]).filter((v) => v != null);
+    if (!nums.length) { out.text = "—"; out.unit = unit(k); out.sub = "sin lecturas"; }
+    else if (hi.kind === "sum") {
+      const s = nums.reduce((a, b) => a + b, 0);
+      out.value = s; out.text = fmt(s, s < 100 ? 1 : 0); out.unit = unit(k);
+      out.sub = on.length + " de " + list.length + " en línea";
+    } else {
+      const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+      out.value = avg; out.text = mfmt(k, avg); out.unit = unit(k);
+      out.sub = nums.length > 1 ? "entre " + mfmt(k, Math.min.apply(null, nums)) + " y " + mfmt(k, Math.max.apply(null, nums)) + " " + unit(k) : (on[0] ? on[0].name : "");
+    }
+  }
+  return out;
+}
+function renderHero() {
+  const body = $("#heroBody"), cards = $("#heroCards"), list = devs();
+  body.replaceChildren(); cards.replaceChildren();
+  const his = typesPresent().map(highlight).filter(Boolean);
+  const main = his.find((h) => h.main) || his[0] || null;
+
+  if (!list.length) {
+    body.append(el("div", {}, el("div", { class: "m-label", text: "Sin dispositivos" }),
+      el("div", { class: "m-num num", text: "—" }),
+      el("ul", { class: "m-leg" }, el("li", { class: "none" }, el("span", { class: "mut", text: "Añade el primero en «Ajustes y dispositivos»." })))));
+  } else if (main) {
+    /* bloque principal: la cifra del grupo dominante y, si es de suma, su reparto */
+    const left = el("div", {}, el("div", { class: "m-label", text: main.label }),
+      el("div", { class: "m-num num" }, main.text, el("small", { text: main.unit })));
+    const hi = TYPES[main.type].hi;
+    if (hi.kind === "sum") {
+      const k = hi.metric, act = list.filter((d) => d.type === main.type && online(d) && (vals(d)[k] || 0) > 0.05)
+        .sort((a, b) => (vals(b)[k] || 0) - (vals(a)[k] || 0));
+      const total = act.reduce((a, d) => a + (vals(d)[k] || 0), 0);
+      left.append(el("div", { class: "m-split", "aria-hidden": "true" },
+        ...act.map((d) => el("i", { style: "--c:" + color(d) + ";flex:" + (vals(d)[k] || 0) + " 1 0%" }))));
+      const leg = el("ul", { class: "m-leg", "aria-label": "Reparto por dispositivo" });
+      if (!act.length) leg.append(el("li", { class: "none" }, el("span", { class: "mut", text: main.nOn ? "Ningún dispositivo consume ahora." : "Ningún dispositivo responde." })));
+      for (const d of act) leg.append(el("li", {}, el("span", { class: "sw", style: "--c:" + color(d) }), d.name,
+        el("span", { class: "mut", text: mfmt(k, vals(d)[k]) + " " + unit(k) + " · " + fmt((vals(d)[k] || 0) / total * 100, 0) + " %" })));
+      left.append(leg);
+    } else {
+      left.append(el("div", { class: "m-sub", text: main.sub }));
+    }
+    body.append(left);
+
+    /* bloque derecho: acumulado del día si algún tipo lo trae; si no, la siguiente cifra */
+    const accKeys = typesPresent().filter((k) => TYPES[k].accum);
+    if (accKeys.length) {
+      const a = TYPES[accKeys[0]].accum;
+      const tot = list.reduce((x, d) => x + (((d.accum || {})[a.key]) || 0), 0);
+      body.append(el("div", {}, el("div", { class: "m-label", text: "Energía hoy" }), odometer(tot),
+        el("div", { class: "m-sub", text: "acumulada desde las 00:00" })));
+    } else {
+      const second = his.filter((h) => h !== main)[0];
+      if (second) body.append(el("div", {}, el("div", { class: "m-label", text: second.label }),
+        el("div", { class: "m-num num", style: "font-size:clamp(44px,7vw,72px)" }, second.text, el("small", { text: second.unit })),
+        el("div", { class: "m-sub", text: second.sub })));
+    }
+  }
+
+  /* destacados del resto de grupos */
+  for (const h of his) {
+    if (h === main) continue;
+    const accKeys = typesPresent().filter((k) => TYPES[k].accum);
+    if (!accKeys.length && his.filter((x) => x !== main)[0] === h) continue;   // ya está en el bloque derecho
+    cards.append(el("div", { class: "m-card" },
+      el("div", { class: "k" }, icon(h.type), h.label),
+      el("div", { class: "v num" }, h.text, el("small", { text: h.unit })),
+      el("div", { class: "s", text: h.sub, title: h.sub })));
+  }
+
+  /* chips de estado general */
+  const nOn = list.filter(online), caidos = list.filter((d) => d.reading && !d.reading.online);
+  const conm = list.filter((d) => (T(d).actions || []).includes("switch"));
+  const enc = conm.filter((d) => online(d) && st(d).on);
+  $("#kOnline").replaceChildren(el("b", { text: nOn.length + " de " + list.length }), " en línea");
+  $("#kOn").replaceChildren(conm.length ? el("b", { text: String(enc.length) }) : "", conm.length ? " de " + conm.length + " encendidos" : "");
+  $("#kOnlineS").textContent = caidos.length ? "Sin conexión: " + caidos.map((d) => d.name).join(", ") : "";
+  $("#kOnline").hidden = !list.length;
+  $("#kOn").hidden = !conm.length;
+}
+
+/* ---------- lista de dispositivos, agrupada ---------- */
+function stateText(d) {
+  if (!d.reading) return "Conectando…";
+  if (!online(d)) return "Sin conexión";
+  const t = T(d), s = st(d);
+  if (t.control === "switch" || t.control === "level") return s.on ? "Encendido" : "Apagado";
+  if (t.control === "position") { const p = s.pos != null ? s.pos : vals(d).pos;
+    return p == null ? "En línea" : p <= 0 ? "Cerrada" : p >= 100 ? "Abierta" : "Abierta al " + fmt(p, 0) + " %"; }
+  return "En línea";
+}
+function groupAgg(list) {
+  const parts = [], on = list.filter(online);
+  const pot = on.filter((d) => hasMetric(d, "p")).reduce((a, d) => a + (vals(d).p || 0), 0);
+  if (on.some((d) => hasMetric(d, "p"))) parts.push([fmt(pot, pot < 100 ? 1 : 0), " W"]);
+  const acc = list.reduce((a, d) => { const k = T(d).accum; return a + (k ? ((d.accum || {})[k.key] || 0) : 0); }, 0);
+  if (list.some((d) => T(d).accum)) parts.push([fmt(acc, 3), " kWh hoy"]);
+  if (on.length < list.length) parts.push([String(on.length) + " de " + list.length, " en línea"]);
+  else parts.push([String(list.length), list.length === 1 ? " dispositivo" : " dispositivos"]);
+  const box = el("span", { class: "agg" });
+  parts.forEach((p, i) => { if (i) box.append(" · "); box.append(el("b", { text: p[0] }), p[1]); });
+  return box;
+}
+function groupsOf(list) {
+  if (S.group === "tipo") return typesPresent().map((k) => ({
+    key: k, label: TYPES[k].plural || TYPES[k].label, icon: k, devs: list.filter((d) => d.type === k) }));
+  if (S.group === "estancia") {
+    const names = [];
+    for (const d of list) { const r = (d.room || "").trim() || "Sin estancia"; if (!names.includes(r)) names.push(r); }
+    names.sort((a, b) => a === "Sin estancia" ? 1 : b === "Sin estancia" ? -1 : a.localeCompare(b, "es"));
+    return names.map((r) => ({ key: r, label: r, devs: list.filter((d) => ((d.room || "").trim() || "Sin estancia") === r) }));
+  }
+  return [{ key: "all", label: "", devs: list, flat: true }];
+}
+function control(d) {
+  const t = T(d), s = st(d), ok = online(d) && !S.busy.has(d.id);
+  const box = el("div", { class: "d-ctl" });
+  const stop = (e) => e.stopPropagation();
+  if (t.control === "switch" || t.control === "level") {
+    if (t.control === "level") {
+      const pc = s.br != null ? s.br : vals(d).br;
+      const sl = el("input", { type: "range", min: "0", max: "100", step: "5", value: String(Math.round(pc || 0)),
+        "aria-label": "Brillo de " + d.name, style: "--c:" + color(d) });
+      sl.disabled = !ok;
+      const lab = el("span", { class: "pc num", text: fmt(pc, 0) + " %" });
+      sl.addEventListener("click", stop);
+      sl.addEventListener("input", (e) => { stop(e); lab.textContent = e.target.value + " %"; });
+      sl.addEventListener("change", (e) => { stop(e); send(d, "level", +e.target.value); });
+      box.append(el("div", { class: "level" }, sl, lab));
+    }
+    const sw = el("button", { class: "switch" + (S.busy.has(d.id) ? " busy" : ""), role: "switch", type: "button",
+      "aria-label": "Alimentación de " + d.name, "aria-checked": String(!!s.on) });
+    sw.disabled = !ok;
+    sw.addEventListener("click", (e) => { stop(e); send(d, "switch", !s.on); });
+    box.append(sw);
+  } else if (t.control === "position") {
+    const p = s.pos != null ? s.pos : vals(d).pos;
+    const bt = (title, path, action, value) => {
+      const b = el("button", { type: "button", title: title, "aria-label": title + " " + d.name });
+      const g = sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2.1", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+      g.append(sv("path", { d: path })); b.append(g);
+      b.disabled = !ok; b.addEventListener("click", (e) => { stop(e); send(d, action, value); });
+      return b;
+    };
+    box.append(el("div", { class: "pos", role: "group", "aria-label": "Persiana " + d.name },
+      bt("Subir", "M6 15l6-6 6 6", "position", 100),
+      bt("Parar", "M7 7h10v10H7z", "stop", null),
+      bt("Bajar", "M6 9l6 6 6-6", "position", 0)));
+    if (p != null && p > 0 && p < 100) box.append(el("span", { class: "ro num", text: fmt(p, 0) + " %" }));
+  } else {
+    box.append(el("span", { class: "ro", text: "solo lectura" }));
+  }
+  return box;
+}
+async function send(d, action, value) {
+  S.busy.add(d.id); renderGroups();
+  try {
+    await api("api/devices/" + d.id + "/command", { method: "POST", body: { action: action, value: value } });
+    const q = action === "switch" ? (value ? "encendido" : "apagado") : action === "level" ? "al " + value + " %"
+      : action === "stop" ? "parada" : value >= 100 ? "subiendo" : value <= 0 ? "bajando" : "al " + value + " %";
+    toast("«" + d.name + "» " + q + ".");
+  } catch (err) { toast(err.message, true); }
+  S.busy.delete(d.id);
+  await refresh();
+}
+function sparkline(d) {
+  const svg = sv("svg", { class: "spark", viewBox: "0 0 128 36", "aria-hidden": "true" });
+  const k = T(d).primary; if (!k) return svg;
+  const pts = S.hist && S.hist.series[d.id] ? S.hist.series[d.id].filter((p) => p[k] != null) : [];
+  if (pts.length < 2) return svg;
+  /* Empieza en la primera lectura: con poco histórico no deja la mayor parte del ancho vacía */
+  const t0 = Math.max(S.hist.from, pts[0].t), t1 = S.hist.to;
+  if (!(t1 > t0)) return svg;
+  const zero = METRICS[k] && METRICS[k].zero;
+  let hi = Math.max.apply(null, pts.map((p) => p[k])), lo = zero ? 0 : Math.min.apply(null, pts.map((p) => p[k]));
+  if (!(hi > lo)) { hi = lo + 1; }
+  if (zero && hi <= 0) hi = 1;
+  const X = (t) => (t - t0) / (t1 - t0) * 126 + 1, Y = (v) => 33 - (v - lo) / (hi - lo) * 30;
+  let line = "";
+  pts.forEach((p, j) => { line += (j ? "L" : "M") + X(p.t).toFixed(1) + " " + Y(p[k]).toFixed(1); });
+  const area = line + "L" + X(pts[pts.length - 1].t).toFixed(1) + " 34L" + X(pts[0].t).toFixed(1) + " 34Z";
+  svg.append(sv("line", { x1: 0, x2: 128, y1: 34.5, y2: 34.5, stroke: "var(--grid)", "stroke-width": 1 }),
+    sv("path", { d: area, fill: color(d), opacity: ".13" }),
+    sv("path", { d: line, fill: "none", stroke: color(d), "stroke-width": 1.6, "stroke-linejoin": "round" }));
+  return svg;
+}
+function devRow(d) {
+  const t = T(d), r = d.reading, k = t.primary, v = vals(d), up = online(d);
+  const row = el("article", { class: "dev-row" + (S.sel === d.id ? " sel" : ""), tabindex: "0", style: "--c:" + color(d),
+    "aria-current": S.sel === d.id ? "true" : "false",
+    "aria-label": d.name + " · " + t.label + " · " + stateText(d) + (up && k && v[k] != null ? ", " + mfmt(k, v[k]) + " " + unit(k) : "") + ". Pulsa para verlo solo en la gráfica." });
+  row.addEventListener("click", () => selectDev(S.sel === d.id ? "all" : d.id));
+  row.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === row) { e.preventDefault(); row.click(); } });
+
+  const estado = stateText(d), activo = up && (!(t.actions || []).includes("switch") || st(d).on);
+  const sub = el("div", { class: "d-state" }, el("span", { class: "dot" + (up ? (activo ? "" : " idle") : r ? " off" : " wait") }),
+    el("span", { class: up && activo && (t.actions || []).includes("switch") ? "on" : "", text: estado }),
+    el("span", { text: "· " + (d.mode === "nube" ? "nube de Tuya" : "red local") }));
+  if (S.group !== "tipo") sub.append(el("span", { class: "tag", text: t.label }));
+  if (S.group !== "estancia" && d.room) sub.append(el("span", { class: "room", text: "· " + d.room }));
+
+  const valBox = el("div", { class: "d-val" });
+  if (k) {
+    valBox.append(el("div", { class: "big num" }, up && v[k] != null ? mfmt(k, v[k]) : "—", el("small", { text: unit(k) })));
+    if (t.bar) {       /* barra: valor actual frente al máximo del intervalo elegido */
+      const s = S.sum && S.sum.devices ? S.sum.devices[d.id] : null;
+      const pk = s && s.m && s.m[t.bar] ? (s.m[t.bar].max || 0) : 0, cur = up ? (v[t.bar] || 0) : 0;
+      const frac = cur > 0 ? Math.min(100, cur / Math.max(pk, cur) * 100) : 0;
+      valBox.append(el("div", { class: "loadbar", style: "--w:" + frac.toFixed(1) + "%", "aria-hidden": "true",
+        title: "Valor actual frente al máximo del intervalo" }, el("i")));
+    }
+  }
+  const meta = el("div", { class: "d-meta num" });
+  for (const mk of (t.meta || [])) meta.append(el("span", {}, el("b", { text: up && v[mk] != null ? mfmt(mk, v[mk]) : "—" }), " " + unit(mk)));
+  if (t.accum) meta.append(el("span", {}, t.accum.label + " ", el("b", { text: fmt((d.accum || {})[t.accum.key], t.accum.dec) }), " " + t.accum.unit));
+
+  row.append(el("div", { class: "d-id" }, el("h4", { text: d.name, title: d.name }), sub),
+    valBox, el("div", { class: "d-spark", title: k ? METRICS[k].label + " en el intervalo elegido" : null }, sparkline(d)),
+    meta, control(d), el("div", { class: "err", text: !up && r && r.error ? r.error : "" }));
+  return row;
+}
+function renderGroups() {
+  const box = $("#groups"); box.replaceChildren();
+  const list = devs();
+  if (!list.length) {
+    box.append(el("section", { class: "devs" }, el("div", { class: "empty-card" },
+      el("h3", { text: "Aún no hay dispositivos configurados" }),
+      el("p", { text: "Añade hasta " + ((S.state && S.state.max_devices) || 16) + " dispositivos: enchufes, sensores, luces o persianas." }),
+      el("button", { class: "btn primary", type: "button", text: "Añadir el primero", onclick: () => openDialog() }))));
+    return;
+  }
+  for (const g of groupsOf(list)) {
+    if (!g.devs.length) continue;
+    const sec = el("section", { class: "devs", "aria-label": g.label || "Dispositivos" });
+    if (!g.flat) sec.append(el("div", { class: "grp-h" },
+      el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs)));
+    for (const d of g.devs) sec.append(devRow(d));
+    box.append(sec);
+  }
+}
+function selectDev(id) {
+  S.sel = id;
+  if (id !== "all") { const d = devs().find((x) => x.id === id);   /* si el tipo no mide la magnitud actual, cambia a la suya */
+    if (d && S.metric && !hasMetric(d, S.metric) && T(d).primary) S.metric = T(d).primary; }
+  renderGroups(); renderFilters(); renderLegend(); drawChart(); renderSummary();
+}
+
+/* ---------- gráfica (una magnitud, los dispositivos que la miden) ---------- */
+function niceTicks(lo, hi, n = 5) {
+  if (!(hi > lo)) { hi = lo + 1; }
+  const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || 10 * mag;
+  const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, out = [];
+  for (let v = a; v <= b + step / 2; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+const pad2 = (n) => String(n).padStart(2, "0");
+function tlabel(t, withDate) {
+  const d = new Date(t * 1000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  return withDate ? pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + (d.getHours() || d.getMinutes() ? " " + hm : "") : hm;
+}
+const metricDevs = () => devs().filter((d) => S.metric && hasMetric(d, S.metric) && (S.sel === "all" || S.sel === d.id));
+const visibleDevs = () => metricDevs().filter((d) => !S.hidden.has(d.id));
+
+function drawChart() {
+  const svg = $("#chart"), H = svg.clientHeight || 330, W = Math.max(svg.clientWidth, 320);
+  svg.replaceChildren(); svg.setAttribute("viewBox", "0 0 " + W + " " + H); $("#chartNote").textContent = "";
+  const hist = S.hist, m = METRICS[S.metric];
+  if (!hist || !m) { $("#chartEmpty").hidden = !(S.state && devs().length); svg.style.display = "none"; return; }
+  const M = { l: 54, r: 16, t: 26, b: 28 }, iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const list = visibleDevs();
+  const bucket = Math.max(1, Math.ceil((hist.to - hist.from) / 400));
+  let lo = Infinity, hi = -Infinity, any = false, minT = Infinity;
+  for (const d of list) for (const p of (hist.series[d.id] || [])) {
+    const v = p[S.metric]; if (v != null) { any = true; lo = Math.min(lo, v); hi = Math.max(hi, v); minT = Math.min(minT, p.t); } }
+  $("#chartEmpty").hidden = any; svg.style.display = any ? "block" : "none";
+  if (!any) return;
+  if (m.zero) lo = 0; else { const padv = Math.max((hi - lo) * 0.15, m.dec ? 0.3 : 1); lo -= padv; hi += padv; }
+  const ticks = niceTicks(lo, hi), y0 = ticks[0], y1 = ticks[ticks.length - 1];
+  /* Si las lecturas empiezan bastante después del inicio del intervalo, el eje empieza en la primera lectura */
+  const span0 = hist.to - hist.from;
+  const t0 = (minT - hist.from) > span0 * 0.06 ? Math.max(hist.from, minT - span0 * 0.01) : hist.from, span = hist.to - t0;
+  if (t0 > hist.from) {
+    const d0 = new Date(minT * 1000), hoy = d0.toDateString() === new Date(hist.to * 1000).toDateString();
+    $("#chartNote").textContent = "Hay lecturas desde " + (hoy ? "las " + tlabel(minT, false) : "el " + d0.toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) +
+      "; el intervalo elegido es más largo que el histórico disponible, así que la gráfica empieza ahí.";
+  }
+  const X = (t) => M.l + (t - t0) / span * iw;
+  const Y = (v) => M.t + ih - (v - y0) / (y1 - y0 || 1) * ih;
+  const decT = m.dec > 1 && (y1 - y0) < 5 ? 2 : (y1 - y0) < 5 ? 1 : 0;
+  for (const tv of ticks) {
+    svg.append(sv("line", { x1: M.l, x2: W - M.r, y1: Y(tv), y2: Y(tv), stroke: tv === y0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(sv("text", { x: M.l - 10, y: Y(tv) + 4, "text-anchor": "end" }, fmt(tv, decT)));
+  }
+  const withDate = span > 86400 * 1.2, nx = W < 520 ? 3 : 5;
+  for (let k = 0; k <= nx; k++) {
+    const t = t0 + span * k / nx;
+    svg.append(sv("text", { x: M.l + iw * k / nx, y: H - 8, "text-anchor": k === 0 ? "start" : k === nx ? "end" : "middle" }, tlabel(t, withDate)));
+  }
+  svg.append(sv("text", { x: M.l - 10, y: 12, "text-anchor": "end", "font-weight": "600" }, m.unit));
+  /* Con una sola serie visible se rellena el área bajo la línea */
+  const defs = sv("defs"); svg.append(defs);
+  const single = list.length === 1;
+  for (const d of list) {
+    const pts = hist.series[d.id] || []; let path = "", prev = null, last = null, segs = [], seg = [];
+    for (const p of pts) {
+      const v = p[S.metric];
+      if (v == null) { prev = null; if (seg.length) { segs.push(seg); seg = []; } continue; }
+      const gap = prev == null || p.t - prev > bucket * 3;
+      if (gap && seg.length) { segs.push(seg); seg = []; }
+      path += (gap ? "M" : "L") + X(p.t).toFixed(1) + " " + Y(v).toFixed(1);
+      seg.push([X(p.t), Y(v)]); prev = p.t; last = p;
+    }
+    if (seg.length) segs.push(seg);
+    if (single && m.zero) {
+      const gid = "g-" + d.id.replace(/[^a-z0-9]/gi, "");
+      const g = sv("linearGradient", { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 });
+      g.append(sv("stop", { offset: "0", "stop-color": color(d), "stop-opacity": ".22" }), sv("stop", { offset: "1", "stop-color": color(d), "stop-opacity": "0" }));
+      defs.append(g);
+      for (const sg of segs) if (sg.length > 1) {
+        const dA = "M" + sg.map((c) => c[0].toFixed(1) + " " + c[1].toFixed(1)).join("L") + "L" + sg[sg.length - 1][0].toFixed(1) + " " + Y(y0) + "L" + sg[0][0].toFixed(1) + " " + Y(y0) + "Z";
+        svg.append(sv("path", { d: dA, fill: "url(#" + gid + ")" }));
+      }
+    }
+    if (path) svg.append(sv("path", { d: path, fill: "none", stroke: color(d), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    if (last) svg.append(sv("circle", { cx: X(last.t), cy: Y(last[S.metric]), r: 4, fill: color(d), stroke: "var(--surface)", "stroke-width": 2 }));
+  }
+  S.geo = { M, iw, ih, W, H, X, Y, bucket, t0 };
+  svg.append(sv("line", { class: "cross", y1: M.t, y2: M.t + ih, stroke: "var(--ink2)", "stroke-width": 1, "stroke-dasharray": "3 3", visibility: "hidden" }));
+  svg.append(sv("rect", { class: "hit", x: M.l, y: M.t, width: iw, height: ih, fill: "transparent" }));
+  if (S.hover != null) showHover(S.hover);
+}
+function showHover(t) {
+  const g = S.geo, hist = S.hist; if (!g || !hist) return;
+  const svg = $("#chart"), tip = $("#tip"), list = visibleDevs(), m = METRICS[S.metric];
+  t = Math.min(Math.max(t, g.t0), hist.to);
+  const rows = []; let snap = null, best = Infinity;
+  for (const d of list) {
+    const pts = hist.series[d.id] || []; let near = null, nd = Infinity;
+    for (const p of pts) { const dd = Math.abs(p.t - t); if (dd < nd) { nd = dd; near = p; } }
+    if (near && nd <= g.bucket * 2) { rows.push([d, near]); if (nd < best) { best = nd; snap = near.t; } }
+  }
+  svg.querySelectorAll(".mk").forEach((n) => n.remove());
+  const cross = svg.querySelector(".cross");
+  if (snap == null) { if (cross) cross.setAttribute("visibility", "hidden"); tip.hidden = true; return; }
+  S.hover = snap;
+  const x = g.X(snap); cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.setAttribute("visibility", "visible");
+  tip.replaceChildren(el("div", { class: "t", text: new Date(snap * 1000).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) }));
+  rows.sort((a, b) => (b[1][S.metric] ?? -1) - (a[1][S.metric] ?? -1));
+  for (const [d, p] of rows) {
+    const v = p[S.metric];
+    if (v != null) svg.append(sv("circle", { class: "mk", cx: x, cy: g.Y(v), r: 4.5, fill: color(d), stroke: "var(--surface)", "stroke-width": 2 }));
+    tip.append(el("div", { class: "r" }, el("span", { class: "key", style: "border-color:" + color(d) }),
+      el("b", { text: v == null ? "sin datos" : mfmt(S.metric, v) + " " + m.unit }), el("span", { class: "n", text: d.name })));
+  }
+  tip.hidden = false;
+  const wrap = $("#chartWrap"), tw = tip.offsetWidth, scale = wrap.clientWidth / g.W;
+  let left = x * scale + 14; if (left + tw > wrap.clientWidth) left = x * scale - tw - 14;
+  tip.style.left = Math.max(0, left) + "px"; tip.style.top = "10px";
+}
+function clearHover() {
+  const svg = $("#chart"); S.hover = null; $("#tip").hidden = true;
+  const c = svg.querySelector(".cross"); if (c) c.setAttribute("visibility", "hidden"); svg.querySelectorAll(".mk").forEach((n) => n.remove());
+}
+function bindChart() {
+  const svg = $("#chart");
+  const tAt = (e) => { const r = svg.getBoundingClientRect(), g = S.geo; if (!g || !S.hist) return null;
+    const px = (e.clientX - r.left) * g.W / r.width; return g.t0 + (px - g.M.l) / g.iw * (S.hist.to - g.t0); };
+  svg.addEventListener("pointermove", (e) => { const t = tAt(e); if (t != null) showHover(t); });
+  svg.addEventListener("pointerdown", (e) => { const t = tAt(e); if (t != null) showHover(t); });
+  svg.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") clearHover(); });
+  svg.addEventListener("blur", clearHover);
+  svg.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") return clearHover();
+    if (!S.geo || !S.hist || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    e.preventDefault(); const step = S.geo.bucket * (e.shiftKey ? 10 : 1);
+    let t = S.hover ?? S.hist.to;
+    t = e.key === "ArrowLeft" ? t - step : e.key === "ArrowRight" ? t + step : e.key === "Home" ? S.geo.t0 : S.hist.to;
+    showHover(t);
+  });
+  let w = 0;
+  new ResizeObserver(() => { if (svg.clientWidth !== w) { w = svg.clientWidth; drawChart(); } }).observe(svg);
+}
+function renderLegend() {
+  const lg = $("#legend"); lg.replaceChildren();
+  const m = METRICS[S.metric], list = metricDevs();
+  $("#chartTitle").replaceChildren(m ? m.label + " " : "Histórico",
+    el("small", { text: m ? "(" + m.unit + ")" + (S.sel === "all" ? " · " + list.length + (list.length === 1 ? " dispositivo" : " dispositivos") : " · " + (list[0] ? list[0].name : "")) : "" }));
+  lg.hidden = list.length < 2;
+  if (list.length < 2) return;
+  for (const d of list) {
+    const b = el("button", { type: "button", "aria-pressed": String(!S.hidden.has(d.id)) }, el("span", { class: "key", style: "border-color:" + color(d) }), d.name);
+    b.addEventListener("click", () => { S.hidden.has(d.id) ? S.hidden.delete(d.id) : S.hidden.add(d.id); renderLegend(); drawChart(); });
+    lg.append(b);
+  }
+}
+function renderFilters() {
+  const rg = $("#rangeGrp"); rg.replaceChildren();
+  for (const [lab, secs] of RANGES) {
+    const b = el("button", { type: "button", text: lab, "aria-pressed": String(S.range === secs) });
+    b.addEventListener("click", () => { S.range = secs; renderFilters(); loadChart(); }); rg.append(b);
+  }
+  const mg = $("#metricGrp"); mg.replaceChildren();
+  for (const k of metricsPresent()) {
+    const b = el("button", { type: "button", text: METRICS[k].label, "aria-pressed": String(S.metric === k),
+      title: METRICS[k].label + " (" + METRICS[k].unit + ")" });
+    b.addEventListener("click", () => { S.metric = k; renderFilters(); renderLegend(); drawChart(); renderSummary(); }); mg.append(b);
+  }
+  const gg = $("#groupGrp"); gg.replaceChildren();
+  for (const [lab, key] of GROUPINGS) {
+    const b = el("button", { type: "button", text: lab, "aria-pressed": String(S.group === key) });
+    b.addEventListener("click", () => { S.group = key; renderFilters(); renderGroups(); }); gg.append(b);
+  }
+  const uno = S.sel !== "all" || devs().length === 1;
+  $("#btnCsv").disabled = !uno;
+  $("#btnCsv").title = uno ? "Descargar las lecturas del dispositivo seleccionado" : "Pulsa un dispositivo de la lista para elegir el que quieres exportar";
+}
+
+/* ---------- resumen: una tabla por tipo, con las columnas que declara ---------- */
+function sumValue(row, key) {
+  if (!row) return null;
+  if (!key.startsWith("m.")) return row[key];
+  const [, mk, agg] = key.split(".");
+  const m = row.m && row.m[mk]; if (!m) return null;
+  return agg === "range" ? (m.min == null || m.max == null ? null : [m.min, m.max]) : m[agg];
+}
+function sumCell(col, row) {
+  const v = sumValue(row, col.key);
+  if (v == null) return "—";
+  if (Array.isArray(v)) return fmt(v[0], col.dec) + "–" + fmt(v[1], col.dec) + (col.unit ? " " + col.unit : "");
+  if (col.pct) return fmt(v * 100, 1) + " %";
+  return fmt(v, col.dec) + (col.unit ? " " + col.unit : "");
+}
+function renderSummary() {
+  const box = $("#sumBox"); box.replaceChildren();
+  const lab = RANGES.find((r) => r[1] === S.range);
+  $("#sumTitle").replaceChildren("Resumen ", el("small", { text: "· últimas " + (lab ? lab[0] : "") }));
+  const rows = (S.sum && S.sum.devices) || null;
+  const notas = [];
+  if (!rows) { $("#sumHint").textContent = ""; return; }
+  const tipos = typesPresent().filter((k) => devs().some((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id)));
+  for (const k of tipos) {
+    const t = TYPES[k], cols = t.summary || [];
+    if (!cols.length) continue;
+    const list = devs().filter((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id));
+    const head = el("tr", {}, el("th", { text: t.label }), ...cols.map((c) => el("th", { text: c.label })));
+    const body = el("tbody"), foot = el("tfoot");
+    const maxBar = {}, tot = {};
+    for (const c of cols) if (c.bar) maxBar[c.key] = Math.max(...list.map((d) => sumValue(rows[d.id], c.key) || 0), 0.0001);
+    for (const d of list) {
+      const row = rows[d.id];
+      const tr = el("tr", { class: S.sel === d.id ? "sel" : "", title: "Ver solo «" + d.name + "» en la gráfica" },
+        el("td", {}, el("span", { class: "key", style: "border-color:" + color(d) + ";margin-right:10px;vertical-align:middle" }), d.name));
+      for (const c of cols) {
+        const td = el("td", { class: "num" }, sumCell(c, row));
+        if (c.bar) td.append(el("span", { class: "bar", style: "--c:" + color(d) + ";width:" + Math.round(40 * (sumValue(row, c.key) || 0) / maxBar[c.key]) + "px" }));
+        if (c.total === "sum") tot[c.key] = (tot[c.key] || 0) + (sumValue(row, c.key) || 0);
+        tr.append(td);
+      }
+      tr.addEventListener("click", () => selectDev(S.sel === d.id ? "all" : d.id));
+      body.append(tr);
+    }
+    if (list.length > 1 && cols.some((c) => c.total === "sum")) {
+      const tr = el("tr", {}, el("td", { text: "Total" }));
+      for (const c of cols) tr.append(el("td", { class: "num", text: c.total === "sum" ? fmt(tot[c.key], c.dec) + (c.unit ? " " + c.unit : "") : "" }));
+      foot.append(tr);
+    }
+    const tbl = el("table", {}, el("thead", {}, head), body, foot);
+    box.append(el("div", { class: "tbl", style: box.children.length ? "margin-top:18px" : null }, tbl));
+    if (t.note) notas.push(t.note);
+  }
+  $("#sumHint").textContent = notas.join(" ");
+}
+async function loadChart() {
+  if (!S.state || !devs().length) { S.hist = null; S.sum = null; drawChart(); renderSummary(); return; }
+  const qs = "range=" + S.range;
+  const [h, s] = await Promise.all([api("api/history?dev=all&points=400&" + qs), api("api/summary?" + qs)]);
+  S.hist = h; S.sum = s; renderLegend(); drawChart(); renderSummary(); renderGroups();
+}
+
+/* ---------- ajustes: alta de dispositivos con formulario generado ---------- */
+const CONTROLS = { switch: "Encendido y apagado", level: "Encendido y brillo", position: "Subir, parar y bajar", setpoint: "Temperatura de consigna", none: "Solo lectura" };
+const supported = (k) => !TYPES[k].soon && (!S.state || !S.state.types || S.state.types.includes(k));
+
+function showTab(name) {
+  document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.querySelectorAll("[data-panel]").forEach((p) => { p.hidden = p.dataset.panel !== name; });
+}
+function openDialog(tab) {
+  renderTypePick(); renderDevList(); renderCatalogue();
+  showTab(typeof tab === "string" ? tab : "dispositivos");
+  $("#dlg").showModal(); fillOptions();
+}
+function renderCatalogue() {
+  const tb = $("#catTable tbody"); tb.replaceChildren();
+  for (const [k, t] of Object.entries(TYPES)) {
+    const ms = (t.metrics || []).map((m) => METRICS[m].label + " (" + METRICS[m].unit + ")").join(", ");
+    const n = devs().filter((d) => d.type === k).length;
+    tb.append(el("tr", {},
+      el("td", {}, el("div", { style: "display:flex;gap:8px;align-items:center;font-weight:650" }, icon(k), t.label),
+        el("div", { class: "mg", text: t.desc || "" })),
+      el("td", { class: "mg", text: ms || "—" }),
+      el("td", { class: "mg", text: CONTROLS[t.control] || "—" }),
+      el("td", { class: "mg", text: t.soon ? t.soon : n ? "Disponible · " + n + " configurado" + (n === 1 ? "" : "s") : "Disponible" })));
+  }
+}
+function renderTypePick() {
+  const box = $("#typePick"); box.replaceChildren();
+  for (const [k, t] of Object.entries(TYPES)) {
+    const b = el("button", { type: "button", "aria-pressed": String(S.pick === k),
+      title: t.soon ? t.soon : (t.desc || t.label) },
+      el("span", { class: "ic" }, icon(k)), el("span", { class: "nm", text: t.label }),
+      el("span", { class: "de", text: t.desc || "" }),
+      t.soon ? el("span", { class: "so", text: "Próximamente" })
+        : (!supported(k) ? el("span", { class: "so", text: "No disponible en el servicio conectado" }) : null));
+    b.disabled = !!t.soon || !supported(k) || (!!S.editing && S.pick !== k);
+    b.addEventListener("click", () => pickType(k));
+    box.append(b);
+  }
+}
+function pickType(k) {
+  S.pick = k; renderTypePick(); buildForm(k);
+  $("#devForm").hidden = false;
+  if (S.scan && !S.editing) {            /* viene de «Buscar en la red local»: rellena lo encontrado */
+    const f = $("#devForm").elements;
+    if (f.dev_id) f.dev_id.value = S.scan.dev_id || "";
+    if (f.ip) f.ip.value = S.scan.ip || "Auto";
+    if (f.version && S.scan.version) f.version.value = S.scan.version;
+    S.scan = null;
+  }
+  if (!S.editing) { $("#formTitle").textContent = "Añadir · " + TYPES[k].label; $("#btnSave").textContent = "Añadir"; }
+  setMsg("#formMsg", "", true);
+}
+function fieldBox(f) {
+  const lab = el("label", { class: f.w === "full" ? "full" : null }, f.l);
+  let inp;
+  if (f.t === "select") {
+    inp = el("select", { name: f.n });
+    for (const o of f.opts) { const [v, l] = Array.isArray(o) ? o : [o, o]; inp.append(el("option", { value: v, text: l })); }
+  } else {
+    inp = el("input", { name: f.n, type: f.t === "password" ? "password" : f.t,
+      placeholder: f.ph || null, maxlength: f.max || null, pattern: f.pat || null,
+      min: f.min != null ? f.min : null, max: f.max != null && f.t === "number" ? f.max : null, step: f.step || null,
+      autocomplete: f.t === "password" ? "new-password" : "off", spellcheck: f.mono ? "false" : null });
+    if (f.req) inp.required = true;
+    if (f.mono) inp.style.fontFamily = "var(--mono)";
+  }
+  if (f.v !== undefined) inp.value = f.v;
+  lab.append(inp);
+  const wrap = el("div", { style: "display:contents" });
+  if (f.only) wrap.dataset.only = f.only;
+  wrap.append(lab);
+  return wrap;
+}
+function buildForm(type) {
+  const t = TYPES[type], box = $("#formFields");
+  box.replaceChildren(); box.className = "fgrid";
+  const base = (t.fields || []).filter((f) => !f.adv), adv = (t.fields || []).filter((f) => f.adv);
+  for (const f of base) box.append(fieldBox(f));
+  if (adv.length) {
+    const grid = el("div", { class: "adv" });
+    for (const f of adv) grid.append(fieldBox(f));
+    box.append(el("details", {}, el("summary", { text: "Avanzado: mapa de datos y escalas" }), grid));
+  }
+  const sel = $("#devForm").elements.mode;
+  if (sel) { sel.addEventListener("change", () => applyMode(sel.value)); applyMode(sel.value); }
+}
+function applyMode(m) {
+  document.querySelectorAll("#formFields [data-only]").forEach((w) => {
+    const show = w.dataset.only === m;
+    w.style.display = show ? "contents" : "none";
+    w.querySelectorAll("input,select").forEach((i) => { i.disabled = !show; });
+  });
+}
+function formFieldNames() { return ((TYPES[S.pick] || {}).fields || []).map((f) => f.n); }
+function setMsg(sel, text, ok) { const m = $(sel); m.textContent = text; m.className = "msg " + (ok ? "ok" : "bad"); }
+function renderDevList() {
+  const box = $("#devList"); box.replaceChildren();
+  const list = devs();
+  $("#dlgCount").textContent = "(" + list.length + " de " + ((S.state && S.state.max_devices) || 16) + ")";
+  if (!list.length) box.append(el("div", { class: "msg ok", text: "Ninguno todavía: elige un tipo abajo y rellena sus datos." }));
+  for (const d of list) {
+    const t = T(d);
+    box.append(el("div", { class: "dev" }, el("span", { class: "key", style: "border-color:" + color(d) }),
+      el("div", { class: "n" }, d.name, el("span", { class: "tag", style: "margin-left:8px", text: t.label }),
+        el("small", { text: d.dev_id + " · " + (d.mode === "nube" ? "nube de Tuya" : (d.ip || "Auto") + " · v" + (d.version || "3.3")) + (d.room ? " · " + d.room : "") })),
+      el("button", { class: "btn", type: "button", text: "Editar", onclick: () => editDev(d) }),
+      el("button", { class: "btn danger", type: "button", text: "Eliminar", onclick: () => delDev(d) })));
+  }
+  const full = list.length >= ((S.state && S.state.max_devices) || 16) && !S.editing;
+  $("#btnSave").disabled = full;
+  if (full) setMsg("#formMsg", "Has alcanzado el máximo de " + S.state.max_devices + " dispositivos.", false);
+}
+function editDev(d) {
+  S.editing = d.id; S.pick = d.type;
+  pickType(d.type);
+  const f = $("#devForm");
+  for (const n of formFieldNames()) if (f.elements[n] && d[n] !== undefined && d[n] !== null) f.elements[n].value = d[n];
+  if (f.elements.mode) applyMode(f.elements.mode.value);
+  if (f.elements.local_key) { f.elements.local_key.value = ""; f.elements.local_key.placeholder = d.has_key ? "(sin cambios)" : "16 caracteres"; }
+  renderTypePick();
+  $("#formTitle").textContent = "Editar «" + d.name + "»"; $("#btnSave").textContent = "Guardar cambios"; $("#btnSave").disabled = false;
+  $("#btnCancel").hidden = false; setMsg("#formMsg", "", true);
+  $("#formTitle").scrollIntoView({ block: "center" });
+  if (f.elements.name) f.elements.name.focus();
+}
+function resetForm() {
+  S.editing = null; S.pick = null;
+  const f = $("#devForm"); f.reset(); f.hidden = true; $("#formFields").replaceChildren();
+  $("#formTitle").textContent = "Añadir dispositivo"; $("#btnSave").textContent = "Añadir"; $("#btnCancel").hidden = true;
+  setMsg("#formMsg", "", true); renderTypePick();
+}
+async function delDev(d) {
+  if (!confirm("¿Eliminar «" + d.name + "» y su histórico de telemetría?")) return;
+  try {
+    await api("api/devices/" + d.id, { method: "DELETE" });
+    if (S.sel === d.id) S.sel = "all";
+    resetForm(); await refresh(); renderDevList(); renderCatalogue(); toast("«" + d.name + "» eliminado.");
+  } catch (e) { setMsg("#formMsg", e.message, false); }
+}
+function downloadCsv(id) {
+  if (BACKEND && BACKEND.csv) return BACKEND.csv(id, S.range);
+  location.href = "api/export.csv?dev=" + encodeURIComponent(id) + "&range=" + S.range;
+}
+function fillOptions() {
+  if (!S.state) return;
+  const o = S.state.options || {}, f = $("#optForm");
+  f.elements.poll_interval.value = o.poll_interval; f.elements.cloud_poll_interval.value = o.cloud_poll_interval; f.elements.retention_days.value = o.retention_days;
+  updateEstimate();
+  const cf = $("#cloudForm"), sel = $("#regionSel");
+  if (!sel.options.length) for (const [k, v] of Object.entries(S.state.regions || {})) sel.append(el("option", { value: k, text: v + " (" + k + ")" }));
+  sel.value = o.cloud_region; cf.elements.api_key.value = o.cloud_api_key || ""; cf.elements.api_secret.value = "";
+  cf.elements.api_secret.placeholder = o.cloud_secret_set ? "(guardado; déjalo vacío para conservarlo)" : "";
+}
+function updateEstimate() {
+  const iv = Math.max(60, +$("#optForm").elements.cloud_poll_interval.value || 300);
+  const n = devs().filter((d) => d.mode === "nube").length;
+  $("#callEstimate").textContent = n
+    ? "Modo nube: unas 2 llamadas a la API por ciclo para todos los dispositivos (" + n + "), ≈ " + nf(0).format(Math.round(2 * 86400 * 30 / iv)) + " llamadas al mes. La cuenta gratuita de Tuya tiene un cupo limitado."
+    : "Ningún dispositivo en modo nube.";
+}
+
+function bindDialog() {
+  document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  $("#optForm").elements.cloud_poll_interval.addEventListener("input", updateEstimate);
+  $("#btnSettings").addEventListener("click", () => openDialog());
+  $("#btnClose").addEventListener("click", () => $("#dlg").close());
+  $("#btnCancel").addEventListener("click", () => { resetForm(); renderDevList(); });
+  $("#devForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, body = { type: S.pick };
+    for (const n of formFieldNames()) {
+      const i = f.elements[n]; if (!i || i.disabled) continue;
+      if (n === "local_key") { if (i.value) body.local_key = i.value.trim(); continue; }
+      body[n] = String(i.value).trim();
+    }
+    try {
+      if (S.editing) await api("api/devices/" + S.editing, { method: "PUT", body: body });
+      else await api("api/devices", { method: "POST", body: body });
+      resetForm(); await refresh(); await loadChart(); renderDevList(); renderCatalogue(); setMsg("#formMsg", "Guardado.", true);
+    } catch (err) { setMsg("#formMsg", err.message, false); }
+  });
+  $("#optForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = e.target;
+    try {
+      await api("api/options", { method: "PUT", body: { poll_interval: +f.elements.poll_interval.value, cloud_poll_interval: +f.elements.cloud_poll_interval.value, retention_days: +f.elements.retention_days.value } });
+      setMsg("#optMsg", "Opciones guardadas.", true); await refresh(); updateEstimate();
+    } catch (err) { setMsg("#optMsg", err.message, false); }
+  });
+  $("#cloudForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = e.target;
+    try {
+      await api("api/cloud", { method: "PUT", body: { region: f.elements.region.value, api_key: f.elements.api_key.value.trim(), api_secret: f.elements.api_secret.value.trim() } });
+      await refresh(); fillOptions(); setMsg("#cloudMsg", "Credenciales guardadas.", true);
+    } catch (err) { setMsg("#cloudMsg", err.message, false); }
+  });
+  $("#btnCloudTest").addEventListener("click", async () => {
+    setMsg("#cloudMsg", "Conectando con la nube de Tuya…", true);
+    try { const r = await api("api/cloud/test", { method: "POST", body: {} }); setMsg("#cloudMsg", "Conexión correcta: " + r.devices + " dispositivos en la cuenta enlazada.", true); }
+    catch (err) { setMsg("#cloudMsg", err.message, false); }
+  });
+  $("#btnCloudList").addEventListener("click", async () => {
+    const out = $("#cloudOut"); out.replaceChildren(); setMsg("#cloudMsg", "Consultando la nube…", true);
+    try {
+      const r = await api("api/cloud/devices", { method: "POST", body: {} });
+      setMsg("#cloudMsg", r.found.length ? "" : "La cuenta enlazada no tiene dispositivos (¿centro de datos correcto?).", true);
+      for (const f of r.found) {
+        const add = el("button", { class: "btn", type: "button", text: f.configured ? "Ya configurado" : "Añadir" });
+        add.disabled = f.configured || devs().length >= S.state.max_devices;
+        add.addEventListener("click", async () => {
+          add.disabled = true;
+          try {
+            const rep = await api("api/cloud/import", { method: "POST", body: { dev_ids: [f.dev_id], type: f.type || "enchufe" } });
+            if (rep["omitidos"] && rep["omitidos"].length) throw new Error(rep["omitidos"][0].motivo);
+            add.textContent = "Añadido"; await refresh(); renderDevList();
+          } catch (err) { setMsg("#cloudMsg", err.message, false); add.disabled = false; }
+        });
+        out.append(el("div", { class: "found" },
+          el("code", { text: f.name + " · " + f.dev_id + (f.category ? " · " + f.category : "") + (f.online === false ? " · desconectado" : "") +
+            (/^vdevo/i.test(f.dev_id) ? " · virtual (solo pruebas)" : "") }), add));
+      }
+    } catch (err) { setMsg("#cloudMsg", err.message, false); }
+  });
+  $("#btnScan").addEventListener("click", async () => {
+    const out = $("#scanOut"); out.className = "msg ok"; out.textContent = "Buscando… (unos 12 s)"; $("#btnScan").disabled = true;
+    try {
+      const r = await api("api/discover", { method: "POST", body: {} });
+      out.replaceChildren(); out.className = "";
+      if (!r.found.length) { out.className = "msg ok"; out.textContent = "No se ha encontrado ningún dispositivo (¿misma red Wi-Fi? ¿dispositivo encendido?)."; }
+      for (const f of r.found) {
+        const use = el("button", { class: "btn", type: "button", text: f.configured ? "Ya configurado" : "Usar", onclick: () => {
+          resetForm(); showTab("dispositivos"); setMsg("#formMsg", "Elige el tipo de «" + f.dev_id + "» para completar el alta.", true);
+          S.scan = f; $("#typePick").scrollIntoView({ block: "center" });
+        } });
+        use.disabled = f.configured;
+        out.append(el("div", { class: "found" }, el("code", { text: f.ip + "  ·  " + f.dev_id + "  ·  v" + f.version }), use));
+      }
+    } catch (err) { out.className = "msg bad"; out.textContent = err.message; }
+    $("#btnScan").disabled = false;
+  });
+  $("#fileImport").addEventListener("change", async (e) => {
+    const out = $("#importOut"), file = e.target.files[0]; if (!file) return;
+    try {
+      const rows = JSON.parse(await file.text());
+      const r = await api("api/devices/import", { method: "POST", body: { devices: Array.isArray(rows) ? rows : (rows.devices || []) } });
+      out.className = "msg ok"; out.textContent = "Añadidos: " + ((r["añadidos"] || []).join(", ") || "ninguno") +
+        ((r["omitidos"] || []).length ? ". Omitidos: " + r["omitidos"].map((o) => o.name + " (" + o.motivo + ")").join("; ") : "");
+      await refresh(); renderDevList();
+    } catch (err) { out.className = "msg bad"; out.textContent = err.message; }
+    e.target.value = "";
+  });
+  $("#btnCsv").addEventListener("click", () => {
+    const id = S.sel !== "all" ? S.sel : (devs()[0] && devs()[0].id); if (id) downloadCsv(id);
+  });
+  $("#toastX").addEventListener("click", () => { $("#toast").hidden = true; });
+  /* Al cerrar la hoja de ajustes, quita el foco del campo para que el teclado virtual no se quede abierto */
+  $("#dlg").addEventListener("close", () => { const a = document.activeElement; if (a && a.blur) a.blur(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { const a = document.activeElement; if (a && a.blur && /INPUT|SELECT/.test(a.tagName)) a.blur(); } });
+}
+
+/* ---------- ciclo ---------- */
+async function refresh() {
+  try { S.state = await api("api/state"); }
+  catch (e) {
+    setStatus(false, "Sin conexión con el servicio", S.lastOk ? "Último dato a las " + new Date(S.lastOk).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "Reintentando…");
+    throw e;
+  }
+  S.lastOk = Date.now();
+  $("#ver").textContent = "v" + S.state.version;
+  const aviso = BACKEND && BACKEND.banner ? BACKEND.banner() : "";
+  const sim = !!S.state.simulate;
+  $("#simBanner").hidden = !(aviso || sim);
+  if (aviso) $("#simText").textContent = aviso;
+  const demo = !!(BACKEND && BACKEND.banner && BACKEND.banner() && (!S.state.legacy));
+  $("#modeBadge").hidden = !(aviso || sim);
+  $("#modeBadge").textContent = S.state.legacy ? "Solo enchufes" : (demo ? "Demostración" : "Simulación");
+  setStatus(true, BACKEND && BACKEND.label ? BACKEND.label() : "Conectado",
+    "Actualizado a las " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  if (S.sel !== "all" && !devs().some((d) => d.id === S.sel)) S.sel = "all";
+  fixMetric();
+  renderHero(); renderGroups(); renderFilters();
+  if ($("#dlg").open) { renderDevList(); updateEstimate(); }
+}
+async function init() {
+  bindChart(); bindDialog();
+  if (BACKEND && BACKEND.init) await BACKEND.init({ reload: async () => { S.sel = "all"; S.hidden.clear(); await refresh(); await loadChart(); } });
+  await refresh(); renderLegend(); await loadChart();
+  setInterval(() => { if (!document.hidden) refresh().catch(() => {}); }, 3000);
+  setInterval(() => { if (!document.hidden) loadChart().catch(() => {}); }, 15000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh().then(loadChart).catch(() => {}); });
+}
+init().catch((e) => { setStatus(false, e.message); });
+</script>
+</body>
+</html>

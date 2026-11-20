@@ -78,8 +78,8 @@ En el servicio, el tipo nuevo solo tiene que leer sus DPS o códigos y devolver 
 
 | Modo | Cuándo | Qué hace |
 |---|---|---|
-| **Servicio TeleHome** | La página la sirve el propio servicio, o escribes en el pie su ruta en el mismo servidor (p. ej. `/rafa/telehome/`) | Todos los tipos, con dispositivos reales |
-| **Servicio TeleHome Enchufes** | Se detecta el servicio heredado (`api/health` responde `TeleHome Enchufes`) | Un adaptador traduce sus respuestas al modelo genérico: se ven y se controlan los enchufes reales, y los demás tipos quedan deshabilitados hasta actualizar el servicio |
+| **Servicio TeleHome** | La página la sirve el propio servicio, o escribes en el pie su ruta en el mismo servidor (p. ej. `/rafa/telehome/`). Se reconoce porque `api/health` responde `"api": "telehome"` (o `"app": "TeleHome"`) | Todos los tipos que el servicio declare en `types`, con dispositivos reales |
+| **Servicio TeleHome Enchufes anterior** | `api/health` responde `TeleHome Enchufes` **sin** `"api": "telehome"` (versiones hasta la 0.4.0) | Un adaptador traduce sus respuestas al modelo genérico: se ven y se controlan los enchufes reales, y los demás tipos quedan deshabilitados hasta actualizar el servicio. Desde la 0.5.0 el servicio habla el protocolo genérico y el adaptador ya no interviene |
 | **Demostración** | No se encuentra ningún servicio (p. ej. en GitHub Pages) | Siete dispositivos simulados de los cuatro tipos; se pueden controlar, añadir y exportar a CSV. Los datos se guardan solo en el navegador (`localStorage`, clave `telehome_demo_v1`; «Reiniciar demo» los borra) |
 
 Notas:

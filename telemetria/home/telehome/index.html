@@ -367,7 +367,7 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
   </div>
   <p>TeleHome · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-20 14:12</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-20 14:29</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -879,7 +879,10 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
     const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal });
     const j = await res.json();
     if (!res.ok || !j || typeof j.app !== "string") return null;
-    if (j.app === "TeleHome") return "telehome";
+    /* «api: telehome» es el saludo del protocolo genérico: lo anuncian tanto el servicio
+       TeleHome como un TeleHome Enchufes ya actualizado (que conserva su nombre para no
+       romper las apps anteriores). Sin ese campo, se habla por el adaptador. */
+    if (j.api === "telehome" || j.app === "TeleHome") return "telehome";
     if (j.app === "TeleHome Enchufes") return "enchufes";
     return null;
   } catch (e) { return null; } finally { clearTimeout(to); }

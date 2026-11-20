@@ -98,6 +98,42 @@ def _fecha_es(dt):
 
 
 # ============================================================================
+# PIE DE PÁGINA COMÚN — el mismo en la página de entrada (index.html de la
+# raíz), en el catálogo completo y en la versión agrupada por tema.
+# ============================================================================
+
+PIE_ENLACES = [
+    ("inicio", "Inicio", ""),
+    ("catalogo", "Catálogo completo", "appindex/"),
+    ("temas", "Agrupado por tema", "appindex/temas/"),
+    ("anterior", "Versión anterior", "appindex/index-anterior.html"),
+]
+
+
+def render_footer_html(actual, raiz, contact_name, contact_email, department="", university="", repo_url="", fecha=None):
+    """Contenido interior del <footer> común. `actual` es la página en la que
+    se inserta (inicio, catalogo o temas) y `raiz` la ruta relativa hasta la
+    raíz del sitio ("", "../" o "../../")."""
+    esc = html.escape
+    enlaces = []
+    for clave, texto, ruta in PIE_ENLACES:
+        cur = ' aria-current="page"' if clave == actual else ""
+        keep = " data-keep-state" if clave in ("catalogo", "temas") else ""
+        enlaces.append(f'<a href="{esc(raiz + ruta) or "./"}"{cur}{keep}>{esc(texto)}</a>')
+    if repo_url:
+        enlaces.append(f'<a href="{esc(repo_url)}" target="_blank" rel="noopener">GitHub</a>')
+    nav = '<span aria-hidden="true">·</span>'.join(enlaces)
+    autor = " · ".join(esc(x) for x in (contact_name, department, university) if x)
+    correo = f' · <a href="mailto:{esc(contact_email)}">{esc(contact_email)}</a>' if contact_email else ""
+    fecha = fecha or _fecha_es(datetime.datetime.now(datetime.timezone.utc))
+    return (
+        f'<nav class="foot-nav" aria-label="Páginas del portal">{nav}</nav>\n'
+        f'    <p class="foot-autor">{autor}{correo}</p>\n'
+        f'    <p class="foot-meta">Generado con IA · Revisado por el autor · Última actualización: {esc(fecha)}</p>'
+    )
+
+
+# ============================================================================
 # VERSIÓN PRINCIPAL — appindex/index.html
 # Rail de categorías + apps agrupadas por familia (GROUP_INFO), iconos
 # Lucide vía CDN, tipografía Fraunces/Figtree/JetBrains Mono, modo oscuro.
@@ -448,8 +484,14 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .card a.open:hover { background: var(--blue-800); }
   .empty-state { text-align: center; color: var(--muted); padding: 60px 0; font-size: .95rem; }
   .empty-state svg { color: var(--border-strong); margin-bottom: 10px; }
-  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 26px 24px 10px; line-height: 1.7; }
-  footer a { color: var(--blue-700); }
+  footer.site-foot { text-align: center; color: var(--muted); font-size: .82rem; padding: 34px 24px 12px; line-height: 1.7; border-top: 1px solid var(--border); margin-top: 10px; }
+  footer.site-foot p { margin: 2px 0; }
+  footer.site-foot a { color: var(--blue-700); }
+  .foot-nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 10px; margin-bottom: 10px; font-weight: 600; }
+  .foot-nav a { text-decoration: none; padding: 4px 2px; }
+  .foot-nav a:hover { text-decoration: underline; }
+  .foot-nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--accent); }
+  .foot-nav span { color: var(--border-strong); }
   @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
   @media (max-width: 880px) {
     .hero { padding: 26px 18px 48px; border-radius: 0 0 18px 18px; }
@@ -549,9 +591,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     </main>
   </div>
 
-  <footer class="gutter">
-    Generado automáticamente a partir de las aplicaciones publicadas. Ir al <a href="../">inicio</a>, a la vista <a href="temas/" data-keep-state>agrupada por tema</a> o a la <a href="index-anterior.html">versión anterior</a>.<br>
-    __CONTACT_NAME__ (<a href="mailto:__CONTACT_EMAIL__">__CONTACT_EMAIL__</a>) · Última actualización: __LAST_UPDATED__
+  <footer class="site-foot gutter">
+    __FOOTER__
   </footer>
 </div>
 
@@ -823,7 +864,7 @@ def _group_order_for(catalog):
     return ordered + extra
 
 
-def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", contact_email=""):
+def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", contact_email="", department="", university="", repo_url="", fecha=None):
     """
     catalog: lista de dicts {title, description, categories, tags, client_only, url}
     Devuelve el HTML completo del portal (versión principal) como string.
@@ -864,9 +905,7 @@ def render_portal_html(catalog, title, subtitle, eyebrow, contact_name="", conta
     out = out.replace("__GROUP_ORDER_JSON__", json.dumps(group_order, ensure_ascii=False))
     out = out.replace("__CLASE_META_JSON__", json.dumps(clase_meta, ensure_ascii=False))
     out = out.replace("__CLASE_ORDER_JSON__", json.dumps(clase_order, ensure_ascii=False))
-    out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
-    out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
-    out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))
+    out = out.replace("__FOOTER__", render_footer_html("catalogo", "../", contact_name, contact_email, department, university, repo_url, fecha))
     return out
 
 
@@ -1149,8 +1188,14 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 @media (prefers-reduced-motion:reduce){.app-card,.app-card:hover{transition:none;transform:none}}
 .empty-state{text-align:center;color:var(--gris);padding:70px 10px;font-size:15px}
 
-footer{max-width:1180px;margin:10px auto 0;padding:0 16px 40px;font-size:13px;color:#6E8299}
-footer hr{border:0;border-top:1px solid var(--linea);margin:0 0 16px}
+footer.site-foot{max-width:1180px;margin:10px auto 0;padding:26px 16px 40px;font-size:13px;color:var(--gris);text-align:center;line-height:1.7;border-top:1px solid var(--linea)}
+footer.site-foot p{margin:2px 0}
+footer.site-foot a{color:var(--acero)}
+.foot-nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 10px;margin-bottom:10px;font-weight:600}
+.foot-nav a{text-decoration:none;padding:4px 2px}
+.foot-nav a:hover{text-decoration:underline}
+.foot-nav a[aria-current="page"]{color:var(--tinta);text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--brasa)}
+.foot-nav span{color:var(--linea)}
 </style>
 </head>
 <body>
@@ -1199,10 +1244,8 @@ __ICON_SPRITE__
   <div id="empty" class="empty-state" style="display:none;">No se encontraron aplicaciones con ese criterio.</div>
 </main>
 
-<footer>
-  <hr>
-  <p>Generado automáticamente a partir de las aplicaciones publicadas en este repositorio, agrupadas por tema. Ir al <a href="../../">inicio</a> o al <a href="../" data-keep-state>catálogo completo</a>.<br>
-  __CONTACT_NAME__ (<a href="mailto:__CONTACT_EMAIL__">__CONTACT_EMAIL__</a>) · Última actualización: __LAST_UPDATED__</p>
+<footer class="site-foot">
+    __FOOTER__
 </footer>
 
 <script id="catalog-data" type="application/json">__CATALOG_JSON__</script>
@@ -1454,7 +1497,7 @@ def _theme_order_for(catalog):
     return ordered + extra
 
 
-def render_portal_html_temas(catalog, title, subtitle, eyebrow, contact_name="", contact_email=""):
+def render_portal_html_temas(catalog, title, subtitle, eyebrow, contact_name="", contact_email="", department="", university="", repo_url="", fecha=None):
     """
     catalog: lista de dicts {title, description, categories, tags,
     client_only, url, group} (group = carpeta de nivel superior de la app,
@@ -1499,8 +1542,6 @@ def render_portal_html_temas(catalog, title, subtitle, eyebrow, contact_name="",
     clase_meta = {c: dict(clase_info(c), icon_temas=CLASE_ICON_TEMAS.get(c, "tag")) for c in clase_order}
     out = out.replace("__CLASE_META_JSON__", json.dumps(clase_meta, ensure_ascii=False))
     out = out.replace("__CLASE_ORDER_JSON__", json.dumps(clase_order, ensure_ascii=False))
-    out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
-    out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
-    out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))
+    out = out.replace("__FOOTER__", render_footer_html("temas", "../../", contact_name, contact_email, department, university, repo_url, fecha))
     out = out.replace("__ICON_SPRITE__", ICON_SPRITE)
     return out

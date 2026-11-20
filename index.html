@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apps de RafaUMH2110 · Herramientas de IA para la Docencia</title>
+<meta name="theme-color" content="#081b33">
 <meta name="description" content="Página de entrada a las apps web de Rafa (UMH): moda, telemetría, análisis de PDF y consulta con IA.">
 <link rel="icon" type="image/svg+xml" href="appindex/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,8 +72,21 @@
   .note strong { font-weight:700; }
 
   /* Pie */
-  .site-foot { text-align:center; color:var(--muted); font-size:.82rem; padding:34px 24px 40px; line-height:1.8; }
+  .site-foot { text-align:center; color:var(--muted); font-size:.82rem; padding:30px 0 40px; line-height:1.7; border-top:1px solid var(--border); margin-top:34px; }
+  .site-foot p { margin:2px 0; }
   .site-foot a { color:var(--blue-700); }
+  .foot-nav { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px 10px; margin-bottom:10px; font-weight:600; }
+  .foot-nav a { text-decoration:none; padding:4px 2px; }
+  .foot-nav a:hover { text-decoration:underline; }
+  .foot-nav a[aria-current="page"] { color:var(--ink); text-decoration:underline; text-underline-offset:4px; text-decoration-color:var(--accent); }
+  .foot-nav span { color:var(--border-strong); }
+
+  /* Cifras y accesos por versión */
+  .cifras { display:flex; flex-wrap:wrap; gap:8px 26px; list-style:none; margin:22px 0 0; padding:0; color:var(--on-hero-soft); font-size:.95rem; }
+  .cifras b { color:var(--on-hero); font:800 1.35rem/1 var(--font-hero); margin-right:4px; }
+  .versiones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:18px; font-size:.88rem; color:var(--on-hero-soft); }
+  .versiones a { color:var(--on-hero); text-decoration:none; border:1px solid rgba(255,255,255,.25); border-radius:999px; padding:5px 12px; min-height:32px; display:inline-flex; align-items:center; }
+  .versiones a:hover { background:rgba(255,255,255,.1); }
   @media (max-width:520px) { .hero { padding:40px 0 78px; } .card { padding:20px; } }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
@@ -88,6 +102,15 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       <a class="btn ghost" href="appindex/temas/">Agrupado por tema</a>
     </div>
+    <nav class="versiones" aria-label="Ir a una versión">
+      <span>Por versión:</span>
+      <a href="appindex/#v=normal">Normales</a>
+      <a href="appindex/#v=lite">Lite</a>
+      <a href="appindex/#v=pro">Pro</a>
+      <a href="appindex/#v=promax">ProMax</a>
+      <a href="appindex/#v=alumnos">Para el aula</a>
+    </nav>
+    <ul class="cifras" aria-label="El catálogo en cifras"><!--HIAD:cifras--><li><b>55</b> herramientas</li><li><b>4</b> temas</li><li><b>100&nbsp;%</b> en el navegador</li><!--/HIAD:cifras--></ul>
   </div>
 </div>
 
@@ -176,11 +199,12 @@
   </aside>
 </main>
 
+<!-- El contenido del pie y las cifras del catálogo los rellena .github/scripts/generate_index.py
+     (bloques HIAD); no los edites a mano. -->
 <footer class="site-foot">
-  Rafa · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche ·
-  <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a><br>
-  Generado con IA · Revisado por el autor<br>
-  Última modificación: 20/11/2026 07:55
+  <div class="wrap"><!--HIAD:pie--><nav class="foot-nav" aria-label="Páginas del portal"><a href="./" aria-current="page">Inicio</a><span aria-hidden="true">·</span><a href="appindex/" data-keep-state>Catálogo completo</a><span aria-hidden="true">·</span><a href="appindex/temas/" data-keep-state>Agrupado por tema</a><span aria-hidden="true">·</span><a href="appindex/index-anterior.html">Versión anterior</a><span aria-hidden="true">·</span><a href="https://github.com/RafaUMH2110/apps" target="_blank" rel="noopener">GitHub</a></nav>
+    <p class="foot-autor">Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
+    <p class="foot-meta">Generado con IA · Revisado por el autor · Última actualización: 20 de noviembre de 2026, 09:04</p><!--/HIAD:pie--></div>
 </footer>
 </body>
 </html>

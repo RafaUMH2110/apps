@@ -186,8 +186,14 @@
   .card a.open:hover { background: var(--blue-800); }
   .empty-state { text-align: center; color: var(--muted); padding: 60px 0; font-size: .95rem; }
   .empty-state svg { color: var(--border-strong); margin-bottom: 10px; }
-  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 26px 24px 10px; line-height: 1.7; }
-  footer a { color: var(--blue-700); }
+  footer.site-foot { text-align: center; color: var(--muted); font-size: .82rem; padding: 34px 24px 12px; line-height: 1.7; border-top: 1px solid var(--border); margin-top: 10px; }
+  footer.site-foot p { margin: 2px 0; }
+  footer.site-foot a { color: var(--blue-700); }
+  .foot-nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 10px; margin-bottom: 10px; font-weight: 600; }
+  .foot-nav a { text-decoration: none; padding: 4px 2px; }
+  .foot-nav a:hover { text-decoration: underline; }
+  .foot-nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--accent); }
+  .foot-nav span { color: var(--border-strong); }
   @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
   @media (max-width: 880px) {
     .hero { padding: 26px 18px 48px; border-radius: 0 0 18px 18px; }
@@ -287,9 +293,10 @@
     </main>
   </div>
 
-  <footer class="gutter">
-    Generado automáticamente a partir de las aplicaciones publicadas. Ir al <a href="../">inicio</a>, a la vista <a href="temas/" data-keep-state>agrupada por tema</a> o a la <a href="index-anterior.html">versión anterior</a>.<br>
-    Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última actualización: 20 de noviembre de 2026, 07:57
+  <footer class="site-foot gutter">
+    <nav class="foot-nav" aria-label="Páginas del portal"><a href="../">Inicio</a><span aria-hidden="true">·</span><a href="../appindex/" aria-current="page" data-keep-state>Catálogo completo</a><span aria-hidden="true">·</span><a href="../appindex/temas/" data-keep-state>Agrupado por tema</a><span aria-hidden="true">·</span><a href="../appindex/index-anterior.html">Versión anterior</a><span aria-hidden="true">·</span><a href="https://github.com/RafaUMH2110/apps" target="_blank" rel="noopener">GitHub</a></nav>
+    <p class="foot-autor">Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
+    <p class="foot-meta">Generado con IA · Revisado por el autor · Última actualización: 20 de noviembre de 2026, 09:04</p>
   </footer>
 </div>
 

@@ -11,7 +11,8 @@ con el GITHUB_TOKEN propio del repo."""
 import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from portal_render import extract_app_metadata, render_portal_html, render_portal_html_temas, clase_de_app
+import datetime, re
+from portal_render import extract_app_metadata, render_portal_html, render_portal_html_temas, clase_de_app, render_footer_html, _fecha_es
 
 ROOT = "."
 EXCLUDE_DIRS = {"appindex", ".github", ".git"}
@@ -22,6 +23,13 @@ SUBTITLE = "Moda, patrones y outfits generados con IA; detección de uso de IA e
 EYEBROW = "RafaUMH2110 · UMH"
 CONTACT_NAME = "Rafael Puerto"
 CONTACT_EMAIL = "r.puerto@umh.es"
+DEPARTMENT = "Departamento de Ingeniería de Sistemas y Automática"
+UNIVERSITY = "Universidad Miguel Hernández de Elche"
+REPO_URL = "https://github.com/RafaUMH2110/apps"
+# Página de entrada de la raíz: se escribe a mano, pero el generador rellena
+# los bloques entre marcadores <!--HIAD:nombre--> … <!--/HIAD:nombre--> (pie
+# común y cifras del catálogo) para que no se queden desfasados.
+INICIO_PATH = "index.html"
 
 # Categorías que se añaden automáticamente (al final de la lista, para no
 # cambiar la categoría principal de cada app) a todas las apps de una
@@ -109,11 +117,13 @@ def main():
         catalog.append(meta)
     catalog.sort(key=lambda m: m["title"].casefold())
 
+    # Una sola fecha para las tres páginas, para que los pies coincidan.
+    fecha = _fecha_es(datetime.datetime.now(datetime.timezone.utc))
+    pie = dict(contact_name=CONTACT_NAME, contact_email=CONTACT_EMAIL, department=DEPARTMENT,
+               university=UNIVERSITY, repo_url=REPO_URL, fecha=fecha)
+
     # Versión principal: cuadrícula plana, la que se usa en producción.
-    html_out = render_portal_html(
-        catalog, TITLE, SUBTITLE, EYEBROW,
-        contact_name=CONTACT_NAME, contact_email=CONTACT_EMAIL,
-    )
+    html_out = render_portal_html(catalog, TITLE, SUBTITLE, EYEBROW, **pie)
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         f.write(html_out)
@@ -121,14 +131,37 @@ def main():
 
     # Versión alternativa: agrupada por tema, estilo "forja". Punto de
     # acceso adicional, no sustituye a la versión principal de arriba.
-    html_out_temas = render_portal_html_temas(
-        catalog, TITLE, SUBTITLE, EYEBROW,
-        contact_name=CONTACT_NAME, contact_email=CONTACT_EMAIL,
-    )
+    html_out_temas = render_portal_html_temas(catalog, TITLE, SUBTITLE, EYEBROW, **pie)
     os.makedirs(os.path.dirname(OUT_PATH_TEMAS), exist_ok=True)
     with open(OUT_PATH_TEMAS, "w", encoding="utf-8") as f:
         f.write(html_out_temas)
     print(f"Portal (agrupado por tema) actualizado con {len(catalog)} apps -> {OUT_PATH_TEMAS}")
+
+    actualizar_inicio(catalog, pie)
+
+
+def actualizar_inicio(catalog, pie):
+    """Rellena en index.html (raíz) el pie común y las cifras del catálogo."""
+    if not os.path.exists(INICIO_PATH):
+        return
+    with open(INICIO_PATH, encoding="utf-8") as f:
+        texto = f.read()
+    temas = len({a["group"] for a in catalog})
+    navegador = sum(1 for a in catalog if a.get("client_only"))
+    pct = round(100 * navegador / len(catalog)) if catalog else 0
+    bloques = {
+        "pie": render_footer_html("inicio", "", **pie),
+        "cifras": (f'<li><b>{len(catalog)}</b> herramientas</li><li><b>{temas}</b> temas</li>'
+                   f'<li><b>{pct}&nbsp;%</b> en el navegador</li>'),
+    }
+    for nombre, contenido in bloques.items():
+        texto, n = re.subn(rf"(<!--HIAD:{nombre}-->).*?(<!--/HIAD:{nombre}-->)",
+                           lambda m: m.group(1) + contenido + m.group(2), texto, flags=re.S)
+        if not n:
+            print(f"AVISO: index.html no tiene el bloque <!--HIAD:{nombre}-->; no se actualiza.")
+    with open(INICIO_PATH, "w", encoding="utf-8") as f:
+        f.write(texto)
+    print(f"Página de entrada actualizada -> {INICIO_PATH}")
 
 
 if __name__ == "__main__":

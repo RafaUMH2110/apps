@@ -59,6 +59,8 @@ persona que la usa.
 
 **Portal: versiones y controles para plegar (20 nov 2026).** Los filtros de los dos portales tienen ahora tres grupos: **Áreas**, **Versiones** (Normales, Lite, Pro, ProMax y Para el aula; se combinan con el área o la categoría y quedan en la URL como `#v=pro`) y **Categorías**. Cada grupo se puede plegar, el panel de filtros se puede ocultar entero («Ocultar filtros») y cada sección (versión en el catálogo completo, tema en la vista por tema) se pliega con su flecha o con «Plegar todo»; estas preferencias se recuerdan en el navegador. Los contadores tienen en cuenta los demás filtros y las opciones sin resultados se desactivan. El título de la cabecera usa Plus Jakarta Sans.
 
+**Pie de página común (20 nov 2026).** La página de entrada (`index.html`), el catálogo completo y la vista por tema comparten el mismo pie: enlaces a Inicio, Catálogo completo, Agrupado por tema, Versión anterior y GitHub (con la página actual marcada), autor con departamento, universidad y correo, y la línea «Generado con IA · Revisado por el autor · Última actualización». El generador (`render_footer_html` en `portal_render.py`) escribe los tres con la misma fecha. En `index.html`, el pie y las cifras del catálogo están entre marcadores `<!--HIAD:…-->` que rellena `generate_index.py`; no se editan a mano. La entrada tiene además accesos directos por versión (Normales, Lite, Pro, ProMax, Para el aula).
+
 ## Estructura del repositorio
 
 ```

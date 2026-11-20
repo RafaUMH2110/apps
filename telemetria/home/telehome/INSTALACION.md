@@ -232,9 +232,14 @@ Notas:
 
 - **Modo demostración** (sin nada instalado): abre `index.html` (desde el repo `apps`, GitHub Pages, o el archivo local). Si no encuentra servicio, arranca en demostración.
 - **Con el servicio local:** abre <http://127.0.0.1:8765/> (el servicio también sirve la interfaz de TeleHome Enchufes).
-- **Con la app TeleHome desplegada aparte** (GitHub Pages, o Apache de `isa.umh.es` en `/var/www/htdocs/rafa`): copia `index.html` a esa carpeta y, en *Ajustes → Conexión*, indica la dirección del servicio (p. ej. `http://127.0.0.1:8765/` con túnel SSH, o `https://tu-dominio/enchufes/` con proxy).
+- **Con la app TeleHome desplegada junto al servicio (Apache de `isa.umh.es`):** la app solo acepta **rutas del mismo servidor que empiecen por `/`** (no direcciones completas como `http://127.0.0.1:8765/`). Pasos:
+  1. Proxy en una subruta del mismo dominio: `ProxyPass /rafa/telehome-api/ http://127.0.0.1:8765/` y `ProxyPassReverse` equivalente.
+  2. Instala el servicio con `--allow-host isa.umh.es` y ponle contraseña.
+  3. Copia `index.html` a `/var/www/htdocs/rafa/telehome/`.
+  4. En *Ajustes → Servicio TeleHome en este servidor* escribe `/rafa/telehome-api/`. Con el campo vacío usa el servicio que sirve esa misma página.
+- **GitHub Pages:** solo modo demostración (no comparte origen con el servicio).
 
-> Si la app está en HTTPS y el servicio en `http://127.0.0.1`, el navegador permite la conexión a loopback; si el servicio está en otra máquina usa el túnel SSH o un proxy HTTPS bajo el mismo origen.
+> Antes de conectar, la app consulta `api/health` en esa ruta (2,5 s de espera). Si no hay servicio TeleHome o TeleHome Enchufes, sigue en demostración.
 
 ### 7.2. Qué muestra
 
@@ -311,7 +316,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | Nube: error 28841105 | Dispositivo virtual `vdevo…`: no admite órdenes, quitarlo |
 | Error 403 / «Host no permitido» tras proxy | Reinstalar o ejecutar con `--allow-host tu-dominio` |
 | `python3 -m pytest` → `No module named pytest` | pytest solo es necesario para desarrollar; ver apartado 12 |
-| El navegador bloquea la conexión desde GitHub Pages | Contenido mixto/CORS: usa túnel SSH o publica la app en el mismo origen que el servicio |
+| No conecta desde GitHub Pages o con una URL completa | La app solo admite rutas del mismo servidor (`/ruta/`): publícala junto al servicio (Apache) y usa el proxy |
 
 ---
 

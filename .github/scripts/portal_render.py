@@ -119,13 +119,37 @@ CATEGORY_INFO = {
     "programacion": {"label": "Programación", "icon": "code"},
     "productividad": {"label": "Productividad", "icon": "wrench"},
     "telemetria": {"label": "Telemetría", "icon": "radio-tower"},
+    "meteo": {"label": "Meteo", "icon": "cloud-sun"},
+    "hogar": {"label": "Hogar", "icon": "plug-zap"},
     "moda": {"label": "Moda", "icon": "shirt"},
 }
+
+# Áreas: categorías que corresponden a carpetas del repo (moda/, telemetria/,
+# telemetria/meteo/, telemetria/home/). Se muestran primero y en este orden,
+# con las subáreas sangradas bajo su área; el resto de categorías va después,
+# por orden alfabético. Ambos portales usan esta misma lista.
+AREA_ORDER = ["moda", "telemetria", "meteo", "hogar"]
+AREA_PARENT = {"meteo": "telemetria", "hogar": "telemetria"}
+
+# Subgrupos de un tema (segundo nivel de carpeta, ver generate_index.py).
+SUBGROUP_INFO = {
+    "meteo": {"label": "Estación meteorológica", "icon": "cloud-sun", "icon_temas": "sun"},
+    "home": {"label": "Hogar · enchufes inteligentes", "icon": "plug-zap", "icon_temas": "plug"},
+}
+
+
+def _con_area(meta, slug):
+    meta = dict(meta)
+    if slug in AREA_ORDER:
+        meta["area"] = AREA_ORDER.index(slug)
+        if slug in AREA_PARENT:
+            meta["parent"] = AREA_PARENT[slug]
+    return meta
 
 
 def category_info(slug):
     if slug in CATEGORY_INFO:
-        return CATEGORY_INFO[slug]
+        return _con_area(CATEGORY_INFO[slug], slug)
     label = slug.replace("-", " ").replace("_", " ").strip().title() or slug
     return {"label": label, "icon": "tag"}
 
@@ -152,9 +176,9 @@ GROUP_INFO = {
         "blurb": "Generación de imágenes, outfits y patrones de corte, además de consulta de logística de la industria.",
     },
     "telemetria": {
-        "label": "Telemetría meteorológica",
-        "icon": "cloud-sun",
-        "blurb": "Monitorización en vivo de la estación meteorológica personal, con histórico, gráficos y exportación.",
+        "label": "Telemetría",
+        "icon": "radio-tower",
+        "blurb": "Monitorización en vivo de la estación meteorológica personal y de los enchufes inteligentes del hogar, con histórico, gráficos y exportación.",
     },
 }
 
@@ -306,8 +330,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   .gutter { padding-left: 16px; padding-right: 16px; }
-  .hero { background: linear-gradient(135deg, var(--navy-950), var(--blue-700)); color: #fff; padding: 34px 0 56px; }
-  .hero-inner { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+  .hero { background: linear-gradient(135deg, var(--navy-950), var(--blue-700)); color: #fff; padding: 34px 32px 64px; border-radius: 0 0 24px 24px; }
+  .hero-inner { max-width: 100%; margin: 0 auto; display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
   .hero-logo { flex-shrink: 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.2)); }
   .hero-text { flex: 1; min-width: 260px; }
   .eyebrow { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; opacity: .78; margin-bottom: 10px; }
@@ -317,6 +341,11 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .hero-stat { text-align: left; }
   .hero-stat .num { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; line-height: 1; }
   .hero-stat .label { font-size: .72rem; opacity: .78; margin-top: 4px; }
+  .viewnav { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 18px; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.22); border-radius: 12px; padding: 4px; }
+  .viewnav a { color: #fff; text-decoration: none; font-size: .86rem; font-weight: 600; padding: 7px 14px; border-radius: 9px; min-height: 36px; display: inline-flex; align-items: center; gap: 6px; opacity: .85; }
+  .viewnav a:hover { background: rgba(255,255,255,.12); opacity: 1; }
+  .viewnav a[aria-current="page"] { background: #fff; color: var(--blue-800); opacity: 1; }
+  .viewnav svg { width: 15px; height: 15px; }
   .shell { max-width: 1180px; margin: 0 auto; padding-bottom: 60px; }
   .layout { margin-top: -28px; display: grid; grid-template-columns: 234px 1fr; gap: 28px; align-items: start; }
   .sidebar { position: sticky; top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
@@ -329,6 +358,11 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .cat-btn.active { background: var(--blue-700); color: #fff; }
   .cat-btn.active svg { color: #fff; }
   .cat-btn.active .ccount { background: rgba(255,255,255,.22); color: #fff; }
+  .cat-btn.sub { padding-left: 30px; font-size: .84rem; }
+  .sidebar-label.sep { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .searchbar button.clear { border: none; background: transparent; color: var(--muted); cursor: pointer; width: 40px; height: 40px; border-radius: 10px; display: none; align-items: center; justify-content: center; }
+  .searchbar button.clear:hover { background: var(--surface-sunk); color: var(--ink); }
+  .searchbar.has-text button.clear { display: inline-flex; }
   .content { min-width: 0; display: flex; flex-direction: column; gap: 30px; }
   .searchbar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 4px 4px 16px; display: flex; align-items: center; gap: 10px; }
   .searchbar svg { color: var(--muted); flex-shrink: 0; }
@@ -349,10 +383,10 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .card-top { display: flex; align-items: flex-start; gap: 11px; }
   .card-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--surface-sunk); color: var(--blue-700); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border); }
   .card-icon svg { width: 17px; height: 17px; }
-  .card h3 { font-size: 1rem; font-weight: 600; line-height: 1.3; }
+  .card h3 { font-size: 1rem; font-weight: 600; line-height: 1.3; min-height: 2.6em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .card p.desc {
     margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.55; flex: none;
-    height: 10.85em; overflow-y: auto; padding-right: 6px;
+    height: 10.85em; overflow-y: auto; padding-right: 6px; overscroll-behavior: contain;
     scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
   }
   .card p.desc::-webkit-scrollbar { width: 6px; }
@@ -375,8 +409,9 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   .empty-state svg { color: var(--border-strong); margin-bottom: 10px; }
   footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 26px 24px 10px; line-height: 1.7; }
   footer a { color: var(--blue-700); }
+  @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
   @media (max-width: 880px) {
-    .hero { padding: 26px 0 44px; }
+    .hero { padding: 26px 18px 48px; border-radius: 0 0 18px 18px; }
     .hero h1 { font-size: 1.5rem; }
     .layout { grid-template-columns: 1fr; margin-top: -24px; }
     .sidebar { display: none; }
@@ -384,6 +419,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     .filter-row::-webkit-scrollbar { display: none; }
     .filter-row .cat-btn { width: auto; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
     .filter-row .cat-btn.active { border-color: var(--blue-700); }
+    .filter-row .cat-btn.sub { padding-left: 10px; }
+    .filter-row .fsep { flex: none; width: 1px; background: var(--border-strong); margin: 6px 2px; }
   }
 </style>
 </head>
@@ -426,6 +463,11 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
         <div class="eyebrow">__EYEBROW__</div>
         <h1>__TITLE__</h1>
         <p class="lede">__SUBTITLE__</p>
+        <nav class="viewnav" aria-label="Vistas del portal">
+          <a href="../"><i data-lucide="house"></i>Inicio</a>
+          <a href="./" aria-current="page" data-keep-state><i data-lucide="layout-grid"></i>Catálogo completo</a>
+          <a href="temas/" data-keep-state><i data-lucide="layers"></i>Agrupado por tema</a>
+        </nav>
       </div>
       <div class="hero-stats">
         <div class="hero-stat"><div class="num">__STAT_TOTAL__</div><div class="label">Herramientas</div></div>
@@ -441,7 +483,8 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     <main class="content">
       <div class="searchbar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input id="search" type="text" placeholder="Buscar por nombre, descripción, categoría o etiqueta...">
+        <input id="search" type="search" placeholder="Buscar por nombre, descripción, categoría o etiqueta..." aria-label="Buscar aplicaciones">
+        <button class="clear" id="clear" type="button" aria-label="Borrar búsqueda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
 
       <div class="filter-row" id="filter-row"></div>
@@ -458,7 +501,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   </div>
 
   <footer class="gutter">
-    Generado automáticamente a partir de las aplicaciones publicadas. También disponible la <a href="index-anterior.html">versión anterior</a> y la <a href="temas/">agrupada por tema</a>.<br>
+    Generado automáticamente a partir de las aplicaciones publicadas. Ir al <a href="../">inicio</a>, a la vista <a href="temas/" data-keep-state>agrupada por tema</a> o a la <a href="index-anterior.html">versión anterior</a>.<br>
     __CONTACT_NAME__ (<a href="mailto:__CONTACT_EMAIL__">__CONTACT_EMAIL__</a>) · Última actualización: __LAST_UPDATED__
   </footer>
 </div>
@@ -483,44 +526,69 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Estado en la URL (#cat=...&q=...): se conserva al recargar, al volver
+  // atrás y al cambiar entre «Catálogo completo» y «Agrupado por tema».
+  function leerEstado() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const cat = h.get('cat');
+    activeCategory = cat && CATALOG.some(a => a.categories.includes(cat)) ? cat : 'all';
+    query = norm((h.get('q') || '').trim());
+    const input = document.getElementById('search');
+    input.value = h.get('q') || '';
+    input.parentElement.classList.toggle('has-text', !!input.value);
+  }
+  function guardarEstado() {
+    const h = new URLSearchParams();
+    if (activeCategory !== 'all') h.set('cat', activeCategory);
+    const q = document.getElementById('search').value.trim();
+    if (q) h.set('q', q);
+    const hash = h.toString();
+    history.replaceState(null, '', hash ? '#' + hash : location.pathname + location.search);
+    document.querySelectorAll('a[data-keep-state]').forEach(a => {
+      a.href = a.getAttribute('href').split('#')[0] + (hash ? '#' + hash : '');
+    });
+  }
 
   function matches(app) {
     const inCategory = activeCategory === 'all' || app.categories.includes(activeCategory);
     if (!inCategory) return false;
     if (!query) return true;
-    const haystack = [
+    const haystack = norm([
       app.title, app.description,
       ...app.categories.map(c => (CATEGORY_META[c] || {}).label || c),
       ...app.tags,
-    ].join(' ').toLowerCase();
+    ].join(' '));
     return haystack.includes(query);
   }
 
   function renderCategoryList(targetId, variant) {
     const counts = {};
     CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
-    const slugs = Object.keys(counts).sort((a, b) =>
-      ((CATEGORY_META[a] || {}).label || a).localeCompare((CATEGORY_META[b] || {}).label || b)
-    );
+    const label = (s) => (CATEGORY_META[s] || {}).label || s;
+    const isArea = (s) => CATEGORY_META[s] && CATEGORY_META[s].area !== undefined;
+    const areas = Object.keys(counts).filter(isArea).sort((a, b) => CATEGORY_META[a].area - CATEGORY_META[b].area);
+    const resto = Object.keys(counts).filter(s => !isArea(s)).sort((a, b) => label(a).localeCompare(label(b), 'es'));
 
-    const allBtn = `<button class="cat-btn ${activeCategory === 'all' ? 'active' : ''}" data-cat="all">
-        <i data-lucide="layout-grid"></i><span class="cname">Todas</span><span class="ccount">${CATALOG.length}</span>
-      </button>`;
-
-    const buttons = slugs.map(slug => {
-      const meta = CATEGORY_META[slug] || { label: slug, icon: 'tag' };
+    const btn = (slug, meta, count) => {
       const active = activeCategory === slug ? 'active' : '';
-      return `<button class="cat-btn ${active}" data-cat="${slug}">
-          <i data-lucide="${meta.icon}"></i><span class="cname">${escapeHtml(meta.label)}</span><span class="ccount">${counts[slug]}</span>
+      const sub = meta.parent ? ' sub' : '';
+      return `<button class="cat-btn${sub} ${active}" data-cat="${slug}" aria-pressed="${activeCategory === slug}">
+          <i data-lucide="${meta.icon}"></i><span class="cname">${escapeHtml(meta.label)}</span><span class="ccount">${count}</span>
         </button>`;
-    }).join('');
+    };
+    const allBtn = btn('all', { label: 'Todas', icon: 'layout-grid' }, CATALOG.length);
+    const lista = (slugs) => slugs.map(s => btn(s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s])).join('');
 
     const el = document.getElementById(targetId);
-    const label = variant === 'sidebar' ? '<div class="sidebar-label">Categorías</div>' : '';
-    el.innerHTML = label + allBtn + buttons;
-    el.querySelectorAll('.cat-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        activeCategory = btn.dataset.cat;
+    el.innerHTML = variant === 'sidebar'
+      ? '<div class="sidebar-label">Áreas</div>' + allBtn + lista(areas) +
+        '<div class="sidebar-label sep">Categorías</div>' + lista(resto)
+      : allBtn + lista(areas) + '<span class="fsep" aria-hidden="true"></span>' + lista(resto);
+    el.querySelectorAll('.cat-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        activeCategory = b.dataset.cat;
         renderAll();
       });
     });
@@ -540,7 +608,7 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
           <div class="card-icon"><i data-lucide="${meta.icon}"></i></div>
           <h3>${escapeHtml(app.title)}</h3>
         </div>
-        <p class="desc">${escapeHtml(app.description)}</p>
+        <p class="desc" tabindex="0" aria-label="Descripción de ${escapeHtml(app.title)}">${escapeHtml(app.description)}</p>
         <div class="badges">${badges}</div>
         <a class="open" href="${app.url}" target="_blank" rel="noopener">Abrir aplicación</a>
       </div>`;
@@ -597,14 +665,21 @@ PORTAL_TEMPLATE = r"""<!DOCTYPE html>
     renderCategoryList('sidebar', 'sidebar');
     renderCategoryList('filter-row', 'row');
     renderSections();
+    guardarEstado();
     if (window.lucide) lucide.createIcons();
   }
 
-  document.getElementById('search').addEventListener('input', (e) => {
-    query = e.target.value.trim().toLowerCase();
+  const searchEl = document.getElementById('search');
+  searchEl.addEventListener('input', (e) => {
+    query = norm(e.target.value.trim());
+    e.target.parentElement.classList.toggle('has-text', !!e.target.value);
     renderAll();
   });
+  searchEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); } });
+  document.getElementById('clear').addEventListener('click', () => { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); searchEl.focus(); });
+  addEventListener('hashchange', () => { leerEstado(); renderAll(); });
 
+  leerEstado();
   renderAll();
 </script>
 </body>
@@ -692,13 +767,15 @@ CATEGORY_INFO_TEMAS = {
     "programacion": {"label": "Programación", "icon": "code"},
     "productividad": {"label": "Productividad", "icon": "wrench"},
     "telemetria": {"label": "Telemetría", "icon": "radio"},
+    "meteo": {"label": "Meteo", "icon": "sun"},
+    "hogar": {"label": "Hogar", "icon": "plug"},
     "moda": {"label": "Moda", "icon": "shirt"},
 }
 
 
 def category_info_temas(slug):
     if slug in CATEGORY_INFO_TEMAS:
-        return CATEGORY_INFO_TEMAS[slug]
+        return _con_area(CATEGORY_INFO_TEMAS[slug], slug)
     label = slug.replace("-", " ").replace("_", " ").strip().title() or slug
     return {"label": label, "icon": "tag"}
 
@@ -719,7 +796,7 @@ THEME_INFO = {
         "label": "Telemetría",
         "icon": "radio",
         "color": "#0E8C7A",
-        "lede": "Monitorización en vivo de una estación meteorológica personal: sondeo continuo, histórico y paneles instalables.",
+        "lede": "Monitorización en vivo de una estación meteorológica personal y de los enchufes inteligentes del hogar: sondeo continuo, histórico, gráficas y paneles instalables.",
     },
     "pdfs": {
         "label": "Evaluación de PDF",
@@ -772,6 +849,11 @@ ICON_SPRITE = """<svg style="display:none" aria-hidden="true">
 <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M16 3 12 6 8 3 2 7l3 4 2-1v9a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-9l2 1 3-4Z"></path></symbol>
 <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"></path></symbol>
 <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8M8 13h5"></path></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></symbol>
+<symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"></path><path d="M9 8V2M15 8V2"></path><path d="M18 8v5a6 6 0 0 1-12 0V8z"></path></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5M2 12l10 5 10-5"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
 <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></symbol>
 </svg>"""
 
@@ -783,6 +865,7 @@ PORTAL_TEMPLATE_TEMAS = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__TITLE__</title>
 <meta name="theme-color" content="#0F2237">
+<meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E4572E'/%3E%3Cstop offset='1' stop-color='%230E7C6B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230F2237'/%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath d='M20 9 11 14l9 5 9-5Z' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M14 16v4c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3v-4' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -799,6 +882,22 @@ PORTAL_TEMPLATE_TEMAS = r"""<!DOCTYPE html>
   --display:"Bricolage Grotesque",Georgia,serif;
   --texto:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,monospace;
+  --chip:#FFFFFF; --chip-on:#0F2237;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --tinta:#E8EEF5; --acero:#A9C0D8; --acero-claro:#7C93AC; --gris:#9CB0C4;
+    --papel:#0B1624; --blanco:#13233A; --linea:#24384F; --linea-2:#1C2E44;
+    --brasa:#EE6A43; --brasa-osc:#D9552F; --brasa-suave:#3A2018;
+    --sombra:0 1px 0 rgba(0,0,0,.3), 0 14px 34px -22px rgba(0,0,0,.8);
+    --sombra-alta:0 2px 0 rgba(0,0,0,.3), 0 22px 50px -24px rgba(0,0,0,.9);
+    --chip:#13233A; --chip-on:#E8EEF5;
+  }
+  .topbar,.hero{background:#081320 !important}
+  .hero{border:1px solid var(--linea)}
+  .chip[aria-pressed="true"]{color:#0B1624 !important}
+  .chip .count{background:rgba(255,255,255,.08) !important}
+  .chip[aria-pressed="true"] .count{background:rgba(11,22,36,.15) !important}
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -815,6 +914,11 @@ svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentCo
 .tb-sub{flex:1;min-width:0;font-size:12.5px;color:#8FA7BE;font-family:var(--mono)}
 .tb-btn{background:transparent;border:1px solid #3E5C7D;color:#C9D8E6;border-radius:9px;padding:7px 12px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none}
 .tb-btn:hover{border-color:var(--brasa);color:#fff}
+.viewnav{display:inline-flex;gap:3px;background:rgba(255,255,255,.06);border:1px solid #3E5C7D;border-radius:11px;padding:3px}
+.viewnav a{color:#C9D8E6;text-decoration:none;font:600 13px var(--texto);padding:6px 11px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;min-height:34px;white-space:nowrap}
+.viewnav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.viewnav a[aria-current="page"]{background:var(--brasa);color:#fff}
+@media(max-width:760px){.viewnav a span{display:none}.viewnav a{padding:6px 9px}}
 @media(max-width:600px){.tb-sub{display:none}}
 
 main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
@@ -837,11 +941,17 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 .searchwrap svg{color:var(--gris);flex:none}
 .searchwrap input{flex:1;border:none;outline:none;font:16px var(--texto);padding:13px 0;color:var(--tinta);background:transparent}
 .searchwrap input::placeholder{color:#9DB0C2}
+.searchwrap input::-webkit-search-cancel-button{display:none}
+.searchwrap .clear{border:0;background:transparent;color:var(--gris);width:42px;height:42px;border-radius:11px;cursor:pointer;display:none;place-items:center}
+.searchwrap .clear:hover{background:var(--papel);color:var(--tinta)}
+.searchwrap.has-text .clear{display:grid}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:26px 0 6px}
-.chip{background:#fff;border:1.5px solid var(--linea);border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--acero);cursor:pointer;display:inline-flex;align-items:center;gap:7px;line-height:1.25}
+.chips-label{width:100%;text-align:center;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--acero-claro);margin:6px 0 -2px}
+.chip{background:var(--chip);border:1.5px solid var(--linea);border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--acero);cursor:pointer;display:inline-flex;align-items:center;gap:7px;line-height:1.25}
 .chip:hover{border-color:var(--acero-claro)}
-.chip[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.chip[aria-pressed="true"]{background:var(--chip-on);border-color:var(--chip-on);color:#fff}
+.chip.sub{border-style:dashed}
 .chip .count{background:rgba(15,34,55,.08);border-radius:999px;padding:1px 8px;font-size:11.5px}
 .chip[aria-pressed="true"] .count{background:rgba(255,255,255,.22)}
 
@@ -863,14 +973,24 @@ main{max-width:1180px;margin:0 auto;padding:26px 16px 50px}
 .app-card-top{display:flex;align-items:center;gap:12px}
 .app-icon{width:40px;height:40px;border-radius:11px;background:var(--papel);color:var(--acero);display:grid;place-items:center;flex:none}
 .app-icon svg{width:19px;height:19px}
-.app-card h3{font-family:var(--display);font-weight:700;font-size:16.5px;margin:0;letter-spacing:-.01em;line-height:1.3}
-.app-card p.desc{margin:0;color:var(--gris);font-size:13.5px;line-height:1.55;flex:1}
-.app-badges{display:flex;flex-wrap:wrap;gap:6px}
+.app-card h3{font-family:var(--display);font-weight:700;font-size:16.5px;margin:0;letter-spacing:-.01em;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Altura fija: si la descripción no cabe, aparece una barra de desplazamiento */
+.app-card p.desc{margin:0;color:var(--gris);font-size:13.5px;line-height:1.55;flex:none;height:9.3em;overflow-y:auto;padding-right:6px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--linea) transparent}
+.app-card p.desc::-webkit-scrollbar,.app-badges::-webkit-scrollbar{width:6px}
+.app-card p.desc::-webkit-scrollbar-thumb,.app-badges::-webkit-scrollbar-thumb{background:var(--linea);border-radius:999px}
+.app-card p.desc:hover::-webkit-scrollbar-thumb,.app-badges:hover::-webkit-scrollbar-thumb{background:var(--acero-claro)}
+.app-badges{display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;height:54px;flex:none;overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--linea) transparent}
 .app-badge{font-size:11.3px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--linea-2);color:var(--acero)}
 .app-open{margin-top:auto;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--brasa);color:#fff;text-align:center;padding:11px;border-radius:11px;font-size:14px;font-weight:700;box-shadow:0 8px 18px -10px var(--brasa);transition:background .15s ease}
 .app-open:hover{background:var(--brasa-osc)}
 .app-open svg{width:15px;height:15px}
 
+.subhead{display:flex;align-items:center;gap:10px;margin:22px 0 12px;font:700 15px var(--display);color:var(--acero)}
+.subhead:first-of-type{margin-top:4px}
+.subhead .si{width:30px;height:30px;border-radius:9px;background:var(--linea-2);display:grid;place-items:center;color:var(--c,var(--acero))}
+.subhead .sn{font:600 12px var(--mono);color:var(--acero-claro)}
+.subhead::after{content:"";flex:1;height:1px;background:var(--linea)}
+@media (prefers-reduced-motion:reduce){.app-card,.app-card:hover{transition:none;transform:none}}
 .empty-state{text-align:center;color:var(--gris);padding:70px 10px;font-size:15px}
 
 footer{max-width:1180px;margin:10px auto 0;padding:0 16px 40px;font-size:13px;color:#6E8299}
@@ -884,6 +1004,11 @@ __ICON_SPRITE__
   <div class="tb-in">
     <span class="logo"><span class="anv"><svg class="i"><use href="#i-anvil"></use></svg></span><span>HIAD</span></span>
     <span class="tb-sub">__EYEBROW__ · agrupado por tema</span>
+    <nav class="viewnav" aria-label="Vistas del portal">
+      <a href="../../" title="Inicio" aria-label="Inicio"><svg class="i"><use href="#i-home"></use></svg><span>Inicio</span></a>
+      <a href="../" data-keep-state title="Catálogo completo" aria-label="Catálogo completo"><svg class="i"><use href="#i-grid"></use></svg><span>Catálogo completo</span></a>
+      <a href="./" aria-current="page" data-keep-state title="Agrupado por tema" aria-label="Agrupado por tema"><svg class="i"><use href="#i-layers"></use></svg><span>Agrupado por tema</span></a>
+    </nav>
     <a class="tb-btn" href="https://github.com/RafaUMH2110/apps" target="_blank" rel="noopener"><svg class="i"><use href="#i-github"></use></svg><span>GitHub</span></a>
   </div>
 </div>
@@ -903,7 +1028,8 @@ __ICON_SPRITE__
 
   <div class="searchwrap">
     <svg class="i"><use href="#i-search"></use></svg>
-    <input id="search" type="text" placeholder="Buscar por nombre, descripción, categoría o etiqueta...">
+    <input id="search" type="search" placeholder="Buscar por nombre, descripción, categoría o etiqueta..." aria-label="Buscar aplicaciones">
+    <button class="clear" id="clear" type="button" aria-label="Borrar búsqueda"><svg class="i"><use href="#i-x"></use></svg></button>
   </div>
 
   <div id="categories" class="chips"></div>
@@ -914,7 +1040,7 @@ __ICON_SPRITE__
 
 <footer>
   <hr>
-  <p>Generado automáticamente a partir de las aplicaciones publicadas en este repositorio, agrupadas por tema. También disponible en su <a href="../">versión principal</a>.<br>
+  <p>Generado automáticamente a partir de las aplicaciones publicadas en este repositorio, agrupadas por tema. Ir al <a href="../../">inicio</a> o al <a href="../" data-keep-state>catálogo completo</a>.<br>
   __CONTACT_NAME__ (<a href="mailto:__CONTACT_EMAIL__">__CONTACT_EMAIL__</a>) · Última actualización: __LAST_UPDATED__</p>
 </footer>
 
@@ -922,14 +1048,39 @@ __ICON_SPRITE__
 <script id="category-meta" type="application/json">__CATEGORY_META_JSON__</script>
 <script id="theme-meta" type="application/json">__THEME_META_JSON__</script>
 <script id="theme-order" type="application/json">__THEME_ORDER_JSON__</script>
+<script id="subgroup-meta" type="application/json">__SUBGROUP_META_JSON__</script>
 <script>
   const CATALOG = JSON.parse(document.getElementById('catalog-data').textContent);
   const CATEGORY_META = JSON.parse(document.getElementById('category-meta').textContent);
   const THEME_META = JSON.parse(document.getElementById('theme-meta').textContent);
   const THEME_ORDER = JSON.parse(document.getElementById('theme-order').textContent);
+  const SUBGROUP_META = JSON.parse(document.getElementById('subgroup-meta').textContent);
 
   let activeCategory = 'all';
   let query = '';
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Estado en la URL (#cat=...&q=...), compartido con el catálogo completo.
+  function leerEstado() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const cat = h.get('cat');
+    activeCategory = cat && CATALOG.some(a => a.categories.includes(cat)) ? cat : 'all';
+    const input = document.getElementById('search');
+    input.value = h.get('q') || '';
+    query = norm(input.value.trim());
+    input.parentElement.classList.toggle('has-text', !!input.value);
+  }
+  function guardarEstado() {
+    const h = new URLSearchParams();
+    if (activeCategory !== 'all') h.set('cat', activeCategory);
+    const q = document.getElementById('search').value.trim();
+    if (q) h.set('q', q);
+    const hash = h.toString();
+    history.replaceState(null, '', hash ? '#' + hash : location.pathname + location.search);
+    document.querySelectorAll('a[data-keep-state]').forEach(a => {
+      a.href = a.getAttribute('href').split('#')[0] + (hash ? '#' + hash : '');
+    });
+  }
 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -939,11 +1090,11 @@ __ICON_SPRITE__
     const inCategory = activeCategory === 'all' || app.categories.includes(activeCategory);
     if (!inCategory) return false;
     if (!query) return true;
-    const haystack = [
+    const haystack = norm([
       app.title, app.description,
       ...app.categories.map(c => (CATEGORY_META[c] || {}).label || c),
       ...app.tags,
-    ].join(' ').toLowerCase();
+    ].join(' '));
     return haystack.includes(query);
   }
 
@@ -954,22 +1105,19 @@ __ICON_SPRITE__
   function renderCategories() {
     const counts = {};
     CATALOG.forEach(app => app.categories.forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
-    const slugs = Object.keys(counts).sort((a, b) =>
-      ((CATEGORY_META[a] || {}).label || a).localeCompare((CATEGORY_META[b] || {}).label || b)
-    );
+    const label = (s) => (CATEGORY_META[s] || {}).label || s;
+    const isArea = (s) => CATEGORY_META[s] && CATEGORY_META[s].area !== undefined;
+    const areas = Object.keys(counts).filter(isArea).sort((a, b) => CATEGORY_META[a].area - CATEGORY_META[b].area);
+    const resto = Object.keys(counts).filter(s => !isArea(s)).sort((a, b) => label(a).localeCompare(label(b), 'es'));
 
-    const allBtn = `<button class="chip" aria-pressed="${activeCategory === 'all'}" data-cat="all">
-        ${iconSymbol('grid')} Todas <span class="count">${CATALOG.length}</span>
-      </button>`;
-
-    const buttons = slugs.map(slug => {
-      const meta = CATEGORY_META[slug] || { label: slug, icon: 'tag' };
-      return `<button class="chip" aria-pressed="${activeCategory === slug}" data-cat="${slug}">
-          ${iconSymbol(meta.icon)} ${escapeHtml(meta.label)} <span class="count">${counts[slug]}</span>
+    const chip = (slug, meta, count) => `<button class="chip${meta.parent ? ' sub' : ''}" aria-pressed="${activeCategory === slug}" data-cat="${slug}">
+          ${iconSymbol(meta.icon)} ${escapeHtml(meta.label)} <span class="count">${count}</span>
         </button>`;
-    }).join('');
+    const lista = (slugs) => slugs.map(s => chip(s, CATEGORY_META[s] || { label: s, icon: 'tag' }, counts[s])).join('');
 
-    document.getElementById('categories').innerHTML = allBtn + buttons;
+    document.getElementById('categories').innerHTML =
+      '<div class="chips-label">Áreas</div>' + chip('all', { label: 'Todas', icon: 'grid' }, CATALOG.length) + lista(areas) +
+      '<div class="chips-label">Categorías</div>' + lista(resto);
     document.querySelectorAll('.chip').forEach(btn => {
       btn.addEventListener('click', () => {
         activeCategory = btn.dataset.cat;
@@ -990,10 +1138,25 @@ __ICON_SPRITE__
           <div class="app-icon">${iconSymbol(meta.icon)}</div>
           <h3>${escapeHtml(app.title)}</h3>
         </div>
-        <p class="desc">${escapeHtml(app.description)}</p>
+        <p class="desc" tabindex="0" aria-label="Descripción de ${escapeHtml(app.title)}">${escapeHtml(app.description)}</p>
         <div class="app-badges">${badges}</div>
         <a class="app-open" href="${app.url}" target="_blank" rel="noopener">Abrir aplicación ${iconSymbol('ext')}</a>
       </div>`;
+  }
+
+  // Si un tema tiene subgrupos (p. ej. telemetría: meteo y hogar), cada uno
+  // va en su propia subsección; si no, una sola cuadrícula.
+  function gridConSubgrupos(apps, meta) {
+    const subs = [...new Set(apps.map(a => a.subgroup || ''))];
+    if (subs.length === 1 && !subs[0]) return `<div class="app-grid">${apps.map(appCardHtml).join('')}</div>`;
+    const orden = Object.keys(SUBGROUP_META);
+    subs.sort((a, b) => (orden.indexOf(a) + 1 || 99) - (orden.indexOf(b) + 1 || 99));
+    return subs.map(sg => {
+      const lista = apps.filter(a => (a.subgroup || '') === sg);
+      const sm = SUBGROUP_META[sg] || { label: sg || 'Otras', icon_temas: 'tag' };
+      return `<h3 class="subhead" style="--c:${meta.color}"><span class="si">${iconSymbol(sm.icon_temas)}</span>${escapeHtml(sm.label)} <span class="sn">${lista.length}</span></h3>
+        <div class="app-grid">${lista.map(appCardHtml).join('')}</div>`;
+    }).join('');
   }
 
   function renderGroups() {
@@ -1015,7 +1178,7 @@ __ICON_SPRITE__
               ${meta.lede ? `<p class="sh-lede">${escapeHtml(meta.lede)}</p>` : ''}
             </div>
           </header>
-          <div class="app-grid">${apps.map(appCardHtml).join('')}</div>
+          ${gridConSubgrupos(apps, meta)}
         </section>`;
     });
 
@@ -1033,13 +1196,20 @@ __ICON_SPRITE__
   function renderAll() {
     renderCategories();
     renderGroups();
+    guardarEstado();
   }
 
-  document.getElementById('search').addEventListener('input', (e) => {
-    query = e.target.value.trim().toLowerCase();
+  const searchEl = document.getElementById('search');
+  searchEl.addEventListener('input', (e) => {
+    query = norm(e.target.value.trim());
+    e.target.parentElement.classList.toggle('has-text', !!e.target.value);
     renderAll();
   });
+  searchEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); } });
+  document.getElementById('clear').addEventListener('click', () => { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); searchEl.focus(); });
+  addEventListener('hashchange', () => { leerEstado(); renderAll(); });
 
+  leerEstado();
   renderAll();
 </script>
 </body>
@@ -1100,6 +1270,7 @@ def render_portal_html_temas(catalog, title, subtitle, eyebrow, contact_name="",
     out = out.replace("__CATEGORY_META_JSON__", json.dumps(category_meta, ensure_ascii=False))
     out = out.replace("__THEME_META_JSON__", json.dumps(theme_meta, ensure_ascii=False))
     out = out.replace("__THEME_ORDER_JSON__", json.dumps(theme_order, ensure_ascii=False))
+    out = out.replace("__SUBGROUP_META_JSON__", json.dumps(SUBGROUP_INFO, ensure_ascii=False))
     out = out.replace("__CONTACT_NAME__", html.escape(contact_name))
     out = out.replace("__CONTACT_EMAIL__", html.escape(contact_email))
     out = out.replace("__LAST_UPDATED__", _fecha_es(datetime.datetime.now(datetime.timezone.utc)))

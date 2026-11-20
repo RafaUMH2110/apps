@@ -55,6 +55,8 @@ persona que la usa.
 
 **TeleHome Enchufes Web (20 nov 2026).** Nueva app `telemetria/home/telehome-enchufes/`: interfaz web del servicio TeleHome Enchufes (repo `code`, `telemetria/home/telehome-enchufes`). Detecta el servicio por la ruta de la propia página o por una ruta del mismo servidor escrita en el pie (p. ej. `/rafa/telehome/enchufes/`; el servicio no admite otros orígenes) y, si no lo encuentra, entra en modo demostración con tres enchufes simulados (encender/apagar, añadir, histórico y exportación a CSV en el navegador). El almacenamiento de la demo es `localStorage` (`telehome_demo_v1`). Las funciones de la nube de Tuya y el descubrimiento de la red solo están disponibles con el servicio real.
 
+**Portal: áreas Meteo y Hogar, navegación y fichas de altura fija (20 nov 2026).** Los dos portales (`appindex/` y `appindex/temas/`) muestran primero las **áreas** (Moda, Telemetría y, bajo ella, Meteo y Hogar, que el generador asigna por carpeta: `telemetria/meteo/` y `telemetria/home/`) y después el resto de categorías. Ambos llevan una barra *Inicio · Catálogo completo · Agrupado por tema* que conserva el filtro y la búsqueda (`#cat=…&q=…`), así que se puede ir y volver entre vistas o enlazar directamente a un área (p. ej. `appindex/temas/#cat=hogar`). En la vista por tema, Telemetría se divide en «Estación meteorológica» y «Hogar», las fichas tienen altura fija con barra de desplazamiento en la descripción y hay modo oscuro. La raíz del repo tiene una página de entrada (`index.html`). El workflow regenera y sube las dos versiones del portal, también al cambiar los scripts del generador.
+
 ## Estructura del repositorio
 
 ```

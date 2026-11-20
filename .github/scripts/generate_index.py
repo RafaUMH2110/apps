@@ -18,7 +18,7 @@ EXCLUDE_DIRS = {"appindex", ".github", ".git"}
 OUT_PATH = "appindex/index.html"
 OUT_PATH_TEMAS = "appindex/temas/index.html"
 TITLE = "Herramientas de IA para la Docencia (HIAD)"
-SUBTITLE = "Moda, patrones y outfits generados con IA; detección de uso de IA en PDF; consulta documental asistida; y monitorización en vivo de una estación meteorológica — todo en apps de un solo archivo, listas para el aula."
+SUBTITLE = "Moda, patrones y outfits generados con IA; detección de uso de IA en PDF; consulta documental asistida; monitorización en vivo de una estación meteorológica; y telemetría y control de enchufes inteligentes — todo en apps de un solo archivo, listas para el aula."
 EYEBROW = "RafaUMH2110 · UMH"
 CONTACT_NAME = "Rafael Puerto"
 CONTACT_EMAIL = "r.puerto@umh.es"
@@ -30,6 +30,18 @@ CONTACT_EMAIL = "r.puerto@umh.es"
 AUTO_CATEGORIES_BY_GROUP = {
     "moda": ["moda"],
 }
+
+# Lo mismo, pero por prefijo de ruta (más específico): las apps de
+# telemetria/meteo/ y telemetria/home/ reciben además su área (Meteo u
+# Hogar), para poder filtrarlas por separado en los dos portales.
+AUTO_CATEGORIES_BY_PATH = {
+    "telemetria/meteo/": ["telemetria", "meteo"],
+    "telemetria/home/": ["telemetria", "hogar"],
+}
+
+# Subgrupo dentro de un tema (segundo nivel de carpeta): solo para los
+# temas que lo usan; el portal por temas los muestra como subsecciones.
+SUBGROUP_THEMES = {"telemetria"}
 
 
 def list_local_apps(root):
@@ -55,9 +67,15 @@ def list_local_apps(root):
                     continue
                 meta["group"] = rel.split("/")[0]
                 meta["clase_app"] = clase_de_app(rel, meta)
-                for slug in AUTO_CATEGORIES_BY_GROUP.get(meta["group"], []):
+                extra = list(AUTO_CATEGORIES_BY_GROUP.get(meta["group"], []))
+                for prefijo, cats in AUTO_CATEGORIES_BY_PATH.items():
+                    if rel.startswith(prefijo):
+                        extra += cats
+                for slug in extra:
                     if slug not in meta["categories"]:
                         meta["categories"].append(slug)
+                partes = rel.split("/")
+                meta["subgroup"] = partes[1] if meta["group"] in SUBGROUP_THEMES and len(partes) > 2 else ""
                 apps.append((rel, meta))
     return apps
 

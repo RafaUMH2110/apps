@@ -100,11 +100,11 @@ sudo systemctl restart telemet-collector
 journalctl -u telemet-collector -f                      # every line carries the station [ID]
 ```
 
-**Which app to use.** *TeleMet History* (one station): open `…/telemethistory/`; it reads `data/history_<ITS_ID>.json`. *TeleMet MultiStation* (several): copy `telemetria/telemet/multistation/{index.html,apple-touch-icon.png}` to `/var/www/htdocs/rafa/telemetmultistation/`, register the stations and, in “07 · Data and server”, set the folder to `../telemethistory/data/` (or the one you use) and press “Synchronise now”. (The Spanish version, TeleMet Multi, lives in `telemetria/telemet/multi/`.) More detail in the [MANUAL](MANUAL.md#85-telemet-multistation-several-stations).
+**Which app to use.** *TeleMet History* (one station): open `…/telemethistory/`; it reads `data/history_<ITS_ID>.json`. *TeleMet MultiStation* (several): copy `telemetria/meteo/telemet/multistation/{index.html,apple-touch-icon.png}` to `/var/www/htdocs/rafa/telemetmultistation/`, register the stations and, in “07 · Data and server”, set the folder to `../telemethistory/data/` (or the one you use) and press “Synchronise now”. (The Spanish version, TeleMet Multi, lives in `telemetria/meteo/telemet/multi/`.) More detail in the [MANUAL](MANUAL.md#85-telemet-multistation-several-stations).
 
 ## Installing the TeleMet History app on the same server
 
-Copy `telemetria/telemet/history/index.html` (and `apple-touch-icon.png`) to
+Copy `telemetria/meteo/telemet/history/index.html` (and `apple-touch-icon.png`) to
 `/var/www/htdocs/rafa/telemethistory/`. The app looks for the history at `data/history_<ID>.json` and, if it does not exist, at `data/history.json`,
 **relative to its own page**, i.e. in `/var/www/htdocs/rafa/telemethistory/data/`,
 which is exactly where the collector writes it with the default configuration. If you publish the app in

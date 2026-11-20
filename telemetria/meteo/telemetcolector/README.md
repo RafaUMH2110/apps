@@ -100,11 +100,11 @@ sudo systemctl restart telemet-colector
 journalctl -u telemet-colector -f                      # cada línea lleva [ID] de la estación
 ```
 
-**Qué app usar.** *TeleMet Historial* (una estación): abre `…/telemethistorial/` y lee `datos/historial_<SU_ID>.json`. *TeleMet Multi* (varias): copia `telemetria/telemet/multi/{index.html,apple-touch-icon.png}` a `/var/www/htdocs/rafa/telemetmulti/`, da de alta las estaciones y en «07 · Datos y servidor» pon como carpeta `../telemethistorial/datos/` (o la que uses) y pulsa «Sincronizar ahora». Más detalle en el [MANUAL](MANUAL.md#85-telemet-multi-varias-estaciones).
+**Qué app usar.** *TeleMet Historial* (una estación): abre `…/telemethistorial/` y lee `datos/historial_<SU_ID>.json`. *TeleMet Multi* (varias): copia `telemetria/meteo/telemet/multi/{index.html,apple-touch-icon.png}` a `/var/www/htdocs/rafa/telemetmulti/`, da de alta las estaciones y en «07 · Datos y servidor» pon como carpeta `../telemethistorial/datos/` (o la que uses) y pulsa «Sincronizar ahora». Más detalle en el [MANUAL](MANUAL.md#85-telemet-multi-varias-estaciones).
 
 ## Instalar la app TeleMet Historial en el mismo servidor
 
-Copia `telemetria/telemet/historial/index.html` (y `apple-touch-icon.png`) a
+Copia `telemetria/meteo/telemet/historial/index.html` (y `apple-touch-icon.png`) a
 `/var/www/htdocs/rafa/telemethistorial/`. La app busca el histórico en `datos/historial_<ID>.json` y, si no existe, en `datos/historial.json`
 **relativos a su propia página**, es decir, en `/var/www/htdocs/rafa/telemethistorial/datos/`,
 que es justo donde lo escribe el colector con la configuración por defecto. Si publicas la app en

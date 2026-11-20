@@ -2,8 +2,8 @@
 
 Manual de instalación, uso, configuración y funcionamiento interno de **TeleMet Colector**, el programa en Python que mantiene en el servidor Linux un histórico de las últimas 24 horas (configurable) de la estación meteorológica y lo pone a disposición de la app **TeleMet Historial**.
 
-- **Código:** `RafaUMH2110/apps` → `telemetria/telemetcolector/`
-- **Apps asociadas:** `telemetria/telemet/historial/index.html` (TeleMet Historial, una estación) y `telemetria/telemet/multi/index.html` (TeleMet Multi, varias estaciones)
+- **Código:** `RafaUMH2110/apps` → `telemetria/meteo/telemetcolector/`
+- **Apps asociadas:** `telemetria/meteo/telemet/historial/index.html` (TeleMet Historial, una estación) y `telemetria/meteo/telemet/multi/index.html` (TeleMet Multi, varias estaciones)
 - **Versión del programa:** 1.1 · **Formato del JSON:** 1
 
 ---
@@ -107,7 +107,7 @@ Puntos clave del diseño:
 ## 4. Contenido del paquete
 
 ```
-telemetria/telemetcolector/
+telemetria/meteo/telemetcolector/
 ├── telemet_colector.py          ← el programa
 ├── config.example.ini           ← plantilla de configuración comentada
 ├── telemet-colector.service     ← unidad systemd
@@ -119,10 +119,10 @@ telemetria/telemetcolector/
 Además, las apps que consumen los datos:
 
 ```
-telemetria/telemet/historial/
+telemetria/meteo/telemet/historial/
 ├── index.html                   ← TeleMet Historial, una estación (ya incluye la lectura del JSON)
 └── apple-touch-icon.png
-telemetria/telemet/multi/
+telemetria/meteo/telemet/multi/
 ├── index.html                   ← TeleMet Multi, varias estaciones (lee un JSON por estación)
 ├── README.md
 └── apple-touch-icon.png
@@ -140,7 +140,7 @@ Desde GitHub (en tu equipo o en el servidor):
 
 ```bash
 git clone https://github.com/RafaUMH2110/apps.git
-cd apps/telemetria/telemetcolector
+cd apps/telemetria/meteo/telemetcolector
 ```
 
 o copia al servidor la carpeta `telemet-colector/` del `.zip` descargado (por ejemplo con `scp -r`).
@@ -279,7 +279,7 @@ Verás una línea de log por lectura. Se detiene con `Ctrl+C` (cierra la base de
 ### 7.1. Instalación
 
 ```bash
-sudo cp /home/<tu-usuario>/apps/telemetria/telemetcolector/telemet-colector.service /etc/systemd/system/
+sudo cp /home/<tu-usuario>/apps/telemetria/meteo/telemetcolector/telemet-colector.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now telemet-colector
 ```
@@ -369,7 +369,7 @@ Copia `index.html` y `apple-touch-icon.png` a la carpeta de la app en el servido
 
 ```bash
 sudo mkdir -p /var/www/htdocs/rafa/telemethistorial
-sudo cp telemetria/telemet/historial/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemethistorial/
+sudo cp telemetria/meteo/telemet/historial/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemethistorial/
 ```
 
 ### 8.2. Cómo se enlazan app y JSON
@@ -418,7 +418,7 @@ Activar la compresión del JSON (`mod_deflate`, tipo `application/json`) reduce 
 
 TeleMet Multi sigue el mismo mecanismo, pero para todas las estaciones a la vez: por cada estación dada de alta lee `<carpeta>/historial_<ID>.json` (o `history_<ID>.json`) y, si no existe, `historial.json` / `history.json` cuando su `stationId` coincide. Añade solo las lecturas que faltan; nunca borra lo local.
 
-1. Copia la app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmulti && sudo cp telemetria/telemet/multi/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmulti/`.
+1. Copia la app: `sudo mkdir -p /var/www/htdocs/rafa/telemetmulti && sudo cp telemetria/meteo/telemet/multi/{index.html,apple-touch-icon.png} /var/www/htdocs/rafa/telemetmulti/`.
 2. Indica a la app dónde están los JSON. Tienes dos opciones:
    - **Opción A (la más sencilla, una sola carpeta de datos):** deja el colector escribiendo en `/var/www/htdocs/rafa/telemethistorial/datos/` y, en la app, sección **«07 · Datos y servidor»**, pon como carpeta `../telemethistorial/datos/`.
    - **Opción B:** pon `ruta_json` en `…/telemetmulti/datos/historial.json` (el colector añade el ID a cada nombre) y deja la carpeta por defecto (`datos/`).
@@ -773,7 +773,7 @@ Todos los instantes son **epoch en milisegundos (UTC)**. La zona horaria solo in
 
 ## 13. Cómo funciona la parte de la app
 
-Todo está en `telemetria/telemet/historial/index.html`, en el bloque «HISTÓRICO DEL SERVIDOR (TeleMet Colector)».
+Todo está en `telemetria/meteo/telemet/historial/index.html`, en el bloque «HISTÓRICO DEL SERVIDOR (TeleMet Colector)».
 
 ### 13.1. Constantes ajustables (en el propio HTML)
 
@@ -872,7 +872,7 @@ No son necesarias: son datos de unas horas, reconstruibles y efímeros. Solo con
 
 ```bash
 cd ~/apps && git pull
-sudo cp telemetria/telemetcolector/telemet_colector.py /opt/telemet-colector/
+sudo cp telemetria/meteo/telemetcolector/telemet_colector.py /opt/telemet-colector/
 sudo chown telemet:telemet /opt/telemet-colector/telemet_colector.py
 sudo systemctl restart telemet-colector
 journalctl -u telemet-colector -n 20
@@ -883,7 +883,7 @@ Si en la actualización se añaden parámetros nuevos, compara `config.example.i
 ### 14.5. Actualizar la app
 
 ```bash
-sudo cp ~/apps/telemetria/telemet/historial/index.html /var/www/htdocs/rafa/telemethistorial/
+sudo cp ~/apps/telemetria/meteo/telemet/historial/index.html /var/www/htdocs/rafa/telemethistorial/
 ```
 
 Los navegadores cargarán la versión nueva al recargar (a veces hay que forzar con `Ctrl+Shift+R`).
@@ -1039,7 +1039,7 @@ O sin tocar el fichero: `python3 telemet_colector.py --horas 48` (o `TELEMET_HOR
 ### 19.5. Instalación completa en un bloque (para copiar y pegar)
 
 ```bash
-# Desde la carpeta apps/telemetria/telemetcolector del repositorio clonado
+# Desde la carpeta apps/telemetria/meteo/telemetcolector del repositorio clonado
 sudo useradd --system --home /opt/telemet-colector --shell /usr/sbin/nologin telemet
 sudo mkdir -p /opt/telemet-colector/datos
 sudo cp telemet_colector.py /opt/telemet-colector/

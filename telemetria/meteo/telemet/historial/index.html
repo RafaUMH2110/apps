@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2237">
-<title>TeleMet Cal ProMax · Monitor con corrección del sensor de temperatura</title>
-<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network, igual que TeleMet Pro, con un añadido: corrección configurable del error de temperatura por calentamiento solar del sensor (offset fijo o estimación dinámica a partir de radiación solar y viento), editable en tiempo real, calibrable comparando con un sensor de referencia, con ajuste automático de k en cada lectura a partir de esa referencia, con un filtro de saltos bruscos entre lecturas consecutivas y un filtro de estabilización que evita que la corrección esté bailando entre décimas de grado.">
+<title>TeleMet Historial · Monitor en vivo + consulta de un día concreto</title>
+<meta name="description" content="Monitor en vivo de tu estación meteorológica personal en Weather Underground / Earth Network (mismo motor que TeleMet Pro), con sondeo continuo, backoff automático y, además, un panel para consultar cualquier día concreto del pasado, no solo los últimos 7.">
 <meta name="author" content="Rafael Puerto">
 <!-- Icono para "Añadir a pantalla de inicio": debe ser un archivo real, no un
      data: URI, que iOS Safari no siempre respeta al crear el icono de la app. -->
@@ -19,7 +19,7 @@
   /* Marca — constante en claro y oscuro */
   --brasa:#E4572E; --brasa-osc:#C9441F;
   --forjado:#0E7C6B;
-  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9; --c-temp-bruta:#9AA9B8;
+  --c-temp:#E4572E; --c-hum:#1F6FB2; --c-pres:#2E4B6B; --c-wind:#6B4FD8; --c-gust:#C98200; --c-rain:#3FA7D6; --c-solar:#F2A900; --c-uv:#D94F70; --c-heat:#4F772D; --c-dew:var(--forjado); --c-dir:#4A7FC9;
   --r:14px;
   --display:'Bricolage Grotesque',Georgia,serif;
   --texto:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -37,22 +37,8 @@
   --sombra:0 1px 0 rgba(15,34,55,.05),0 14px 34px -22px rgba(15,34,55,.45);
   --sombra-alta:0 2px 0 rgba(15,34,55,.04),0 22px 50px -24px rgba(15,34,55,.55);
 }
-:root[data-tema="claro"]{ color-scheme: light; }
-:root[data-tema="oscuro"]{
-    --ink:#EAF1F7; --muted:#92ACC4;
-    --page-bg:#0B1420; --card-bg:#121C2B;
-    --line:#223247; --line-2:#1A2638;
-    --steel:#9CB7D6; --steel-soft:#51708F;
-    --panel-dark:#060B14; --on-dark:#DCE8F2; --on-dark-muted:#6E88A3; --panel-line:#223247;
-    --brasa-suave:#3A2015; --forjado-suave:#123028; --aviso-ink:#F2B59A;
-    --tip-bg:#2A230A; --tip-bd:#5C4A1E; --tip-ink:#F0C674; --tip-ico:#F0C674;
-    --c-hum:#5FA8E0; --c-wind:#A98CFF; --c-gust:#F2B341; --c-rain:#73C7EC; --c-heat:#7FB069; --c-dir:#7FA8E0;
-    --forjado:#1FBE9F;
-    --sombra:0 1px 0 rgba(0,0,0,.2),0 14px 34px -22px rgba(0,0,0,.6);
-    --sombra-alta:0 2px 0 rgba(0,0,0,.2),0 22px 50px -24px rgba(0,0,0,.7);
-  }
 @media (prefers-color-scheme: dark){
-  :root:not([data-tema]){
+  :root{
     --ink:#EAF1F7; --muted:#92ACC4;
     --page-bg:#0B1420; --card-bg:#121C2B;
     --line:#223247; --line-2:#1A2638;
@@ -170,12 +156,6 @@ button{font-family:var(--texto);cursor:pointer}
 .aviso{display:flex;gap:11px;background:var(--brasa-suave);border:1px solid #F3C7B5;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--aviso-ink);margin:14px 0 0}
 .aviso svg{width:20px;height:20px;flex:none;margin-top:1px}
 .okbox{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--forjado);margin-top:10px;display:inline-flex;gap:9px;align-items:center}
-.card > hr{border:0;border-top:1px solid var(--line);margin:18px 0 16px}
-.subtitulo-sub{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0 0 6px;color:var(--ink)}
-.calib-caja{background:var(--forjado-suave);border:1px solid #A9DCCF;border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--ink);line-height:1.5}
-.calib-caja b{font-family:var(--mono)}
-.calib-caja .calib-aviso{color:var(--aviso-ink)}
-.calib-acciones{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 
 /* Acordeón de ajustes avanzados */
 .acc{border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px}
@@ -195,6 +175,11 @@ button{font-family:var(--texto);cursor:pointer}
 .acc-evol .inner{padding-top:16px}
 .evol-nota{font-size:12.5px;color:var(--muted);margin:0 0 14px}
 .evol-vacio{color:var(--muted);font-size:13.5px;font-style:italic;padding:8px 0}
+/* Selector de ventana (12 h / 24 h) de las gráficas de evolución */
+.evol-ventana{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:0 0 14px}
+.evol-ventana button{font:inherit;font-size:13px;font-weight:700;padding:6px 18px;border:0;background:transparent;color:var(--steel);cursor:pointer}
+.evol-ventana button[aria-pressed="true"]{background:var(--steel);color:#fff}
+.evol-ventana button:focus-visible{outline:2px solid var(--steel);outline-offset:-2px}
 
 .chart-card{margin-bottom:16px}
 .chart-card:last-child{margin-bottom:0}
@@ -253,7 +238,6 @@ button{font-family:var(--texto);cursor:pointer}
 .sparkline{width:100%;height:13px;display:block;margin-top:5px}
 .sparkline polyline{fill:none;stroke:var(--c);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .rango-minmax{font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
-.temp-bruta{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
 .eje-tiempo{display:flex;justify-content:space-between;font-size:10px;color:var(--steel-soft);font-family:var(--mono);margin-top:2px}
 .tile-calidad{grid-column:1/-1;display:flex;align-items:center;gap:14px}
 .tile-calidad .fi{margin-bottom:0;flex-shrink:0}
@@ -273,6 +257,7 @@ button{font-family:var(--texto);cursor:pointer}
 .dia-card .dc-barra{height:4px;border-radius:2px;background:var(--line-2);margin-top:8px;position:relative;overflow:hidden}
 .dia-card .dc-relleno{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--c-hum),var(--c-temp));border-radius:2px}
 .dia-card .dc-extra{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.resumen-dia-solo{max-width:220px;margin:4px 0 16px}
 .dias-vacio{color:var(--muted);font-size:13.5px;font-style:italic;grid-column:1/-1}
 
 .meta-linea{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 14px}
@@ -319,108 +304,27 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 .firma{margin-top:6px;font-family:var(--mono);font-size:11.5px}
 </style>
 </head>
-<body data-app-title="TeleMet Cal ProMax" data-app-description="Variante de TeleMet Pro que añade corrección configurable del error de temperatura por calentamiento solar del sensor: offset fijo o estimación dinámica a partir de la radiación solar y el viento reportados por la propia estación (si los reporta), con los parámetros editables en tiempo real (sin pulsar Guardar, incluso con el sondeo en marcha), una calibración rápida con un solo punto que, a partir de la temperatura de un sensor de referencia, calcula el offset fijo o la sensibilidad dinámica equivalentes, un ajuste automático de esa sensibilidad (k) en cada lectura en vivo nueva a partir de esa misma referencia (sin necesitar un sensor externo continuo), un filtro de saltos bruscos que descarta picos espurios entre lecturas en vivo consecutivas (con resincronización automática si el cambio resulta ser real), y un filtro de estabilización que evita que la temperatura corregida mostrada esté constantemente variando en décimas de grado sin que haya pasado nada real. La gráfica de evolución de temperatura muestra tanto la corregida como la sin corregir. El resto del motor es idéntico a TeleMet Pro: sondeo continuo con backoff automático, tiempo límite configurable, histórico local con backfill, gráficas de 12h/7 días, tendencia por variable, histórico de sesión y exportación a CSV. Versi&#243;n ProMax: aspecto claro u oscuro, pantalla completa, modo quiosco, pantalla siempre encendida, alertas por umbral, exportaci&#243;n del hist&#243;rico en JSON y atajos de teclado." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,edicion en vivo,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,correccion de sensor,calibracion,filtro de saltos,ajuste automatico de k,filtro de estabilizacion" data-client-only="true">
+<body data-app-title="TeleMet Historial" data-app-description="Monitor en vivo de tu estación meteorológica personal (Vevor YT60234 u otra compatible) en Weather Underground / Earth Network. Mismo motor y mismo rediseño editorial tipo 'forja' que TeleMet Pro (sondeo continuo con backoff automático, tendencia por variable, glosario, ajustes avanzados plegables, histórico de sesión y exportación a CSV), con una funcionalidad añadida: un panel para consultar cualquier día concreto del pasado (no solo los últimos 7 que cubren las gráficas de evolución), combinando lo ya guardado en este navegador con el histórico de la API de Weather Underground para esa fecha exacta." data-categories="telemetria,automatizacion,analisis-datos,docencia,diseno-creatividad" data-tags="estacion meteorologica,weather underground,pws,telemetria,vevor,iot,sensores,sondeo continuo,tiempo real,graficos,backoff,tendencia,glosario,diseno editorial,radiacion solar,indice uv,consulta historica,dia concreto,fecha" data-client-only="true">
 
 <!--
   ============================================================================
-  TeleMet Cal ProMax — Notas de diseño y configuración
+  TeleMet Historial — Notas de diseño y configuración
   ============================================================================
 
   QUÉ ES ESTA APP
-  Variante de TeleMet Pro (apps/telemetria/telemet/pro) que añade una
-  CORRECCIÓN CONFIGURABLE DEL SENSOR DE TEMPERATURA: muchas estaciones
-  domésticas no llevan un blindaje de radiación adecuado y el sensor se
-  calienta por encima del aire real cuando le da el sol directo, sobre
-  todo con poco viento (poca ventilación). Dos modos, en la sección
-  "Corrección de temperatura" de Configuración:
-    - "Offset fijo": resta siempre el mismo valor en °C. Sencillo de
-      calibrar comparando con una estación de referencia cercana, pero
-      no se adapta a si hace sol, está nublado o sopla el viento.
-    - "Dinámica (radiación + viento)": estima el calentamiento en cada
-      lectura con error(°C) = k·radiación / (viento + c) — ver
-      corregirTemperatura() en el <script>. Requiere que la estación
-      reporte radiación solar (solarRadiation); si no la reporta, este
-      modo no corrige nada (no hay forma de estimarlo sin ese dato).
-  La corrección se aplica en extraerValores(), antes de calcular la
-  sensación térmica y el punto de rocío (recalculado localmente con la
-  temperatura ya corregida, en vez de usar el que reporta la API, que
-  vendría de la temperatura bruta del sensor) — así toda la app, el
-  histórico local y las gráficas quedan coherentes entre sí. Se guarda
-  también la temperatura bruta (sin corregir) junto a cada lectura, que
-  se muestra como referencia bajo la tarjeta de temperatura cuando hay
-  una corrección activa, y como serie aparte ("Temperatura sin
-  corregir", gris) en la gráfica de evolución de temperatura de 12h/7
-  días, junto a la corregida — ver GRAFICABLES_EXTRA_CHART. Cambiar la
-  configuración de corrección solo afecta a las lecturas nuevas (en
-  vivo o backfill); las ya guardadas en este navegador conservan la
-  corrección con la que se guardaron — usa "Limpiar histórico local"
-  para que las gráficas repartan desde cero con la configuración actual.
-
-  FILTRO DE SALTOS BRUSCOS (solo lecturas en vivo, ver
-  filtrarSaltoBrusco()): si la temperatura ya corregida de una lectura
-  nueva difiere en más de "Umbral de salto brusco" (por defecto 0,5°C)
-  de la última corregida aceptada, se descarta y se repite esa última
-  en su lugar (probable pico espurio del sensor o de la API). Para no
-  quedarse "congelado" si el cambio resulta ser real, al cabo de
-  "Lecturas congeladas antes de resincronizar" (por defecto 10) lecturas
-  seguidas descartadas se acepta la siguiente tal cual y se
-  resincroniza. Ambos valores se editan en tiempo real igual que
-  offset/k/c. No se aplica al backfill histórico (que reconstruye días
-  pasados fuera de orden cronológico estricto) ni al recálculo en vivo
-  de la ficha actual al tocar los parámetros de corrección (misma
-  lectura bruta, no una lectura nueva). Cuando filtra una lectura, se
-  ve un aviso bajo la tarjeta de temperatura ("salto brusco filtrado").
-  Un cambio de configuración de corrección en vivo (modo/offset/k/c) o
-  activar el ajuste automático de k reinicia este filtro: el salto que
-  produce ese cambio es legítimo, no un pico del sensor.
-
-  AJUSTE AUTOMÁTICO DE k (solo modo "Dinámica", ver
-  activarAjusteAutomaticoK()/aplicarAjusteAutomaticoK()): al no haber
-  más referencia disponible que la calibración puntual con un sensor
-  externo, este modo repite esa misma calibración en cada lectura en
-  vivo nueva, usando como "referencia" la propia temperatura corregida
-  de la lectura anterior (la mejor estimación disponible sin más
-  datos). Se activa desde el botón "Activar ajuste automático de k a
-  partir de esta referencia" de la calibración de un punto; a partir de
-  ahí k se recalcula solo en cada lectura (c se mantiene al valor
-  configurado: con una sola ecuación no se pueden despejar k y c a la
-  vez). Por diseño hay un desfase de una muestra (la k nueva se calcula
-  con esta lectura pero se aplica a la siguiente): despejarla y
-  aplicarla a la misma lectura sería circular y dejaría la temperatura
-  corregida congelada para siempre. No se recalcula con una lectura que
-  el filtro de saltos bruscos haya descartado, ni durante el backfill.
-
-  FILTRO DE ESTABILIZACIÓN (solo lecturas en vivo, ver
-  estabilizarTemperatura()): al contrario que el filtro de saltos
-  bruscos (que descarta cambios DEMASIADO grandes), este descarta
-  cambios DEMASIADO pequeños sostenidos en el tiempo — el vaivén de
-  décimas de grado que, sin filtrar, haría que la temperatura corregida
-  mostrada estuviera constantemente cambiando sin que pase nada real.
-  Mientras la variación (máximo − mínimo) de las últimas "Nº de lecturas
-  para confirmar un cambio" lecturas (ya pasadas por el filtro de saltos
-  bruscos) se mantenga dentro de "Umbral de estabilización" (por
-  defecto 0,3°C), se sigue mostrando el mismo valor ya fijado; en
-  cuanto esa variación supera el umbral, se da el cambio por real, se
-  fija el nuevo valor y se reinicia la ventana de observación. Ambos
-  valores se editan en tiempo real igual que el resto de parámetros de
-  corrección. Igual que el filtro de saltos bruscos: no se aplica al
-  backfill histórico ni al recálculo en vivo de la ficha actual, y se
-  reinicia con cualquier cambio de configuración de corrección en vivo
-  o al activar el ajuste automático de k. Una lectura que mantiene el
-  valor fijado se marca igual que una congelada por el filtro de saltos
-  a efectos del ajuste automático de k (no se recalcula k con ella,
-  porque no aporta información nueva), y en pantalla se ve un aviso
-  bajo la tarjeta de temperatura ("estabilizado").
-
-  Por lo demás, misma lógica de sondeo que TeleMet (apps/telemetria/telemet),
-  con el mismo rediseño editorial tipo "forja":
-  paleta de tinta/acero/brasa/forjado, tipografía Bricolage Grotesque
-  (titulares) + Instrument Sans (texto) + JetBrains Mono (cifras/código),
-  tarjetas con icono y borde de color por variable meteorológica, una luz
-  de estado (semáforo) que se mantiene visible en la barra superior y en
-  una barra inferior fija, visibilidad de la API Key, ajustes avanzados
-  plegables (acordeón) y un glosario emergente de los términos propios
-  de la app (Freshness, tendencia, backoff, comprobación de plausibilidad).
+  Partiendo al completo de TeleMet Pro (apps/telemetria/meteo/telemet/pro): mismo
+  motor de sondeo, mismo rediseño editorial tipo "forja" (paleta de
+  tinta/acero/brasa/forjado, tipografía Bricolage Grotesque + Instrument
+  Sans + JetBrains Mono, tarjetas con icono y color por variable, luz de
+  estado persistente, glosario, ajustes avanzados plegables), MÁS una
+  funcionalidad nueva: un panel de "Consultar un día en concreto" (sección
+  "Evolución", junto a las de 12h/7 días) que permite elegir cualquier
+  fecha pasada, no solo las que cubren las gráficas de evolución. Para esa
+  fecha se busca primero en el histórico local (IndexedDB) y, si falta
+  cobertura, se completa con el mismo endpoint de histórico de la API de
+  Weather Underground que ya usa el backfill de 7 días (history/all), pero
+  sin su límite de ventana — es la misma API, simplemente consultada para
+  una fecha arbitraria en vez de "uno de los últimos 7 días".
 
   El sondeo sigue viviendo en el navegador (setTimeout): solo funciona
   mientras esta pestaña permanece abierta.
@@ -430,11 +334,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      localStorage que el resto de la familia TelemetriaWU
      (wu_station_id / wu_api_key): si ya las configuraste en otra app de
      la familia, aparecerán aquí automáticamente. Los ajustes propios de
-     esta app (intervalo, backoff, tiempo límite, nº de puntos,
-     corrección de temperatura) usan su propio prefijo ("telemetcalvivo_"),
-     independiente del resto — y su propia base de datos local
-     ("telemetcalvivo_db"), para no mezclar lecturas corregidas con las ya
-     guardadas sin corregir por TeleMet Pro.
+     esta app (intervalo, backoff, tiempo límite, nº de puntos) usan su
+     propio prefijo ("telemethistorial_"), independiente del resto — y del
+     histórico guardado en IndexedDB, que también es propio de esta app
+     (no comparte el histórico ya acumulado por TeleMet Pro u otras).
 
   2) QUÉ CONSTANTES EDITAR (buscar en el <script> final)
      - BASE_URL: el endpoint de la API.
@@ -452,7 +355,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      Cada punto se guarda junto a su marca de tiempo (seriesTiempos,
      compartida por todas las variables porque se registran todas a la
      vez en cada lectura). El selector "Por lectura / Por tiempo real"
-     (ejeXModo, persistido en telemetcalvivo_eje_x_modo) decide cómo se
+     (ejeXModo, persistido en telemethistorial_eje_x_modo) decide cómo se
      reparte el ancho del sparkline:
        - "uniforme": un punto, un paso de ancho fijo (como antes).
        - "tiempo": posición proporcional a la marca de tiempo real, dentro
@@ -505,7 +408,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <div class="topbar">
   <div class="tb-in">
-    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Cal Pro</em></span></button>
+    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Historial</em></span></button>
     <div class="tb-right">
       <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
       <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
@@ -517,8 +420,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   <div class="hero">
     <p class="eyebrow">ESTACIÓN PERSONAL · WEATHER UNDERGROUND / EARTH NETWORK</p>
-    <h1>Tu estación, <em>en vivo</em></h1>
-    <p class="lede">Sondeo continuo de tu estación meteorológica personal (Vevor YT60234 u otra compatible), con backoff automático, tiempo límite configurable y un aviso claro en cuanto algo no cuadra.</p>
+    <h1>Tu estación, <em>en vivo</em> y en el pasado</h1>
+    <p class="lede">Sondeo continuo de tu estación meteorológica personal (Vevor YT60234 u otra compatible), con backoff automático, tiempo límite configurable y un aviso claro en cuanto algo no cuadra — y, además, un panel para consultar cualquier día concreto del pasado, no solo los últimos 7.</p>
     <div class="actions">
       <button type="button" class="btn btn-primary btn-big" id="btnIrConfig"><svg class="i"><use href="#i-sliders"></use></svg>Configurar mi estación</button>
       <button type="button" class="btn btn-ghost btn-big" id="btnHelp2"><svg class="i"><use href="#i-help"></use></svg>¿Qué significa cada término?</button>
@@ -564,89 +467,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h3>Corrección de temperatura</h3>
-      <p class="sub">Si el sensor recibe sol directo, se calienta por encima del aire real. Elige cómo corregir esa lectura antes de guardarla y mostrarla.</p>
-      <div class="field">
-        <label for="corrModoInput">Modo de corrección</label>
-        <select id="corrModoInput">
-          <option value="ninguna">Ninguna (temperatura tal cual la reporta el sensor)</option>
-          <option value="fijo">Offset fijo</option>
-          <option value="dinamico">Dinámica (radiación solar + viento)</option>
-        </select>
-      </div>
-
-      <div class="grid2" id="corrFijoGrupo" style="display:none">
-        <div class="field">
-          <label for="corrOffsetInput">Offset (°C)</label>
-          <input type="number" id="corrOffsetInput" step="0.1" value="-1.5">
-          <p class="help">Se suma a la lectura bruta: un valor negativo la reduce. Para calibrarlo, compara varias lecturas con una estación de referencia cercana a pleno sol y sin viento (el peor caso) y usa la diferencia media.</p>
-        </div>
-      </div>
-
-      <div class="grid2" id="corrDinamicoGrupo" style="display:none">
-        <div class="field">
-          <label for="corrKInput">Sensibilidad a la radiación (k)</label>
-          <input type="number" id="corrKInput" step="0.001" min="0" value="0.02">
-          <p class="help">Error estimado (°C) = k × radiación solar (W/m²) ÷ (viento (km/h) + c). Más k, más corrección con el mismo sol. Requiere que tu estación reporte radiación solar; si no, este modo no corrige nada.</p>
-        </div>
-        <div class="field">
-          <label for="corrCInput">Viento base (c)</label>
-          <input type="number" id="corrCInput" step="0.5" min="0.5" value="2">
-          <p class="help">Evita dividir por cero con viento en calma y modera la corrección cuando sí sopla (más ventilación, menos calentamiento del sensor).</p>
-        </div>
-      </div>
-      <p class="help" style="margin-top:-4px">Los cambios se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual y a las lecturas nuevas (en vivo o backfill). Las lecturas ya guardadas en este navegador conservan la corrección con la que se guardaron: usa "Borrar histórico local" para que se vuelvan a calcular con el ajuste actual.</p>
-
-      <hr>
-      <div class="subtitulo-sub">Filtro de saltos bruscos</div>
-      <p class="sub" style="margin-bottom:10px">Si la temperatura ya corregida cambia de golpe más de la cuenta entre dos lecturas en vivo seguidas, se mantiene la lectura corregida anterior en vez de aceptar el salto (probable pico espurio del sensor). Si el cambio resulta ser real, se acepta igualmente al cabo de unas cuantas lecturas seguidas "congeladas", para no quedarse atascado. Solo afecta a lecturas en vivo nuevas, no al backfill histórico ni a lo ya guardado.</p>
-      <div class="grid2">
-        <div class="field">
-          <label for="filtroUmbralInput">Umbral de salto brusco (°C)</label>
-          <input type="number" id="filtroUmbralInput" step="0.1" min="0.1" value="0.5">
-        </div>
-        <div class="field">
-          <label for="filtroResyncInput">Lecturas congeladas antes de resincronizar</label>
-          <input type="number" id="filtroResyncInput" step="1" min="1" value="10">
-        </div>
-      </div>
-
-      <hr>
-      <div class="subtitulo-sub">Filtro de estabilización</div>
-      <p class="sub" style="margin-bottom:10px">Evita que la temperatura corregida esté bailando entre décimas de grado de una lectura a otra. Mientras la variación entre las últimas lecturas se mantenga dentro del umbral, se sigue mostrando el mismo valor; solo se actualiza cuando el cambio, sostenido durante esas lecturas, supera el umbral (se confirma como real, no ruido). Solo afecta a lecturas en vivo nuevas, no al backfill histórico ni a lo ya guardado.</p>
-      <div class="grid2">
-        <div class="field">
-          <label for="estabUmbralInput">Umbral de estabilización (°C)</label>
-          <input type="number" id="estabUmbralInput" step="0.1" min="0.1" value="0.3">
-        </div>
-        <div class="field">
-          <label for="estabMuestrasInput">Nº de lecturas para confirmar un cambio</label>
-          <input type="number" id="estabMuestrasInput" step="1" min="2" value="5">
-        </div>
-      </div>
-
-      <hr>
-      <div class="subtitulo-sub">Calibrar con un sensor de referencia</div>
-      <p class="sub" style="margin-bottom:10px">Si tienes a mano, en este mismo instante, la lectura de otro termómetro de confianza, introdúcela aquí: se calculan el offset fijo y (si hay sol) la sensibilidad k del modo dinámico a partir de la diferencia con la última lectura en vivo de esta estación.</p>
-      <div class="field">
-        <label for="calibRefTempInput">Temperatura de referencia (°C)</label>
-        <input type="number" id="calibRefTempInput" step="0.1" placeholder="p. ej. 24.5">
-      </div>
-      <div class="actions">
-        <button type="button" class="btn btn-primary btn-sm" id="btnCalcularCalibracion">Calcular corrección con esta referencia</button>
-      </div>
-      <div class="calib-caja" id="calibResultado" style="display:none;margin-top:12px"></div>
-      <div class="calib-caja" id="kAutoEstado" style="display:none;margin-top:12px"></div>
-
-      <hr>
-      <div class="actions" style="margin-top:10px">
-        <button type="button" class="btn btn-ghost btn-sm" id="btnBorrarHistorialLocal"><svg class="i"><use href="#i-trash"></use></svg>Borrar histórico local de esta estación</button>
-      </div>
-      <p class="help">Vacía las lecturas guardadas en este navegador para la estación configurada (las que alimentan las gráficas de 12h/7 días), para que vuelvan a rellenarse desde cero con la corrección actual.</p>
-      <div class="okbox" id="avisoHistorialLocalBorrado" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-check"></use></svg><span>Histórico local borrado para esta estación</span></div>
     </div>
 
     <div class="card">
@@ -758,9 +578,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   </div>
 
   <details class="acc-evol" id="accEvol12h">
-    <summary><svg class="i"><use href="#i-activity"></use></svg>Evolución de las últimas 12 horas<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <summary><svg class="i"><use href="#i-activity"></use></svg><span id="evolVentanaTitulo">Evolución de las últimas 12 horas</span><svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
-      <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha.</p>
+      <div class="evol-ventana" role="group" aria-label="Ventana de tiempo de las gráficas"><button type="button" data-h="12" aria-pressed="true">12 h</button><button type="button" data-h="24" aria-pressed="false">24 h</button></div>
+      <p class="evol-nota">Gráficas opcionales construidas a partir del histórico guardado en este navegador (no de la sesión, que se pierde al recargar). Se completan solas lectura a lectura mientras el monitor está en marcha y, si esta app está alojada junto al recolector del servidor, también con las lecturas que el servidor registró mientras la app estaba cerrada.</p>
+      <p class="evol-nota" id="servidorEstadoLinea" style="display:none"></p>
       <div id="charts12h"><p class="evol-vacio">Todavía no hay datos suficientes. Inicia el monitor y deja que pasen unos minutos.</p></div>
     </div>
   </details>
@@ -768,9 +590,31 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   <details class="acc-evol" id="accEvol7d">
     <summary><svg class="i"><use href="#i-archive"></use></svg>Evolución de los últimos 7 días<svg class="i chev"><use href="#i-down"></use></svg></summary>
     <div class="inner">
-      <p class="evol-nota">Histórico completo de los 7 días, lectura a lectura (no un resumen diario). Al iniciar el monitor se intenta rellenar automáticamente con el histórico de la API para los días sin datos locales; si ese histórico no está disponible, la gráfica se completa solo con lo registrado desde este navegador.</p>
+      <p class="evol-nota">Histórico completo de los 7 días, lectura a lectura (no un resumen diario). Al iniciar el monitor se intenta rellenar automáticamente con el histórico de la API para los días con huecos; si ese histórico no está disponible, la gráfica se completa solo con lo registrado desde este navegador.</p>
       <p class="evol-nota" id="backfillEstadoLinea" style="display:none"></p>
       <div id="charts7d"><p class="evol-vacio">Todavía no hay datos suficientes.</p></div>
+    </div>
+  </details>
+
+  <details class="acc-evol" id="accDiaConcreto">
+    <summary><svg class="i"><use href="#i-archive"></use></svg>Consultar un día en concreto<svg class="i chev"><use href="#i-down"></use></svg></summary>
+    <div class="inner">
+      <p class="evol-nota">A diferencia de las gráficas de arriba (limitadas a los últimos 7 días), aquí se puede elegir cualquier fecha pasada. Se busca primero en lo ya guardado en este navegador y, si falta cobertura para ese día, se completa con el histórico de la API de Weather Underground para esa fecha exacta (el mismo endpoint que usan las gráficas de 7 días, sin su límite de ventana).</p>
+      <div class="grid2" style="align-items:end">
+        <div class="field">
+          <label for="diaConcretoInput">Fecha</label>
+          <input type="date" id="diaConcretoInput">
+        </div>
+        <div class="field">
+          <button type="button" class="btn btn-dark" id="btnConsultarDia" style="width:100%"><svg class="i"><use href="#i-activity"></use></svg>Consultar</button>
+        </div>
+      </div>
+      <p class="evol-nota" id="diaConcretoEstadoLinea" style="display:none"></p>
+      <div id="diaConcretoResumen"></div>
+      <div id="chartsDiaConcreto"><p class="evol-vacio">Elige una fecha y pulsa «Consultar».</p></div>
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnDescargarCSVDia" disabled><svg class="i"><use href="#i-download"></use></svg>Descargar ese día (CSV)</button>
+      </div>
     </div>
   </details>
 
@@ -790,7 +634,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       <div id="historialVacio" class="historial-vacio">Todavía no se ha recibido ninguna lectura.</div>
       <div class="tbl-wrap historial-envoltorio" id="historialEnvoltorio" style="display:none">
         <table class="t">
-          <thead><tr><th>Hora</th><th>Temp.</th><th>Bruta</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Dirección</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Hora</th><th>Temp.</th><th>Sens. térm.</th><th>Rocío</th><th>Hum.</th><th>Presión</th><th>Viento</th><th>Racha</th><th>Dirección</th><th>Lluvia</th><th>Lluvia acum.</th><th>Radiación</th><th>UV</th><th>Calidad</th><th>Freshness</th><th>Estado</th></tr></thead>
           <tbody id="historialCuerpo"></tbody>
         </table>
       </div>
@@ -805,8 +649,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <footer class="app-footer">
   <hr>
-  <p>TeleMet Cal ProMax. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 12 de noviembre de 2026, 3:16</p>
+  <p>TeleMet Historial. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground.</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 6 de noviembre de 2026, 3:37</p>
 </footer>
 
 <div class="bottomnav">
@@ -834,12 +678,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         <div><b>Backoff</b><span>Espera creciente entre reintentos tras un error transitorio (red, tiempo límite, 5xx): se duplica cada vez, hasta un máximo configurable.</span></div>
         <div><b>Comprobación de plausibilidad</b><span>Cada lectura se compara con un rango físicamente posible por variable; si algo se sale de rango, se avisa antes de confiar en el dato.</span></div>
         <div><b>Eje X de los minigráficos</b><span>«Por lectura» espacia los puntos de forma uniforme; «Por tiempo real» los sitúa dentro de una ventana fija (nº de puntos × intervalo de sondeo) terminada ahora mismo, con la hora de inicio y fin de esa ventana bajo el gráfico, agrupados a la derecha si el histórico no está lleno y con huecos visibles si hubo reintentos.</span></div>
-        <div><b>Evolución de 12 horas / 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días con huecos; bajo esa gráfica aparece un aviso indicando si ese histórico de la API ha aportado algo o no (muchas cuentas no tienen ese endpoint disponible). Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
-        <div><b>Corrección de temperatura</b><span>Compensa que el sensor, al sol, caliente por encima del aire real: por offset fijo o de forma dinámica (según radiación solar y viento). Los cambios en el modo, el offset, k o c se aplican al momento —sin pulsar "Guardar"— a la ficha de temperatura actual, usando la última lectura bruta recibida.</span></div>
-        <div><b>Calibrar con sensor de referencia</b><span>Introduce la temperatura que marca en ese instante otro termómetro de confianza y calcula el offset fijo y, si hay sol, la sensibilidad k del modo dinámico que igualarían esta estación con esa referencia. Es una calibración de un solo punto: para afinar "c" conviene repetirla otro día con distinta radiación o viento.</span></div>
-        <div><b>Filtro de saltos bruscos</b><span>Si la temperatura corregida cambia de golpe más del umbral configurado entre dos lecturas en vivo seguidas, se mantiene la anterior (probable pico espurio). Si el cambio se repite "Lecturas congeladas..." veces seguidas, se da por real y se resincroniza. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
-        <div><b>Filtro de estabilización</b><span>Evita que la temperatura corregida esté bailando entre décimas de grado sin que pase nada real: mientras la variación entre las últimas lecturas (ya pasadas por el filtro de saltos bruscos) se mantenga dentro del umbral, se sigue mostrando el mismo valor. Solo se actualiza cuando esa variación, sostenida durante el número de lecturas configurado, supera el umbral. Solo afecta a lecturas en vivo, no al backfill histórico.</span></div>
-        <div><b>Ajuste automático de k</b><span>En modo "Dinámica", recalcula k en cada lectura en vivo nueva usando la temperatura corregida de la lectura anterior como referencia (sin necesitar un sensor externo continuo). Se activa desde la calibración de un punto. No se recalcula con una lectura descartada por el filtro de saltos bruscos o mantenida por el filtro de estabilización.</span></div>
+        <div><b>Evolución de 12 / 24 horas y 7 días</b><span>Paneles opcionales (pulsa para desplegarlos) con gráficas más largas que los minigráficos de sesión: se construyen a partir de un histórico guardado en este navegador (IndexedDB), que persiste entre recargas y sesiones, a diferencia del histórico de la tabla. Ambas muestran el histórico completo, lectura a lectura (no un resumen). El de 7 días intenta rellenarse también con el histórico de la API al iniciar el monitor, para los días con huecos; bajo esa gráfica aparece un aviso indicando si ese histórico de la API ha aportado algo o no (muchas cuentas no tienen ese endpoint disponible). Pasa el cursor (o el dedo) sobre cualquiera de ellas para ver el valor exacto de cada lectura.</span></div>
+        <div><b>Consultar un día en concreto</b><span>A diferencia de las gráficas anteriores, no está limitado a los últimos 7 días: eliges cualquier fecha pasada y, si lo que hay guardado en este navegador no cubre el día entero, se completa con el histórico de la API de Weather Underground para esa fecha exacta. Si tampoco esa consulta devuelve nada (muchas cuentas no tienen ese endpoint disponible), se avisa y se muestra solo lo que haya en local.</span></div>
       </div>
     </div>
   </div>
@@ -857,236 +697,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // Mismas claves de localStorage que el resto de la familia TelemetriaWU.
   const STORAGE_KEY_STATION = 'wu_station_id';
   const STORAGE_KEY_APIKEY  = 'wu_api_key';
-  // Claves propias de TeleMet Cal ProMax, independientes de TeleMet Pro y del resto.
-  const STORAGE_KEY_POLL      = 'telemetcalvivo_poll_interval_s';
-  const STORAGE_KEY_TIMEOUT   = 'telemetcalvivo_request_timeout_s';
-  const STORAGE_KEY_BACKOFF_B = 'telemetcalvivo_backoff_base_s';
-  const STORAGE_KEY_BACKOFF_M = 'telemetcalvivo_backoff_max_s';
-  const STORAGE_KEY_STALE     = 'telemetcalvivo_stale_threshold_s';
-  const STORAGE_KEY_HISTLEN   = 'telemetcalvivo_history_len';
-  const STORAGE_KEY_EJE_X     = 'telemetcalvivo_eje_x_modo';
-  const STORAGE_KEY_EVOL7D    = 'telemetcalvivo_evolucion_7d_cache';
-  const STORAGE_KEY_CORR_MODO   = 'telemetcalvivo_corr_modo';
-  const STORAGE_KEY_CORR_OFFSET = 'telemetcalvivo_corr_offset';
-  const STORAGE_KEY_CORR_K      = 'telemetcalvivo_corr_k';
-  const STORAGE_KEY_CORR_C      = 'telemetcalvivo_corr_c';
-  const STORAGE_KEY_FILTRO_UMBRAL = 'telemetcalvivo_filtro_umbral';
-  const STORAGE_KEY_FILTRO_RESYNC = 'telemetcalvivo_filtro_resync';
-  const STORAGE_KEY_ESTAB_UMBRAL   = 'telemetcalvivo_estab_umbral';
-  const STORAGE_KEY_ESTAB_MUESTRAS = 'telemetcalvivo_estab_muestras';
+  // Claves propias de TeleMet Historial, independientes de TeleMet Pro y del resto.
+  const STORAGE_KEY_POLL      = 'telemethistorial_poll_interval_s';
+  const STORAGE_KEY_TIMEOUT   = 'telemethistorial_request_timeout_s';
+  const STORAGE_KEY_BACKOFF_B = 'telemethistorial_backoff_base_s';
+  const STORAGE_KEY_BACKOFF_M = 'telemethistorial_backoff_max_s';
+  const STORAGE_KEY_STALE     = 'telemethistorial_stale_threshold_s';
+  const STORAGE_KEY_HISTLEN   = 'telemethistorial_history_len';
+  const STORAGE_KEY_EJE_X     = 'telemethistorial_eje_x_modo';
+  const STORAGE_KEY_EVOL7D    = 'telemethistorial_evolucion_7d_cache';
 
   const DEFAULTS = {
     pollIntervalS: 60, requestTimeoutS: 15, backoffBaseS: 2, backoffMaxS: 300,
     staleThresholdS: 120, historyLen: 40
   };
-
-  const CORR_MODOS = { NINGUNA: 'ninguna', FIJO: 'fijo', DINAMICO: 'dinamico' };
-  const CORR_DEFAULTS = { modo: CORR_MODOS.NINGUNA, offset: -1.5, k: 0.02, c: 2 };
-  // Configuración de corrección actualmente cargada; la actualizan
-  // cargarConfig()/guardarConfig() y la lee corregirTemperatura() en cada
-  // extracción (en vivo o backfill). Vive en una variable de módulo en vez
-  // de releerse de localStorage en cada lectura por simple eficiencia.
-  let corrConfig = Object.assign({}, CORR_DEFAULTS);
-
-  // Filtro de saltos bruscos entre lecturas EN VIVO consecutivas: si la
-  // temperatura ya corregida cambia de golpe más de "umbral" °C respecto
-  // a la última corregida aceptada, se mantiene esa última (en vez del
-  // nuevo valor) — ver filtrarSaltoBrusco(). Para no quedarse "congelado"
-  // para siempre si el cambio resulta ser real (no un pico espurio del
-  // sensor), tras "resync" lecturas seguidas congeladas se acepta la
-  // siguiente lectura tal cual, se resincroniza el filtro.
-  const FILTRO_DEFAULTS = { umbral: 0.5, resync: 10 };
-  let filtroConfig = Object.assign({}, FILTRO_DEFAULTS);
-  let ultimoTempCorregidaAceptada = null;
-  let muestrasCongeladasSeguidas = 0;
-
-  function reiniciarFiltroSaltoBrusco(){
-    ultimoTempCorregidaAceptada = null;
-    muestrasCongeladasSeguidas = 0;
-  }
-
-  // Solo se usa con lecturas EN VIVO reales (ver extraerValores(obs,
-  // { filtrarSaltos: true }) en cicloConsulta()), nunca con el backfill
-  // histórico: el backfill reconstruye días pasados fuera de orden
-  // cronológico estricto (hoy primero, luego ayer, etc. — ver
-  // backfillSiNecesario()), así que comparar "con la lectura anterior"
-  // no tendría sentido ahí. Tampoco se usa en el recálculo en vivo de
-  // recalcularYRepintarConCorreccionActual(): eso vuelve a corregir la
-  // MISMA lectura bruta con otros parámetros, no es una lectura nueva.
-  function filtrarSaltoBrusco(tempCorregida){
-    if (tempCorregida === null) return { valor: tempCorregida, congelado: false };
-    if (ultimoTempCorregidaAceptada === null){
-      ultimoTempCorregidaAceptada = tempCorregida;
-      muestrasCongeladasSeguidas = 0;
-      return { valor: tempCorregida, congelado: false };
-    }
-    const umbral = (Number.isFinite(filtroConfig.umbral) && filtroConfig.umbral > 0) ? filtroConfig.umbral : FILTRO_DEFAULTS.umbral;
-    const resync = (Number.isFinite(filtroConfig.resync) && filtroConfig.resync >= 1) ? Math.round(filtroConfig.resync) : FILTRO_DEFAULTS.resync;
-    const salto = Math.abs(tempCorregida - ultimoTempCorregidaAceptada);
-    if (salto > umbral && muestrasCongeladasSeguidas < resync){
-      muestrasCongeladasSeguidas += 1;
-      return { valor: ultimoTempCorregidaAceptada, congelado: true };
-    }
-    // O no hay salto brusco, o ya se lleva "resync" lecturas seguidas
-    // congeladas: se da el cambio por real y se resincroniza.
-    ultimoTempCorregidaAceptada = tempCorregida;
-    muestrasCongeladasSeguidas = 0;
-    return { valor: tempCorregida, congelado: false };
-  }
-
-  // ------------------------------------------------------------
-  // Filtro de estabilización: a diferencia del filtro de saltos bruscos
-  // (que descarta cambios DEMASIADO grandes entre dos lecturas), este
-  // descarta cambios DEMASIADO pequeños sostenidos en el tiempo — el
-  // ruido de fondo de décimas de grado que, de no filtrarse, haría que
-  // la temperatura corregida mostrada estuviera constantemente bailando
-  // sin que haya pasado nada real. Mientras las últimas "muestras"
-  // lecturas (ya pasadas por el filtro de saltos bruscos) se mantengan
-  // dentro de "umbral" °C unas de otras, se sigue mostrando el mismo
-  // valor ya fijado; solo cuando esa variación supera el umbral se da
-  // el cambio por real y se fija un nuevo valor.
-  //
-  // Ventana deslizante de tamaño "muestras": mientras no esté completa,
-  // o mientras su variación (máximo − mínimo) no supere el umbral, se
-  // mantiene el valor fijado y la ventana se desliza (se descarta la
-  // lectura más antigua) para seguir vigilando hacia delante. En cuanto
-  // la variación supera el umbral, se fija el valor nuevo (la lectura
-  // más reciente) y la ventana se reinicia vacía, para evaluar el
-  // siguiente tramo desde cero.
-  const ESTAB_DEFAULTS = { umbral: 0.3, muestras: 5 };
-  let estabConfig = Object.assign({}, ESTAB_DEFAULTS);
-  let valorEstabilizado = null;
-  let ventanaEstab = [];
-
-  function reiniciarEstabilizacion(){
-    valorEstabilizado = null;
-    ventanaEstab = [];
-  }
-
-  // Solo se usa con lecturas EN VIVO reales, encadenado justo después de
-  // filtrarSaltoBrusco() (mismo motivo que ese filtro: no tiene sentido
-  // con el backfill histórico, que no sigue un orden cronológico
-  // estricto, ni con el recálculo en vivo de la ficha actual al tocar
-  // los parámetros de corrección).
-  function estabilizarTemperatura(tempCorregida){
-    if (tempCorregida === null) return { valor: tempCorregida, mantenido: false };
-    if (valorEstabilizado === null){
-      valorEstabilizado = tempCorregida;
-      ventanaEstab = [];
-      return { valor: tempCorregida, mantenido: false };
-    }
-    const umbral = (Number.isFinite(estabConfig.umbral) && estabConfig.umbral > 0) ? estabConfig.umbral : ESTAB_DEFAULTS.umbral;
-    const muestras = (Number.isFinite(estabConfig.muestras) && estabConfig.muestras >= 2) ? Math.round(estabConfig.muestras) : ESTAB_DEFAULTS.muestras;
-    ventanaEstab.push(tempCorregida);
-    if (ventanaEstab.length < muestras){
-      return { valor: valorEstabilizado, mantenido: true };
-    }
-    const variacion = Math.max.apply(null, ventanaEstab) - Math.min.apply(null, ventanaEstab);
-    if (variacion <= umbral){
-      // Variación dentro de ruido: se mantiene el valor fijado y la
-      // ventana se desliza (descarta la lectura más antigua) para
-      // seguir vigilando con las próximas lecturas.
-      ventanaEstab.shift();
-      return { valor: valorEstabilizado, mantenido: true };
-    }
-    // Variación sostenida por encima del umbral: cambio real, se fija.
-    valorEstabilizado = tempCorregida;
-    ventanaEstab = [];
-    return { valor: tempCorregida, mantenido: false };
-  }
-
-  // ------------------------------------------------------------
-  // Ajuste automático de k EN CADA MUESTRA (modo dinámico): al no haber
-  // más dato de referencia disponible que uno puntual, se activa desde
-  // una lectura real de un sensor de referencia (como la calibración de
-  // un punto de más abajo) y, a partir de ahí, cada lectura en vivo
-  // nueva vuelve a despejar k comparando su temperatura BRUTA con la
-  // ÚLTIMA temperatura corregida aceptada — el propio resultado de la
-  // lectura anterior, que pasa a hacer de "referencia" porque es la
-  // mejor estimación disponible de la temperatura real en ese instante.
-  // Mismo límite que la calibración manual: con una sola ecuación
-  // (error = k·G/(v+c)) no se pueden despejar k Y c a la vez, así que
-  // c se mantiene al valor configurado — solo se recalcula k.
-  //
-  // La k recién calculada en la muestra t se guarda para corregir LA
-  // SIGUIENTE muestra (t+1): la muestra t ya se corrigió con la k
-  // vigente hasta ese momento (ver aplicarAjusteAutomaticoK(), llamada
-  // en cicloConsulta() después de extraerValores()). Despejar k y
-  // aplicarla a la MISMA muestra sería circular — haría que la
-  // temperatura corregida se quedara congelada para siempre en el
-  // primer valor de referencia, en vez de seguir las variaciones reales
-  // — por eso el desfase de una muestra es intencional, no un descuido.
-  //
-  // No se recalcula k con una muestra que el filtro de saltos bruscos
-  // haya descartado (filtro_salto_congelado), ni con una que el filtro
-  // de estabilización haya mantenido sin cambios (filtro_estabilizado_
-  // mantenido): en ambos casos t.temp_c ya es el mismo valor de antes
-  // (no hay información nueva), así que recalibrar k con ella sería
-  // recalibrar con ruido. Solo se usa con lecturas en vivo reales,
-  // nunca con el backfill histórico (mismo motivo que los dos filtros:
-  // el backfill no sigue un orden cronológico estricto).
-  // ------------------------------------------------------------
-  let kAutoActivo = false;
-  let tempCorregidaAnteriorParaK = null;
-
-  function activarAjusteAutomaticoK(refTemp){
-    tempCorregidaAnteriorParaK = refTemp;
-    kAutoActivo = true;
-    actualizarEstadoKAuto();
-  }
-
-  function desactivarAjusteAutomaticoK(){
-    kAutoActivo = false;
-    tempCorregidaAnteriorParaK = null;
-    actualizarEstadoKAuto();
-  }
-
-  function actualizarEstadoKAuto(){
-    if (!kAutoEstado) return;
-    if (!kAutoActivo){
-      kAutoEstado.style.display = 'none';
-      kAutoEstado.innerHTML = '';
-      return;
-    }
-    kAutoEstado.style.display = 'block';
-    const enPausa = corrConfig.modo !== CORR_MODOS.DINAMICO;
-    let html = 'Ajuste automático de k: <b>' + (enPausa ? 'activo, mas en pausa (el modo no es "Dinámica")' : 'activo') + '</b><br>';
-    html += '<span style="color:var(--muted);font-size:12.5px">Última temperatura de referencia (propia o calculada): ' +
-      (tempCorregidaAnteriorParaK !== null ? fmt(redondear1(tempCorregidaAnteriorParaK)) + ' °C' : '—') +
-      ' · k actual: ' + corrConfig.k + '</span><br>';
-    html += '<button type="button" class="btn btn-ghost btn-sm" id="btnDesactivarKAuto" style="margin-top:6px">Desactivar ajuste automático</button>';
-    kAutoEstado.innerHTML = html;
-    const btn = document.getElementById('btnDesactivarKAuto');
-    if (btn) btn.addEventListener('click', desactivarAjusteAutomaticoK);
-  }
-
-  // Se llama desde cicloConsulta() con la lectura YA extraída (t), justo
-  // después de extraerValores(); nunca desde el backfill.
-  function aplicarAjusteAutomaticoK(t){
-    if (!kAutoActivo) return;
-    if (corrConfig.modo !== CORR_MODOS.DINAMICO) return;
-    if (t.filtro_salto_congelado) return;
-    if (t.filtro_estabilizado_mantenido) return;
-    if (t.temp_c_bruta === null || t.temp_c === null) return;
-
-    const solar = t.solarradiation_wm2;
-    const viento = (t.wind_kmh === null || t.wind_kmh < 0) ? 0 : t.wind_kmh;
-    if (tempCorregidaAnteriorParaK !== null && solar !== null && solar > 0){
-      const error = t.temp_c_bruta - tempCorregidaAnteriorParaK; // > 0: el sensor lee por encima de la referencia
-      if (error > 0){
-        const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
-        const nuevaK = Math.round((error * (viento + cActual) / solar) * 1000) / 1000;
-        corrConfig.k = nuevaK;
-        corrKInput.value = nuevaK;
-        localStorage.setItem(STORAGE_KEY_CORR_K, nuevaK);
-      }
-    }
-    // El ancla avanza a la temperatura corregida de ESTA muestra (ya
-    // calculada con la k vigente hasta ahora), para que la siguiente
-    // muestra se compare contra ella.
-    tempCorregidaAnteriorParaK = t.temp_c;
-    actualizarEstadoKAuto();
-  }
 
   const MAX_FILAS_TABLA = 500;
 
@@ -1107,7 +731,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   // Variable, icono y color (debe existir como var(--c-xxx) en :root).
   const GRAFICABLES = [
-    { key: 'temp_c',       etiqueta: 'Temperatura corregida', unidad: '°C', icono: 'thermometer', color: 'var(--c-temp)' },
+    { key: 'temp_c',       etiqueta: 'Temperatura',    unidad: '°C',   icono: 'thermometer', color: 'var(--c-temp)' },
     { key: 'heat_index_c', etiqueta: 'Sensación térmica', unidad: '°C', icono: 'thermometer', color: 'var(--c-heat)' },
     { key: 'dewpoint_c',   etiqueta: 'Punto de rocío', unidad: '°C',   icono: 'droplet',     color: 'var(--c-dew)'  },
     { key: 'humidity_pct', etiqueta: 'Humedad',        unidad: '%',    icono: 'droplet',     color: 'var(--c-hum)'  },
@@ -1121,32 +745,45 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     { key: 'uv_index',     etiqueta: 'Índice UV',      unidad: '',     icono: 'sun',         color: 'var(--c-uv)'   }
   ];
 
-  // Series "extra" que solo aparecen en las gráficas de evolución (12h/7
-  // días), no como ficha propia en el panel principal (que ya muestra
-  // "Sin corregir" junto a la temperatura corregida, ver pintarValoresActuales()).
-  // CHART_GROUPS_12H/CHART_GROUPS_7D la referencian igual que a GRAFICABLES.
-  const GRAFICABLES_EXTRA_CHART = [
-    { key: 'temp_c_bruta', etiqueta: 'Temperatura sin corregir', color: 'var(--c-temp-bruta)' }
-  ];
-  function buscarDefGrafico(key){
-    return GRAFICABLES.find(m => m.key === key) || GRAFICABLES_EXTRA_CHART.find(m => m.key === key);
-  }
-
   const UMBRAL_TENDENCIA = 0.05;
 
   // Histórico local (IndexedDB) para las gráficas de evolución de 12 h / 7 días.
   const HISTORY_URL = 'https://api.weather.com/v2/pws/history/all';
-  const DB_NAME = 'telemetcalvivo_db';
+  const DB_NAME = 'telemethistorial_db';
   const DB_VERSION = 1;
   const DB_STORE = 'lecturas';
   const VENTANA_12H_MS = 12 * 60 * 60 * 1000;
+  // Ventana de las gráficas de evolución "cortas": 12 h o 24 h (se recuerda).
+  const VENTANAS_EVOL_H = [12, 24];
+  const STORAGE_KEY_VENTANA_EVOL = 'telemethistorial_ventana_evol_h';
+  let ventanaEvolH = (function(){
+    try { const v = parseInt(localStorage.getItem(STORAGE_KEY_VENTANA_EVOL), 10); return VENTANAS_EVOL_H.indexOf(v) >= 0 ? v : 12; }
+    catch (e) { return 12; }
+  })();
   const DIAS_SEMANA = 7;
   const RETENCION_LOCAL_DIAS = 9; // algo más de 7 días, margen para el backfill
+
+  // Histórico del servidor (programa TeleMet Colector, en el mismo servidor
+  // Linux que aloja esta app): fichero JSON con las lecturas de las últimas
+  // 24 h (configurable en el colector; sirven para las gráficas de 12 y 24 h), que se funden con las del navegador para que las gráficas de
+  // evolución no pierdan información aunque la app haya estado cerrada.
+  // La ruta es relativa a esta página; si el fichero no existe (p. ej. en
+  // GitHub Pages) simplemente se ignora, sin ningún error visible.
+  // Con varias estaciones el colector escribe un fichero por estación
+  // (historial_<ID>.json, ID en mayúsculas); la app prueba primero el de su
+  // estación y, si no existe, el fichero único historial.json.
+  const SERVIDOR_HISTORIAL_URL = 'datos/historial.json';
+  const urlsHistorialServidor = (stationId) =>
+    ['datos/historial_' + String(stationId).toUpperCase().replace(/[^A-Za-z0-9._-]/g, '_') + '.json', SERVIDOR_HISTORIAL_URL];
+  const SERVIDOR_TIMEOUT_MS = 15000;
+  const SERVIDOR_SYNC_CADA_MIN = 10;               // vuelve a consultarlo cada N minutos con la app abierta
+  const SERVIDOR_MERGE_TOLERANCIA_MS = 30 * 1000;  // una lectura del servidor a <30 s de una local se considera la misma
+  const SERVIDOR_AVISO_PARADO_MIN = 15;            // avisa si la última lectura del servidor es más antigua que esto (o que 3 intervalos del colector, si es mayor)
 
   // Grupos de gráficos de "últimas 12 horas" (eje de tiempo continuo).
   // Cada grupo puede combinar varias variables de GRAFICABLES en una sola gráfica.
   const CHART_GROUPS_12H = [
-    { titulo: 'Temperatura (corregida y sin corregir), sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'temp_c_bruta', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
@@ -1159,7 +796,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // Grupos de gráficos de "últimos 7 días": histórico completo (una lectura
   // real por punto, igual que en la gráfica de 12 horas), no un resumen diario.
   const CHART_GROUPS_7D = [
-    { titulo: 'Temperatura (corregida y sin corregir), sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'temp_c_bruta', 'heat_index_c', 'dewpoint_c'] },
+    { titulo: 'Temperatura, sensación térmica y punto de rocío', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
     { titulo: 'Humedad', unidad: '%', claves: ['humidity_pct'] },
     { titulo: 'Presión', unidad: 'hPa', claves: ['pressure_hpa'] },
     { titulo: 'Viento y racha', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
@@ -1179,22 +816,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const backoffBaseInput   = document.getElementById('backoffBaseInput');
   const backoffMaxInput    = document.getElementById('backoffMaxInput');
   const staleThresholdInput = document.getElementById('staleThresholdInput');
-  const corrModoInput     = document.getElementById('corrModoInput');
-  const corrOffsetInput   = document.getElementById('corrOffsetInput');
-  const corrKInput        = document.getElementById('corrKInput');
-  const corrCInput        = document.getElementById('corrCInput');
-  const corrFijoGrupo     = document.getElementById('corrFijoGrupo');
-  const corrDinamicoGrupo = document.getElementById('corrDinamicoGrupo');
-  const filtroUmbralInput = document.getElementById('filtroUmbralInput');
-  const filtroResyncInput = document.getElementById('filtroResyncInput');
-  const estabUmbralInput = document.getElementById('estabUmbralInput');
-  const estabMuestrasInput = document.getElementById('estabMuestrasInput');
-  const calibRefTempInput = document.getElementById('calibRefTempInput');
-  const btnCalcularCalibracion = document.getElementById('btnCalcularCalibracion');
-  const calibResultado = document.getElementById('calibResultado');
-  const kAutoEstado = document.getElementById('kAutoEstado');
-  const btnBorrarHistorialLocal = document.getElementById('btnBorrarHistorialLocal');
-  const avisoHistorialLocalBorrado = document.getElementById('avisoHistorialLocalBorrado');
   const btnGuardarConfig   = document.getElementById('btnGuardarConfig');
   const btnBorrarConfig    = document.getElementById('btnBorrarConfig');
   const estadoConfig       = document.getElementById('estadoConfig');
@@ -1242,6 +863,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   const charts12h = document.getElementById('charts12h');
   const charts7d = document.getElementById('charts7d');
   const backfillEstadoLinea = document.getElementById('backfillEstadoLinea');
+  const servidorEstadoLinea = document.getElementById('servidorEstadoLinea');
+
+  const diaConcretoInput = document.getElementById('diaConcretoInput');
+  const btnConsultarDia = document.getElementById('btnConsultarDia');
+  const diaConcretoEstadoLinea = document.getElementById('diaConcretoEstadoLinea');
+  const diaConcretoResumen = document.getElementById('diaConcretoResumen');
+  const chartsDiaConcreto = document.getElementById('chartsDiaConcreto');
+  const btnDescargarCSVDia = document.getElementById('btnDescargarCSVDia');
 
   const historialVacio = document.getElementById('historialVacio');
   const historialEnvoltorio = document.getElementById('historialEnvoltorio');
@@ -1258,13 +887,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   document.getElementById('maxFilasTexto').textContent = MAX_FILAS_TABLA;
 
-  // Los 4 campos de corrección (corrModoInput/corrOffsetInput/corrKInput/
-  // corrCInput) se editan EN TIEMPO REAL, incluso con el sondeo en
-  // marcha (ver aplicarCorreccionEnVivo()), así que quedan fuera de este
-  // bloqueo: solo lo que sí exige reiniciar el monitor para aplicarse
-  // (Station ID, intervalos, etc.) se deshabilita mientras está activo.
-  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput, corrModoInput, corrOffsetInput, corrKInput, corrCInput, filtroUmbralInput, filtroResyncInput, estabUmbralInput, estabMuestrasInput];
-  const INPUTS_BLOQUEABLES_EN_MARCHA = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
+  const INPUTS_CONFIG = [stationIdInput, apiKeyInput, pollIntervalInput, requestTimeoutInput, historyLenInput, backoffBaseInput, backoffMaxInput, staleThresholdInput];
 
   /* ============================================================
      ESTADO EN MEMORIA
@@ -1293,13 +916,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // el histórico" (modo privado, cuota, bloqueo del navegador...), que
   // de lo contrario se ven exactamente igual: un array vacío.
   let ultimoErrorHistorialLocal = null;
-
-  // Última lectura recibida de la API, con sus valores brutos
-  // (temp_c_bruta, wind_kmh, solarradiation_wm2, humidity_pct) intactos. Permite
-  // recalcular la corrección al vuelo —al tocar los campos de
-  // Ajustes— sin esperar a la siguiente consulta, y es la base de la
-  // calibración con sensor de referencia (ver calcularCalibracionDesdeReferencia()).
-  let ultimaLectura = null;
 
   /* ============================================================
      PERSISTENCIA LOCAL (IndexedDB) — histórico para las gráficas
@@ -1384,29 +1000,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     } catch (err) { /* purga best-effort */ }
   }
 
-  // Borra todas las filas guardadas de una estación dentro de un rango de
-  // tiempo. Uso deliberado y explícito del usuario únicamente (botón
-  // "Borrar histórico local", ver borrarHistorialLocalEstacion()):
-  // backfillSiNecesario() ya NO la usa, precisamente para no poder borrar
-  // nunca lecturas reales por sí sola (ver la nota junto a esa función).
-  async function borrarRango(stationId, tDesdeMs, tHastaMs){
-    try {
-      const db = await abrirDB();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        const idx = tx.objectStore(DB_STORE).index('por_estacion');
-        const req = idx.openCursor(IDBKeyRange.only(stationId));
-        req.onsuccess = () => {
-          const cur = req.result;
-          if (!cur){ resolve(); return; }
-          if (cur.value.epochMs >= tDesdeMs && cur.value.epochMs <= tHastaMs) cur.delete();
-          cur.continue();
-        };
-        req.onerror = () => reject(req.error);
-      });
-    } catch (err) { /* best-effort */ }
-  }
-
   // Un día se trata como "incompleto" (y se vuelve a pedir a la API) en dos
   // casos, en vez de asumir que, por tener alguna fila, ya está completo:
   //   1) NINGUNA fila tiene temperatura: el bug anterior de extraerValores(),
@@ -1424,7 +1017,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   //      en una ventana de una semana) mientras la de 12h se veía con
   //      medio día vacío: el bug no estaba en cuánto se cubría, sino en
   //      QUÉ parte del día quedaba sin cubrir.
-  const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos
+  const HUECO_MAX_MS = 90 * 60 * 1000; // 90 minutos (máximo)
+  const HUECO_MIN_MS = 15 * 60 * 1000; // 15 minutos (mínimo del umbral adaptativo de las gráficas)
 
   // Mismo umbral (HUECO_MAX_MS), pero expresado como fracción del ancho
   // total de cada gráfica de evolución: se usa para NO trazar una línea
@@ -1436,6 +1030,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // día (de 6 a 7 días completos), así que se usa una aproximación de 7
   // días exactos: de sobra para decidir si un hueco es "real" o no.
   const UMBRAL_GAP_7D_FRAC = HUECO_MAX_MS / (DIAS_SEMANA * 24 * 60 * 60 * 1000);
+  // Mismo umbral, para la gráfica de "Consultar un día en concreto" (ventana
+  // de 24 horas exactas).
+  const UMBRAL_GAP_DIA_FRAC = HUECO_MAX_MS / (24 * 60 * 60 * 1000);
 
   function diaIncompleto(filas, inicioMs, finMs){
     const validas = filas.filter(f => f.vals && f.vals.temp_c !== null)
@@ -1460,19 +1057,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       div.className = 'feat';
       div.id = 'tile-' + m.key;
       div.style.setProperty('--c', m.color);
-      // La tarjeta de temperatura arranca con la etiqueta neutra
-      // ("Temperatura"): actualizarEtiquetaTemperatura() la cambia a
-      // "Temperatura corregida" solo cuando de verdad hay una corrección
-      // aplicándose (ver esa función). El resto de tarjetas usan la
-      // etiqueta tal cual de GRAFICABLES (la de temp_c en GRAFICABLES
-      // sigue siendo "Temperatura corregida": la usa la gráfica de
-      // evolución para distinguir la serie corregida de la sin corregir).
-      const etiquetaInicial = m.key === 'temp_c' ? 'Temperatura' : m.etiqueta;
       div.innerHTML =
         '<div class="fi"><svg class="i"><use href="#i-' + m.icono + '"></use></svg></div>' +
-        '<div class="etiqueta">' + etiquetaInicial + '</div>' +
+        '<div class="etiqueta">' + m.etiqueta + '</div>' +
         '<div class="valor"><span class="valor-num">—</span><span class="unidad">' + m.unidad + '</span><span class="tendencia estable" aria-hidden="true"></span></div>' +
-        (m.key === 'temp_c' ? '<div class="temp-bruta" id="tempBrutaSub" style="display:none"></div>' : '') +
         '<svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points=""/></svg>' +
         '<div class="eje-tiempo" style="display:none"><span class="eje-ini">—</span><span class="eje-fin">—</span></div>' +
         '<div class="rango-minmax">mín — · máx —</div>';
@@ -1504,245 +1092,8 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     staleThresholdInput.value = localStorage.getItem(STORAGE_KEY_STALE) || DEFAULTS.staleThresholdS;
     historyLenInput.value = localStorage.getItem(STORAGE_KEY_HISTLEN) || DEFAULTS.historyLen;
     fijarEjeXModo(localStorage.getItem(STORAGE_KEY_EJE_X) || 'uniforme');
-    corrModoInput.value = localStorage.getItem(STORAGE_KEY_CORR_MODO) || CORR_DEFAULTS.modo;
-    corrOffsetInput.value = localStorage.getItem(STORAGE_KEY_CORR_OFFSET) || CORR_DEFAULTS.offset;
-    corrKInput.value = localStorage.getItem(STORAGE_KEY_CORR_K) || CORR_DEFAULTS.k;
-    corrCInput.value = localStorage.getItem(STORAGE_KEY_CORR_C) || CORR_DEFAULTS.c;
-    filtroUmbralInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_UMBRAL) || FILTRO_DEFAULTS.umbral;
-    filtroResyncInput.value = localStorage.getItem(STORAGE_KEY_FILTRO_RESYNC) || FILTRO_DEFAULTS.resync;
-    estabUmbralInput.value = localStorage.getItem(STORAGE_KEY_ESTAB_UMBRAL) || ESTAB_DEFAULTS.umbral;
-    estabMuestrasInput.value = localStorage.getItem(STORAGE_KEY_ESTAB_MUESTRAS) || ESTAB_DEFAULTS.muestras;
-    actualizarCorrConfigDesdeInputs();
-    actualizarFiltroConfigDesdeInputs();
-    actualizarEstabConfigDesdeInputs();
-    actualizarVisibilidadCorrGrupos();
-    actualizarEtiquetaTemperatura();
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
-  }
-
-  // Lee los 4 campos de corrección y actualiza corrConfig (lo que de
-  // verdad usa corregirTemperatura() en cada lectura). Se llama al
-  // cargar, a cada tecla en los campos de corrección (ver
-  // aplicarCorreccionEnVivo()) y al guardar el resto de ajustes. Un
-  // valor en blanco o no numérico a medio escribir CONSERVA el último
-  // valor válido de corrConfig en vez de saltar al valor por defecto
-  // de fábrica: así no "parpadea" mientras el usuario está tecleando.
-  function actualizarCorrConfigDesdeInputs(){
-    const nuevoOffset = parseFloat(corrOffsetInput.value);
-    const nuevoK = parseFloat(corrKInput.value);
-    const nuevoC = parseFloat(corrCInput.value);
-    corrConfig = {
-      modo: corrModoInput.value,
-      offset: Number.isFinite(nuevoOffset) ? nuevoOffset : corrConfig.offset,
-      k: (Number.isFinite(nuevoK) && nuevoK >= 0) ? nuevoK : corrConfig.k,
-      c: (Number.isFinite(nuevoC) && nuevoC > 0) ? nuevoC : corrConfig.c
-    };
-  }
-
-  function actualizarVisibilidadCorrGrupos(){
-    corrFijoGrupo.style.display = corrModoInput.value === CORR_MODOS.FIJO ? 'grid' : 'none';
-    corrDinamicoGrupo.style.display = corrModoInput.value === CORR_MODOS.DINAMICO ? 'grid' : 'none';
-  }
-
-  // Etiqueta de la tarjeta de temperatura: solo dice "Temperatura
-  // corregida" cuando de verdad se está aplicando una corrección ahora
-  // mismo; el resto del tiempo dice simplemente "Temperatura". Se llama
-  // con el booleano ya calculado (el mismo "corrigiendo" por muestra que
-  // decide el aviso "Sin corregir: X °C", ver pintarValoresActuales()) o,
-  // sin argumento, con un valor por defecto basado solo en el modo
-  // configurado (para el estado inicial, antes de la primera lectura, o
-  // justo al cambiar de modo en Ajustes).
-  function actualizarEtiquetaTemperatura(corrigiendo){
-    const el = document.querySelector('#tile-temp_c .etiqueta');
-    if (!el) return;
-    const activa = (corrigiendo === undefined) ? (corrConfig.modo !== CORR_MODOS.NINGUNA) : corrigiendo;
-    el.textContent = activa ? 'Temperatura corregida' : 'Temperatura';
-  }
-
-  // Lee los 2 campos del filtro de saltos bruscos y actualiza
-  // filtroConfig, con la misma política de "valor en blanco conserva el
-  // último válido" que actualizarCorrConfigDesdeInputs().
-  function actualizarFiltroConfigDesdeInputs(){
-    const nuevoUmbral = parseFloat(filtroUmbralInput.value);
-    const nuevoResync = parseInt(filtroResyncInput.value, 10);
-    filtroConfig = {
-      umbral: (Number.isFinite(nuevoUmbral) && nuevoUmbral > 0) ? nuevoUmbral : filtroConfig.umbral,
-      resync: (Number.isFinite(nuevoResync) && nuevoResync >= 1) ? nuevoResync : filtroConfig.resync
-    };
-  }
-
-  // Igual que aplicarCorreccionEnVivo() pero para el filtro de saltos
-  // bruscos: no hace falta recalcular ni repintar la ficha actual (el
-  // filtro no cambia la última lectura ya mostrada, solo cómo se tratan
-  // las siguientes), así que solo actualiza filtroConfig y persiste con
-  // el mismo pequeño retardo.
-  let filtroAutoguardadoTimeoutId = null;
-  function aplicarFiltroEnVivo(){
-    actualizarFiltroConfigDesdeInputs();
-    if (filtroAutoguardadoTimeoutId) clearTimeout(filtroAutoguardadoTimeoutId);
-    filtroAutoguardadoTimeoutId = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY_FILTRO_UMBRAL, filtroConfig.umbral);
-      localStorage.setItem(STORAGE_KEY_FILTRO_RESYNC, filtroConfig.resync);
-    }, 400);
-  }
-
-  // Lee los 2 campos del filtro de estabilización y actualiza
-  // estabConfig, con la misma política que los demás filtros/ajustes.
-  function actualizarEstabConfigDesdeInputs(){
-    const nuevoUmbral = parseFloat(estabUmbralInput.value);
-    const nuevasMuestras = parseInt(estabMuestrasInput.value, 10);
-    estabConfig = {
-      umbral: (Number.isFinite(nuevoUmbral) && nuevoUmbral > 0) ? nuevoUmbral : estabConfig.umbral,
-      muestras: (Number.isFinite(nuevasMuestras) && nuevasMuestras >= 2) ? nuevasMuestras : estabConfig.muestras
-    };
-  }
-
-  // Igual que aplicarFiltroEnVivo() pero para el filtro de
-  // estabilización: solo actualiza estabConfig y persiste con el mismo
-  // pequeño retardo (no hace falta reiniciar la ventana al cambiar estos
-  // dos campos, igual que el filtro de saltos bruscos no se reinicia al
-  // cambiar su umbral/resync).
-  let estabAutoguardadoTimeoutId = null;
-  function aplicarEstabilizacionEnVivo(){
-    actualizarEstabConfigDesdeInputs();
-    if (estabAutoguardadoTimeoutId) clearTimeout(estabAutoguardadoTimeoutId);
-    estabAutoguardadoTimeoutId = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY_ESTAB_UMBRAL, estabConfig.umbral);
-      localStorage.setItem(STORAGE_KEY_ESTAB_MUESTRAS, estabConfig.muestras);
-    }, 400);
-  }
-
-  // ------------------------------------------------------------
-  // Corrección EN TIEMPO REAL: cada tecla en el modo/offset/k/c de
-  // Ajustes (sin esperar a "Guardar") actualiza corrConfig, recalcula
-  // la ficha de temperatura actual a partir de la última lectura bruta
-  // (sin esperar al siguiente sondeo) y persiste el cambio en
-  // localStorage con un pequeño retardo para no escribir en cada
-  // pulsación. El resto de ajustes (Station ID, intervalo de sondeo,
-  // etc.) siguen requiriendo pulsar "Guardar" como hasta ahora.
-  // ------------------------------------------------------------
-  let corrAutoguardadoTimeoutId = null;
-  function aplicarCorreccionEnVivo(){
-    actualizarVisibilidadCorrGrupos();
-    actualizarCorrConfigDesdeInputs();
-    // Si aún no hay ninguna lectura en vivo, recalcularYRepintarConCorreccionActual()
-    // no hace nada (no hay nada que repintar): este fallback deja la
-    // etiqueta de la tarjeta ya correcta para cuando llegue la primera.
-    // Si sí hay lectura, pintarValoresActuales() (llamada desde ahí) la
-    // vuelve a fijar con el valor exacto por muestra, así que esta
-    // llamada no sobra.
-    actualizarEtiquetaTemperatura();
-    recalcularYRepintarConCorreccionActual();
-    // Un cambio de modo/offset/k/c altera legítimamente la temperatura
-    // corregida de golpe: no es un salto brusco del sensor ni una deriva
-    // real a confirmar, así que ni el filtro de saltos ni el de
-    // estabilización deben comparar la siguiente lectura en vivo contra
-    // un valor "antiguo" calculado con la configuración anterior.
-    reiniciarFiltroSaltoBrusco();
-    reiniciarEstabilizacion();
-    actualizarEstadoKAuto(); // por si el cambio de modo pausa o reanuda el ajuste automático de k
-    if (corrAutoguardadoTimeoutId) clearTimeout(corrAutoguardadoTimeoutId);
-    corrAutoguardadoTimeoutId = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY_CORR_MODO, corrConfig.modo);
-      localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
-      localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
-      localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
-    }, 400);
-  }
-
-  // Vuelve a aplicar corregirTemperatura() (con el corrConfig que esté
-  // vigente en ese instante) a la temperatura BRUTA de la última
-  // lectura recibida, y repinta la ficha actual con el resultado. No
-  // toca lo ya guardado en el histórico de sesión ni en IndexedDB: ver
-  // "Borrar histórico local" para recalcular también lo ya guardado.
-  function recalcularYRepintarConCorreccionActual(){
-    if (!ultimaLectura) return;
-    const base = ultimaLectura;
-    const tempC = corregirTemperatura(base.temp_c_bruta, base.solarradiation_wm2, base.wind_kmh);
-    const actualizada = Object.assign({}, base, {
-      temp_c: tempC,
-      heat_index_c: sensacionTermicaC(tempC, base.humidity_pct, base.wind_kmh),
-      dewpoint_c: calcularPuntoRocio(tempC, base.humidity_pct)
-    });
-    ultimaLectura = actualizada;
-    pintarValoresActuales(actualizada);
-  }
-
-  // ------------------------------------------------------------
-  // Calibración con sensor de referencia: a partir de la temperatura
-  // BRUTA de la última lectura en vivo y una temperatura de
-  // referencia que da el usuario (otro termómetro fiable, medido en
-  // el mismo instante), calcula:
-  //   - el offset fijo que igualaría ambas temperaturas ahora mismo.
-  //   - la sensibilidad k del modo dinámico que, con el viento base
-  //     (c) configurado y la radiación/viento de este instante,
-  //     produciría ese mismo error. Solo es posible con sol (radiación
-  //     > 0) y si el sensor está leyendo por ENCIMA de la referencia.
-  // Es una calibración de un solo punto: razonable para un primer
-  // ajuste rápido, pero lo ideal es repetirla en otro momento del día
-  // (con distinta radiación/viento) y comparar si se quiere afinar
-  // más "c", que aquí se mantiene al valor ya configurado.
-  // ------------------------------------------------------------
-  function calcularCalibracionDesdeReferencia(){
-    if (!ultimaLectura || ultimaLectura.temp_c_bruta === null){
-      calibResultado.innerHTML = '<span class="calib-aviso">Todavía no hay ninguna lectura en vivo de esta estación con la que comparar. Inicia el sondeo y espera a la primera lectura.</span>';
-      calibResultado.style.display = 'block';
-      return;
-    }
-    const refTemp = parseFloat(calibRefTempInput.value);
-    if (!Number.isFinite(refTemp)){
-      calibResultado.innerHTML = '<span class="calib-aviso">Introduce primero una temperatura de referencia válida.</span>';
-      calibResultado.style.display = 'block';
-      return;
-    }
-
-    const bruta = ultimaLectura.temp_c_bruta;
-    const solar = ultimaLectura.solarradiation_wm2;
-    const viento = (ultimaLectura.wind_kmh === null || ultimaLectura.wind_kmh < 0) ? 0 : ultimaLectura.wind_kmh;
-    const error = redondear1(bruta - refTemp); // > 0: el sensor lee por encima de la referencia
-    const offsetCalculado = redondear1(refTemp - bruta);
-    let kCalculado = null;
-
-    let html = 'Con la lectura bruta actual (<b>' + fmt(bruta) + ' °C</b>) y tu referencia (<b>' + fmt(refTemp) + ' °C</b>):<br>';
-    html += 'Offset fijo calculado: <b>' + (offsetCalculado >= 0 ? '+' : '') + offsetCalculado + ' °C</b>';
-    html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarOffsetCalculado">Usar este offset</button><br>';
-    html += '<button type="button" class="btn btn-ok btn-sm" id="btnActivarKAuto" style="margin-top:8px">Activar ajuste automático de k a partir de esta referencia</button>';
-    html += '<br><span style="color:var(--muted);font-size:12.5px">Toma esta referencia como ancla y, desde la siguiente lectura en vivo, recalcula k en cada muestra comparándola con la temperatura corregida de la muestra anterior (no hay otro dato de referencia continuo disponible). El modo pasa a "Dinámica" si no lo estaba ya.</span>';
-
-    if (solar !== null && solar > 0 && error > 0){
-      const cActual = (Number.isFinite(corrConfig.c) && corrConfig.c > 0) ? corrConfig.c : CORR_DEFAULTS.c;
-      kCalculado = Math.round((error * (viento + cActual) / solar) * 1000) / 1000;
-      html += 'Sensibilidad k calculada (con viento base c = ' + cActual + '): <b>' + kCalculado + '</b>';
-      html += ' <button type="button" class="btn btn-ghost btn-sm" id="btnUsarKCalculado">Usar esta k</button>';
-      html += '<br><span style="color:var(--muted);font-size:12.5px">Radiación actual: ' + fmt(solar, 0) + ' W/m² · viento: ' + viento.toFixed(1) + ' km/h. Calibración de un solo punto: repítela otro día con distinta radiación/viento y compara si quieres afinar más "c".</span>';
-    } else if (solar !== null && solar > 0){
-      html += '<br><span class="calib-aviso">El sensor no está leyendo por encima de la referencia ahora mismo: no hace falta corrección dinámica con este punto.</span>';
-    } else {
-      html += '<br><span class="calib-aviso">No hay radiación solar en esta lectura (de noche, o la estación no la reporta): la k dinámica no se puede calcular ahora. Repite la calibración con el sensor a pleno sol.</span>';
-    }
-
-    calibResultado.innerHTML = html;
-    calibResultado.style.display = 'block';
-
-    const btnUsarOffset = document.getElementById('btnUsarOffsetCalculado');
-    if (btnUsarOffset) btnUsarOffset.addEventListener('click', () => {
-      corrModoInput.value = CORR_MODOS.FIJO;
-      corrOffsetInput.value = offsetCalculado;
-      aplicarCorreccionEnVivo();
-    });
-    const btnUsarK = document.getElementById('btnUsarKCalculado');
-    if (btnUsarK) btnUsarK.addEventListener('click', () => {
-      corrModoInput.value = CORR_MODOS.DINAMICO;
-      corrKInput.value = kCalculado;
-      aplicarCorreccionEnVivo();
-    });
-    const btnActivarKAuto = document.getElementById('btnActivarKAuto');
-    if (btnActivarKAuto) btnActivarKAuto.addEventListener('click', () => {
-      corrModoInput.value = CORR_MODOS.DINAMICO;
-      aplicarCorreccionEnVivo();
-      activarAjusteAutomaticoK(refTemp);
-    });
   }
 
   function guardarConfig(){
@@ -1758,14 +1109,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     localStorage.setItem(STORAGE_KEY_BACKOFF_M, leerNumero(backoffMaxInput, DEFAULTS.backoffMaxS));
     localStorage.setItem(STORAGE_KEY_STALE, leerNumero(staleThresholdInput, DEFAULTS.staleThresholdS));
     localStorage.setItem(STORAGE_KEY_HISTLEN, leerNumero(historyLenInput, DEFAULTS.historyLen));
-    actualizarCorrConfigDesdeInputs();
-    localStorage.setItem(STORAGE_KEY_CORR_MODO, corrConfig.modo);
-    localStorage.setItem(STORAGE_KEY_CORR_OFFSET, corrConfig.offset);
-    localStorage.setItem(STORAGE_KEY_CORR_K, corrConfig.k);
-    localStorage.setItem(STORAGE_KEY_CORR_C, corrConfig.c);
-    actualizarFiltroConfigDesdeInputs();
-    localStorage.setItem(STORAGE_KEY_FILTRO_UMBRAL, filtroConfig.umbral);
-    localStorage.setItem(STORAGE_KEY_FILTRO_RESYNC, filtroConfig.resync);
     configForzarExpandida = false; // "Guardar" = fin de la edición: vuelve a la vista compacta
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -1784,7 +1127,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   function borrarConfig(){
-    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN, STORAGE_KEY_CORR_MODO, STORAGE_KEY_CORR_OFFSET, STORAGE_KEY_CORR_K, STORAGE_KEY_CORR_C, STORAGE_KEY_FILTRO_UMBRAL, STORAGE_KEY_FILTRO_RESYNC, STORAGE_KEY_ESTAB_UMBRAL, STORAGE_KEY_ESTAB_MUESTRAS]
+    [STORAGE_KEY_STATION, STORAGE_KEY_APIKEY, STORAGE_KEY_POLL, STORAGE_KEY_TIMEOUT, STORAGE_KEY_BACKOFF_B, STORAGE_KEY_BACKOFF_M, STORAGE_KEY_STALE, STORAGE_KEY_HISTLEN]
       .forEach(k => localStorage.removeItem(k));
     stationIdInput.value = '';
     apiKeyInput.value = '';
@@ -1794,24 +1137,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     backoffMaxInput.value = DEFAULTS.backoffMaxS;
     staleThresholdInput.value = DEFAULTS.staleThresholdS;
     historyLenInput.value = DEFAULTS.historyLen;
-    corrModoInput.value = CORR_DEFAULTS.modo;
-    corrOffsetInput.value = CORR_DEFAULTS.offset;
-    corrKInput.value = CORR_DEFAULTS.k;
-    corrCInput.value = CORR_DEFAULTS.c;
-    actualizarCorrConfigDesdeInputs();
-    filtroUmbralInput.value = FILTRO_DEFAULTS.umbral;
-    filtroResyncInput.value = FILTRO_DEFAULTS.resync;
-    actualizarFiltroConfigDesdeInputs();
-    estabUmbralInput.value = ESTAB_DEFAULTS.umbral;
-    estabMuestrasInput.value = ESTAB_DEFAULTS.muestras;
-    actualizarEstabConfigDesdeInputs();
-    reiniciarFiltroSaltoBrusco();
-    reiniciarEstabilizacion();
-    desactivarAjusteAutomaticoK();
-    actualizarVisibilidadCorrGrupos();
-    actualizarEtiquetaTemperatura();
-    calibRefTempInput.value = '';
-    calibResultado.style.display = 'none';
     configForzarExpandida = false;
     actualizarEstadoConfig();
     actualizarEstadoBotonIniciar();
@@ -2086,31 +1411,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
         const comp = gradosACompass(t.wind_dir_deg);
         elUnidad.textContent = comp ? ('° ' + comp) : '°';
       }
-      if (m.key === 'temp_c'){
-        // Referencia visible de cuánto se está corrigiendo: solo se
-        // muestra si hay una corrección activa y de verdad cambió algo
-        // (modo "dinámico" sin sol, por ejemplo, deja temp_c == bruta).
-        // Si además el filtro de saltos bruscos ha mantenido la lectura
-        // corregida anterior, o el filtro de estabilización ha
-        // mantenido el valor ya fijado, se añade un aviso aparte (ver
-        // filtrarSaltoBrusco() / estabilizarTemperatura()). Si ambos
-        // aplicasen a la vez solo se muestra el de saltos bruscos, que
-        // es la causa real de fondo (el valor que llega a estabilizar ya
-        // viene repetido del filtro de saltos).
-        const sub = document.getElementById('tempBrutaSub');
-        const corrigiendo = corrConfig.modo !== CORR_MODOS.NINGUNA &&
-          t.temp_c_bruta !== null && t.temp_c !== null && t.temp_c_bruta !== t.temp_c;
-        const congelado = !!t.filtro_salto_congelado;
-        const estabilizado = !congelado && !!t.filtro_estabilizado_mantenido;
-        sub.style.display = (corrigiendo || congelado || estabilizado) ? 'block' : 'none';
-        if (corrigiendo || congelado || estabilizado){
-          let texto = corrigiendo ? ('Sin corregir: ' + fmt(t.temp_c_bruta) + ' °C') : '';
-          if (congelado) texto += (texto ? ' · ' : '') + 'salto brusco filtrado (mantiene la lectura anterior)';
-          else if (estabilizado) texto += (texto ? ' · ' : '') + 'estabilizado (variación dentro del umbral)';
-          sub.textContent = texto;
-        }
-        actualizarEtiquetaTemperatura(corrigiendo);
-      }
     });
     const cal = textoCalidad(t.quality_code);
     valorCalidad.textContent = cal.texto;
@@ -2143,7 +1443,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     fila.innerHTML =
       '<td>' + new Date().toLocaleTimeString('es-ES') + '</td>' +
       '<td>' + fmt(t.temp_c) + '</td>' +
-      '<td>' + fmt(t.temp_c_bruta) + '</td>' +
       '<td>' + fmt(t.heat_index_c !== null ? t.heat_index_c.toFixed(1) : null) + '</td>' +
       '<td>' + fmt(t.dewpoint_c) + '</td>' +
       '<td>' + fmt(t.humidity_pct) + '</td>' +
@@ -2174,7 +1473,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
   function descargarCSV(){
     if (filasHistorial.length === 0) return;
-    const columnas = ['hora', 'temp_c', 'temp_c_bruta', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
+    const columnas = ['hora', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index', 'quality_code', 'staleness_s', 'latency_ms'];
     const lineas = [columnas.join(',')];
     filasHistorial.forEach(r => {
       lineas.push(columnas.map(c => {
@@ -2189,7 +1488,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     const estacion = (activo && activo.stationId) || 'estacion';
     const fecha = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     a.href = url;
-    a.download = 'telemetcalvivo-' + estacion + '-' + fecha + '.csv';
+    a.download = 'telemethistorial-' + estacion + '-' + fecha + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2252,56 +1551,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   }
 
   /* ============================================================
-     CORRECCIÓN DEL SENSOR DE TEMPERATURA
-     Las estaciones domésticas suelen llevar el sensor de temperatura
-     unido al cuerpo principal, sin un blindaje de radiación propio: si
-     le da el sol directo, se calienta por conducción/radiación y reporta
-     una temperatura por encima de la real del aire, sobre todo con poco
-     viento (poca ventilación que lo refrigere). corrConfig (cargada por
-     cargarConfig()/guardarConfig() desde localStorage) decide el modo:
-       - "ninguna": no se toca nada (comportamiento de TeleMet Pro).
-       - "fijo": resta siempre el mismo offset en °C (típicamente
-         negativo). Barato de calibrar, pero sobre/sub-corrige según la
-         hora del día y el tiempo que haga.
-       - "dinamico": estima el error con cada lectura a partir de la
-         radiación solar y el viento que reporte la propia estación:
-           error(°C) = k · radiación(W/m²) / (viento(km/h) + c)
-         Sin radiación (de noche, o si la estación no la reporta) no hay
-         nada que corregir. "c" evita dividir por 0 con viento en calma.
-     ============================================================ */
-  function corregirTemperatura(tempC, solarWm2, windKmh){
-    if (tempC === null || corrConfig.modo === CORR_MODOS.NINGUNA) return tempC;
-    if (corrConfig.modo === CORR_MODOS.FIJO) return redondear1(tempC + corrConfig.offset);
-    if (corrConfig.modo === CORR_MODOS.DINAMICO){
-      if (solarWm2 === null || solarWm2 <= 0) return tempC; // sin sol no hay calentamiento por radiación que corregir
-      const viento = (windKmh === null || windKmh < 0) ? 0 : windKmh;
-      const error = corrConfig.k * solarWm2 / (viento + corrConfig.c);
-      return redondear1(tempC - error);
-    }
-    return tempC;
-  }
-  function redondear1(v){ return Math.round(v * 10) / 10; }
-
-  // Punto de rocío (Magnus-Tetens, aproximación de Sonntag 1990) a partir
-  // de temperatura y humedad relativa. Se recalcula localmente con la
-  // temperatura YA corregida en vez de usar el dewpoint que reporta la
-  // API (que vendría siempre de la temperatura bruta del sensor): si no
-  // se recalculara, el punto de rocío mostrado dejaría de ser coherente
-  // con la temperatura corregida que se ve justo al lado.
-  function calcularPuntoRocio(tempC, humPct){
-    if (tempC === null || humPct === null || humPct <= 0) return null;
-    const a = 17.62, b = 243.12;
-    const alfa = Math.log(humPct / 100) + (a * tempC) / (b + tempC);
-    return redondear1((b * alfa) / (a - alfa));
-  }
-
-  /* ============================================================
      EXTRACCIÓN DE VALORES DE UNA OBSERVACIÓN (compartida por el
      motor en vivo y por el backfill histórico, para no duplicar
      el mapeo de campos de la API ni sus nombres/fallbacks).
      ============================================================ */
-  function extraerValores(obs, opts){
-    opts = opts || {};
+  function extraerValores(obs){
     const metric = obs.metric || {};
     // El endpoint de histórico (history/all) NO usa los mismos nombres de
     // campo que el de lectura en vivo (current): en vez de un valor
@@ -2314,44 +1568,16 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     // excepto la lluvia. Se usa el valor en vivo si existe y, si no, la
     // media del histórico (o el promedio de máximo y mínimo cuando no hay
     // media, como en la presión).
-    const tempBrutaC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
+    const tempC = numOrNull(firstDefined(metric.temp, metric.tempAvg));
     const humPct = numOrNull(firstDefined(obs.humidity, obs.humidityAvg));
     const windKmh = numOrNull(firstDefined(metric.windSpeed, metric.windspeedAvg));
-    const solarWm2 = numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh));
-    let tempC = corregirTemperatura(tempBrutaC, solarWm2, windKmh);
-    let filtroSaltoCongelado = false;
-    let estabilizacionMantenida = false;
-    if (opts.filtrarSaltos){
-      const resultadoFiltro = filtrarSaltoBrusco(tempC);
-      tempC = resultadoFiltro.valor;
-      filtroSaltoCongelado = resultadoFiltro.congelado;
-      const resultadoEstab = estabilizarTemperatura(tempC);
-      tempC = resultadoEstab.valor;
-      estabilizacionMantenida = resultadoEstab.mantenido;
-    }
     const presionHist = (Number.isFinite(metric.pressureMax) && Number.isFinite(metric.pressureMin))
       ? (metric.pressureMax + metric.pressureMin) / 2
       : firstDefined(metric.pressureMax, metric.pressureMin);
     return {
       temp_c: tempC,
-      // Temperatura tal cual la reporta el sensor, sin corregir: se
-      // conserva para poder mostrarla como referencia (ver
-      // pintarValoresActuales()) y para no perder el dato bruto aunque
-      // cambie la configuración de corrección más adelante.
-      temp_c_bruta: tempBrutaC,
-      // true si el filtro de saltos bruscos ha mantenido la temperatura
-      // corregida anterior en vez de aceptar esta lectura (ver
-      // filtrarSaltoBrusco()); false si no aplica el filtro (backfill,
-      // recálculo en vivo) o si la lectura se aceptó tal cual.
-      filtro_salto_congelado: filtroSaltoCongelado,
-      // true si el filtro de estabilización ha mantenido el valor ya
-      // fijado en vez de seguir la variación de esta lectura, por
-      // quedarse dentro del umbral configurado (ver
-      // estabilizarTemperatura()); false si no aplica (backfill,
-      // recálculo en vivo) o si se confirmó un cambio real.
-      filtro_estabilizado_mantenido: estabilizacionMantenida,
       heat_index_c: sensacionTermicaC(tempC, humPct, windKmh),
-      dewpoint_c: calcularPuntoRocio(tempC, humPct),
+      dewpoint_c: numOrNull(firstDefined(obs.dewpoint, metric.dewpt, metric.dewptAvg, metric.dewpoint)),
       humidity_pct: humPct,
       pressure_hpa: numOrNull(firstDefined(metric.pressure, presionHist)),
       wind_kmh: windKmh,
@@ -2368,7 +1594,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // fallback a variantes en minúsculas / el nombre antiguo, y a la
       // variante "...High" del histórico, por si tu estación llega a
       // través de una pasarela que las reporte así.
-      solarradiation_wm2: solarWm2,
+      solarradiation_wm2: numOrNull(firstDefined(obs.solarRadiation, obs.solarradiation, obs.solarRadiationHigh)),
       uv_index: numOrNull(firstDefined(obs.uv, obs.uvHigh)),
       quality_code: firstDefined(obs.qcStatus, obs.qualityControlFlag, 'N/A')
     };
@@ -2424,7 +1650,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const obsMs = obs.epoch ? obs.epoch * 1000 : ahoraMs;
       const stalenessS = (ahoraMs - obsMs) / 1000;
 
-      const t = Object.assign(extraerValores(obs, { filtrarSaltos: true }), {
+      const t = Object.assign(extraerValores(obs), {
         staleness_s: stalenessS,
         latency_ms: latenciaMs
       });
@@ -2432,8 +1658,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       lecturasRecibidas += 1;
       contLecturas.textContent = lecturasRecibidas;
 
-      ultimaLectura = t;
-      aplicarAjusteAutomaticoK(t);
       pintarValoresActuales(t);
       registrarEnSeries(t);
       anadirAlHistorial(t, activo.staleThresholdS);
@@ -2579,8 +1803,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
             const epochMs = obs.epoch * 1000;
             const yaExiste = epochsExistentes.some(e => Math.abs(e - epochMs) < MERGE_TOLERANCIA_MS);
             if (yaExiste) continue;
-            // Sin { filtrarSaltos: true }: el backfill no pasa por el
-            // filtro de saltos bruscos (ver nota junto a filtrarSaltoBrusco()).
             await guardarLectura(stationId, epochMs, extraerValores(obs));
             epochsExistentes.push(epochMs); // evita duplicar entre sí varias observaciones de la API muy próximas
             anadidasEsteDia++;
@@ -2624,6 +1846,121 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     backfillEstadoLinea.style.display = 'block';
   }
 
+  /* ============================================================
+     HISTÓRICO DEL SERVIDOR (TeleMet Colector)
+     Lee datos/historial_<ID>.json (o datos/historial.json), que el programa Python del servidor
+     actualiza tras cada lectura de la estación, y añade al histórico
+     local (IndexedDB) las lecturas que le faltan. Es SIEMPRE aditivo
+     —nunca borra ni modifica nada local— y de mejor esfuerzo: si el
+     fichero no existe o falla, la app sigue funcionando solo con lo
+     que registra el navegador.
+     ============================================================ */
+  let servidorSyncEnCurso = false;
+
+  async function guardarLecturasLote(stationId, filas){
+    const db = await abrirDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      filas.forEach(f => store.add({ stationId: stationId, epochMs: f.epochMs, vals: f.vals }));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  // Devuelve un resumen { estado, anadidas, ... }; estado: 'no-disponible',
+  // 'otra-estacion', 'formato', 'error' u 'ok'.
+  async function sincronizarHistorialServidor(stationId){
+    if (servidorSyncEnCurso || !stationId) return { estado: 'omitido' };
+    servidorSyncEnCurso = true;
+    try {
+      let data = null;
+      for (const url of urlsHistorialServidor(stationId)){
+        try {
+          const resp = await fetchConTimeout(url + '?t=' + Date.now(), SERVIDOR_TIMEOUT_MS);
+          if (!resp.ok) continue;
+          data = await resp.json();
+          break;
+        } catch (err) { /* prueba el siguiente */ }
+      }
+      if (data === null) return { estado: 'no-disponible' };
+
+      if (!data || data.formato !== 1 || !Array.isArray(data.lecturas)) return { estado: 'formato' };
+      if (String(data.stationId || '').toLowerCase() !== stationId.toLowerCase()){
+        return { estado: 'otra-estacion', estacionServidor: data.stationId };
+      }
+
+      const filas = [];
+      for (const l of data.lecturas){
+        if (l && Number.isFinite(l.t) && l.v && typeof l.v === 'object') filas.push({ epochMs: l.t, vals: l.v });
+      }
+      const ultimaMs = filas.length ? Math.max.apply(null, filas.map(f => f.epochMs)) : null;
+      if (filas.length === 0) return { estado: 'ok', recibidas: 0, anadidas: 0, ultimaMs: null };
+
+      const minMs = Math.min.apply(null, filas.map(f => f.epochMs));
+      const existentes = await consultarRango(stationId, minMs - SERVIDOR_MERGE_TOLERANCIA_MS, ultimaMs + SERVIDOR_MERGE_TOLERANCIA_MS);
+      if (ultimoErrorHistorialLocal) return { estado: 'error' }; // no se pudo ni leer lo local: mejor no arriesgar duplicados
+      const epochsLocales = existentes.map(f => f.epochMs).sort((a, b) => a - b);
+
+      // Solo se compara con lo que YA había en local (no con lo que se va
+      // añadiendo): las lecturas del servidor van muy juntas entre sí y no
+      // deben descartarse unas a otras.
+      const nuevas = filas.filter(f => {
+        let lo = 0, hi = epochsLocales.length - 1;
+        while (lo <= hi){
+          const mid = (lo + hi) >> 1;
+          const e = epochsLocales[mid];
+          if (Math.abs(e - f.epochMs) < SERVIDOR_MERGE_TOLERANCIA_MS) return false;
+          if (e < f.epochMs) lo = mid + 1; else hi = mid - 1;
+        }
+        return true;
+      });
+      if (nuevas.length > 0) await guardarLecturasLote(stationId, nuevas);
+      return { estado: 'ok', recibidas: filas.length, anadidas: nuevas.length, ultimaMs: ultimaMs, intervaloS: Number(data.intervaloS) || 0 };
+    } catch (err) {
+      return { estado: 'error' };
+    } finally {
+      servidorSyncEnCurso = false;
+    }
+  }
+
+  function actualizarServidorEstadoLinea(r){
+    if (!servidorEstadoLinea) return;
+    let texto = null;
+    if (r.estado === 'ok'){
+      if (r.recibidas === 0){
+        texto = 'Histórico del servidor: el recolector aún no tiene lecturas guardadas.';
+      } else {
+        const hora = fmtHora(r.ultimaMs);
+        texto = r.anadidas > 0
+          ? 'Histórico del servidor: ha aportado ' + (r.anadidas === 1 ? '1 lectura' : r.anadidas + ' lecturas') + ' que faltaban en este navegador (última lectura del servidor: ' + hora + ').'
+          : 'Histórico del servidor: consultado, no faltaba ninguna lectura (última lectura del servidor: ' + hora + ').';
+        const umbralMin = Math.max(SERVIDOR_AVISO_PARADO_MIN, Math.ceil(3 * (r.intervaloS || 0) / 60));
+        if (Date.now() - r.ultimaMs > umbralMin * 60 * 1000){
+          texto += ' Atención: hace más de ' + umbralMin + ' minutos que el servidor no registra nada; el recolector podría estar parado.';
+        }
+      }
+    } else if (r.estado === 'otra-estacion'){
+      texto = 'El histórico del servidor es de otra estación (' + escHTML(r.estacionServidor || '?') + '), distinta de la indicada aquí; no se ha usado.';
+    } else if (r.estado === 'formato' || r.estado === 'error'){
+      texto = 'No se ha podido usar el histórico del servidor (formato no válido o error al guardarlo).';
+    }
+    // 'no-disponible' / 'omitido': la app funciona sin servidor (p. ej. GitHub Pages), no se muestra nada.
+    if (texto === null){ servidorEstadoLinea.style.display = 'none'; return; }
+    servidorEstadoLinea.innerHTML = texto;
+    servidorEstadoLinea.style.display = 'block';
+  }
+
+  async function sincronizarServidorYRepintar(){
+    const stationId = estacionParaEvolucion();
+    if (!stationId) return;
+    const r = await sincronizarHistorialServidor(stationId);
+    if (r.estado === 'omitido') return;
+    actualizarServidorEstadoLinea(r);
+    if (r.estado === 'ok' && r.anadidas > 0) redibujarEvolucionSiAbierta();
+  }
+
   function iniciarMonitor(){
     const stationId = stationIdInput.value.trim();
     if (!stationId) return;
@@ -2642,9 +1979,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     running = true;
     retryCount = 0;
     contReintentos.textContent = '0';
-    reiniciarFiltroSaltoBrusco(); // cada arranque del monitor empieza sin lectura previa que comparar
-    reiniciarEstabilizacion(); // igual: sin valor fijado previo que mantener
-    desactivarAjusteAutomaticoK(); // requiere una referencia real nueva cada vez que se (re)arranca
     horaInicioMs = Date.now();
     horaInicioValor.textContent = new Date(horaInicioMs).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     ultimaActValor.textContent = '—';
@@ -2653,13 +1987,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     avisoPlausibilidad.style.display = 'none';
 
     setBotonesIniciarDetener(true, false);
-    INPUTS_BLOQUEABLES_EN_MARCHA.forEach(i => { i.disabled = true; });
+    INPUTS_CONFIG.forEach(i => { i.disabled = true; });
     fijarLuz('ok', 'En ejecución');
     progresoEtiqueta.textContent = 'Realizando la primera consulta…';
 
     const limiteMs = Date.now() - RETENCION_LOCAL_DIAS * 24 * 60 * 60 * 1000;
     purgarAntiguos(stationId, limiteMs);
-    backfillSiNecesario(stationId, activo.apiKey);
+    // Primero el histórico del servidor (sin coste de API) y después el de la
+    // API de Weather Underground, que solo consultará los días que sigan con huecos.
+    sincronizarServidorYRepintar().then(() => backfillSiNecesario(stationId, activo.apiKey));
 
     cicloConsulta();
   }
@@ -2846,9 +2182,25 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       // otro del hueco sugeriría un cambio gradual y continuo que en
       // realidad nunca se ha observado (ver nota junto a UMBRAL_GAP_12H_FRAC
       // / UMBRAL_GAP_7D_FRAC). Se dibuja un trazo por cada tramo contiguo.
+      //
+      // El umbral es ADAPTATIVO por serie: umbralGapFrac es el máximo
+      // (HUECO_MAX_MS) y el umbral real es 3 veces la separación habitual
+      // (mediana) entre lecturas de esa serie, con un mínimo de
+      // HUECO_MIN_MS. Así, donde hay lecturas cada pocos minutos, un
+      // tramo con lecturas mucho más espaciadas (p. ej. cada 40 min) no se
+      // une con rectas largas: se ve como puntos sueltos.
+      let umbralSerie = umbralGapFrac;
+      if (umbralGapFrac && pts.length > 2){
+        const sep = [];
+        for (let i = 1; i < pts.length; i++) sep.push(pts[i].x - pts[i - 1].x);
+        sep.sort((a, b) => a - b);
+        const mediana = sep[Math.floor(sep.length / 2)];
+        const minFrac = umbralGapFrac * (HUECO_MIN_MS / HUECO_MAX_MS);
+        umbralSerie = Math.min(umbralGapFrac, Math.max(minFrac, 3 * mediana));
+      }
       const tramos = [[]];
       pts.forEach((p, i) => {
-        if (i > 0 && umbralGapFrac && (p.x - pts[i - 1].x) > umbralGapFrac) tramos.push([]);
+        if (i > 0 && umbralSerie && (p.x - pts[i - 1].x) > umbralSerie) tramos.push([]);
         tramos[tramos.length - 1].push(p);
       });
       tramos.forEach(tramo => {
@@ -3007,19 +2359,20 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!stationId){ charts12h.innerHTML = '<p class="evol-vacio">Indica un Station ID para ver esta gráfica.</p>'; return; }
 
     const hastaMs = Date.now();
-    const desdeMs = hastaMs - VENTANA_12H_MS;
+    const ventanaMs = ventanaEvolH * 60 * 60 * 1000;
+    const desdeMs = hastaMs - ventanaMs;
     const filas = await consultarRango(stationId, desdeMs, hastaMs);
     if (filas.length === 0){
-      charts12h.innerHTML = mensajeHistorialVacio('Todavía no hay datos de las últimas 12 horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.');
+      charts12h.innerHTML = mensajeHistorialVacio('Todavía no hay datos de las últimas ' + ventanaEvolH + ' horas en este navegador. Déjalo en marcha un rato y vuelve a abrir este panel.');
       return;
     }
     filas.sort((a, b) => a.epochMs - b.epochMs);
-    const xTicks = construirTicksTiempo(desdeMs, hastaMs, 4);
+    const xTicks = construirTicksTiempo(desdeMs, hastaMs, ventanaEvolH === 24 ? 6 : 4);
     // Una posición de "engancho" para el cursor por cada lectura real
     // (más fina que las 4-5 marcas visibles del eje X).
     const puntosX = filas.map(f => {
       const d = new Date(f.epochMs);
-      return { frac: (f.epochMs - desdeMs) / VENTANA_12H_MS, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+      return { frac: (f.epochMs - desdeMs) / ventanaMs, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
     });
 
     charts12h.innerHTML = '';
@@ -3027,10 +2380,10 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
       charts12h.appendChild(card.el);
       const series = grupo.claves.map(key => {
-        const def = buscarDefGrafico(key);
+        const def = GRAFICABLES.find(m => m.key === key);
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
-          .map(f => ({ x: (f.epochMs - desdeMs) / VENTANA_12H_MS, y: f.vals[key] }));
+          .map(f => ({ x: (f.epochMs - desdeMs) / ventanaMs, y: f.vals[key] }));
         return {
           etiqueta: def ? def.etiqueta : key,
           color: (grupo.colores && grupo.colores[key]) || (def ? def.color : 'var(--c-temp)'),
@@ -3041,7 +2394,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
           trazo: (grupo.trazos && grupo.trazos[key]) || ''
         };
       });
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, UMBRAL_GAP_12H_FRAC);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, series, xTicks, puntosX, HUECO_MAX_MS / ventanaMs);
     });
   }
 
@@ -3054,7 +2407,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       titulo: grupo.titulo,
       unidad: grupo.unidad,
       series: grupo.claves.map(key => {
-        const def = buscarDefGrafico(key);
+        const def = GRAFICABLES.find(m => m.key === key);
         const puntos = filas
           .filter(f => f.vals[key] !== null && f.vals[key] !== undefined)
           .map(f => ({ x: (f.epochMs - desdeMs) / rangoMs, y: f.vals[key] }));
@@ -3071,12 +2424,12 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     }));
   }
 
-  function pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX){
+  function pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX, umbralGapFrac){
     charts7d.innerHTML = '';
     gruposConSeries.forEach(grupo => {
       const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
       charts7d.appendChild(card.el);
-      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, UMBRAL_GAP_7D_FRAC);
+      dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, umbralGapFrac || UMBRAL_GAP_7D_FRAC);
     });
   }
 
@@ -3088,9 +2441,9 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   // histórico es demasiado grande para localStorage, guardarlo
   // simplemente se ignora: solo se pierde el repintado instantáneo,
   // nunca el histórico real.
-  function guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks){
+  function guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks, umbralGapFrac){
     try {
-      localStorage.setItem(STORAGE_KEY_EVOL7D, JSON.stringify({ stationId, grupos: gruposConSeries, xTicks }));
+      localStorage.setItem(STORAGE_KEY_EVOL7D, JSON.stringify({ stationId, grupos: gruposConSeries, xTicks, umbral: umbralGapFrac }));
     } catch (err) { /* almacenamiento lleno o no disponible: se ignora */ }
   }
 
@@ -3102,7 +2455,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
       if (!datos || datos.stationId !== stationId || !datos.grupos || !datos.xTicks) return false;
       // La caché no guarda una posición de "engancho" por lectura (solo
       // las marcas del eje): el cursor fino llega con el repintado real.
-      pintarGraficos7dDesdeGrupos(datos.grupos, datos.xTicks, datos.xTicks);
+      pintarGraficos7dDesdeGrupos(datos.grupos, datos.xTicks, datos.xTicks, datos.umbral);
       return true;
     } catch (err) { return false; }
   }
@@ -3141,8 +2494,11 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     });
 
     const gruposConSeries = construirGruposEvolucion7d(filas, desdeMs, rangoMs);
-    pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX);
-    guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks);
+    // El umbral de hueco se calcula sobre la ventana REAL (hasta ahora), no
+    // sobre 7 días nominales: así 90 min equivalen siempre a 90 min.
+    const umbralGapFrac = HUECO_MAX_MS / rangoMs;
+    pintarGraficos7dDesdeGrupos(gruposConSeries, xTicks, puntosX, umbralGapFrac);
+    guardarEvolucion7dEnStorage(stationId, gruposConSeries, xTicks, umbralGapFrac);
   }
 
   function redibujarEvolucionSiAbierta(){
@@ -3151,22 +2507,162 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     pintarResumenDias();
   }
 
-  // Vacía el histórico local (IndexedDB) de la estación configurada: las
-  // lecturas ya guardadas no se recorrigen solas al cambiar el modo o los
-  // parámetros de corrección (cada fila se guarda ya corregida en el
-  // momento de llegar), así que este botón es la forma de que las
-  // gráficas de 12h/7 días vuelvan a rellenarse desde cero con la
-  // configuración de corrección actual, en vez de mezclar lecturas
-  // corregidas de formas distintas.
-  let avisoHistorialLocalBorradoTimeout = null;
-  async function borrarHistorialLocalEstacion(){
+  /* ============================================================
+     CONSULTAR UN DÍA EN CONCRETO (no limitado a los últimos 7): primero
+     se mira el histórico local (IndexedDB) y, solo si falta cobertura
+     para ese día, se completa con el histórico de la API de Weather
+     Underground para esa fecha exacta — el mismo endpoint que usa
+     backfillSiNecesario() para los últimos 7 días, pero sin esa ventana.
+     ============================================================ */
+  let diaConcretoUltimasFilas = null; // para el botón de descarga CSV
+
+  // <input type="date">.value viene como "YYYY-MM-DD"; se construye a mano
+  // para que sea medianoche LOCAL (igual que el resto de la app), no UTC
+  // como haría new Date("YYYY-MM-DD").
+  function diaConcretoAFechaLocal(valorInput){
+    const partes = valorInput.split('-').map(Number);
+    return new Date(partes[0], partes[1] - 1, partes[2], 0, 0, 0, 0);
+  }
+
+  async function consultarDiaConcreto(){
     const stationId = estacionParaEvolucion();
-    if (!stationId) return;
-    await borrarRango(stationId, 0, Date.now() + 24 * 60 * 60 * 1000);
-    redibujarEvolucionSiAbierta();
-    avisoHistorialLocalBorrado.style.display = 'inline-flex';
-    clearTimeout(avisoHistorialLocalBorradoTimeout);
-    avisoHistorialLocalBorradoTimeout = setTimeout(() => { avisoHistorialLocalBorrado.style.display = 'none'; }, 3000);
+    if (!stationId){
+      diaConcretoEstadoLinea.textContent = 'Indica un Station ID (sección 1) para poder consultar.';
+      diaConcretoEstadoLinea.style.display = 'block';
+      return;
+    }
+    const valorFecha = diaConcretoInput.value;
+    if (!valorFecha){
+      diaConcretoEstadoLinea.textContent = 'Elige primero una fecha.';
+      diaConcretoEstadoLinea.style.display = 'block';
+      return;
+    }
+    const inicioDia = diaConcretoAFechaLocal(valorFecha);
+    const inicioDiaMs = inicioDia.getTime();
+    const ahoraMs = Date.now();
+    if (inicioDiaMs > ahoraMs){
+      diaConcretoEstadoLinea.textContent = 'Esa fecha todavía no ha llegado.';
+      diaConcretoEstadoLinea.style.display = 'block';
+      return;
+    }
+    // Para "hoy" no se exige cobertura hasta medianoche, que todavía no ha
+    // pasado: la ventana relevante termina en "ahora" (mismo criterio que
+    // backfillSiNecesario()).
+    const finDiaMs = Math.min(inicioDiaMs + 24 * 60 * 60 * 1000 - 1, ahoraMs);
+
+    btnConsultarDia.disabled = true;
+    diaConcretoEstadoLinea.textContent = 'Consultando…';
+    diaConcretoEstadoLinea.style.display = 'block';
+    diaConcretoResumen.innerHTML = '';
+    chartsDiaConcreto.innerHTML = '';
+    btnDescargarCSVDia.disabled = true;
+
+    try {
+      let filas = await consultarRango(stationId, inicioDiaMs, finDiaMs);
+      let aportadasApi = 0, apiFallo = false, apiSinDatos = false;
+
+      // Solo merece la pena llamar a la API de histórico si de verdad falta
+      // cobertura (mismo criterio que backfillSiNecesario): si ya hay datos
+      // locales con cobertura suficiente, nos ahorramos la petición.
+      if (filas.length === 0 || diaIncompleto(filas, inicioDiaMs, finDiaMs)){
+        try {
+          const apiKey = (activo ? activo.apiKey : apiKeyInput.value.trim());
+          const url = construirURLHistorico(stationId, apiKey, fechaYYYYMMDD(inicioDia));
+          const resp = await fetchConTimeout(url, 15000);
+          if (resp.ok){
+            const data = await resp.json();
+            const obsArr = data.observations || [];
+            const epochsExistentes = filas.map(f => f.epochMs);
+            for (const obs of obsArr){
+              if (!obs.epoch) continue;
+              const epochMs = obs.epoch * 1000;
+              if (epochMs < inicioDiaMs || epochMs > finDiaMs) continue; // la API a veces devuelve algo justo fuera del día exacto
+              const yaExiste = epochsExistentes.some(e => Math.abs(e - epochMs) < MERGE_TOLERANCIA_MS);
+              if (yaExiste) continue;
+              const vals = extraerValores(obs);
+              await guardarLectura(stationId, epochMs, vals);
+              epochsExistentes.push(epochMs);
+              filas.push({ stationId: stationId, epochMs: epochMs, vals: vals });
+              aportadasApi++;
+            }
+            if (aportadasApi === 0) apiSinDatos = true;
+          } else apiFallo = true;
+        } catch (err) { apiFallo = true; }
+      }
+
+      filas.sort((a, b) => a.epochMs - b.epochMs);
+      diaConcretoUltimasFilas = filas;
+      btnDescargarCSVDia.disabled = filas.length === 0;
+
+      const fechaTexto = inicioDia.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      if (filas.length === 0){
+        diaConcretoEstadoLinea.textContent = 'Sin lecturas para ' + fechaTexto + ', ni en este navegador ni en el histórico de la API (si tu plan lo incluye).';
+        chartsDiaConcreto.innerHTML = '<p class="evol-vacio">No hay ningún dato para ese día.</p>';
+        return;
+      }
+
+      let piezaApi;
+      if (aportadasApi > 0) piezaApi = 'se ha completado con ' + (aportadasApi === 1 ? '1 lectura' : aportadasApi + ' lecturas') + ' del histórico de la API.';
+      else if (apiFallo) piezaApi = 'no se ha podido consultar el histórico de la API para completar los huecos (fallo de red o de la API); se muestra solo lo registrado en este navegador.';
+      else if (apiSinDatos) piezaApi = 'el histórico de la API no ha devuelto ninguna lectura nueva (habitual si el plan de tu cuenta no lo incluye); se muestra solo lo registrado en este navegador.';
+      else piezaApi = 'cobertura completa ya guardada en este navegador, sin necesidad de consultar la API.';
+      diaConcretoEstadoLinea.textContent = fechaTexto + ' (' + filas.length + (filas.length === 1 ? ' lectura' : ' lecturas') + '): ' + piezaApi;
+
+      // Mismo resumen rápido que las fichas de "Resumen de los últimos 7 días".
+      const r = resumenDeLecturasDia(filas);
+      const maxTxt = r.tempMax !== null ? r.tempMax.toFixed(1) + ' °C' : '—';
+      const minTxt = r.tempMin !== null ? r.tempMin.toFixed(1) + ' °C' : '—';
+      const rainTxt = r.rainTotal !== null ? r.rainTotal.toFixed(1) + ' mm' : '—';
+      diaConcretoResumen.innerHTML = '<div class="resumen-dia-solo"><div class="dia-card">' +
+        '<div class="dc-fecha">Máx. / mín. de temperatura</div>' +
+        '<div class="dc-temps"><span class="dc-max">' + maxTxt + '</span><span class="dc-min">' + minTxt + '</span></div>' +
+        '<div class="dc-extra">Lluvia acumulada: ' + rainTxt + '</div>' +
+        '</div></div>';
+
+      const rangoMs = Math.max(finDiaMs - inicioDiaMs, 1);
+      const xTicks = construirTicksTiempo(inicioDiaMs, inicioDiaMs + 24 * 60 * 60 * 1000, 6);
+      const puntosX = filas.map(f => {
+        const d = new Date(f.epochMs);
+        return { frac: (f.epochMs - inicioDiaMs) / rangoMs, etiqueta: pad2(d.getHours()) + ':' + pad2(d.getMinutes()) };
+      });
+      const gruposConSeries = construirGruposEvolucion7d(filas, inicioDiaMs, rangoMs);
+      chartsDiaConcreto.innerHTML = '';
+      gruposConSeries.forEach(grupo => {
+        const card = construirTarjetaGrafico(grupo.titulo, grupo.unidad);
+        chartsDiaConcreto.appendChild(card.el);
+        dibujarGraficoSVG(card.svg, card.leyenda, card.tooltip, grupo.series, xTicks, puntosX, HUECO_MAX_MS / rangoMs); // ventana real: si el día es hoy, solo llega hasta ahora
+      });
+    } finally {
+      btnConsultarDia.disabled = false;
+    }
+  }
+
+  function descargarCSVDia(){
+    if (!diaConcretoUltimasFilas || diaConcretoUltimasFilas.length === 0) return;
+    const columnas = ['hora', 'temp_c', 'heat_index_c', 'dewpoint_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh', 'gust_kmh', 'wind_dir_deg', 'rainrate_mmh', 'rain_total_mm', 'solarradiation_wm2', 'uv_index'];
+    const lineas = [columnas.join(',')];
+    diaConcretoUltimasFilas.forEach(f => {
+      const fila = { hora: new Date(f.epochMs).toLocaleString('es-ES') };
+      Object.assign(fila, f.vals);
+      lineas.push(columnas.map(c => {
+        const v = fila[c];
+        return (v === null || v === undefined) ? '' : String(v).replace(/,/g, '.');
+      }).join(','));
+    });
+    const blob = new Blob(['﻿' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'telemethistorial-' + stationId_SeguroParaNombreArchivo() + '-' + diaConcretoInput.value + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function stationId_SeguroParaNombreArchivo(){
+    const s = estacionParaEvolucion();
+    return s ? s.replace(/[^A-Za-z0-9_-]/g, '') : 'estacion';
   }
 
   /* ============================================================
@@ -3250,16 +2746,6 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
      ============================================================ */
   btnGuardarConfig.addEventListener('click', guardarConfig);
   btnBorrarConfig.addEventListener('click', borrarConfig);
-  corrModoInput.addEventListener('change', aplicarCorreccionEnVivo);
-  corrOffsetInput.addEventListener('input', aplicarCorreccionEnVivo);
-  corrKInput.addEventListener('input', aplicarCorreccionEnVivo);
-  corrCInput.addEventListener('input', aplicarCorreccionEnVivo);
-  filtroUmbralInput.addEventListener('input', aplicarFiltroEnVivo);
-  filtroResyncInput.addEventListener('input', aplicarFiltroEnVivo);
-  estabUmbralInput.addEventListener('input', aplicarEstabilizacionEnVivo);
-  estabMuestrasInput.addEventListener('input', aplicarEstabilizacionEnVivo);
-  btnCalcularCalibracion.addEventListener('click', calcularCalibracionDesdeReferencia);
-  btnBorrarHistorialLocal.addEventListener('click', borrarHistorialLocalEstacion);
   stationIdInput.addEventListener('input', actualizarEstadoBotonIniciar);
   btnIniciar.addEventListener('click', iniciarMonitor);
   btnDetener.addEventListener('click', detenerMonitor);
@@ -3280,10 +2766,26 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (!accEvol12h.open) return;
     dibujarEvolucion12h().then(() => accEvol12h.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
   });
+  // Selector 12 h / 24 h de las gráficas de evolución cortas.
+  const evolVentanaBtns = document.querySelectorAll('.evol-ventana button');
+  const evolVentanaTitulo = document.getElementById('evolVentanaTitulo');
+  function aplicarVentanaEvol(){
+    evolVentanaBtns.forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === ventanaEvolH)));
+    evolVentanaTitulo.textContent = 'Evolución de las últimas ' + ventanaEvolH + ' horas';
+  }
+  evolVentanaBtns.forEach(b => b.addEventListener('click', () => {
+    ventanaEvolH = parseInt(b.dataset.h, 10);
+    try { localStorage.setItem(STORAGE_KEY_VENTANA_EVOL, String(ventanaEvolH)); } catch (e) {}
+    aplicarVentanaEvol();
+    dibujarEvolucion12h();
+  }));
+  aplicarVentanaEvol();
   accEvol7d.addEventListener('toggle', () => {
     if (!accEvol7d.open) return;
     dibujarEvolucion7d().then(() => accEvol7d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
   });
+  btnConsultarDia.addEventListener('click', consultarDiaConcreto);
+  btnDescargarCSVDia.addEventListener('click', descargarCSVDia);
 
   btnVerApiKey.addEventListener('click', () => {
     const mostrar = apiKeyInput.type === 'password';
@@ -3315,6 +2817,14 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
   construirTarjetas();
   cargarConfig();
 
+  // El selector de fecha de "Consultar un día en concreto" no deja elegir
+  // un día futuro (del que, por definición, no puede haber lecturas).
+  {
+    const hoy = new Date();
+    diaConcretoInput.max = hoy.getFullYear() + '-' + pad2(hoy.getMonth() + 1) + '-' + pad2(hoy.getDate());
+    diaConcretoInput.value = diaConcretoInput.max;
+  }
+
   // El panel de "Evolución de los últimos 7 días" está abierto por
   // defecto: se pinta de inmediato con lo que haya en caché (si lo hay),
   // y en cuanto a continuación termine la consulta real a IndexedDB se
@@ -3324,432 +2834,15 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
     if (stationIdInicial) pintarEvolucion7dDesdeCache(stationIdInicial);
   }
   redibujarEvolucionSiAbierta();
+
+  // Al abrir la app (sin esperar a pulsar "Iniciar") se trae el histórico del
+  // servidor, y se repite cada SERVIDOR_SYNC_CADA_MIN minutos mientras la
+  // pestaña esté visible: cubre los ratos en que el navegador pausa la app
+  // (pestaña en segundo plano, iPad bloqueado...).
+  sincronizarServidorYRepintar();
+  setInterval(() => { if (!document.hidden) sincronizarServidorYRepintar(); }, SERVIDOR_SYNC_CADA_MIN * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizarServidorYRepintar(); });
 })();
 </script>
-
-<!-- ===================================================================
-     ProMax · utilidades comunes: aspecto, pantalla completa, pantalla
-     siempre encendida, modo quiosco, alertas por umbral, exportación del
-     histórico en JSON y atajos de teclado.
-     =================================================================== -->
-<style>
-  .pmx-bar{position:fixed;right:14px;bottom:var(--pmx-bottom,14px);z-index:9000;display:flex;align-items:center;gap:4px;
-    padding:5px;border-radius:999px;background:var(--card-bg,var(--bg,#fff));color:var(--ink,var(--texto,#13202e));
-    border:1px solid var(--line,rgba(127,127,127,.3));box-shadow:0 10px 30px -14px rgba(0,0,0,.55)}
-  .pmx-bar button{all:unset;box-sizing:border-box;cursor:pointer;width:36px;height:36px;border-radius:50%;
-    display:grid;place-items:center;color:inherit;position:relative}
-  .pmx-bar button:hover{background:rgba(127,127,127,.18)}
-  .pmx-bar button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-  .pmx-bar button[aria-pressed="true"]{background:#2E4B6B;color:#fff}
-  .pmx-bar button.pmx-alarma{background:#B3261E;color:#fff;animation:pmxLatido 1.2s ease-in-out infinite}
-  @keyframes pmxLatido{50%{opacity:.55}}
-  @media (prefers-reduced-motion:reduce){.pmx-bar button.pmx-alarma{animation:none}}
-  .pmx-bar svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .pmx-toast{position:fixed;right:14px;bottom:calc(var(--pmx-bottom,14px) + 56px);z-index:9001;max-width:330px;
-    padding:10px 14px;border-radius:12px;background:#13202e;color:#fff;
-    font:500 13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
-    box-shadow:0 10px 30px -14px rgba(0,0,0,.6);opacity:0;transform:translateY(6px);
-    transition:opacity .2s ease,transform .2s ease;pointer-events:none}
-  .pmx-toast.ver{opacity:1;transform:none}
-  .pmx-panel{position:fixed;right:14px;bottom:calc(var(--pmx-bottom,14px) + 56px);z-index:9002;width:min(340px,calc(100vw - 28px));
-    padding:14px 16px;border-radius:14px;background:var(--card-bg,var(--bg,#fff));color:var(--ink,var(--texto,#13202e));
-    border:1px solid var(--line,rgba(127,127,127,.3));box-shadow:0 18px 44px -18px rgba(0,0,0,.6);
-    font:400 13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-  .pmx-panel[hidden]{display:none}
-  .pmx-panel h4{margin:0 0 4px;font-size:14px}
-  .pmx-panel .pmx-sub{margin:0 0 10px;opacity:.7;font-size:12px}
-  .pmx-panel select,.pmx-panel input[type=number]{font:inherit;padding:5px 7px;border-radius:8px;
-    border:1px solid var(--line,rgba(127,127,127,.4));background:transparent;color:inherit;min-width:0}
-  .pmx-nueva{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}
-  .pmx-nueva select#pmxMag{grid-column:1 / -1}
-  .pmx-nueva .pmx-cv{display:flex;gap:6px}
-  .pmx-nueva .pmx-cv select{flex:1}
-  .pmx-nueva .pmx-cv input{width:76px}
-  .pmx-panel button.pmx-txt{all:unset;cursor:pointer;padding:6px 11px;border-radius:9px;background:#2E4B6B;color:#fff;
-    font:600 12.5px system-ui,sans-serif;text-align:center}
-  .pmx-panel button.pmx-txt:focus-visible{outline:2px solid currentColor;outline-offset:2px}
-  .pmx-regla{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed var(--line,rgba(127,127,127,.3))}
-  .pmx-regla span{flex:1}
-  .pmx-regla button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
-    background:rgba(127,127,127,.2);font-size:13px;line-height:1}
-  .pmx-panel label.pmx-check{display:flex;gap:7px;align-items:flex-start;margin-top:10px;font-size:12.5px}
-  .pmx-oculto{display:none !important}
-  body.pmx-quiosco main,body.pmx-quiosco .wrap{max-width:none !important}
-  body.pmx-quiosco main{zoom:var(--pmx-zoom,1.2);padding-top:8px !important}
-  @media print{.pmx-bar,.pmx-toast,.pmx-panel{display:none !important}}
-</style>
-<div class="pmx-bar" id="pmxBar" role="group" aria-label="Utilidades ProMax"></div>
-<div class="pmx-toast" id="pmxToast" role="status" aria-live="polite"></div>
-<div class="pmx-panel" id="pmxPanelAlertas" hidden role="dialog" aria-label="Alertas por umbral">
-  <h4>Alertas por umbral</h4>
-  <p class="pmx-sub">Se comprueban con cada lectura que recibe la aplicación.</p>
-  <div id="pmxReglas"></div>
-  <div class="pmx-nueva">
-    <select id="pmxMag" aria-label="Magnitud"></select>
-    <div class="pmx-cv">
-      <select id="pmxCond" aria-label="Condición">
-        <option value="gt">supera</option>
-        <option value="lt">baja de</option>
-      </select>
-      <input type="number" id="pmxValor" step="0.1" value="30" aria-label="Valor">
-    </div>
-    <button type="button" class="pmx-txt" id="pmxAddRegla">Añadir</button>
-  </div>
-  <label class="pmx-check"><input type="checkbox" id="pmxNotif"><span>Avisarme también con una notificación del navegador</span></label>
-</div>
-<script>
-(function(){
-  "use strict";
-  var CFG = {"pref": "telemetcal", "nombre": "TeleMet Cal ProMax", "tema": true, "iniciar": "btnIniciar", "detener": "btnDetener", "manual": "btnSondeoManual", "pausa": null, "quiosco": "#metaLinea, #datosGrid", "db": "telemetcalvivo_db"};
-  var bar = document.getElementById("pmxBar");
-  var toastEl = document.getElementById("pmxToast");
-  var tToast = null;
-  function toast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("ver");
-    clearTimeout(tToast);
-    tToast = setTimeout(function(){ toastEl.classList.remove("ver"); }, 4000);
-  }
-  function svg(d){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>'; }
-  var ICONO = {
-    auto:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
-    claro:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
-    oscuro:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
-    pantalla:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
-    quiosco:'<rect x="2.5" y="4.5" width="19" height="13" rx="2"/><path d="M8 21h8M12 17.5V21"/>',
-    bombilla:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"/>',
-    campana:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6M13.7 20a2 2 0 0 1-3.4 0"/>',
-    descarga:'<path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 20h16"/>',
-    teclado:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/>'
-  };
-  function boton(id, titulo, icono){
-    var b = document.createElement("button");
-    b.type = "button"; b.id = id; b.title = titulo;
-    b.setAttribute("aria-label", titulo);
-    b.innerHTML = svg(icono);
-    bar.appendChild(b);
-    return b;
-  }
-  function leer(clave, porDefecto){
-    try { var v = localStorage.getItem(CFG.pref + clave); return v === null ? porDefecto : v; }
-    catch (e) { return porDefecto; }
-  }
-  function guardar(clave, valor){ try { localStorage.setItem(CFG.pref + clave, valor); } catch (e) {} }
-
-  var navInf = document.querySelector(".bottomnav, .tabbar, .barra-inferior");
-  if (navInf && navInf.offsetHeight) {
-    document.documentElement.style.setProperty("--pmx-bottom", (navInf.offsetHeight + 16) + "px");
-  }
-
-  /* ---------- Aspecto ---------- */
-  var btnTema = null, TEMAS = ["auto","claro","oscuro"], tema = "auto", ciclarTema = null;
-  if (CFG.tema) {
-    tema = leer("_tema", "auto");
-    if (TEMAS.indexOf(tema) === -1) tema = "auto";
-    btnTema = boton("pmxTema", "Aspecto (tecla T)", ICONO.auto);
-    var NOMBRE = {auto:"automático (el del sistema)", claro:"claro", oscuro:"oscuro"};
-    var pintarTema = function(avisar){
-      if (tema === "auto") document.documentElement.removeAttribute("data-tema");
-      else document.documentElement.setAttribute("data-tema", tema);
-      btnTema.innerHTML = svg(ICONO[tema === "auto" ? "auto" : tema]);
-      btnTema.title = "Aspecto: " + NOMBRE[tema] + " (tecla T)";
-      btnTema.setAttribute("aria-label", btnTema.title);
-      guardar("_tema", tema);
-      if (avisar) toast("Aspecto " + NOMBRE[tema] + ".");
-    };
-    ciclarTema = function(){ tema = TEMAS[(TEMAS.indexOf(tema)+1) % TEMAS.length]; pintarTema(true); };
-    btnTema.addEventListener("click", ciclarTema);
-    pintarTema(false);
-  }
-
-  /* ---------- Pantalla completa ---------- */
-  var btnPantalla = boton("pmxPantalla", "Pantalla completa (tecla F)", ICONO.pantalla);
-  var enPantallaCompleta = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); };
-  function alternarPantalla(){
-    try {
-      if (!enPantallaCompleta()) {
-        var el = document.documentElement;
-        (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
-      } else { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
-    } catch (e) { toast("Este navegador no permite la pantalla completa."); }
-  }
-  btnPantalla.addEventListener("click", alternarPantalla);
-  document.addEventListener("fullscreenchange", function(){
-    btnPantalla.setAttribute("aria-pressed", String(enPantallaCompleta()));
-  });
-
-  /* ---------- Modo quiosco: solo las lecturas ---------- */
-  var btnQuiosco = boton("pmxQuiosco", "Modo quiosco: solo las lecturas (tecla Q)", ICONO.quiosco);
-  btnQuiosco.setAttribute("aria-pressed", "false");
-  var enQuiosco = false, ocultados = [];
-  function alternarQuiosco(){
-    if (!enQuiosco) {
-      var mantener = [];
-      try { mantener = Array.prototype.slice.call(document.querySelectorAll(CFG.quiosco || "")); } catch (e) {}
-      mantener = mantener.filter(function(el){ return el.offsetParent !== null || el.getClientRects().length; });
-      if (!mantener.length) { toast("Todavía no hay lecturas que mostrar en grande."); return; }
-      // "rama" son los ancestros por los que hay que bajar; al llegar a un
-      // elemento de "mantener" se para, para no ocultar su contenido.
-      var rama = [];
-      mantener.forEach(function(el){ var n = el.parentElement; while (n && n !== document.body) { rama.push(n); n = n.parentElement; } });
-      (function recorrer(nodo){
-        Array.prototype.forEach.call(nodo.children, function(h){
-          if (h.id === "pmxBar" || h.id === "pmxToast" || h.classList.contains("pmx-panel")) return;
-          if (h.tagName === "SCRIPT" || h.tagName === "STYLE") return;
-          if (mantener.indexOf(h) !== -1) return;
-          if (rama.indexOf(h) !== -1) recorrer(h);
-          else { h.classList.add("pmx-oculto"); ocultados.push(h); }
-        });
-      })(document.body);
-      document.body.classList.add("pmx-quiosco");
-      enQuiosco = true;
-      toast("Modo quiosco. Pulsa Q o el botón para volver.");
-    } else {
-      ocultados.forEach(function(h){ h.classList.remove("pmx-oculto"); });
-      ocultados = [];
-      document.body.classList.remove("pmx-quiosco");
-      enQuiosco = false;
-    }
-    btnQuiosco.setAttribute("aria-pressed", String(enQuiosco));
-  }
-  btnQuiosco.addEventListener("click", alternarQuiosco);
-
-  /* ---------- Pantalla siempre encendida ---------- */
-  var btnLuz = null, wakeLock = null, luzPedida = false, alternarLuz = null;
-  if ("wakeLock" in navigator) {
-    btnLuz = boton("pmxLuz", "Mantener la pantalla encendida (tecla P)", ICONO.bombilla);
-    btnLuz.setAttribute("aria-pressed", "false");
-    var pedirLuz = function(){
-      return navigator.wakeLock.request("screen").then(function(w){
-        wakeLock = w;
-        w.addEventListener("release", function(){ wakeLock = null; });
-      });
-    };
-    alternarLuz = function(){
-      if (!luzPedida) {
-        pedirLuz().then(function(){
-          luzPedida = true;
-          btnLuz.setAttribute("aria-pressed","true");
-          toast("La pantalla no se apagará mientras esta pestaña esté a la vista.");
-        }).catch(function(){ toast("El navegador no ha permitido mantener la pantalla encendida."); });
-      } else {
-        luzPedida = false;
-        btnLuz.setAttribute("aria-pressed","false");
-        if (wakeLock) { wakeLock.release(); wakeLock = null; }
-        toast("La pantalla vuelve a apagarse sola.");
-      }
-    };
-    btnLuz.addEventListener("click", alternarLuz);
-    document.addEventListener("visibilitychange", function(){
-      if (luzPedida && !wakeLock && document.visibilityState === "visible") pedirLuz().catch(function(){});
-    });
-  }
-
-  /* ---------- Alertas por umbral ----------
-     Las lecturas se leen de la propia respuesta de Weather Underground, así
-     que no dependen de cómo las pinte cada app. */
-  var MAGS = {
-    temp:      {etq:"Temperatura (°C)",       leer:function(o,m){ return n(m.temp); }},
-    sensacion: {etq:"Sensación térmica (°C)", leer:function(o,m){ return n(m.heatIndex !== undefined ? m.heatIndex : m.windChill); }},
-    rocio:     {etq:"Punto de rocío (°C)",    leer:function(o,m){ return n(m.dewpt !== undefined ? m.dewpt : o.dewpoint); }},
-    humedad:   {etq:"Humedad (%)",            leer:function(o,m){ return n(o.humidity); }},
-    presion:   {etq:"Presión (hPa)",          leer:function(o,m){ return n(m.pressure); }},
-    viento:    {etq:"Viento (km/h)",          leer:function(o,m){ return n(m.windSpeed); }},
-    racha:     {etq:"Racha (km/h)",           leer:function(o,m){ return n(m.windGust); }},
-    lluvia:    {etq:"Lluvia (mm/h)",          leer:function(o,m){ return n(m.precipRate); }},
-    uv:        {etq:"Índice UV",              leer:function(o,m){ return n(o.uv); }}
-  };
-  function n(v){ var x = Number(v); return Number.isFinite(x) ? x : null; }
-
-  var panel = document.getElementById("pmxPanelAlertas");
-  var selMag = document.getElementById("pmxMag");
-  Object.keys(MAGS).forEach(function(k){
-    var o = document.createElement("option"); o.value = k; o.textContent = MAGS[k].etq; selMag.appendChild(o);
-  });
-  var reglas = [];
-  try { reglas = JSON.parse(leer("_alertas", "[]")) || []; } catch (e) { reglas = []; }
-  var notifOn = leer("_alertas_notif", "0") === "1";
-  document.getElementById("pmxNotif").checked = notifOn;
-  var btnAlertas = boton("pmxAlertas", "Alertas por umbral (tecla A)", ICONO.campana);
-
-  function pintarReglas(){
-    var cont = document.getElementById("pmxReglas");
-    cont.innerHTML = "";
-    if (!reglas.length) {
-      var p = document.createElement("p");
-      p.className = "pmx-sub"; p.style.margin = "0";
-      p.textContent = "Todavía no hay ninguna alerta.";
-      cont.appendChild(p);
-    }
-    reglas.forEach(function(r, i){
-      var fila = document.createElement("div");
-      fila.className = "pmx-regla";
-      var txt = document.createElement("span");
-      txt.textContent = (MAGS[r.mag] ? MAGS[r.mag].etq : r.mag) + " " + (r.cond === "gt" ? "supera" : "baja de") + " " + r.valor;
-      var quitar = document.createElement("button");
-      quitar.type = "button"; quitar.textContent = "×"; quitar.title = "Quitar esta alerta";
-      quitar.addEventListener("click", function(){ reglas.splice(i,1); guardarReglas(); });
-      fila.appendChild(txt); fila.appendChild(quitar);
-      cont.appendChild(fila);
-    });
-    btnAlertas.setAttribute("aria-pressed", String(reglas.length > 0));
-    btnAlertas.title = reglas.length ? reglas.length + " alerta(s) activa(s) (tecla A)" : "Alertas por umbral (tecla A)";
-  }
-  function guardarReglas(){ guardar("_alertas", JSON.stringify(reglas)); pintarReglas(); }
-  document.getElementById("pmxAddRegla").addEventListener("click", function(){
-    var v = Number(document.getElementById("pmxValor").value);
-    if (!Number.isFinite(v)) { toast("Escribe un valor numérico."); return; }
-    if (reglas.length >= 8) { toast("Máximo ocho alertas."); return; }
-    reglas.push({mag: selMag.value, cond: document.getElementById("pmxCond").value, valor: v});
-    guardarReglas();
-    toast("Alerta añadida.");
-  });
-  document.getElementById("pmxNotif").addEventListener("change", function(){
-    notifOn = this.checked;
-    guardar("_alertas_notif", notifOn ? "1" : "0");
-    if (notifOn && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
-  });
-  function alternarAlertas(){
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) document.getElementById("pmxValor").focus();
-  }
-  btnAlertas.addEventListener("click", alternarAlertas);
-  pintarReglas();
-
-  var estadoReglas = {};
-  function revisarAlertas(data){
-    var obs = ((data && data.observations) || [])[0];
-    if (!obs || !reglas.length) return;
-    var m = obs.metric || obs.metricSI || {};
-    reglas.forEach(function(r){
-      var mag = MAGS[r.mag];
-      if (!mag) return;
-      var v = mag.leer(obs, m);
-      if (v === null) return;
-      var cumple = r.cond === "gt" ? v > r.valor : v < r.valor;
-      var clave = r.mag + "|" + r.cond + "|" + r.valor;
-      if (cumple && !estadoReglas[clave]) {
-        estadoReglas[clave] = true;
-        disparar(mag.etq + ": " + v + " " + (r.cond === "gt" ? "supera" : "baja de") + " " + r.valor);
-      } else if (!cumple) { estadoReglas[clave] = false; }
-    });
-  }
-  function disparar(texto){
-    toast("⚠ " + texto);
-    btnAlertas.classList.add("pmx-alarma");
-    setTimeout(function(){ btnAlertas.classList.remove("pmx-alarma"); }, 12000);
-    if (notifOn && "Notification" in window && Notification.permission === "granted") {
-      try { new Notification(CFG.nombre, {body: texto}); } catch (e) {}
-    }
-  }
-  var fetchOriginal = window.fetch;
-  window.fetch = function(entrada){
-    var p = fetchOriginal.apply(this, arguments);
-    try {
-      var url = typeof entrada === "string" ? entrada : (entrada && entrada.url) || "";
-      if (url.indexOf("/v2/pws/observations/current") !== -1) {
-        p.then(function(r){
-          if (r && r.ok) r.clone().json().then(revisarAlertas).catch(function(){});
-        }).catch(function(){});
-      }
-    } catch (e) {}
-    return p;
-  };
-
-  /* ---------- Exportar el histórico en JSON ---------- */
-  var btnJson = boton("pmxJson", "Descargar el histórico en JSON", ICONO.descarga);
-  btnJson.addEventListener("click", function(){
-    if (!CFG.db || !window.indexedDB) { toast("Esta aplicación no guarda histórico en el navegador."); return; }
-    var req;
-    try { req = indexedDB.open(CFG.db); } catch (e) { toast("No se ha podido abrir el histórico."); return; }
-    req.onerror = function(){ toast("No se ha podido abrir el histórico."); };
-    req.onsuccess = function(){
-      var db = req.result;
-      var nombres = Array.prototype.slice.call(db.objectStoreNames);
-      if (!nombres.length) { toast("Todavía no hay histórico guardado."); db.close(); return; }
-      var salida = {app: CFG.nombre, exportado: new Date().toISOString(), almacenes: {}};
-      var tx = db.transaction(nombres, "readonly");
-      var faltan = nombres.length;
-      nombres.forEach(function(nom){
-        var pet = tx.objectStore(nom).getAll();
-        pet.onsuccess = function(){ salida.almacenes[nom] = pet.result; if (--faltan === 0) bajar(); };
-        pet.onerror = function(){ salida.almacenes[nom] = []; if (--faltan === 0) bajar(); };
-      });
-      function bajar(){
-        db.close();
-        var total = Object.keys(salida.almacenes).reduce(function(a,k){ return a + salida.almacenes[k].length; }, 0);
-        if (!total) { toast("Todavía no hay histórico guardado."); return; }
-        var blob = new Blob([JSON.stringify(salida, null, 2)], {type: "application/json"});
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = CFG.pref + "_historico_" + new Date().toISOString().slice(0,10) + ".json";
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-        toast("Histórico exportado: " + total + " registro(s) en JSON.");
-      }
-    };
-  });
-
-  /* ---------- Reanudar el sondeo tras recargar ---------- */
-  var btnIniciar = CFG.iniciar ? document.getElementById(CFG.iniciar) : null;
-  var btnDetener = CFG.detener ? document.getElementById(CFG.detener) : null;
-  if (btnIniciar && btnDetener) {
-    btnIniciar.addEventListener("click", function(){ guardar("_pmx_sondeo", String(Date.now())); });
-    btnDetener.addEventListener("click", function(){ guardar("_pmx_sondeo", "0"); });
-    var marca = Number(leer("_pmx_sondeo", "0")) || 0;
-    if (marca && Date.now() - marca < 2*3600*1000) {
-      var intentos = 0;
-      var esperando = setInterval(function(){
-        if (!btnIniciar.disabled) {
-          clearInterval(esperando); btnIniciar.click();
-          toast("Sondeo reanudado: estaba activo al cerrar la página.");
-        } else if (++intentos > 40) { clearInterval(esperando); }
-      }, 250);
-    }
-  }
-
-  /* ---------- Atajos de teclado ---------- */
-  var btnManual = CFG.manual ? document.getElementById(CFG.manual) : null;
-  var btnPausa = CFG.pausa ? document.getElementById(CFG.pausa) : null;
-  function escribiendo(e){
-    var t = e.target;
-    if (!t) return false;
-    var nom = (t.tagName || "").toLowerCase();
-    return nom === "input" || nom === "textarea" || nom === "select" || t.isContentEditable;
-  }
-  function pulsar(b, nombre){
-    if (!b || b.disabled) { toast("Ahora mismo no se puede: " + nombre + "."); return; }
-    b.click();
-  }
-  document.addEventListener("keydown", function(e){
-    if (e.ctrlKey || e.metaKey || e.altKey || escribiendo(e)) return;
-    var k = (e.key || "").toLowerCase();
-    if (k === "escape" && !panel.hidden) { panel.hidden = true; return; }
-    if (k === "f") { e.preventDefault(); alternarPantalla(); }
-    else if (k === "q") { e.preventDefault(); alternarQuiosco(); }
-    else if (k === "a") { e.preventDefault(); alternarAlertas(); }
-    else if (k === "t" && ciclarTema) { e.preventDefault(); ciclarTema(); }
-    else if (k === "p" && alternarLuz) { e.preventDefault(); alternarLuz(); }
-    else if (k === "s" && btnManual) { e.preventDefault(); pulsar(btnManual, "sondear ahora"); }
-    else if (e.key === " ") {
-      if (btnPausa) { e.preventDefault(); pulsar(btnPausa, "pausar o reanudar"); }
-      else if (btnIniciar && btnDetener) {
-        e.preventDefault();
-        pulsar(btnIniciar.disabled ? btnDetener : btnIniciar, "iniciar o detener el monitor");
-      }
-    }
-  });
-
-  /* ---------- Recordatorio de atajos ---------- */
-  var atajos = ["F · pantalla completa", "Q · quiosco", "A · alertas"];
-  if (ciclarTema) atajos.push("T · aspecto");
-  if (alternarLuz) atajos.push("P · pantalla encendida");
-  if (btnManual) atajos.push("S · sondear ahora");
-  if (btnPausa || (btnIniciar && btnDetener)) atajos.push("Espacio · iniciar o detener");
-  var btnAtajos = boton("pmxAtajos", "Atajos de teclado", ICONO.teclado);
-  btnAtajos.addEventListener("click", function(){ toast("Atajos: " + atajos.join("   ")); });
-})();
-</script>
-
 </body>
 </html>

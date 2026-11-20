@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apps de RafaUMH2110 · Herramientas de IA para la Docencia</title>
+<meta name="description" content="Página de entrada a las apps web de Rafa (UMH): moda, telemetría, análisis de PDF y consulta con IA.">
+<link rel="icon" type="image/svg+xml" href="appindex/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg:#eff5fc; --surface:#fff; --sunk:#f4f9ff; --ink:#0f1f35; --muted:#5c6c82;
+    --border:#d9e4f3; --border-strong:#c3d6ee; --navy:#081b33; --blue-800:#123a6b; --blue-700:#1656a3; --blue-600:#1d6fd1;
+    --accent:#c98a1f; --accent-soft:#fbead0; --shadow:0 4px 22px rgba(15,45,90,.08); --shadow-lift:0 14px 34px rgba(15,45,90,.14);
+    --hero-a:#081b33; --hero-b:#123a6b; --on-hero:#fff; --on-hero-soft:#c9d8ee;
+    --font-display:"Fraunces",Georgia,"Times New Roman",serif;
+    --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0a1526; --surface:#111f36; --sunk:#0d1a2e; --ink:#e9eef8; --muted:#93a4bf;
+      --border:#203454; --border-strong:#2b4367; --blue-700:#6fa3f4; --blue-600:#4a85e6;
+      --accent:#e6b35c; --accent-soft:#3a2c15; --shadow:0 4px 24px rgba(0,0,0,.4); --shadow-lift:0 16px 38px rgba(0,0,0,.5);
+      --hero-a:#050f1e; --hero-b:#1c3f72; color-scheme:dark;
+    }
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 var(--font-body); }
+  a { color:inherit; }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:3px; border-radius:6px; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+
+  /* Cabecera */
+  .hero { background:linear-gradient(135deg,var(--hero-a),var(--hero-b)); color:var(--on-hero); padding:56px 0 92px; }
+  .eyebrow { display:inline-block; font-size:.78rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:4px 12px; }
+  .hero h1 { font:700 clamp(2rem,5vw,3.2rem)/1.1 var(--font-display); margin:16px 0 12px; letter-spacing:-.01em; }
+  .hero h1 em { font-style:italic; font-weight:500; color:var(--accent); }
+  .hero p { margin:0; max-width:640px; font-size:1.08rem; color:var(--on-hero-soft); }
+  .cta { display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:0 22px; border-radius:12px; font-weight:600; text-decoration:none; border:1px solid transparent; transition:transform .15s, box-shadow .15s; }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.25); }
+  .btn.main { background:var(--accent); color:#1b1204; }
+  .btn.ghost { background:rgba(255,255,255,.08); color:var(--on-hero); border-color:rgba(255,255,255,.28); }
+
+  /* Áreas */
+  main { position:relative; margin-top:-48px; padding-bottom:12px; }
+  .grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow); padding:24px; display:flex; flex-direction:column; gap:14px; }
+  .card header { display:flex; align-items:center; gap:14px; }
+  .ico { flex:none; width:48px; height:48px; border-radius:14px; display:grid; place-items:center; background:var(--sunk); border:1px solid var(--border-strong); color:var(--blue-700); }
+  .ico svg { width:26px; height:26px; }
+  .card h2 { margin:0; font:700 1.35rem/1.2 var(--font-display); }
+  .card p { margin:0; color:var(--muted); font-size:.97rem; }
+  .group { margin:2px 0 0; font-size:.74rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .links { display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:0; list-style:none; }
+  .links a { display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:10px; background:var(--sunk); border:1px solid var(--border); text-decoration:none; font-weight:600; font-size:.93rem; color:var(--blue-700); transition:background .15s, border-color .15s, transform .15s; }
+  .links a:hover { background:var(--surface); border-color:var(--blue-600); transform:translateY(-1px); }
+  .card footer { margin-top:auto; padding-top:4px; }
+  .more { font-size:.9rem; font-weight:600; color:var(--blue-700); text-decoration:none; }
+  .more:hover { text-decoration:underline; }
+
+  /* Franja informativa */
+  .note { margin:28px 0 0; background:var(--accent-soft); border:1px solid var(--border-strong); border-radius:16px; padding:18px 22px; display:flex; gap:14px; align-items:flex-start; }
+  .note svg { flex:none; width:24px; height:24px; color:var(--accent); margin-top:2px; }
+  .note p { margin:0; font-size:.96rem; }
+  .note strong { font-weight:700; }
+
+  /* Pie */
+  .site-foot { text-align:center; color:var(--muted); font-size:.82rem; padding:34px 24px 40px; line-height:1.8; }
+  .site-foot a { color:var(--blue-700); }
+  @media (max-width:520px) { .hero { padding:40px 0 78px; } .card { padding:20px; } }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="wrap">
+    <span class="eyebrow">HIAD · Universidad Miguel Hernández</span>
+    <h1>Herramientas de <em>IA</em> para la Docencia</h1>
+    <p>Apps web de un solo archivo para generar imágenes y patrones de moda, estudiar telemetría de una estación meteorológica y enchufes inteligentes, analizar PDF y hacer consultas con IA. Se abren en el navegador, sin instalar nada.</p>
+    <div class="cta">
+      <a class="btn main" href="appindex/">Catálogo completo
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn ghost" href="appindex/temas/">Agrupado por tema</a>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="grid">
+
+    <!-- Moda -->
+    <section class="card" aria-labelledby="t-moda">
+      <header>
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>
+        <h2 id="t-moda">Moda y textil</h2>
+      </header>
+      <p>Genera imágenes de moda, outfits completos y patrones de corte en SVG con Claude, OpenAI, Gemini y FLUX; y consulta la logística de empresas del sector.</p>
+      <h3 class="group">Versiones completas</h3>
+      <ul class="links">
+        <li><a href="moda/genimod/">GenImOd</a></li>
+        <li><a href="moda/genoutfit/">GenOutFit</a></li>
+        <li><a href="moda/genoutfitface/">GenOutFitFace</a></li>
+        <li><a href="moda/genoutfitfacem/">GenOutFitFaceM</a></li>
+        <li><a href="moda/genpatmod/">GenPatMod</a></li>
+        <li><a href="moda/searchlogmod/">SearchLogMod</a></li>
+        <li><a href="moda/searchlogmodcb/">SearchLogModCB</a></li>
+      </ul>
+      <h3 class="group">Versiones para el aula</h3>
+      <ul class="links">
+        <li><a href="moda/genimoda/">GenImOda</a></li>
+        <li><a href="moda/genoutfits/">GenOutFitS</a></li>
+        <li><a href="moda/genpatmoda/">GenPatModa</a></li>
+      </ul>
+      <footer><a class="more" href="appindex/moda/">Ver todo el portal de moda →</a></footer>
+    </section>
+
+    <!-- Telemetría -->
+    <section class="card" aria-labelledby="t-tele">
+      <header>
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+        <h2 id="t-tele">Telemetría</h2>
+      </header>
+      <p>Monitoriza en vivo una estación meteorológica personal (Weather Underground) y los enchufes Wi-Fi con medidor de consumo, con gráficas, histórico y exportación a CSV.</p>
+      <h3 class="group">Estación meteorológica</h3>
+      <ul class="links">
+        <li><a href="telemetria/meteo/telemet/pro/">TeleMet Pro</a></li>
+        <li><a href="telemetria/meteo/telemet/multi/">TeleMet Multi</a></li>
+        <li><a href="telemetria/meteo/telemetmobile/">TeleMet Mobile</a></li>
+        <li><a href="telemetria/meteo/telemetipad/">TeleMet iPad</a></li>
+        <li><a href="telemetria/meteo/telemetriawu/">TelemetriaWU</a></li>
+      </ul>
+      <h3 class="group">Hogar</h3>
+      <ul class="links">
+        <li><a href="telemetria/home/telehome-enchufes/">TeleHome Enchufes</a></li>
+      </ul>
+      <footer><a class="more" href="appindex/temas/">Ver todas las apps de telemetría →</a></footer>
+    </section>
+
+    <!-- PDF -->
+    <section class="card" aria-labelledby="t-pdf">
+      <header>
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+        <h2 id="t-pdf">Análisis de PDF</h2>
+      </header>
+      <p>DetectIApdf analiza documentos PDF y genera un informe con indicios de uso de IA en su redacción, pensado para el profesorado universitario.</p>
+      <ul class="links">
+        <li><a href="pdfs/detectiapdf/">DetectIApdf (hasta 3 PDF)</a></li>
+        <li><a href="pdfs/detectiapdfone/">DetectIApdfOne</a></li>
+        <li><a href="pdfs/detectiapdflite/">DetectIApdfLite</a></li>
+      </ul>
+    </section>
+
+    <!-- Consulta -->
+    <section class="card" aria-labelledby="t-cons">
+      <header>
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h6M9 14h3"/></svg></span>
+        <h2 id="t-cons">Consulta con IA</h2>
+      </header>
+      <p>ConSultar mejora automáticamente tu consulta, se la envía a Claude y te devuelve una respuesta completa en Markdown, exportable a Word o PDF.</p>
+      <ul class="links">
+        <li><a href="consultar/">ConSultar</a></li>
+      </ul>
+    </section>
+
+  </div>
+
+  <aside class="note" role="note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+    <p><strong>Tu clave de API es solo tuya.</strong> Cada app llama directamente desde tu navegador a Anthropic, OpenAI, Google Gemini o fal.ai con la clave que tú escribes; no hay servidor propio en medio. Las apps de telemetría necesitan además los datos de tu estación (o un servicio TeleHome propio); sin ellos, algunas ofrecen un modo demostración.</p>
+  </aside>
+</main>
+
+<footer class="site-foot">
+  Rafa · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche ·
+  <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a><br>
+  Generado con IA · Revisado por el autor<br>
+  Última modificación: 20/11/2026 07:26
+</footer>
+</body>
+</html>

@@ -96,6 +96,8 @@ Cambios del parche: `__init__.py` (versión 0.5.0), `config.py` (campos `type` y
 
 ## 4. Instalar el servicio
 
+> Desde la 0.5.2 el servicio Linux se llama **`telehome`** (antes `telehome-enchufes`): unidad systemd, orden, `/opt/telehome` y `/var/lib/telehome`. Si ya lo tenías instalado, vuelve a ejecutar el instalador: migra solo el nombre anterior y conserva los datos. La carpeta del código y el módulo Python siguen llamándose `telehome-enchufes` / `telehome_enchufes`.
+
 ### 4.1. macOS
 
 ```bash

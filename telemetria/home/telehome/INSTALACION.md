@@ -257,7 +257,7 @@ sudo ./linux/instalar-linux.sh --allow-origin https://rafaumh2110.github.io
 
 - **Contador superior (hero):** magnitud principal agregada (suma, media o recuento según el tipo).
 - **Grupos por tipo/habitación:** lista de dispositivos con indicador de carga/estado, minigráfica y control (interruptor, regulador de nivel, botones de persiana…).
-- **Gráfica:** 1 h a 30 días, con valores al pasar el ratón o el dedo. Dos tipos que miden la misma magnitud comparten gráfica.
+- **Gráfica:** 1 h a 30 días, con valores al pasar el ratón o el dedo. Dos tipos que miden la misma magnitud comparten gráfica. Con varios dispositivos se dibuja una mini-gráfica por dispositivo, cada una con su escala vertical, para que uno de 1.800 W no aplaste a los de 4 W; el selector «Escala» (Por dispositivo / Común) vuelve a una sola gráfica con escala compartida y la elección se recuerda en el navegador.
 - **Tabla resumen** con medias, mínimos y máximos por magnitud, energía y disponibilidad.
 - **Ajustes:** conexión, dispositivos (añadir, editar, eliminar), nube de Tuya, buscar/importar, opciones. Modo oscuro automático.
 

@@ -21,7 +21,7 @@ El bloque 2 solo hace falta en esta versión web: la página que sirva el propio
 
 ### Magnitudes comunes
 
-`TELEHOME_METRICS` es una tabla común a todos los tipos (`p`, `v`, `i`, `t`, `h`, `br`, `pos`), con etiqueta, unidad, decimales y si el eje debe empezar en cero. Al ser comunes, **dos tipos que midan lo mismo se dibujan en la misma gráfica**: un sensor y un termostato comparten «Temperatura».
+`TELEHOME_METRICS` es una tabla común a todos los tipos (`p`, `v`, `i`, `t`, `h`, `br`, `pos`), con etiqueta, unidad, decimales y si el eje debe empezar en cero. Al ser comunes, **dos tipos que midan lo mismo se dibujan en la misma gráfica**: un sensor y un termostato comparten «Temperatura». Con la escala «Por dispositivo» (la de por defecto cuando hay varios) cada uno tiene su mini-gráfica con escala propia; «Común» las junta en una sola.
 
 ### Modelo de datos
 

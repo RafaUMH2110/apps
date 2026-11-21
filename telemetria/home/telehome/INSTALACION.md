@@ -169,8 +169,8 @@ cd scripts/instalar-todo
 ```
 
 Resultado:
-- Servicio: proxy en `http://lorca.umh.es/rafa/telehome/enchufes/` (interfaz propia de TeleHome Enchufes).
-- App TeleHome: `http://lorca.umh.es/rafa/apps/telemetria/home/telehome/`. En *Servicio TeleHome* escribe `/rafa/telehome/enchufes/` y pulsa Conectar (mismo origen: no hace falta CORS).
+- Servicio: proxy en `http://lorca.umh.es/rafa/telehome/` (interfaz propia de TeleHome Enchufes).
+- App TeleHome: `http://lorca.umh.es/rafa/apps/telemetria/home/telehome/`. En *Servicio TeleHome* escribe `/rafa/telehome/` y pulsa Conectar (mismo origen: no hace falta CORS).
 - Si el portal no muestra las apps nuevas, es que no se ha vuelto a ejecutar el instalador.
 
 Sin HTTPS la contraseña viaja sin cifrar: pon contraseña (`sudo telehome password`) y limita el acceso a la red.

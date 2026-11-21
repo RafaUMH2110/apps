@@ -158,17 +158,22 @@ Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome pass
 
 ---
 
-### 4.4. Todo en un paso en lorca.umh.es (sin HTTPS)
+### 4.4. Todo en lorca.umh.es (sin HTTPS): `instalar-todo-lorca.sh`
 
-`instalar-lorca.sh` instala el servicio `telehome`, copia la app a `/var/www/htdocs/rafa/telehome/` y configura el proxy de Apache (`/rafa/telehome-api/`) en el mismo origen:
+El instalador `scripts/instalar-todo/instalar-todo-lorca.sh` del repo `code` clona los repos, despliega las apps en Apache, **regenera el portal** (`/rafa/`) e instala el servicio `telehome` con su proxy. Es idempotente: se repite para actualizar.
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/RafaUMH2110/apps/main/telemetria/home/telehome/instalar-lorca.sh
-chmod +x instalar-lorca.sh
-sudo ./instalar-lorca.sh --permitir 158.42.0.0/16      # --permitir limita el acceso a esa red (opcional)
+cd ~/RafaUMH2110/code && git pull
+cd scripts/instalar-todo
+./instalar-todo-lorca.sh          # usa la selección de repos guardada; --telehome / --sin-telehome lo controlan
 ```
 
-Opciones: `--nombre`, `--webroot`, `--ruta`, `--api`, `--puerto`, `--alias`, `--permitir`, `--sin-apache`, `--sin-password`, `--rama`, `--quitar`. Repetir el script actualiza servicio y app. Después, en la app escribe `/rafa/telehome-api/` en *Servicio TeleHome*. Sin HTTPS la contraseña viaja sin cifrar: usa contraseña y limita la red.
+Resultado:
+- Servicio: proxy en `http://lorca.umh.es/rafa/telehome/enchufes/` (interfaz propia de TeleHome Enchufes).
+- App TeleHome: `http://lorca.umh.es/rafa/apps/telemetria/home/telehome/`. En *Servicio TeleHome* escribe `/rafa/telehome/enchufes/` y pulsa Conectar (mismo origen: no hace falta CORS).
+- Si el portal no muestra las apps nuevas, es que no se ha vuelto a ejecutar el instalador.
+
+Sin HTTPS la contraseña viaja sin cifrar: pon contraseña (`sudo telehome password`) y limita el acceso a la red.
 
 ## 5. Ejecutar el servicio
 

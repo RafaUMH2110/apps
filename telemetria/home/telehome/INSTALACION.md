@@ -158,6 +158,18 @@ Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome pass
 
 ---
 
+### 4.4. Todo en un paso en lorca.umh.es (sin HTTPS)
+
+`instalar-lorca.sh` instala el servicio `telehome`, copia la app a `/var/www/htdocs/rafa/telehome/` y configura el proxy de Apache (`/rafa/telehome-api/`) en el mismo origen:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/RafaUMH2110/apps/main/telemetria/home/telehome/instalar-lorca.sh
+chmod +x instalar-lorca.sh
+sudo ./instalar-lorca.sh --permitir 158.42.0.0/16      # --permitir limita el acceso a esa red (opcional)
+```
+
+Opciones: `--nombre`, `--webroot`, `--ruta`, `--api`, `--puerto`, `--alias`, `--permitir`, `--sin-apache`, `--sin-password`, `--rama`, `--quitar`. Repetir el script actualiza servicio y app. Después, en la app escribe `/rafa/telehome-api/` en *Servicio TeleHome*. Sin HTTPS la contraseña viaja sin cifrar: usa contraseña y limita la red.
+
 ## 5. Ejecutar el servicio
 
 | Caso | Orden |

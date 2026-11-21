@@ -3,7 +3,7 @@
 **Autor:** Rafa · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · r.puerto@umh.es
 *Generado con IA · Revisado por el autor*
 
-Versión de la app: primera versión genérica · Versión del servicio: TeleHome Enchufes 0.5.0 (protocolo genérico) · Fecha: 20/11/2026
+Versión de la app: primera versión genérica · Versión del servicio: TeleHome Enchufes 0.5.2 (protocolo genérico; servicio «telehome») · Fecha: 21/11/2026
 
 ---
 
@@ -212,7 +212,7 @@ Sirve cuando el servicio no está en la misma red que los enchufes (p. ej. en un
 Notas:
 
 - El plan gratuito de IoT Core **caduca al mes**: renuévalo en la consola de Tuya (*Extend trial period*). Si caduca, los enchufes salen «sin conexión» con el error de la API.
-- El cupo de llamadas es limitado: se lee todo con 1-2 llamadas por ciclo (por defecto cada **300 s**, mínimo 60 s). *Ajustes → Opciones* muestra la estimación mensual.
+- El cupo de llamadas es limitado: se lee todo con 1-2 llamadas por ciclo (por defecto cada **300 s**, mínimo 60 s). *Ajustes → Opciones* muestra la estimación mensual y, desde la 0.5.1, las llamadas reales por día (se guardan en la base de datos del servicio) para contrastarlas con los créditos de iot.tuya.com.
 - Códigos de datos por defecto: `switch_1`, `cur_power` (÷10 → W), `cur_voltage` (÷10 → V), `cur_current` (mA); ajustables por enchufe en *Avanzado*.
 - Los dispositivos virtuales de la consola (Device ID `vdevo…`) solo sirven para pruebas: no dan potencia/tensión/corriente y rechazan órdenes (error 28841105).
 - Al importar desde la nube se guarda también la Local Key, por lo que luego puedes pasar el enchufe a modo local.
@@ -338,7 +338,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 cd telemetria/home/telehome-enchufes
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt pytest
-.venv/bin/python -m pytest -q          # 34 tests
+.venv/bin/python -m pytest -q          # 38 tests
 ```
 
 pytest **no** es necesario para ejecutar el servicio, solo para las pruebas.

@@ -8,6 +8,7 @@ en la raíz (p.ej. /consultar/index.html -> https://.../apps/consultar/).
 No hace llamadas a la API de GitHub ni necesita ningún secreto: el
 workflow que invoca este script es el que hace commit/push del resultado
 con el GITHUB_TOKEN propio del repo."""
+import json
 import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -99,6 +100,28 @@ def path_to_url(pages_owner, pages_repo, rel):
     return f"{base}/{rel}"
 
 
+def cargar_enlaces_externos():
+    """Entradas del catálogo que no son páginas de este repo (p. ej. un servicio que
+    se instala y vive en otro repositorio): se declaran en enlaces_externos.json."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "enlaces_externos.json")
+    if not os.path.exists(ruta):
+        return []
+    with open(ruta, encoding="utf-8") as f:
+        entradas = json.load(f)
+    resultado = []
+    for e in entradas:
+        if not e.get("title") or not e.get("url"):
+            continue
+        resultado.append({
+            "title": e["title"], "description": e.get("description", ""),
+            "categories": list(e.get("categories", [])), "tags": list(e.get("tags", [])),
+            "client_only": bool(e.get("client_only", False)), "clase": e.get("clase", ""),
+            "group": e.get("group", "otros"), "clase_app": clase_de_app("", e),
+            "subgroup": e.get("subgroup", ""), "url": e["url"],
+        })
+    return resultado
+
+
 def main():
     pages_owner_repo = os.environ.get("GITHUB_REPOSITORY", "")
     if "/" not in pages_owner_repo:
@@ -115,6 +138,7 @@ def main():
     for rel, meta in local_apps:
         meta["url"] = path_to_url(pages_owner, pages_repo, rel)
         catalog.append(meta)
+    catalog.extend(cargar_enlaces_externos())
     catalog.sort(key=lambda m: m["title"].casefold())
 
     # Una sola fecha para las tres páginas, para que los pies coincidan.

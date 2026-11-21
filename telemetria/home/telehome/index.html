@@ -265,6 +265,14 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
 .toast.bad { background:#7f1d1d; }
 .toast button { border:none; background:transparent; color:#fff; opacity:.8; cursor:pointer; font-size:18px; line-height:1; padding:0 2px; }
 
+/* Ocultar gráficas (botón «Ocultar gráficas»; la elección se recuerda en el navegador) */
+html.sin-graficas .d-spark { display:none; }
+html.sin-graficas #chartPanel .toolbar, html.sin-graficas #chartPanel .legend, html.sin-graficas #chartPanel .note,
+html.sin-graficas #chartPanel #chartWrap, html.sin-graficas #chartPanel .chart-empty, html.sin-graficas #chartPanel .hint { display:none; }
+@media (min-width:761px) {
+  html.sin-graficas .dev-row { grid-template-columns:minmax(0,1.25fr) minmax(130px,.85fr) minmax(0,1.35fr) auto; grid-template-areas:"id val meta ctl"; }
+}
+
 @media (max-width:900px) {
   .m-body { grid-template-columns:1fr; gap:30px; }
 }
@@ -321,6 +329,7 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
   <div class="sec-h">
     <h2>Dispositivos</h2>
     <span>
+      <button class="btn" id="btnGraphs" type="button" aria-pressed="false" title="Oculta o muestra las minigráficas y el histórico">Ocultar gráficas</button>
       <span class="seg" id="groupGrp" role="group" aria-label="Agrupar dispositivos por"></span>
       <span style="margin-left:10px">Pulsa un dispositivo para verlo solo en el histórico</span>
     </span>
@@ -368,7 +377,7 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
   </div>
   <p>TeleHome · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 20:37</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 23:35</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -995,6 +1004,13 @@ const savedRange = () => {
   try { const v = parseInt(localStorage.getItem(RANGE_KEY), 10); if (RANGES.some(r => r[1] === v)) return v; } catch (e) { /* sin almacenamiento */ }
   return 86400;
 };
+const GRAPHS_KEY = "telehome_sin_graficas";
+function setGraphsHidden(hide, save) {
+  document.documentElement.classList.toggle("sin-graficas", hide);
+  const b = document.getElementById("btnGraphs");
+  if (b) { b.textContent = hide ? "Mostrar gráficas" : "Ocultar gráficas"; b.setAttribute("aria-pressed", hide ? "true" : "false"); }
+  if (save) { try { localStorage.setItem(GRAPHS_KEY, hide ? "1" : "0"); } catch (e) { /* sin almacenamiento */ } }
+}
 const S = { state: null, range: savedRange(), scale: savedScale(), metric: null, sel: "all", hidden: new Set(), group: "tipo",
   hist: null, sum: null, hover: null, editing: null, pick: null, busy: new Set(), lastOk: 0 };
 
@@ -1866,6 +1882,14 @@ async function refresh() {
   if ($("#dlg").open) { renderDevList(); updateEstimate(); }
 }
 async function init() {
+  let oculto = false;
+  try { oculto = localStorage.getItem(GRAPHS_KEY) === "1"; } catch (e) { /* sin almacenamiento */ }
+  setGraphsHidden(oculto, false);
+  document.getElementById("btnGraphs").addEventListener("click", () => {
+    const hide = !document.documentElement.classList.contains("sin-graficas");
+    setGraphsHidden(hide, true);
+    if (!hide) drawChart();
+  });
   bindChart(); bindDialog();
   if (BACKEND && BACKEND.init) await BACKEND.init({ reload: async () => { S.sel = "all"; S.hidden.clear(); await refresh(); await loadChart(); } });
   await refresh(); renderLegend(); await loadChart();

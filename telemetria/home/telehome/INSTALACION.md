@@ -105,7 +105,7 @@ cd telemetria/home/telehome-enchufes
 ```
 
 - La primera vez macOS pedirá permiso de **Red local** para Python: **hay que permitirlo**. Si usas el LaunchAgent, ejecuta antes la app una vez desde el Terminal para ver ese aviso.
-- Datos: `~/Library/Application Support/telehome-enchufes/`.
+- Datos: `~/Library/Application Support/telehome/`.
 
 ### 4.2. Linux (p. ej. una VM de Azure)
 
@@ -114,7 +114,7 @@ cd telemetria/home/telehome-enchufes
 sudo ./linux/instalar-linux.sh
 ```
 
-Crea un usuario de servicio, el entorno virtual, la unidad systemd `telehome-enchufes` (con `ProtectSystem=strict`) y la orden `telehome-enchufes`. Código en `/opt`, datos en `/var/lib/telehome-enchufes/`.
+Crea un usuario de servicio, el entorno virtual, la unidad systemd `telehome` (con `ProtectSystem=strict`) y la orden `telehome`. Código en `/opt/telehome`, datos en `/var/lib/telehome/`. Si ya tenías el servicio con el nombre anterior (`telehome-enchufes`, hasta la 0.5.1), vuelve a ejecutar el instalador: lo migra solo, sin perder datos.
 
 Opciones del instalador:
 
@@ -129,12 +129,12 @@ Opciones del instalador:
 Gestión del servicio:
 
 ```bash
-sudo systemctl status telehome-enchufes
-sudo systemctl restart telehome-enchufes
-sudo journalctl -u telehome-enchufes -f
+sudo systemctl status telehome
+sudo systemctl restart telehome
+sudo journalctl -u telehome -f
 ```
 
-Los cambios hechos con la orden `telehome-enchufes ...` (alta de dispositivos, contraseña, etc.) se aplican al momento, sin reiniciar.
+Los cambios hechos con la orden `telehome ...` (alta de dispositivos, contraseña, etc.) se aplican al momento, sin reiniciar.
 
 ### 4.3. Acceso remoto al servicio
 
@@ -152,7 +152,7 @@ ProxyPass        /enchufes/ http://127.0.0.1:8765/
 ProxyPassReverse /enchufes/ http://127.0.0.1:8765/
 ```
 
-Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome-enchufes password`). No uses `--host 0.0.0.0` sin contraseña.
+Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome password`). No uses `--host 0.0.0.0` sin contraseña.
 
 ---
 
@@ -162,7 +162,7 @@ Instala con `--allow-host tu-dominio` y **pon contraseña** (`sudo telehome-ench
 |---|---|
 | macOS, doble clic | `macos/iniciar-telehome-enchufes.command` (abre el navegador en <http://127.0.0.1:8765/>) |
 | Línea de órdenes (venv) | `.venv/bin/python -m telehome_enchufes serve` |
-| Linux (servicio) | `sudo systemctl start telehome-enchufes` |
+| Linux (servicio) | `sudo systemctl start telehome` |
 | **Sin hardware (simulado)** | `.venv/bin/python -m telehome_enchufes serve --simulate 4` |
 
 Opciones de `serve`: `--host`, `--port` (por defecto 8765), `--no-browser`, `--simulate N`, `--allow-host NOMBRE`, `--allow-origin ORIGEN`, `--data-dir RUTA`. También se puede fijar la carpeta de datos con la variable `TELEHOME_ENCHUFES_DIR`.
@@ -204,9 +204,9 @@ Sirve cuando el servicio no está en la misma red que los enchufes (p. ej. en un
 4. **Para poder encender/apagar:** en esa lista, columna *Device Permission* → *Change* → **Controllable** (con *Read* solo se lee y Tuya responde «No permissions…»).
 5. Copia **Access ID** y **Access Secret** (pestaña *Overview*) en *Ajustes → Nube de Tuya* y pulsa *Ver dispositivos de la nube*; o por terminal:
    ```bash
-   telehome-enchufes cloud-setup --region eu --access-id TU_ACCESS_ID
-   telehome-enchufes cloud-list
-   telehome-enchufes cloud-import            # todos, o: cloud-import id1 id2 ...
+   telehome cloud-setup --region eu --access-id TU_ACCESS_ID
+   telehome cloud-list
+   telehome cloud-import            # todos, o: cloud-import id1 id2 ...
    ```
 
 Notas:
@@ -290,7 +290,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 
 ## 9. Órdenes de la línea de comandos
 
-(`telehome-enchufes …` en el servicio Linux, o `python -m telehome_enchufes …` en el venv.)
+(`telehome …` en el servicio Linux, o `python -m telehome_enchufes …` en el venv.)
 
 | Orden | Descripción |
 |---|---|
@@ -308,10 +308,10 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 
 ## 10. Datos y seguridad
 
-- Datos en `~/Library/Application Support/telehome-enchufes/` (macOS), `~/.telehome-enchufes/` (Linux, usuario) o `/var/lib/telehome-enchufes/` (servicio Linux): `config.json` (permisos 600) y `telemetria.sqlite3`.
+- Datos en `~/Library/Application Support/telehome/` (macOS), `~/.telehome/` (Linux, usuario) o `/var/lib/telehome/` (servicio Linux): `config.json` (permisos 600) y `telemetria.sqlite3`.
 - Las *Local Keys*, el *Access Secret* y la contraseña (PBKDF2) **nunca** salen por la API ni se suben al repositorio (`.gitignore`).
 - El servicio escucha en `127.0.0.1`, rechaza `Host` ajenos (anti DNS rebinding) y exige `X-TeleHome` + `Origin` propio en escrituras (anti CSRF).
-- Contraseña opcional (HTTP Basic, cualquier usuario): `telehome-enchufes password`. Por HTTP sin cifrar solo tiene sentido tras túnel SSH o proxy HTTPS.
+- Contraseña opcional (HTTP Basic, cualquier usuario): `telehome password`. Por HTTP sin cifrar solo tiene sentido tras túnel SSH o proxy HTTPS.
 - Haz copia de seguridad de `config.json` y `telemetria.sqlite3` si el histórico te importa.
 
 ---

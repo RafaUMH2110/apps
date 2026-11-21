@@ -339,7 +339,7 @@ footer.pie .conn input { border:1px solid var(--border); background:var(--page);
   </div>
   <p>TeleHome Enchufes · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 14:55</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 15:25</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -451,7 +451,7 @@ footer.pie .conn input { border:1px solid var(--border); background:var(--page);
       </section>
       <section>
         <h3>Llamadas a la API de Tuya</h3>
-        <p class="desc">Cuántas llamadas ha hecho el servicio a la nube de Tuya (lectura de estado, órdenes y renovación del token). Tuya no informa del coste por llamada: compara estas cifras con los créditos que muestra iot.tuya.com para saber cuántos créditos gasta cada llamada.</p>
+        <p class="desc">Cuántas llamadas ha hecho el servicio a la nube de Tuya (lectura de estado, órdenes y renovación del token). El uso oficial lo muestra iot.tuya.com en Cloud → Usage (API Statistics); compáralo con estas cifras. Los créditos de Cobuilder (IA) no cuentan estas llamadas.</p>
         <div id="callsBox"></div>
       </section>
     </div>
@@ -504,7 +504,7 @@ const DEMO = (() => {
       let r;
       if (p === "api/state") {
         const d0 = new Date(); d0.setHours(0, 0, 0, 0);
-        return { app: "TeleHome Enchufes", version: "0.5.1 · demo", simulate: true, max_devices: MAX, server_time: now,
+        return { app: "TeleHome Enchufes", version: "0.5.2 · demo", simulate: true, max_devices: MAX, server_time: now,
           options: { poll_interval: 10, cloud_poll_interval: 300, retention_days: 30, cloud_region: "eu", cloud_api_key: "", cloud_secret_set: false, password_set: false },
           regions: REGIONS, cloud: { configured: false, calls: 0, today: 0, yesterday: 0, month: 0, last30: 0, by_day: Array.from({ length: 31 }, (_, i) => ({ day: new Date(Date.now() - (30 - i) * 86400000).toISOString().slice(0, 10), n: 0 })) },
           devices: devs.map((d) => Object.assign(pub(d), { reading: reading(d, now), energy_today_kwh: energyKwh(d, d0.getTime() / 1000, now) })) };

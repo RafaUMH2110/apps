@@ -212,7 +212,7 @@ Sirve cuando el servicio no está en la misma red que los enchufes (p. ej. en un
 Notas:
 
 - El plan gratuito de IoT Core **caduca al mes**: renuévalo en la consola de Tuya (*Extend trial period*). Si caduca, los enchufes salen «sin conexión» con el error de la API.
-- El cupo de llamadas es limitado: se lee todo con 1-2 llamadas por ciclo (por defecto cada **300 s**, mínimo 60 s). *Ajustes → Opciones* muestra la estimación mensual y, desde la 0.5.1, las llamadas reales por día (se guardan en la base de datos del servicio) para contrastarlas con los créditos de iot.tuya.com.
+- El cupo de llamadas es limitado: se lee todo con 1-2 llamadas por ciclo (por defecto cada **300 s**, mínimo 60 s). *Ajustes → Opciones* muestra la estimación mensual y, desde la 0.5.1, las llamadas reales por día (se guardan en la base de datos del servicio) para contrastarlas con *Cloud → Usage (API Statistics)* en iot.tuya.com. Los créditos de la portada de la consola son de Cobuilder (IA) y no cuentan estas llamadas.
 - Códigos de datos por defecto: `switch_1`, `cur_power` (÷10 → W), `cur_voltage` (÷10 → V), `cur_current` (mA); ajustables por enchufe en *Avanzado*.
 - Los dispositivos virtuales de la consola (Device ID `vdevo…`) solo sirven para pruebas: no dan potencia/tensión/corriente y rechazan órdenes (error 28841105).
 - Al importar desde la nube se guarda también la Local Key, por lo que luego puedes pasar el enchufe a modo local.

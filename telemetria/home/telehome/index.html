@@ -270,6 +270,7 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
 
 /* Ocultar minigráficas de la lista (botón «Ocultar gráficas»; la elección se recuerda en el navegador) */
 html.sin-graficas .d-spark { display:none; }
+html.sin-historico #chartPanel { display:none; }
 @media (min-width:761px) {
   html.sin-graficas .dev-row { grid-template-columns:minmax(0,1.25fr) minmax(130px,.85fr) minmax(0,1.35fr) auto; grid-template-areas:"id val meta ctl"; }
 }
@@ -330,7 +331,7 @@ html.sin-graficas .d-spark { display:none; }
   <div class="sec-h">
     <h2>Dispositivos</h2>
     <span>
-      <button class="btn" id="btnGraphs" type="button" aria-pressed="false" title="Oculta o muestra las minigráficas de cada dispositivo (no afecta al histórico)">Ocultar gráficas</button>
+      <button class="btn" id="btnGraphs" type="button" aria-pressed="false" title="Oculta o muestra las minigráficas de cada dispositivo (no afecta al histórico)">Ocultar gráficas</button> <button class="btn" id="btnHist" type="button" aria-pressed="false" title="Oculta o muestra la ficha del histórico con su gráfica">Ocultar histórico</button>
       <span class="seg" id="groupGrp" role="group" aria-label="Agrupar dispositivos por"></span>
       <span style="margin-left:10px">Pulsa un dispositivo para verlo solo en el histórico</span>
     </span>
@@ -378,7 +379,7 @@ html.sin-graficas .d-spark { display:none; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 23:59</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 00:14</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -1011,6 +1012,13 @@ function setGraphsHidden(hide, save) {
   const b = document.getElementById("btnGraphs");
   if (b) { b.textContent = hide ? "Mostrar gráficas" : "Ocultar gráficas"; b.setAttribute("aria-pressed", hide ? "true" : "false"); }
   if (save) { try { localStorage.setItem(GRAPHS_KEY, hide ? "1" : "0"); } catch (e) { /* sin almacenamiento */ } }
+}
+const HIST_KEY = "telehome_sin_historico";
+function setHistHidden(hide, save) {
+  document.documentElement.classList.toggle("sin-historico", hide);
+  const b = document.getElementById("btnHist");
+  if (b) { b.textContent = hide ? "Mostrar histórico" : "Ocultar histórico"; b.setAttribute("aria-pressed", hide ? "true" : "false"); }
+  if (save) { try { localStorage.setItem(HIST_KEY, hide ? "1" : "0"); } catch (e) { /* sin almacenamiento */ } }
 }
 const S = { state: null, range: savedRange(), scale: savedScale(), metric: null, sel: "all", hidden: new Set(), group: "tipo",
   hist: null, sum: null, hover: null, editing: null, pick: null, busy: new Set(), lastOk: 0 };
@@ -1915,6 +1923,14 @@ async function init() {
   document.getElementById("btnGraphs").addEventListener("click", () => {
     const hide = !document.documentElement.classList.contains("sin-graficas");
     setGraphsHidden(hide, true);
+  });
+  let sinHist = false;
+  try { sinHist = localStorage.getItem(HIST_KEY) === "1"; } catch (e) { /* sin almacenamiento */ }
+  setHistHidden(sinHist, false);
+  document.getElementById("btnHist").addEventListener("click", () => {
+    const hide = !document.documentElement.classList.contains("sin-historico");
+    setHistHidden(hide, true);
+    if (!hide) drawChart();
   });
   bindChart(); bindDialog();
   if (BACKEND && BACKEND.init) await BACKEND.init({ reload: async () => { S.sel = "all"; S.hidden.clear(); await refresh(); await loadChart(); } });

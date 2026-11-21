@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>TeleHome · Demostración</title>
+<title>TeleHome</title>
 <meta name="description" content="Demostración de TeleHome, la app de telemetría del hogar para varios tipos de dispositivo: enchufes Wi-Fi, sensores de temperatura y humedad, luces regulables y persianas, con histórico, gráficas y CSV.">
 <meta name="theme-color" content="#0d1b26">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231656a3'/%3E%3Cpath d='M16 6 5 15h3v11h6v-7h4v7h6V15h3z' fill='%23fff'/%3E%3C/svg%3E">
@@ -224,6 +224,9 @@ dialog::backdrop { background:rgba(8,16,30,.5); backdrop-filter:blur(2px); }
 .dlg-b h3 { font-size:15px; margin:0 0 4px; font-weight:700; }
 .dlg-b p.desc { color:var(--ink2); font-size:13.5px; margin:0 0 12px; }
 .dev { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:8px; background:var(--sunk); flex-wrap:wrap; }
+.dev .ord { display:inline-flex; gap:4px; }
+.dev .ord .btn { min-width:36px; padding:0 8px; }
+.dev .ord .btn:disabled { opacity:.35; cursor:default; }
 .dev .n { flex:1; min-width:140px; font-weight:600; }
 .dev .n small { color:var(--ink2); display:block; font-weight:400; font-family:var(--mono); font-size:12px; overflow:hidden; text-overflow:ellipsis; }
 form.f { display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
@@ -265,10 +268,8 @@ details .adv { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margi
 .toast.bad { background:#7f1d1d; }
 .toast button { border:none; background:transparent; color:#fff; opacity:.8; cursor:pointer; font-size:18px; line-height:1; padding:0 2px; }
 
-/* Ocultar gráficas (botón «Ocultar gráficas»; la elección se recuerda en el navegador) */
+/* Ocultar minigráficas de la lista (botón «Ocultar gráficas»; la elección se recuerda en el navegador) */
 html.sin-graficas .d-spark { display:none; }
-html.sin-graficas #chartPanel .toolbar, html.sin-graficas #chartPanel .legend, html.sin-graficas #chartPanel .note,
-html.sin-graficas #chartPanel #chartWrap, html.sin-graficas #chartPanel .chart-empty, html.sin-graficas #chartPanel .hint { display:none; }
 @media (min-width:761px) {
   html.sin-graficas .dev-row { grid-template-columns:minmax(0,1.25fr) minmax(130px,.85fr) minmax(0,1.35fr) auto; grid-template-areas:"id val meta ctl"; }
 }
@@ -299,7 +300,7 @@ html.sin-graficas #chartPanel #chartWrap, html.sin-graficas #chartPanel .chart-e
 @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
 </style>
 </head>
-<body data-app-title="TeleHome · Demostración" data-app-description="Demostración de TeleHome, la app de telemetría del hogar: una sola plantilla para varios tipos de dispositivo (enchufes Wi-Fi con potencia y energía, sensores de temperatura y humedad, luces regulables y persianas), con contador adaptativo, histórico, gráficas por magnitud, resumen y CSV. Los datos de la demostración se guardan solo en el navegador; para dispositivos reales hace falta el servicio TeleHome." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="domotica,hogar,iot,tuya,enchufes inteligentes,sensores,temperatura,humedad,luces,persianas,consumo electrico,graficas,csv,modo demostracion" data-client-only="true">
+<body data-app-title="TeleHome" data-app-description="Demostración de TeleHome, la app de telemetría del hogar: una sola plantilla para varios tipos de dispositivo (enchufes Wi-Fi con potencia y energía, sensores de temperatura y humedad, luces regulables y persianas), con contador adaptativo, histórico, gráficas por magnitud, resumen y CSV. Los datos de la demostración se guardan solo en el navegador; para dispositivos reales hace falta el servicio TeleHome." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="domotica,hogar,iot,tuya,enchufes inteligentes,sensores,temperatura,humedad,luces,persianas,consumo electrico,graficas,csv,modo demostracion" data-client-only="true">
 <main class="wrap">
   <section class="meter" aria-label="Resumen del hogar">
     <div class="m-top">
@@ -329,7 +330,7 @@ html.sin-graficas #chartPanel #chartWrap, html.sin-graficas #chartPanel .chart-e
   <div class="sec-h">
     <h2>Dispositivos</h2>
     <span>
-      <button class="btn" id="btnGraphs" type="button" aria-pressed="false" title="Oculta o muestra las minigráficas y el histórico">Ocultar gráficas</button>
+      <button class="btn" id="btnGraphs" type="button" aria-pressed="false" title="Oculta o muestra las minigráficas de cada dispositivo (no afecta al histórico)">Ocultar gráficas</button>
       <span class="seg" id="groupGrp" role="group" aria-label="Agrupar dispositivos por"></span>
       <span style="margin-left:10px">Pulsa un dispositivo para verlo solo en el histórico</span>
     </span>
@@ -375,9 +376,9 @@ html.sin-graficas #chartPanel #chartWrap, html.sin-graficas #chartPanel .chart-e
       <span id="connState" role="status"></span>
     </form>
   </div>
-  <p>TeleHome · Demostración <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
+  <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 23:35</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-21 23:59</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -1032,7 +1033,15 @@ const color = (d) => "var(--series-" + (((d.slot ?? 0) % 8) + 1) + ")";
 const vals = (d) => (d.reading && d.reading.values) || {};
 const st = (d) => (d.reading && d.reading.state) || {};
 const online = (d) => !!(d.reading && d.reading.online);
-const devs = () => (S.state && S.state.devices) || [];
+/* Orden elegido en «Ajustes y dispositivos» (se guarda en este navegador; los dispositivos nuevos van al final) */
+const ORDER_KEY = "telehome_orden";
+const ordenIds = () => { try { const v = JSON.parse(localStorage.getItem(ORDER_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+const devs = () => {
+  const l = (S.state && S.state.devices) || [], o = ordenIds();
+  if (!o.length) return l;
+  const pos = (id) => { const i = o.indexOf(id); return i < 0 ? 1e9 : i; };
+  return l.map((d, i) => [d, i]).sort((a, b) => pos(a[0].id) - pos(b[0].id) || a[1] - b[1]).map((x) => x[0]);
+};
 const unit = (k) => (METRICS[k] ? METRICS[k].unit : "");
 const mfmt = (k, v) => v == null ? "—" : fmt(v, METRICS[k] ? METRICS[k].dec : 1);
 /* Tipos presentes, en el orden del catálogo */
@@ -1180,6 +1189,14 @@ function groupAgg(list) {
   return box;
 }
 function groupsOf(list) {
+  const g = groupsBase(list);
+  if (ordenIds().length && !(g.length === 1 && g[0].flat)) {   // con orden personalizado, los grupos salen por su primer dispositivo
+    const first = (x) => { const i = list.indexOf(x.devs[0]); return i < 0 ? 1e9 : i; };
+    return g.map((x, i) => [x, i]).sort((a, b) => first(a[0]) - first(b[0]) || a[1] - b[1]).map((x) => x[0]);
+  }
+  return g;
+}
+function groupsBase(list) {
   if (S.group === "tipo") return typesPresent().map((k) => ({
     key: k, label: TYPES[k].plural || TYPES[k].label, icon: k, devs: list.filter((d) => d.type === k) }));
   if (S.group === "estancia") {
@@ -1699,17 +1716,27 @@ function renderDevList() {
   const list = devs();
   $("#dlgCount").textContent = "(" + list.length + " de " + ((S.state && S.state.max_devices) || 16) + ")";
   if (!list.length) box.append(el("div", { class: "msg ok", text: "Ninguno todavía: elige un tipo abajo y rellena sus datos." }));
-  for (const d of list) {
+  for (const [i, d] of list.entries()) {
     const t = T(d);
     box.append(el("div", { class: "dev" }, el("span", { class: "key", style: "border-color:" + color(d) }),
       el("div", { class: "n" }, d.name, el("span", { class: "tag", style: "margin-left:8px", text: t.label }),
         el("small", { text: d.dev_id + " · " + (d.mode === "nube" ? "nube de Tuya" : (d.ip || "Auto") + " · v" + (d.version || "3.3")) + (d.room ? " · " + d.room : "") })),
+      el("span", { class: "ord" },
+        el("button", { class: "btn", type: "button", text: "▲", title: "Subir", "aria-label": "Subir «" + d.name + "»", disabled: i === 0 ? "" : null, onclick: () => moverDev(d.id, -1) }),
+        el("button", { class: "btn", type: "button", text: "▼", title: "Bajar", "aria-label": "Bajar «" + d.name + "»", disabled: i === list.length - 1 ? "" : null, onclick: () => moverDev(d.id, 1) })),
       el("button", { class: "btn", type: "button", text: "Editar", onclick: () => editDev(d) }),
       el("button", { class: "btn danger", type: "button", text: "Eliminar", onclick: () => delDev(d) })));
   }
   const full = list.length >= ((S.state && S.state.max_devices) || 16) && !S.editing;
   $("#btnSave").disabled = full;
   if (full) setMsg("#formMsg", "Has alcanzado el máximo de " + S.state.max_devices + " dispositivos.", false);
+}
+function moverDev(id, delta) {
+  const ids = devs().map((d) => d.id), i = ids.indexOf(id), j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  try { localStorage.setItem(ORDER_KEY, JSON.stringify(ids)); } catch (e) { /* sin almacenamiento */ }
+  renderDevList(); renderGroups(); renderLegend(); drawChart(); renderSummary();
 }
 function editDev(d) {
   S.editing = d.id; S.pick = d.type;
@@ -1888,7 +1915,6 @@ async function init() {
   document.getElementById("btnGraphs").addEventListener("click", () => {
     const hide = !document.documentElement.classList.contains("sin-graficas");
     setGraphsHidden(hide, true);
-    if (!hide) drawChart();
   });
   bindChart(); bindDialog();
   if (BACKEND && BACKEND.init) await BACKEND.init({ reload: async () => { S.sel = "all"; S.hidden.clear(); await refresh(); await loadChart(); } });

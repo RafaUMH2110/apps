@@ -209,6 +209,7 @@ footer.pie p { margin:0; }
 footer.pie .conn { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin:0 auto 16px; padding:12px; max-width:860px; background:var(--surface); border:1px solid var(--border); border-radius:14px; color:var(--ink2); font-size:13px; }
 footer.pie .conn input { border:1px solid var(--border); background:var(--page); color:var(--ink); border-radius:9px; padding:7px 10px; min-width:0; }
 #connState { width:100%; font-weight:600; }
+footer.pie .conn .chk { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
 
 /* ===================== Ajustes ===================== */
 dialog { border:1px solid var(--border); border-radius:18px; background:var(--surface); color:var(--ink); width:min(860px,95vw); padding:0; box-shadow:0 24px 60px rgba(0,0,0,.35); }
@@ -398,6 +399,8 @@ details.hint > p { margin:6px 0 0; }
     <form id="connForm" class="conn" autocomplete="off">
       <label for="connBase">Servicio TeleHome</label>
       <input id="connBase" placeholder="(esta misma ruta), /rafa/telehome/ o http://127.0.0.1:8765/" spellcheck="false" size="46">
+      <input id="connPass" type="password" placeholder="Contraseña (si el servicio la tiene)" autocomplete="current-password" spellcheck="false" size="26" aria-label="Contraseña del servicio TeleHome">
+      <label class="chk" title="Guarda la contraseña (sin cifrar) en este navegador; si no, solo vale para esta pestaña"><input type="checkbox" id="connRemember"> Recordar</label>
       <button class="btn" type="submit">Conectar</button>
       <button class="btn" type="button" id="connDemo">Modo demostración</button>
       <button class="btn" type="button" id="connReset" title="Borra los datos de la demostración guardados en este navegador">Reiniciar demo</button>
@@ -406,7 +409,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 13:58</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:01</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -693,7 +696,22 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } },
 };
-const CONN = { mode: "demo", base: "", flavor: "telehome" };
+const CONN = { mode: "demo", base: "", flavor: "telehome", needAuth: false, authBase: "" };
+/* Contraseña del servicio (si la tiene puesta con «telehome password»). El servicio usa autenticación Basic:
+   el usuario da igual y solo cuenta la contraseña. Se guarda solo en esta pestaña, o en el navegador si se marca «Recordar». */
+const AUTH = {
+  KEY: "telehome_auth", hdr: "",
+  load() { let v = null; try { v = sessionStorage.getItem(this.KEY); } catch (e) { /* sin almacenamiento */ } this.hdr = v || store.get(this.KEY) || ""; },
+  set(pw, remember) {
+    this.clear();
+    if (!pw) return;
+    this.hdr = "Basic " + btoa(unescape(encodeURIComponent(":" + pw)));
+    if (remember) store.set(this.KEY, this.hdr); else { try { sessionStorage.setItem(this.KEY, this.hdr); } catch (e) { /* sin almacenamiento */ } }
+  },
+  clear() { this.hdr = ""; try { sessionStorage.removeItem(this.KEY); localStorage.removeItem(this.KEY); } catch (e) { /* sin almacenamiento */ } },
+  headers(h) { if (this.hdr) h.Authorization = this.hdr; return h; },
+};
+AUTH.load();
 const REGIONS = { "eu": "Europa central", "eu-w": "Europa occidental", "us": "EE. UU. oeste", "us-e": "EE. UU. este", "in": "India", "sg": "Singapur", "cn": "China" };
 const MAXD = 16;
 
@@ -904,12 +922,13 @@ const LEGACY = {
 async function serverApi(path, opt) {
   let p = path, o = opt;
   if (CONN.flavor === "enchufes") { const t = LEGACY.path(path, opt); p = t[0]; o = t[1]; }
-  const init = { method: o.method || "GET", headers: { "X-TeleHome": "1" } };
+  const init = { method: o.method || "GET", headers: AUTH.headers({ "X-TeleHome": "1" }) };
   if (o.body !== undefined) { init.body = JSON.stringify(o.body); init.headers["Content-Type"] = "application/json"; }
   if (/^https?:/i.test(CONN.base)) init.credentials = "include";     // servicio en otro origen (--allow-origin)
   const res = await fetch(CONN.base + p, init);
   let data = null;
   try { data = await res.json(); } catch (e) { /* respuesta no JSON */ }
+  if (res.status === 401) { pedirClave(CONN.base, AUTH.hdr ? "La contraseña del servicio ya no es válida" : "El servicio pide contraseña"); AUTH.clear(); }
   if (!res.ok) throw new Error((data && data.error) || ("Error " + res.status));
   return CONN.flavor === "enchufes" ? LEGACY.out(path, data) : data;
 }
@@ -918,10 +937,11 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
   PROBE_WHY = "";
   try {
-    const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
+    const res = await fetch(base + "api/health", { headers: AUTH.headers({ "X-TeleHome": "1" }), signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
     let j = null; try { j = await res.json(); } catch (e) { /* no es JSON */ }
     if (!res.ok) {
-      PROBE_WHY = res.status === 401 ? "el servicio tiene contraseña (401): abre " + (base || "/") + " en otra pestaña, escríbela (el usuario puede quedar vacío) y vuelve a pulsar Conectar"
+      if (res.status === 401) { CONN.needAuth = true; CONN.authBase = base; }
+      PROBE_WHY = res.status === 401 ? (AUTH.hdr ? "la contraseña no es correcta (401)" : "el servicio tiene contraseña (401): escríbela en el campo «Contraseña» y pulsa Conectar")
         : res.status === 404 ? "la ruta no existe en este servidor (404): ¿falta el proxy de Apache?"
         : res.status === 403 ? "el servicio rechaza esta petición (403" + (j && j.error ? ": " + j.error : "") + "): revisa --allow-host / --allow-origin"
         : (res.status === 502 || res.status === 503 || res.status === 504) ? "Apache no alcanza el servicio (" + res.status + "): ¿está arrancado?"
@@ -952,6 +972,13 @@ function normBase(v) {                  // ruta del mismo servidor (/ruta/) o UR
   return v.endsWith("/") ? v : v + "/";
 }
 const q = (s) => document.querySelector(s);
+function pedirClave(base, texto) {        // deja el pie listo para escribir la contraseña del servicio
+  CONN.needAuth = true; CONN.authBase = base;
+  const b = q("#connBase"), pw = q("#connPass");
+  if (b && !b.value) b.value = base;
+  if (q("#connState")) q("#connState").textContent = texto + ": escríbela en «Contraseña» (pie de página) y pulsa Conectar.";
+  if (pw) pw.focus({ preventScroll: true });
+}
 function showConn() {
   q("#connState").textContent = CONN.mode === "server"
     ? "Conectado al servicio" + (CONN.flavor === "enchufes" ? " TeleHome Enchufes (solo enchufes)" : "") + (CONN.base ? " · " + CONN.base : "")
@@ -959,7 +986,7 @@ function showConn() {
 }
 async function connect(base) {          // base "" = el servicio que sirve esta misma página
   const flavor = await probe(base);
-  if (flavor) { CONN.mode = "server"; CONN.base = base; CONN.flavor = flavor; store.set("telehome_conn", base); }
+  if (flavor) { CONN.mode = "server"; CONN.base = base; CONN.flavor = flavor; CONN.needAuth = false; store.set("telehome_conn", base); }
   else { CONN.mode = "demo"; CONN.base = ""; CONN.flavor = "telehome"; }
   showConn();
   return CONN.mode === "server";
@@ -971,12 +998,21 @@ window.TELEHOME_BACKEND = {
   },
   csv(id, range) {
     const path = "api/export.csv?dev=" + encodeURIComponent(id) + "&range=" + range;
-    if (CONN.mode === "server") { location.href = CONN.base + (CONN.flavor === "enchufes" ? path.replace("?dev=", "?plug=") : path); return; }
+    if (CONN.mode === "server") {
+      const url = CONN.base + (CONN.flavor === "enchufes" ? path.replace("?dev=", "?plug=") : path);
+      if (!AUTH.hdr) { location.href = url; return; }
+      /* con contraseña, el navegador no puede mandarla en una navegación: se descarga por fetch */
+      return fetch(url, { headers: AUTH.headers({ "X-TeleHome": "1" }), credentials: /^https?:/i.test(CONN.base) ? "include" : "same-origin" })
+        .then((r) => { if (!r.ok) throw new Error("Error " + r.status); return r.blob(); })
+        .then((b) => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "telehome-" + id + ".csv"; document.body.append(a); a.click(); a.remove(); })
+        .catch((e) => toast("No se pudo descargar el CSV: " + e.message, true));
+    }
     const r = DEMO.handle(path, {}), a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([r.csv], { type: "text/csv;charset=utf-8" })); a.download = r.name;
     document.body.append(a); a.click(); a.remove();
   },
   banner() {
+    if (CONN.mode !== "server" && CONN.needAuth) return "El servicio TeleHome pide contraseña: escríbela en el campo «Contraseña» del pie de página y pulsa Conectar. Mientras tanto se ven datos de demostración.";
     if (CONN.mode !== "server") return "Modo demostración: dispositivos simulados de varios tipos, guardados solo en este navegador. Para ver los tuyos, conecta con el servicio TeleHome (pie de página).";
     if (CONN.flavor === "enchufes") return "Conectado a un servicio TeleHome Enchufes: solo se ven enchufes, y los demás tipos no están disponibles hasta actualizar el servicio.";
     return "";
@@ -985,12 +1021,23 @@ window.TELEHOME_BACKEND = {
   async init(app) {
     const saved = store.get("telehome_conn");
     if (saved === "demo-only") { CONN.mode = "demo"; showConn(); }
-    else if (!(saved !== null && await connect(saved)) && !(saved !== "" && await connect(""))) { CONN.mode = "demo"; showConn(); }
+    else if (!(saved !== null && await connect(saved)) && !(saved !== "" && await connect(""))) {
+      CONN.mode = "demo"; showConn();
+      if (CONN.needAuth) pedirClave(CONN.authBase, "El servicio pide contraseña");
+    }
     q("#connForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
+        const pw = q("#connPass").value;
+        if (pw) AUTH.set(pw, q("#connRemember").checked);
+        CONN.needAuth = false;
         const ok = await connect(normBase(q("#connBase").value));
-        if (!ok) q("#connState").textContent = "No hay servicio TeleHome en esa ruta" + (PROBE_WHY ? " — " + PROBE_WHY : "") + " → modo demostración";
+        if (ok) q("#connPass").value = "";
+        else {
+          if (CONN.needAuth && pw) AUTH.clear();                 // contraseña equivocada: no la conservamos
+          q("#connState").textContent = "No hay servicio TeleHome en esa ruta" + (PROBE_WHY ? " — " + PROBE_WHY : "") + " → modo demostración";
+          if (CONN.needAuth) q("#connPass").focus({ preventScroll: true });
+        }
         await app.reload();
       } catch (err) { q("#connState").textContent = err.message; }
     });

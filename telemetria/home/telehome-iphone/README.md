@@ -34,8 +34,11 @@ contraseña puesta, todo está disponible desde el principio.
 2. `instalar-todo` copia el repo `apps` al webroot, así que esta carpeta queda publicada sin nada más que configurar.
 3. Ábrela desde el iPhone y úsala con *Compartir → Añadir a pantalla de inicio*: se abre a pantalla completa, como una app.
 
-Como la página y la API salen del mismo servidor, no hay CORS ni cabeceras que tocar. Si el servicio pide contraseña,
-el navegador la pide al conectar; si no puede, la app muestra un aviso con un botón que abre la interfaz completa.
+Como la página y la API salen del mismo servidor, no hay CORS ni cabeceras que tocar. Si el servicio pide contraseña
+(servicio 0.9.1 o posterior), la app muestra un aviso con el botón «Escribir contraseña» y la pide en su propia hoja,
+sin la ventana nativa del navegador. Se guarda en este dispositivo (`localStorage`, clave `telehome.clave`) y se borra
+en *Ajustes → Contraseña del servicio → Olvidar*. Si es incorrecta, la app lo dice y la vuelve a pedir. Con servicios
+anteriores a 0.9.1 el navegador puede seguir mostrando su propia ventana la primera vez.
 
 ## Cómo encuentra la API
 

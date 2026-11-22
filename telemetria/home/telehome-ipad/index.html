@@ -252,6 +252,17 @@ const sess = {
   set(k, v) { try { v ? sessionStorage.setItem("telehome." + k, v) : sessionStorage.removeItem("telehome." + k); } catch (e) { /* sin almacenamiento */ } },
 };
 
+/* Contraseña del servicio (HTTP Basic). Va en nuestras peticiones, así el navegador no abre su diálogo.
+   Se guarda en este dispositivo para no pedirla cada vez; Ajustes permite olvidarla. */
+const AUTH = {
+  hdr: "",
+  load() { const pw = prefs.get("clave", ""); this.hdr = pw ? "Basic " + btoa(unescape(encodeURIComponent(":" + pw))) : ""; },
+  set(pw) { if (!pw) return this.clear(); prefs.set("clave", pw); this.load(); },
+  clear() { prefs.del("clave"); this.hdr = ""; },
+  headers(h) { if (this.hdr) h["Authorization"] = this.hdr; return h; },
+};
+AUTH.load();
+
 /* ---------- catálogo (el mismo de la app completa, sin los campos de alta) ---------- */
 const METRICS = {
   p:   { label: "Potencia",    unit: "W",   dec: 1, zero: true },
@@ -343,7 +354,7 @@ let histToken = 0;
 
 /* ---------- cliente de la API ---------- */
 async function api(path, opt = {}) {
-  const h = { "X-TeleHome": "1" };
+  const h = AUTH.headers({ "X-TeleHome": "1" });
   if (APP.admin.token) h["X-TeleHome-Admin"] = APP.admin.token;
   const init = { method: opt.method || "GET", headers: h, cache: "no-store" };
   if (opt.body !== undefined) { init.body = JSON.stringify(opt.body); h["Content-Type"] = "application/json"; }
@@ -359,7 +370,7 @@ async function api(path, opt = {}) {
 /* ¿Hay un servicio TeleHome en «base»? "ok", "auth" (pide contraseña) o null */
 async function probe(base) {
   try {
-    const r = await fetch(base + "health", { headers: { "X-TeleHome": "1" }, cache: "no-store" });
+    const r = await fetch(base + "health", { headers: AUTH.headers({ "X-TeleHome": "1" }), cache: "no-store" });
     if (r.status === 401) return "auth";
     if (!r.ok) return null;
     const j = await r.json();
@@ -409,7 +420,11 @@ async function loadState() {
     fixMetric();
     return true;
   } catch (e) {
-    if (e.status === 401) { APP.needAuth = true; APP.error = "El servicio pide contraseña."; }
+    if (e.status === 401) {
+      APP.needAuth = true;
+      APP.error = AUTH.hdr ? "La contraseña del servicio no es correcta." : "El servicio pide contraseña.";
+      AUTH.clear();   // una contraseña rechazada no se conserva
+    }
     else APP.error = e.message === "Failed to fetch" || e.name === "TypeError" ? "Sin conexión con el servicio." : e.message;
     if (e.status !== 401) APP.base = null;
     return false;
@@ -819,7 +834,7 @@ function panelGrafica(alto) {
 /* El CSV puede necesitar la contraseña del servicio o la sesión de administrador: se baja por fetch */
 async function descargarCsv(d) {
   try {
-    const h = { "X-TeleHome": "1" };
+    const h = AUTH.headers({ "X-TeleHome": "1" });
     if (APP.admin.token) h["X-TeleHome-Admin"] = APP.admin.token;
     const r = await fetch(csvUrl(d.id), { headers: h, cache: "no-store" });
     if (!r.ok) throw new Error("Error " + r.status);
@@ -885,6 +900,12 @@ function panelAjustes() {
         } })));
   } else {
     rows.append(filaAjuste("Sesión", "Este servicio no pide contraseña: se puede manejar todo.", el("span", { class: "ro", text: "abierto" })));
+  }
+  /* contraseña del servicio guardada en este dispositivo */
+  if (AUTH.hdr) {
+    rows.append(filaAjuste("Contraseña del servicio", "Guardada en este dispositivo.",
+      el("button", { class: "act", type: "button", text: "Olvidar",
+        onclick: async () => { AUTH.clear(); APP.base = null; toast("Contraseña del servicio olvidada."); await recargar(); } })));
   }
   /* API */
   const manual = prefs.get("api", "");
@@ -960,13 +981,25 @@ function pedirAdmin(texto) {
     } });
 }
 
+/* Contraseña del servicio: se escribe aquí, sin diálogo del navegador, y se recuerda en este dispositivo */
+function pedirClaveServicio() {
+  hoja({ titulo: "Contraseña del servicio", texto: "El servicio TeleHome está protegido. Escríbela una vez: se recuerda en este dispositivo.",
+    campo: "Contraseña del servicio", ok: "Conectar",
+    onOk: async (pw) => {
+      if (!pw) return "Escribe la contraseña.";
+      AUTH.set(pw); APP.base = null;   // se vuelve a buscar el servicio ya con la contraseña
+      const ok = await loadState();
+      if (!ok) return APP.needAuth ? "La contraseña no es correcta." : (APP.error || "No se pudo conectar.");
+      toast("Conectado al servicio."); await recargar(); return "";
+    } });
+}
+
 /* ---------- aviso de conexión ---------- */
 function pintarAviso() {
   const b = $("#banner");
   if (APP.needAuth) {
-    b.replaceChildren("El servicio pide contraseña. Ábrelo una vez en el navegador para escribirla y vuelve aquí.",
-      el("button", { type: "button", text: "Abrir la interfaz completa",
-        onclick: () => { location.href = APP.base ? APP.base.replace(/api\/$/, "") : INTERFAZ_COMPLETA; } }));
+    b.replaceChildren(APP.error || "El servicio pide contraseña.",
+      el("button", { type: "button", text: "Escribir contraseña", onclick: pedirClaveServicio }));
     b.hidden = false; return;
   }
   if (APP.error) { b.replaceChildren(APP.error + " Comprueba que el servicio está en marcha o pon su URL en Ajustes."); b.hidden = false; return; }
@@ -979,7 +1012,7 @@ function pintarAviso() {
    TeleHome · iPad — vista dividida: dispositivos a la izquierda,
    gráfica y resumen a la derecha; los ajustes se abren en un panel.
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 21:40", LAYOUT_LABEL = "iPad";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 22:02", LAYOUT_LABEL = "iPad";
 let ajustesAbiertos = false, derecha = "grafica";   // "grafica" | "resumen"
 
 function subtitulo() {

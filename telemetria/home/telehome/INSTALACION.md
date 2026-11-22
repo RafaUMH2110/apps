@@ -262,6 +262,11 @@ aquella decide quién puede *ver* la interfaz, y esta quién puede *cambiar* alg
 El servicio rechaza por su cuenta (403) cualquier petición que no sea de lectura sin sesión de administrador, así que la
 protección no depende de que la app oculte los botones.
 
+Estando en modo Administrador, en **«Ajustes → Opciones → Contraseña del servicio»** puedes cambiarla o quitarla (servicio
+0.7.1 o posterior). **La contraseña actual no se puede ver**: se guarda con PBKDF2, que es irreversible, así que ni el
+servicio la conoce; solo se puede sustituir por otra. La del propio modo Administrador se gestiona únicamente con
+`telehome admin-password`.
+
 ### 6.5. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
 
 Para que otra persona use los mismos dispositivos sin configurar nada:

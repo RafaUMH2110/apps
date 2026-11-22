@@ -419,7 +419,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:49</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 15:15</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -531,6 +531,20 @@ details.hint > p { margin:6px 0 0; }
           <div class="full"><button class="btn primary" type="submit">Guardar opciones</button></div>
         </form>
         <div class="msg" id="optMsg" role="alert"></div>
+      </section>
+      <section id="pwSection" hidden>
+        <h3>Contraseña del servicio</h3>
+        <p class="desc">Es la que hay que escribir para abrir el servicio. <strong id="pwState"></strong></p>
+        <form class="f" id="pwForm">
+          <label>Nueva contraseña (mín. 8)<input name="pw1" type="password" autocomplete="new-password"></label>
+          <label>Repítela<input name="pw2" type="password" autocomplete="new-password"></label>
+          <div class="full">
+            <button class="btn primary" type="submit">Guardar contraseña</button>
+            <button class="btn danger" id="btnPwDel" type="button">Quitar contraseña</button>
+          </div>
+        </form>
+        <div class="msg" id="pwMsg" role="alert"></div>
+        <p class="hint">La contraseña actual no se puede mostrar: se guarda cifrada en un solo sentido (PBKDF2), así que ni el servicio la conoce. La del modo Administrador se cambia con <code>telehome admin-password</code>.</p>
       </section>
     </div>
 
@@ -1095,6 +1109,11 @@ window.TELEHOME_BACKEND = {
     return { blob: await res.blob(), name: (/filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "") || [])[1] };
   },
   isServer() { return CONN.mode === "server"; },
+  setPassword(pw) {                     // tras cambiarla desde los ajustes, la app sigue conectada con la nueva
+    if (!pw) return AUTH.clear();
+    const enLocal = !!store.get(AUTH.KEY);
+    AUTH.set(pw, enLocal);
+  },
   rutaActual() { const u = new URL(CONN.base || ".", location.href); return u.origin === location.origin ? u.pathname : u.origin + u.pathname; },
   async connectTo(ruta) {               // conecta con la ruta de un fichero de configuración (la misma lógica que el pie de página)
     let base; try { base = normBase(ruta); } catch (e) { return { ok: false, why: e.message }; }
@@ -1862,6 +1881,7 @@ function aplicarSoloLectura() {
     else if (c.dataset.ro === "1") { delete c.dataset.ro; c.disabled = false; }   // solo se reactiva lo que apagó el modo lectura
   }
   $("#roNote").hidden = !ro;
+  pintarEstadoPw();
 }
 function abrirAdmin(texto) {
   $("#admMsg").textContent = texto || ""; $("#admMsg").className = "msg ok";
@@ -2025,6 +2045,14 @@ function downloadCsv(id) {
   if (BACKEND && BACKEND.csv) return BACKEND.csv(id, S.range);
   location.href = "api/export.csv?dev=" + encodeURIComponent(id) + "&range=" + S.range;
 }
+function pintarEstadoPw() {
+  const o = (S.state && S.state.options) || {};
+  $("#pwSection").hidden = !ADMIN.can() || !(BACKEND && BACKEND.isServer && BACKEND.isServer());
+  $("#pwState").textContent = o.password_set
+    ? "Ahora mismo hay una contraseña puesta."
+    : "Ahora mismo no hay ninguna: cualquiera que llegue al servicio ve la interfaz.";
+  $("#btnPwDel").hidden = !o.password_set;
+}
 function fillOptions() {
   if (!S.state) return;
   const o = S.state.options || {}, f = $("#optForm");
@@ -2034,6 +2062,7 @@ function fillOptions() {
   if (!sel.options.length) for (const [k, v] of Object.entries(S.state.regions || {})) sel.append(el("option", { value: k, text: v + " (" + k + ")" }));
   sel.value = o.cloud_region; cf.elements.api_key.value = o.cloud_api_key || ""; cf.elements.api_secret.value = "";
   cf.elements.api_secret.placeholder = o.cloud_secret_set ? "(guardado; déjalo vacío para conservarlo)" : "";
+  pintarEstadoPw();
 }
 function updateEstimate() {
   const iv = Math.max(60, +$("#optForm").elements.cloud_poll_interval.value || 300);
@@ -2098,6 +2127,29 @@ function bindDialog() {
       renderAdmin(); if ($("#dlg").open) aplicarSoloLectura();
       await refresh(); toast("Modo Administrador activado.");
     } catch (err) { $("#admMsg").textContent = err.message; $("#admMsg").className = "msg bad"; }
+  });
+  /* ---- contraseña del servicio (solo en modo Administrador; la actual no se puede mostrar) ---- */
+  $("#pwForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, pw = f.pw1.value, pw2 = f.pw2.value;
+    if (pw.length < 8) return setMsg("#pwMsg", "La contraseña debe tener al menos 8 caracteres.", false);
+    if (pw !== pw2) return setMsg("#pwMsg", "Las dos contraseñas no coinciden.", false);
+    try {
+      await api("api/password", { method: "PUT", body: { password: pw } });
+      f.pw1.value = f.pw2.value = "";
+      if (BACKEND && BACKEND.setPassword) BACKEND.setPassword(pw);   // la app sigue conectada con la nueva
+      setMsg("#pwMsg", "Contraseña guardada: la app ya la usa.", true);
+      await refresh(); fillOptions();
+    } catch (err) { setMsg("#pwMsg", err.message, false); }
+  });
+  $("#btnPwDel").addEventListener("click", async () => {
+    if (!confirm("Sin contraseña, cualquiera que llegue al servicio verá la interfaz. ¿Quitarla?")) return;
+    try {
+      await api("api/password", { method: "PUT", body: { quitar: true } });
+      if (BACKEND && BACKEND.setPassword) BACKEND.setPassword("");
+      setMsg("#pwMsg", "Contraseña quitada: el servicio queda sin protección.", true);
+      await refresh(); fillOptions();
+    } catch (err) { setMsg("#pwMsg", err.message, false); }
   });
   $("#btnSettings").addEventListener("click", () => openDialog());
   $("#btnClose").addEventListener("click", () => $("#dlg").close());

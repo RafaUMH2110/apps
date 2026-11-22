@@ -244,7 +244,25 @@ Notas:
 - Si un enchufe se cae se reintenta con espera creciente (hasta 60 s) y se marca «sin conexión».
 - Histórico: 30 días por defecto (configurable). Al eliminar un enchufe se borra su histórico.
 
-### 6.4. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
+### 6.4. Modo Administrador (servicio 0.7.0 o posterior)
+
+Con una contraseña de administrador puesta, quien abra la app **solo ve las lecturas** de los dispositivos: no puede
+encenderlos ni apagarlos, ni tocar la configuración. El servicio tampoco le envía Device ID, IP, versión, mapas de datos,
+credenciales de Tuya ni el recuento de llamadas.
+
+```bash
+sudo telehome admin-password            # la pide por teclado (mín. 8 caracteres)
+sudo telehome admin-password --quitar   # vuelve a quedar todo abierto
+```
+
+Para administrar, pulsa **«Administrador»** en la cabecera de la app y escribe la contraseña. La sesión dura 12 horas y se
+cierra al cerrar la pestaña o con «Salir de administrador». Es **distinta** de la contraseña del servicio (sección 10):
+aquella decide quién puede *ver* la interfaz, y esta quién puede *cambiar* algo. No se incluye al exportar la configuración.
+
+El servicio rechaza por su cuenta (403) cualquier petición que no sea de lectura sin sesión de administrador, así que la
+protección no depende de que la app oculte los botones.
+
+### 6.5. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
 
 Para que otra persona use los mismos dispositivos sin configurar nada:
 
@@ -333,7 +351,8 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | `cloud-setup --region eu --access-id …` | Guarda credenciales de la nube de Tuya |
 | `cloud-list` | Lista los dispositivos de la nube |
 | `cloud-import [ids…]` | Importa dispositivos de la nube |
-| `password [--quitar]` | Pone, cambia o quita la contraseña |
+| `password [--quitar]` | Pone, cambia o quita la contraseña del servicio |
+| `admin-password [--quitar]` | Pone, cambia o quita la contraseña del modo Administrador |
 | `export-config [-o fichero] [--ruta /ruta/]` | Exporta dispositivos, credenciales de Tuya, ajustes y la ruta del servicio (sin la contraseña del servicio) |
 | `import-config <fichero> [--anadir]` | Aplica un fichero creado con `export-config` |
 

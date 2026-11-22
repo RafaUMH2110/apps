@@ -51,6 +51,10 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .brand .ttl { min-width:0; }
 .brand h1 { margin:0; font-size:28px; font-weight:700; letter-spacing:-.025em; line-height:1.15; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .brand .sub { font-size:14.5px; color:var(--meter-mut); line-height:1.35; margin-top:2px; }
+.hbtn.ghost { background:transparent; border-color:rgba(255,255,255,.35); }
+.hbtn.ghost[aria-pressed="true"] { background:rgba(120,220,150,.16); border-color:rgba(120,220,150,.5); }
+.ro-badge { font-size:12px; font-weight:650; color:var(--ink2); background:var(--sunk); border:1px solid var(--border); border-radius:999px; padding:1px 10px; }
+html.solo-lectura [data-tab="dispositivos"], html.solo-lectura [data-tab="tipos"] { }
 .mode-badge { font-size:12px; font-weight:650; color:#ffd98a; background:rgba(255,196,77,.12); border:1px solid rgba(255,196,77,.38); border-radius:999px; padding:1px 10px; }
 .status { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid var(--meter-line); border-radius:999px; background:rgba(255,255,255,.06); font-size:13.5px; line-height:1.2; white-space:nowrap; }
 .status .st { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
@@ -332,7 +336,7 @@ details.hint > p { margin:6px 0 0; }
       <div class="brand">
         <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3 2 11.3h2.6V21h5.6v-6.2h3.6V21h5.6v-9.7H22z"/></svg></span>
         <div class="ttl">
-          <h1>TeleHome <span class="mode-badge" id="modeBadge" hidden></span></h1>
+          <h1>TeleHome <span class="mode-badge" id="modeBadge" hidden></span> <span class="ro-badge" id="roBadge" hidden>Solo lectura</span></h1>
           <div class="sub">Telemetría y control del hogar · varios tipos de dispositivo</div>
         </div>
       </div>
@@ -340,6 +344,9 @@ details.hint > p { margin:6px 0 0; }
         <span class="st"><span class="dot wait"></span><span id="statusTxt">Conectando…</span></span>
         <span class="when" id="statusWhen"></span>
       </div>
+      <button class="hbtn ghost" id="btnAdmin" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6z"/></svg>
+        <span id="btnAdminTxt">Administrador</span></button>
       <button class="hbtn" id="btnSettings" type="button" aria-label="Ajustes y dispositivos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Ajustes y dispositivos</span></button>
@@ -412,13 +419,29 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:35</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:49</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
 
+<dialog id="admDlg" aria-labelledby="admTitle">
+  <div class="dlg-h"><h2 id="admTitle">Modo Administrador</h2><button class="btn" id="admClose" type="button">Cerrar</button></div>
+  <div class="dlg-b">
+    <section>
+      <p class="desc">Escribe la contraseña de administrador para configurar el servicio y mandar órdenes a los dispositivos. Sin ella, la app solo muestra sus lecturas.</p>
+      <form class="f" id="admForm">
+        <label class="full">Contraseña de administrador<input name="password" type="password" autocomplete="current-password" required></label>
+        <div class="full"><button class="btn primary" type="submit">Entrar</button></div>
+      </form>
+      <div class="msg" id="admMsg" role="alert"></div>
+      <p class="hint">La sesión dura 12 horas y se cierra al cerrar la pestaña. Se pone o se cambia con <code>telehome admin-password</code>.</p>
+    </section>
+  </div>
+</dialog>
+
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <div class="dlg-h"><h2 id="dlgTitle">Ajustes y dispositivos</h2><button class="btn" id="btnClose" type="button">Cerrar</button></div>
+  <p class="msg bad" id="roNote" hidden>Solo lectura: entra como administrador (botón «Administrador» de la cabecera) para cambiar la configuración.</p>
   <div class="tabs" role="tablist" aria-label="Secciones de ajustes">
     <button type="button" role="tab" data-tab="dispositivos" aria-selected="true">Dispositivos</button>
     <button type="button" role="tab" data-tab="tipos" aria-selected="false">Tipos</button>
@@ -736,6 +759,25 @@ const AUTH = {
   headers(h) { if (this.hdr) h.Authorization = this.hdr; return h; },
 };
 AUTH.load();
+/* Modo Administrador: el servicio da un token al validar la contraseña; sin él, la app es de solo lectura.
+   Si el servicio no tiene contraseña de administrador (o es anterior a esta versión), todo sigue abierto. */
+const ADMIN = window.ADMIN = {
+  KEY: "telehome_admin", token: "", required: false, active: true,
+  load() { try { this.token = sessionStorage.getItem(this.KEY) || ""; } catch (e) { this.token = ""; } },
+  set(tok) { this.token = tok || ""; try { tok ? sessionStorage.setItem(this.KEY, tok) : sessionStorage.removeItem(this.KEY); } catch (e) { /* sin almacenamiento */ } },
+  clear() { this.set(""); this.active = !this.required; },
+  headers(h) { if (this.token) h["X-TeleHome-Admin"] = this.token; return h; },
+  /* el servicio manda admin:{required,active} en api/state; en demostración o servicios antiguos no viene */
+  sync(st) {
+    const a = (st && st.admin) || null;
+    this.required = !!(a && a.required);
+    this.active = a ? !!a.active : true;
+    if (!this.required) this.set("");
+    return this.active;
+  },
+  can() { return this.active; },
+};
+ADMIN.load();
 const REGIONS = { "eu": "Europa central", "eu-w": "Europa occidental", "us": "EE. UU. oeste", "us-e": "EE. UU. este", "in": "India", "sg": "Singapur", "cn": "China" };
 const MAXD = 16;
 
@@ -946,13 +988,17 @@ const LEGACY = {
 async function serverApi(path, opt) {
   let p = path, o = opt;
   if (CONN.flavor === "enchufes") { const t = LEGACY.path(path, opt); p = t[0]; o = t[1]; }
-  const init = { method: o.method || "GET", headers: AUTH.headers({ "X-TeleHome": "1" }) };
+  const init = { method: o.method || "GET", headers: ADMIN.headers(AUTH.headers({ "X-TeleHome": "1" })) };
   if (o.body !== undefined) { init.body = JSON.stringify(o.body); init.headers["Content-Type"] = "application/json"; }
   if (/^https?:/i.test(CONN.base)) init.credentials = "include";     // servicio en otro origen (--allow-origin)
   const res = await fetch(CONN.base + p, init);
   let data = null;
   try { data = await res.json(); } catch (e) { /* respuesta no JSON */ }
   if (res.status === 401) { pedirClave(CONN.base, AUTH.hdr ? "La contraseña del servicio ya no es válida" : "El servicio pide contraseña"); AUTH.clear(); }
+  if (res.status === 403 && data && data.admin_required) {       // la sesión de administrador ha caducado o no existe
+    ADMIN.required = true; ADMIN.active = false; ADMIN.set("");
+    renderAdmin(); throw new Error("Hace falta el modo Administrador: pulsa «Administrador» en la cabecera.");
+  }
   if (!res.ok) throw new Error((data && data.error) || ("Error " + res.status));
   return CONN.flavor === "enchufes" ? LEGACY.out(path, data) : data;
 }
@@ -961,7 +1007,7 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
   PROBE_WHY = "";
   try {
-    const res = await fetch(base + "api/health", { headers: AUTH.headers({ "X-TeleHome": "1" }), signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
+    const res = await fetch(base + "api/health", { headers: ADMIN.headers(AUTH.headers({ "X-TeleHome": "1" })), signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
     let j = null; try { j = await res.json(); } catch (e) { /* no es JSON */ }
     if (!res.ok) {
       if (res.status === 401) { CONN.needAuth = true; CONN.authBase = base; }
@@ -1039,7 +1085,7 @@ window.TELEHOME_BACKEND = {
     if (CONN.mode !== "server") throw new Error("No disponible en la demostración: conecta con un servicio TeleHome real (pie de página).");
     /* la ruta del servicio al que está conectada la app va en el fichero, para que la otra persona se conecte al mismo sitio */
     const u = new URL(CONN.base || ".", location.href), ruta = u.origin === location.origin ? u.pathname : u.origin + u.pathname;
-    const res = await fetch(CONN.base + "api/config/export", { method: "POST", headers: AUTH.headers({ "X-TeleHome": "1", "Content-Type": "application/json" }),
+    const res = await fetch(CONN.base + "api/config/export", { method: "POST", headers: ADMIN.headers(AUTH.headers({ "X-TeleHome": "1", "Content-Type": "application/json" })),
       body: JSON.stringify({ ruta }), credentials: /^https?:/i.test(CONN.base) ? "include" : "same-origin" });
     if (!res.ok) {
       let m = res.status === 404 ? "Este servicio es anterior a la exportación: actualízalo." : "Error " + res.status;
@@ -1366,7 +1412,7 @@ function groupsBase(list) {
   return [{ key: "all", label: "", devs: list, flat: true }];
 }
 function control(d) {
-  const t = T(d), s = st(d), ok = online(d) && !S.busy.has(d.id);
+  const t = T(d), s = st(d), ok = online(d) && !S.busy.has(d.id) && ADMIN.can();
   const box = el("div", { class: "d-ctl" });
   const stop = (e) => e.stopPropagation();
   if (t.control === "switch" || t.control === "level") {
@@ -1403,9 +1449,11 @@ function control(d) {
   } else {
     box.append(el("span", { class: "ro", text: "solo lectura" }));
   }
+  if (!ADMIN.can() && t.control && t.control !== "read") box.title = "Entra como administrador para mandar órdenes";
   return box;
 }
 async function send(d, action, value) {
+  if (!ADMIN.can()) return abrirAdmin("Entra como administrador para mandar órdenes a los dispositivos.");
   S.busy.add(d.id); renderGroups();
   try {
     await api("api/devices/" + d.id + "/command", { method: "POST", body: { action: action, value: value } });
@@ -1787,10 +1835,39 @@ function showTab(name) {
   document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   document.querySelectorAll("[data-panel]").forEach((p) => { p.hidden = p.dataset.panel !== name; });
 }
+function renderAdmin() {                 // refleja en la interfaz si se puede configurar o solo mirar
+  const b = $("#btnAdmin"), ro = !ADMIN.can();
+  document.documentElement.classList.toggle("solo-lectura", ro);
+  b.hidden = !ADMIN.required;
+  b.setAttribute("aria-pressed", String(!ro));
+  $("#btnAdminTxt").textContent = ro ? "Administrador" : "Salir de administrador";
+  b.title = ro ? "Entra como administrador para configurar y mandar órdenes" : "Vuelve al modo de solo lectura";
+  $("#roBadge").hidden = !ro;
+  $("#btnSettings").disabled = false;
+  if (S.state) { renderGroups(); if ($("#dlg").open) renderDevList(); }
+}
 function openDialog(tab) {
   renderTypePick(); renderDevList(); renderCatalogue();
-  showTab(typeof tab === "string" ? tab : "dispositivos");
+  showTab(typeof tab === "string" ? tab : (ADMIN.can() ? "dispositivos" : "opciones"));
   $("#dlg").showModal(); fillOptions();
+  aplicarSoloLectura();
+}
+/* En solo lectura, los ajustes se ven pero no se pueden tocar (el servicio también los rechaza). */
+function aplicarSoloLectura() {
+  const ro = !ADMIN.can();
+  $("#dlgTitle").textContent = ro ? "Ajustes y dispositivos (solo lectura)" : "Ajustes y dispositivos";
+  for (const c of $("#dlg").querySelectorAll("input, select, textarea, button")) {
+    if (c.id === "btnClose" || c.closest(".tabs")) continue;
+    if (ro) { if (!c.disabled) { c.dataset.ro = "1"; c.disabled = true; } }
+    else if (c.dataset.ro === "1") { delete c.dataset.ro; c.disabled = false; }   // solo se reactiva lo que apagó el modo lectura
+  }
+  $("#roNote").hidden = !ro;
+}
+function abrirAdmin(texto) {
+  $("#admMsg").textContent = texto || ""; $("#admMsg").className = "msg ok";
+  $("#admForm").password.value = "";
+  $("#admDlg").showModal();
+  $("#admForm").password.focus({ preventScroll: true });
 }
 function renderCatalogue() {
   const tb = $("#catTable tbody"); tb.replaceChildren();
@@ -2002,6 +2079,26 @@ function bindDialog() {
       $("#cfgFile").value = ""; $("#btnCfgImport").disabled = true;
     } catch (err) { setMsg("#cfgMsg", err.message, false); }
   });
+  $("#btnAdmin").addEventListener("click", async () => {
+    if (ADMIN.can()) {                                   // salir del modo administrador
+      try { await api("api/admin/logout", { method: "POST", body: {} }); } catch (e) { /* da igual: el token se tira igualmente */ }
+      ADMIN.set(""); ADMIN.active = false; renderAdmin();
+      if ($("#dlg").open) aplicarSoloLectura();
+      await refresh(); toast("Has salido del modo Administrador.");
+    } else abrirAdmin();
+  });
+  $("#admClose").addEventListener("click", () => $("#admDlg").close());
+  $("#admForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pw = e.target.password.value;
+    try {
+      const r = await api("api/admin/login", { method: "POST", body: { password: pw } });
+      ADMIN.set(r.token || ""); ADMIN.active = true; ADMIN.required = !!r.required;
+      e.target.password.value = ""; $("#admDlg").close();
+      renderAdmin(); if ($("#dlg").open) aplicarSoloLectura();
+      await refresh(); toast("Modo Administrador activado.");
+    } catch (err) { $("#admMsg").textContent = err.message; $("#admMsg").className = "msg bad"; }
+  });
   $("#btnSettings").addEventListener("click", () => openDialog());
   $("#btnClose").addEventListener("click", () => $("#dlg").close());
   $("#btnCancel").addEventListener("click", () => { resetForm(); renderDevList(); });
@@ -2118,6 +2215,9 @@ async function refresh() {
   $("#modeBadge").hidden = !(aviso || sim);
   $("#modeBadge").textContent = S.state.legacy ? "Solo enchufes" : (demo ? "Demostración" : "Simulación");
   setStatus(true, BACKEND && BACKEND.label ? BACKEND.label() : "Conectado", textoUltimoDato(), "Consultado a las " + horaCorta(Date.now()));
+  ADMIN.sync(S.state);
+  renderAdmin();
+  if ($("#dlg").open) aplicarSoloLectura();
   if (S.sel !== "all" && !devs().some((d) => d.id === S.sel)) S.sel = "all";
   fixMetric();
   renderHero(); renderGroups(); renderFilters();

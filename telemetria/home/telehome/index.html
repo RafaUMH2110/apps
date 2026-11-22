@@ -406,7 +406,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 02:15</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 03:38</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -913,19 +913,32 @@ async function serverApi(path, opt) {
   if (!res.ok) throw new Error((data && data.error) || ("Error " + res.status));
   return CONN.flavor === "enchufes" ? LEGACY.out(path, data) : data;
 }
+let PROBE_WHY = "";                     // por qué falló el último sondeo (se muestra junto al aviso)
 async function probe(base) {            // ¿hay un servicio TeleHome en esta ruta de este mismo servidor?
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
+  PROBE_WHY = "";
   try {
     const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
-    const j = await res.json();
-    if (!res.ok || !j || typeof j.app !== "string") return null;
+    let j = null; try { j = await res.json(); } catch (e) { /* no es JSON */ }
+    if (!res.ok) {
+      PROBE_WHY = res.status === 404 ? "la ruta no existe en este servidor (404): ¿falta el proxy de Apache?"
+        : res.status === 403 ? "el servicio rechaza esta petición (403" + (j && j.error ? ": " + j.error : "") + "): revisa --allow-host / --allow-origin"
+        : (res.status === 502 || res.status === 503 || res.status === 504) ? "Apache no alcanza el servicio (" + res.status + "): ¿está arrancado?"
+        : "respuesta " + res.status + (j && j.error ? ": " + j.error : "");
+      return null;
+    }
+    if (!j || typeof j.app !== "string") { PROBE_WHY = "la ruta responde, pero no es un servicio TeleHome (no devuelve JSON de api/health)"; return null; }
     /* «api: telehome» es el saludo del protocolo genérico: lo anuncian tanto el servicio
        TeleHome como un TeleHome Enchufes ya actualizado (que conserva su nombre para no
        romper las apps anteriores). Sin ese campo, se habla por el adaptador. */
     if (j.api === "telehome" || j.app === "TeleHome") return "telehome";
     if (j.app === "TeleHome Enchufes") return "enchufes";
+    PROBE_WHY = "el servicio de esa ruta es otro (" + j.app + ")";
     return null;
-  } catch (e) { return null; } finally { clearTimeout(to); }
+  } catch (e) {
+    PROBE_WHY = e && e.name === "AbortError" ? "no responde (más de 2,5 s)" : /^https?:/i.test(base) ? "el navegador no pudo conectar (¿servicio parado, bloqueo CORS/contenido mixto o --allow-origin?)" : "no se pudo conectar";
+    return null;
+  } finally { clearTimeout(to); }
 }
 function normBase(v) {                  // ruta del mismo servidor (/ruta/) o URL completa de un servicio que admita este origen
   v = (v || "").trim();
@@ -976,7 +989,7 @@ window.TELEHOME_BACKEND = {
       e.preventDefault();
       try {
         const ok = await connect(normBase(q("#connBase").value));
-        if (!ok) q("#connState").textContent = "No hay servicio TeleHome en esa ruta: modo demostración";
+        if (!ok) q("#connState").textContent = "No hay servicio TeleHome en esa ruta" + (PROBE_WHY ? " — " + PROBE_WHY : "") + " → modo demostración";
         await app.reload();
       } catch (err) { q("#connState").textContent = err.message; }
     });

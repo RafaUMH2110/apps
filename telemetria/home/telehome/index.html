@@ -1168,6 +1168,9 @@ window.TELEHOME_BACKEND = {
    ======================================================================= */
 const BACKEND = window.TELEHOME_BACKEND || null;
 const TYPES = window.TELEHOME_TYPES, METRICS = window.TELEHOME_METRICS;
+/* Valor de una magnitud en un punto del histórico. En el formato plano del servicio
+   («{t, p, v, i}») la clave «t» es el instante, no la temperatura: esa solo se lee de «values». */
+const valorPunto = (p, k) => (p.values ? p.values[k] : (k === "t" ? undefined : p[k]));
 
 const $ = (s, r = document) => r.querySelector(s);
 const nf = (d) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -1486,7 +1489,7 @@ async function send(d, action, value) {
 function sparkline(d) {
   const svg = sv("svg", { class: "spark", viewBox: "0 0 128 36", "aria-hidden": "true" });
   const k = T(d).primary; if (!k) return svg;
-  const pts = S.hist && S.hist.series[d.id] ? S.hist.series[d.id].filter((p) => p[k] != null) : [];
+  const pts = S.hist && S.hist.series[d.id] ? S.hist.series[d.id].filter((p) => valorPunto(p, k) != null) : [];
   if (pts.length < 2) return svg;
   /* Empieza en la primera lectura: con poco histórico no deja la mayor parte del ancho vacía */
   const t0 = Math.max(S.hist.from, pts[0].t), t1 = S.hist.to;
@@ -1608,7 +1611,7 @@ function drawChart() {
   const steps = {};  // separación típica entre lecturas de cada dispositivo (la nube lee cada 60-300 s)
   for (const d of list) steps[d.id] = stepOf(hist.series[d.id] || [], bucket);
   let any = false, minT = Infinity;
-  for (const d of list) for (const p of (hist.series[d.id] || [])) { if (p[S.metric] != null) { any = true; minT = Math.min(minT, p.t); } }
+  for (const d of list) for (const p of (hist.series[d.id] || [])) { if (valorPunto(p, S.metric) != null) { any = true; minT = Math.min(minT, p.t); } }
   $("#chartEmpty").hidden = any; svg.style.display = any ? "block" : "none";
   if (!any) return;
   // Si las lecturas empiezan bastante después del inicio del intervalo, el eje empieza en la primera lectura
@@ -1626,7 +1629,7 @@ function drawChart() {
   groups.forEach((gd, i) => {
     const top = M.t + i * (HEAD + ih + GAP) + (multi ? HEAD : 0);
     let lo = Infinity, hi = -Infinity;
-    for (const d of gd) for (const p of (hist.series[d.id] || [])) { const v = p[S.metric]; if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+    for (const d of gd) for (const p of (hist.series[d.id] || [])) { const v = valorPunto(p, S.metric); if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
     const has = lo <= hi, dataHi = hi;
     if (!has) { lo = 0; hi = 1; }
     if (m.zero) lo = 0; else if (has) { const padv = Math.max((hi - lo) * 0.15, m.dec ? 0.3 : 1); lo -= padv; hi += padv; }
@@ -1652,7 +1655,7 @@ function drawChart() {
     for (const d of gd) {
       const pts = hist.series[d.id] || []; let path = "", prev = null, last = null, segs = [], seg = [];
       for (const p of pts) {
-        const v = p[S.metric];
+        const v = valorPunto(p, S.metric);
         if (v == null) { prev = null; if (seg.length) { segs.push(seg); seg = []; } continue; }
         const gap = prev == null || p.t - prev > steps[d.id] * 3;
         if (gap && seg.length) { segs.push(seg); seg = []; }
@@ -1704,7 +1707,7 @@ function showHover(t) {
   tip.replaceChildren(el("div", { class: "t", text: new Date(snap * 1000).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) }));
   rows.sort((a, b) => (b[1][S.metric] ?? -1) - (a[1][S.metric] ?? -1));
   for (const [d, p] of rows) {
-    const v = p[S.metric], pn = g.panels.find(q => q.ids.includes(d.id));
+    const v = valorPunto(p, S.metric), pn = g.panels.find(q => q.ids.includes(d.id));
     if (v != null && pn) svg.append(sv("circle", { class: "mk", cx: x, cy: pn.Y(v), r: 4.5, fill: color(d), stroke: "var(--surface)", "stroke-width": 2 }));
     tip.append(el("div", { class: "r" }, el("span", { class: "key", style: "border-color:" + color(d) }),
       el("b", { text: v == null ? "sin datos" : mfmt(S.metric, v) + " " + m.unit }), el("span", { class: "n", text: d.name })));

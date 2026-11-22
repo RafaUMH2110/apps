@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TeleHome · iPad</title>
+<meta name="description" content="TeleHome para iPad: vista dividida con tus dispositivos y la gráfica de su histórico.">
+<!-- Pantalla de inicio de iPadOS: «Compartir → Añadir a pantalla de inicio» la abre como una app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TeleHome">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#f2f2f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M17 5 9 18h6l-1 9 9-14h-6z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ---- Colores: paleta de series validada (claro/oscuro) y superficies estilo iOS ---- */
+:root {
+  color-scheme: light dark;
+  --page:#f2f2f0; --surface:#ffffff; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e6e5df; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --accent:#2a78d6; --on-accent:#fff;
+  --good:#0ca30c; --critical:#d03b3b; --warn-bg:#fff4d6; --bar:rgba(249,249,247,.82); --segsel:#fff;
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
+  --series-5:#e87ba4; --series-6:#008300; --series-7:#6250d6;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page:#000; --surface:#1c1c1e; --ink:#f2f2f0; --ink2:#c3c2b7; --muted:#8e8e93;
+    --grid:#2c2c2e; --axis:#48484a; --border:rgba(255,255,255,.12); --accent:#3987e5; --warn-bg:#3a2f0b;
+    --bar:rgba(28,28,30,.82); --segsel:#636366;
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+    --series-5:#d55181; --series-6:#0ca30c; --series-7:#9085e9;
+  }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--page); color:var(--ink); font:17px/1.35 var(--font);
+  -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+button, input, select { font:inherit; color:inherit; }
+button { -webkit-appearance:none; appearance:none; }
+input { -webkit-user-select:text; user-select:text; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+[hidden] { display:none !important; }
+.icon-btn:active { background:var(--grid); }
+.icon-btn svg { width:22px; height:22px; }
+.icon-btn.spin svg { animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+
+/* ---- Avisos ---- */
+.banner { background:var(--warn-bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:15px; }
+.banner button { margin-top:8px; border:none; background:var(--accent); color:var(--on-accent); border-radius:9px; min-height:36px; padding:0 14px; font-weight:600; }
+
+/* ---- Tarjetas y listas ---- */
+.card { background:var(--surface); border-radius:14px; box-shadow:0 1px 2px rgba(0,0,0,.05); overflow:hidden; }
+.grp { margin-bottom:18px; }
+.grp-h { display:flex; align-items:center; gap:8px; padding:0 4px 6px; color:var(--ink2); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+.grp-h svg { width:16px; height:16px; }
+.grp-h .n { margin-left:auto; text-transform:none; letter-spacing:0; font-weight:500; }
+.dev { display:flex; align-items:center; gap:12px; padding:12px 14px; border-top:.5px solid var(--border); position:relative; }
+.dev:first-child { border-top:none; }
+.dev::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--c); }
+.dev .id { flex:1; min-width:0; }
+.dev .nm { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dev .sub { color:var(--ink2); font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dev .sub .on { color:var(--good); font-weight:600; }
+.dev .sub .off { color:var(--critical); font-weight:600; }
+.dev .val { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dev .val b { font-size:24px; font-weight:600; letter-spacing:-.4px; }
+.dev .val span { color:var(--ink2); font-size:13px; margin-left:2px; }
+.dev.sel { background:color-mix(in srgb, var(--accent) 9%, transparent); }
+.gauge { height:4px; border-radius:2px; background:var(--grid); overflow:hidden; margin-top:6px; }
+.gauge i { display:block; height:100%; background:var(--c); }
+
+/* ---- Controles ---- */
+.sw { width:51px; height:31px; flex:none; border-radius:16px; border:none; background:var(--grid); position:relative; transition:background .18s; }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform .18s; }
+.sw[aria-checked="true"] { background:var(--good); }
+.sw[aria-checked="true"]::after { transform:translateX(20px); }
+.sw:disabled { opacity:.4; }
+.sw.busy { opacity:.6; }
+.pos { display:flex; gap:6px; flex:none; }
+.pos button { width:44px; height:38px; border-radius:9px; border:1px solid var(--border); background:var(--page); display:grid; place-items:center; }
+.pos button:disabled { opacity:.4; }
+.pos svg { width:20px; height:20px; }
+.lvl { display:flex; align-items:center; gap:10px; flex:none; }
+.lvl input[type=range] { width:112px; accent-color:var(--c); }
+.lvl input[type=range]:disabled { opacity:.4; }
+.ro { color:var(--muted); font-size:13px; flex:none; }
+
+/* ---- Segmentos ---- */
+.seg { display:flex; background:var(--grid); border-radius:9px; padding:2px; gap:2px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.seg::-webkit-scrollbar { display:none; }
+.seg button { flex:1 0 auto; min-height:32px; padding:0 12px; border:none; background:transparent; border-radius:7px; font-size:14px; font-weight:600; color:var(--ink2); white-space:nowrap; }
+.seg button[aria-pressed="true"] { background:var(--segsel); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12); }
+
+/* ---- Gráfica ---- */
+.chart-wrap { position:relative; }
+svg.chart { width:100%; display:block; touch-action:pan-y; }
+.c-grid { stroke:var(--grid); stroke-width:1; }
+.c-axis { fill:var(--axis); font-size:11px; }
+.c-muted { fill:var(--muted); font-size:14px; }
+.c-cross { stroke:var(--axis); stroke-width:1; stroke-dasharray:3 3; }
+.tip { position:absolute; top:6px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:7px 10px; font-size:13px; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.18); min-width:120px; }
+.tip b { display:block; margin-bottom:4px; font-variant-numeric:tabular-nums; }
+.tip-row { display:flex; align-items:center; gap:6px; }
+.tip-key { width:10px; height:3px; border-radius:2px; flex:none; }
+.tip-name { flex:1; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tip-val { font-variant-numeric:tabular-nums; }
+.legend { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.legend button { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--surface); border-radius:999px; min-height:32px; padding:0 12px; font-size:13px; }
+.legend button[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
+.legend .k { width:12px; height:3px; border-radius:2px; }
+
+/* ---- Tablas del resumen ---- */
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { padding:9px 12px; text-align:right; white-space:nowrap; }
+th:first-child, td:first-child { text-align:left; }
+thead th { color:var(--ink2); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+tbody tr { border-top:.5px solid var(--border); }
+tfoot td { border-top:.5px solid var(--border); font-weight:700; }
+.tscroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.key { display:inline-block; width:12px; height:3px; border-radius:2px; vertical-align:middle; margin-right:7px; }
+
+/* ---- Formularios y filas de ajustes ---- */
+.rows { background:var(--surface); border-radius:14px; overflow:hidden; }
+.row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-top:.5px solid var(--border); min-height:48px; }
+.row:first-child { border-top:none; }
+.row .lab { flex:1; min-width:0; }
+.row .lab small { display:block; color:var(--ink2); font-size:13px; margin-top:2px; white-space:normal; }
+.row input[type=text], .row input[type=password] { flex:1; min-width:0; border:1px solid var(--border); background:var(--page); border-radius:9px; padding:8px 10px; font-size:15px; }
+.row .act { border:none; background:transparent; color:var(--accent); font-weight:600; padding:0; min-height:44px; }
+.row .act.danger { color:var(--critical); }
+.msg { font-size:14px; padding:2px 4px 0; min-height:1.2em; }
+.msg.bad { color:var(--critical); }
+.msg.ok { color:var(--ink2); }
+.hint { color:var(--ink2); font-size:13px; padding:8px 4px 0; }
+.ro-badge { font-size:12px; font-weight:700; color:var(--ink2); background:var(--grid); border-radius:999px; padding:2px 9px; vertical-align:middle; }
+
+/* ---- Avisos flotantes y hoja modal ---- */
+.toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom) + 72px);
+  background:rgba(0,0,0,.86); color:#fff; padding:10px 16px; border-radius:999px; font-size:14px; z-index:60; max-width:90vw; text-align:center; }
+.sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:70; }
+.sheet { position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:min(520px,100%); z-index:71;
+  background:var(--surface); border-radius:18px 18px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 30px rgba(0,0,0,.28); }
+.sheet h2 { margin:0 0 6px; font-size:19px; }
+.sheet p { margin:0 0 14px; color:var(--ink2); font-size:15px; }
+.sheet input { width:100%; border:1px solid var(--border); background:var(--page); border-radius:10px; padding:11px 12px; font-size:16px; margin-bottom:10px; }
+.sheet .btns { display:flex; gap:10px; }
+.sheet .btns button { flex:1; min-height:46px; border-radius:12px; border:none; font-weight:600; background:var(--grid); color:var(--ink); }
+.sheet .btns button.pri { background:var(--accent); color:var(--on-accent); }
+.sheet .btns button.danger { background:var(--critical); color:#fff; }
+.foot { color:var(--muted); font-size:12px; text-align:center; padding:16px 10px 4px; line-height:1.5; }
+.foot a { color:var(--muted); }
+
+html { -webkit-text-size-adjust:100%; overflow-x:hidden; }
+/* ---- Barra superior ---- */
+.bar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+  padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 18px) 10px calc(env(safe-area-inset-left) + 18px);
+  background:var(--bar); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:.5px solid var(--border); }
+.bar h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-.3px; }
+.bar .sub { color:var(--ink2); font-size:14px; margin-left:10px; flex:1; min-width:0; }
+.icon-btn { min-width:44px; height:44px; padding:0 10px; border:none; background:transparent; color:var(--accent);
+  border-radius:11px; display:inline-grid; place-items:center; }
+.icon-btn[aria-pressed="true"] { background:color-mix(in srgb, var(--good) 18%, transparent); color:var(--good); }
+#btnAjustes[aria-pressed="true"] { background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
+.banner { margin:12px calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px); }
+/* ---- Vista dividida ---- */
+.split { display:grid; grid-template-columns:minmax(300px, 380px) 1fr; gap:20px; align-items:start;
+  padding:16px calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 28px) calc(env(safe-area-inset-left) + 18px); }
+.split > aside { position:sticky; top:84px; }
+@media (max-width:860px) { .split { grid-template-columns:1fr; } .split > aside { position:static; } }
+.dev { padding:13px 15px; }
+
+/* ---- Controles compactos: dejan sitio al nombre del dispositivo ---- */
+.lvl input[type=range] { width:96px; }
+.pos button { width:38px; }
+.dev .nm { font-size:16px; }
+.gauge { background:color-mix(in srgb, var(--ink) 12%, transparent); }
+</style>
+</head>
+<body data-app-title="TeleHome · iPad" data-app-description="TeleHome para iPad: vista dividida con tus dispositivos y la gráfica de su histórico." data-categories="telemetria,automatizacion,docencia" data-tags="domotica,hogar,iot,tuya,enchufes inteligentes,sensores,luces,persianas,ipad,tactil,pantalla de inicio">
+<header class="bar">
+  <h1>TeleHome <span class="ro-badge" id="roBadge" hidden>Solo lectura</span></h1>
+  <div class="sub" id="sub">Conectando…</div>
+  <button class="icon-btn" id="btnAdmin" type="button" hidden aria-pressed="false" aria-label="Entrar como administrador">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6z"/></svg></button>
+  <button class="icon-btn" id="btnAjustes" type="button" aria-pressed="false" aria-label="Ajustes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+  <button class="icon-btn" id="btnRefresh" type="button" aria-label="Actualizar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
+</header>
+<div class="banner" id="banner" hidden></div>
+<div class="split">
+  <aside id="aside" aria-label="Dispositivos"></aside>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+<div class="sheet-bg" id="sheetBg" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Diálogo"></div>
+
+<script>
+/* =====================================================================
+   Núcleo común de TeleHome para iPhone y iPad: utilidades, catálogo de
+   tipos, cliente de la API genérica de TeleHome, modo Administrador y
+   gráfica SVG. Sin librerías externas.
+   ===================================================================== */
+"use strict";
+
+/* ---------- utilidades ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const k in attrs) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === "text") e.textContent = v;
+    else if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids) if (c != null) e.append(c);
+  return e;
+};
+const sv = (tag, attrs = {}, text) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+};
+const fmt = (v, d = 1) =>
+  v == null || Number.isNaN(+v) ? "—" : Number(v).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pad2 = (n) => String(n).padStart(2, "0");
+function tlabel(t, withDate) {
+  const d = new Date(t * 1000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  return withDate ? pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + " " + hm : hm;
+}
+/* Preferencias de este dispositivo (localStorage puede no estar disponible) */
+const prefs = {
+  get(k, def) { try { const v = localStorage.getItem("telehome." + k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem("telehome." + k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+  del(k) { try { localStorage.removeItem("telehome." + k); } catch (e) { /* sin almacenamiento */ } },
+};
+/* El token de administrador vive solo en esta pestaña */
+const sess = {
+  get(k) { try { return sessionStorage.getItem("telehome." + k) || ""; } catch (e) { return ""; } },
+  set(k, v) { try { v ? sessionStorage.setItem("telehome." + k, v) : sessionStorage.removeItem("telehome." + k); } catch (e) { /* sin almacenamiento */ } },
+};
+
+/* ---------- catálogo (el mismo de la app completa, sin los campos de alta) ---------- */
+const METRICS = {
+  p:   { label: "Potencia",    unit: "W",   dec: 1, zero: true },
+  v:   { label: "Tensión",     unit: "V",   dec: 1, zero: false },
+  i:   { label: "Corriente",   unit: "A",   dec: 3, zero: true },
+  t:   { label: "Temperatura", unit: "°C",  dec: 1, zero: false },
+  h:   { label: "Humedad",     unit: "%",   dec: 0, zero: true },
+  br:  { label: "Brillo",      unit: "%",   dec: 0, zero: true },
+  pos: { label: "Apertura",    unit: "%",   dec: 0, zero: true },
+};
+const TYPES = {
+  enchufe: {
+    label: "Enchufe", plural: "Enchufes",
+    icon: "M9 2v6M15 2v6M6 8h12v2.5a6 6 0 0 1-12 0zM12 16.5V22",
+    metrics: ["p", "v", "i"], primary: "p", meta: ["v", "i"], bar: "p",
+    control: "switch", actions: ["switch"],
+    accum: { key: "energy_today_kwh", label: "Hoy", unit: "kWh", dec: 3 },
+    hi: { kind: "sum", metric: "p", main: true, label: "Potencia ahora" },
+    summary: [
+      { key: "energy_kwh", label: "Energía", unit: "kWh", dec: 3, total: "sum" },
+      { key: "m.p.avg", label: "Potencia media", unit: "W", dec: 1, total: "sum" },
+      { key: "m.p.max", label: "Potencia máx.", unit: "W", dec: 1 },
+      { key: "m.v.range", label: "Tensión", unit: "V", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+  },
+  "sensor-th": {
+    label: "Sensor T/H", plural: "Sensores de temperatura y humedad",
+    icon: "M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0zM12 9v5",
+    metrics: ["t", "h"], primary: "t", meta: ["h"],
+    control: "none", actions: [],
+    hi: { kind: "avg", metric: "t", label: "Temperatura media" },
+    summary: [
+      { key: "m.t.avg", label: "T. media", unit: "°C", dec: 1 },
+      { key: "m.t.range", label: "T. mín.–máx.", unit: "°C", dec: 1 },
+      { key: "m.h.avg", label: "Humedad media", unit: "%", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+  },
+  luz: {
+    label: "Luz regulable", plural: "Luces",
+    icon: "M9.5 18.5h5M10.5 22h3M12 2a7 7 0 0 0-4 12.8v3.7h8v-3.7A7 7 0 0 0 12 2z",
+    metrics: ["br"], primary: "br", meta: [], bar: "br",
+    control: "level", actions: ["switch", "level"],
+    hi: { kind: "count", label: "Luces encendidas" },
+    summary: [
+      { key: "m.br.avg", label: "Brillo medio", unit: "%", dec: 0 },
+      { key: "m.br.max", label: "Brillo máx.", unit: "%", dec: 0 },
+      { key: "on_ratio", label: "Tiempo encendida", pct: true },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+  },
+  persiana: {
+    label: "Persiana", plural: "Persianas",
+    icon: "M3 4h18M5 4v16h14V4M5 9h14M5 13.5h14M5 18h14",
+    metrics: ["pos"], primary: "pos", meta: [], bar: "pos",
+    control: "position", actions: ["position", "stop"],
+    hi: { kind: "avg", metric: "pos", label: "Apertura media" },
+    summary: [
+      { key: "m.pos.avg", label: "Apertura media", unit: "%", dec: 0 },
+      { key: "m.pos.range", label: "Apertura mín.–máx.", unit: "%", dec: 0 },
+      { key: "availability", label: "Disponibilidad", pct: true },
+    ],
+  },
+};
+const TIPO_DESCONOCIDO = { label: "Dispositivo", plural: "Otros dispositivos", icon: "M4 6h16v12H4zM8 10h8", metrics: [], meta: [], control: "none", actions: [], summary: [{ key: "availability", label: "Disponibilidad", pct: true }] };
+const T = (d) => TYPES[d && d.type] || TIPO_DESCONOCIDO;
+
+/* ---------- dónde buscar la API ---------- */
+const API_CANDIDATAS = ["/rafa/telehome/api/", "api/", "/rafa/telehome/enchufes/api/"];
+const INTERFAZ_COMPLETA = "/rafa/telehome/";
+
+/* ---------- estado ---------- */
+const APP = {
+  base: null,              // URL base de la API detectada
+  state: null,             // respuesta de api/state
+  range: prefs.get("range", 86400),
+  metric: null,            // magnitud de la gráfica
+  sel: "all",              // "all" o id de dispositivo
+  hist: null, sum: null,
+  hidden: new Set(),       // series ocultas en la gráfica
+  needAuth: false,         // el servicio pide contraseña (HTTP Basic)
+  admin: { required: false, active: true, token: sess.get("admin") },
+  error: "",
+  busy: new Set(),
+};
+let histToken = 0;
+
+/* ---------- cliente de la API ---------- */
+async function api(path, opt = {}) {
+  const h = { "X-TeleHome": "1" };
+  if (APP.admin.token) h["X-TeleHome-Admin"] = APP.admin.token;
+  const init = { method: opt.method || "GET", headers: h, cache: "no-store" };
+  if (opt.body !== undefined) { init.body = JSON.stringify(opt.body); h["Content-Type"] = "application/json"; }
+  const r = await fetch(APP.base + path, init);
+  let data = null;
+  try { data = await r.json(); } catch (e) { /* respuesta no JSON */ }
+  if (r.status === 403 && data && data.admin_required) {        // la sesión de administrador caducó
+    APP.admin.required = true; APP.admin.active = false; APP.admin.token = ""; sess.set("admin", "");
+  }
+  if (!r.ok) { const err = new Error((data && data.error) || ("Error " + r.status)); err.status = r.status; throw err; }
+  return data;
+}
+/* ¿Hay un servicio TeleHome en «base»? "ok", "auth" (pide contraseña) o null */
+async function probe(base) {
+  try {
+    const r = await fetch(base + "health", { headers: { "X-TeleHome": "1" }, cache: "no-store" });
+    if (r.status === 401) return "auth";
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && (j.ok || j.api === "telehome" || /^TeleHome/.test(j.app || "")) ? "ok" : null;
+  } catch (e) { return null; }
+}
+async function detectApi() {
+  const manual = prefs.get("api", "");
+  for (const base of (manual ? [manual] : API_CANDIDATAS)) {
+    const p = await probe(base);
+    if (p) { APP.base = base; return p; }
+  }
+  APP.base = null;
+  return null;
+}
+
+/* ---------- datos ---------- */
+const devs = () => (APP.state ? APP.state.devices : []);
+const colorOf = (d) => "var(--series-" + (((d.slot ?? 0) % 7) + 1) + ")";
+const online = (d) => !!(d.reading && d.reading.online);
+const vals = (d) => (d.reading && d.reading.values) || {};
+const stOf = (d) => (d.reading && d.reading.state) || {};
+/* Magnitudes presentes en los dispositivos configurados, en el orden de METRICS */
+const metricsPresent = () => Object.keys(METRICS).filter((m) => devs().some((d) => (T(d).metrics || []).includes(m)));
+const metricDevs = () => devs().filter((d) => (T(d).metrics || []).includes(APP.metric));
+function fixMetric() {
+  const ms = metricsPresent();
+  if (!ms.length) APP.metric = null;
+  else if (!ms.includes(APP.metric)) APP.metric = ms[0];
+}
+/* Tipos presentes, en el orden del catálogo */
+const typesPresent = () => Object.keys(TYPES).concat(["?"]).filter((k) => devs().some((d) => (TYPES[d.type] ? d.type : "?") === k));
+const devsOfType = (k) => devs().filter((d) => (TYPES[d.type] ? d.type : "?") === k);
+
+async function loadState() {
+  if (!APP.base) { const p = await detectApi(); if (!p) { APP.error = "No encuentro el servicio TeleHome."; APP.state = null; return false; } }
+  try {
+    APP.state = await api("state");
+    const a = APP.state.admin || null;
+    APP.admin.required = !!(a && a.required);
+    APP.admin.active = a ? !!a.active : true;
+    if (!APP.admin.required && APP.admin.token) { APP.admin.token = ""; sess.set("admin", ""); }
+    APP.error = ""; APP.needAuth = false;
+    fixMetric();
+    return true;
+  } catch (e) {
+    if (e.status === 401) { APP.needAuth = true; APP.error = "El servicio pide contraseña."; }
+    else APP.error = e.message === "Failed to fetch" || e.name === "TypeError" ? "Sin conexión con el servicio." : e.message;
+    if (e.status !== 401) APP.base = null;
+    return false;
+  }
+}
+async function loadHistory() {
+  if (!APP.base || !APP.state || !APP.metric) { APP.hist = null; APP.sum = null; return; }
+  const tk = ++histToken;
+  try {
+    const [h, s] = await Promise.all([
+      api("history?dev=" + encodeURIComponent(APP.sel) + "&range=" + APP.range + "&points=300"),
+      api("summary?range=" + APP.range),
+    ]);
+    if (tk === histToken) { APP.hist = h; APP.sum = s; }
+  } catch (e) { if (tk === histToken) { APP.hist = null; APP.sum = null; } }
+}
+/* Órdenes genéricas de TeleHome. Devuelve "" si fue bien, o el mensaje de error. */
+async function enviar(dev, action, value) {
+  APP.busy.add(dev.id);
+  try { await api("devices/" + dev.id + "/command", { method: "POST", body: { action, value } }); return ""; }
+  catch (e) { return e.message; }
+  finally { APP.busy.delete(dev.id); }
+}
+async function entrarAdmin(password) {
+  const r = await api("admin/login", { method: "POST", body: { password } });
+  APP.admin.token = r.token || ""; APP.admin.active = true; APP.admin.required = !!r.required;
+  sess.set("admin", APP.admin.token);
+}
+async function salirAdmin() {
+  try { await api("admin/logout", { method: "POST", body: {} }); } catch (e) { /* el token se tira igualmente */ }
+  APP.admin.token = ""; APP.admin.active = false; sess.set("admin", "");
+}
+const puedeMandar = () => APP.admin.active;
+function csvUrl(id) { return APP.base + "export.csv?dev=" + encodeURIComponent(id) + "&range=" + APP.range; }
+
+/* ---------- valores de una lectura ---------- */
+/* Valor principal del dispositivo, ya formateado */
+function principal(d) {
+  const t = T(d), m = METRICS[t.primary];
+  if (!m) return { txt: "—", unit: "" };
+  const v = vals(d)[t.primary];
+  return { txt: fmt(v, m.dec), unit: m.unit, v: v };
+}
+function metaTexto(d) {
+  const t = T(d), out = [];
+  for (const k of t.meta || []) { const m = METRICS[k], v = vals(d)[k]; if (m && v != null) out.push(fmt(v, m.dec) + " " + m.unit); }
+  const ac = t.accum, av = ac && d.accum ? d.accum[ac.key] : (ac ? d[ac.key] : null);
+  if (ac && av != null) out.push(ac.label + " " + fmt(av, ac.dec) + " " + ac.unit);
+  return out;
+}
+/* Texto de estado: «Encendido», «Abierta 60 %», «Sin conexión»… */
+function estadoTexto(d) {
+  if (!d.reading) return "Conectando…";
+  if (!online(d)) return "Sin conexión";
+  const t = T(d), s = stOf(d);
+  if (t.control === "position") { const p = s.pos != null ? s.pos : vals(d).pos; return p >= 100 ? "Abierta" : p <= 0 ? "Cerrada" : "Abierta " + fmt(p, 0) + " %"; }
+  if (t.control === "level") return s.on ? "Encendida " + fmt(s.br != null ? s.br : vals(d).br, 0) + " %" : "Apagada";
+  if (t.control === "switch") return s.on ? "Encendido" : "Apagado";
+  return "En línea";
+}
+/* Cifra destacada de un grupo (potencia total, temperatura media, luces encendidas) */
+function destacado(k) {
+  const t = TYPES[k]; if (!t || !t.hi) return null;
+  const list = devsOfType(k).filter(online);
+  if (!list.length) return null;
+  const hi = t.hi, m = METRICS[hi.metric];
+  if (hi.kind === "count") return { label: hi.label, txt: String(list.filter((d) => stOf(d).on).length), unit: "de " + list.length };
+  const nums = list.map((d) => vals(d)[hi.metric]).filter((v) => v != null);
+  if (!nums.length) return null;
+  const v = hi.kind === "sum" ? nums.reduce((a, b) => a + b, 0) : nums.reduce((a, b) => a + b, 0) / nums.length;
+  return { label: hi.label, txt: fmt(v, m.dec), unit: m.unit, main: !!hi.main };
+}
+
+/* ---------- resumen ---------- */
+function sumValue(row, key) {
+  if (!row) return null;
+  if (!key.startsWith("m.")) return row[key];
+  const [, mk, agg] = key.split(".");
+  const m = row.m && row.m[mk]; if (!m) return null;
+  return agg === "range" ? (m.min == null || m.max == null ? null : [m.min, m.max]) : m[agg];
+}
+function sumCell(col, row) {
+  const v = sumValue(row, col.key);
+  if (v == null) return "—";
+  if (Array.isArray(v)) return fmt(v[0], col.dec) + "–" + fmt(v[1], col.dec) + (col.unit ? " " + col.unit : "");
+  if (col.pct) return fmt(v * 100, 1) + " %";
+  return fmt(v, col.dec) + (col.unit ? " " + col.unit : "");
+}
+const sumRows = () => (APP.sum && (APP.sum.devices || APP.sum.plugs)) || {};
+
+/* ---------- gráfica ---------- */
+/* Valor de una magnitud en un punto del histórico. Ojo: en el formato plano del servicio
+   («{t, p, v, i}») la clave «t» es el instante, no la temperatura; por eso la temperatura
+   solo se lee del objeto «values», que es el que mandan los servicios con sensores. */
+const valorPunto = (p, k) => (p.values ? p.values[k] : (k === "t" ? undefined : p[k]));
+function niceTicks(lo, hi, n = 4) {
+  if (!(hi > lo)) hi = lo + 1;
+  const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || 10 * mag;
+  const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, out = [];
+  for (let v = a; v <= b + step / 2; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+/* Series dibujables: los dispositivos que miden la magnitud elegida y están visibles */
+const visibleDevs = () => metricDevs().filter((d) => (APP.sel === "all" || APP.sel === d.id) && !APP.hidden.has(d.id));
+
+function drawChart(svg, tip, height) {
+  const H = height, W = Math.max(svg.clientWidth, 260);
+  svg.replaceChildren(); svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg._geo = null; if (tip) tip.hidden = true;
+  const hist = APP.hist, m = METRICS[APP.metric], list = visibleDevs();
+  const note = (msg) => svg.append(sv("text", { x: W / 2, y: H / 2, "text-anchor": "middle", class: "c-muted" }, msg));
+  if (!m) return note("Aún no hay dispositivos");
+  if (!hist) return note("Cargando…");
+  const M = { l: 46, r: 10, t: 10, b: 24 }, iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const span = hist.to - hist.from, bucket = Math.max(1, Math.ceil(span / 300));
+  let lo = Infinity, hi = -Infinity;
+  const series = list.map((d) => {
+    const pts = (hist.series[d.id] || []).filter((p) => valorPunto(p, APP.metric) != null && p.online !== 0)
+      .map((p) => ({ t: p.t, y: valorPunto(p, APP.metric) }));
+    for (const p of pts) { if (p.y < lo) lo = p.y; if (p.y > hi) hi = p.y; }
+    return { dev: d, pts };
+  });
+  if (lo === Infinity) return note("Sin datos en este intervalo");
+  if (m.zero) lo = Math.min(0, lo);
+  else { const pad = (hi - lo || 1) * 0.15; lo -= pad; hi += pad; }
+  if (hi === lo) hi = lo + 1;
+  const ticks = niceTicks(lo, hi); lo = ticks[0]; hi = ticks[ticks.length - 1];
+  const X = (t) => M.l + ((t - hist.from) / span) * iw, Y = (v) => M.t + ih - ((v - lo) / (hi - lo)) * ih;
+  for (const v of ticks) {
+    svg.append(sv("line", { x1: M.l, x2: W - M.r, y1: Y(v), y2: Y(v), class: "c-grid" }));
+    svg.append(sv("text", { x: M.l - 6, y: Y(v) + 4, "text-anchor": "end", class: "c-axis" }, fmt(v, v % 1 ? 1 : 0)));
+  }
+  const withDate = span > 86400, nx = iw > 520 ? 6 : 4;
+  for (let k = 0; k <= nx; k++) {
+    const t = hist.from + (span * k) / nx;
+    svg.append(sv("text", { x: X(t), y: H - 6, "text-anchor": k === 0 ? "start" : k === nx ? "end" : "middle", class: "c-axis" }, tlabel(t, withDate)));
+  }
+  for (const s of series) {
+    let dpath = "", prev = null;
+    for (const p of s.pts) {
+      const gap = prev === null || p.t - prev > bucket * 3;
+      dpath += (gap ? "M" : "L") + X(p.t).toFixed(1) + " " + Y(p.y).toFixed(1);
+      prev = p.t;
+    }
+    if (s.pts.length === 1) { const p = s.pts[0]; dpath = "M" + (X(p.t) - 1) + " " + Y(p.y) + "L" + (X(p.t) + 1) + " " + Y(p.y); }
+    svg.append(sv("path", { d: dpath, fill: "none", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", style: "stroke:" + colorOf(s.dev) }));
+  }
+  svg.append(sv("line", { class: "c-cross", y1: M.t, y2: M.t + ih, x1: 0, x2: 0, visibility: "hidden" }));
+  for (const s of series) svg.append(sv("circle", { class: "c-dot", r: 4.5, cx: 0, cy: 0, visibility: "hidden", style: "fill:" + colorOf(s.dev) }));
+  svg._geo = { M, iw, ih, W, H, X, Y, hist, series, m, tip };
+}
+function hoverChart(svg, ev) {
+  const g = svg._geo; if (!g) return;
+  const rect = svg.getBoundingClientRect(), px = ((ev.clientX - rect.left) / rect.width) * g.W;
+  const t = g.hist.from + ((px - g.M.l) / g.iw) * (g.hist.to - g.hist.from);
+  const near = (pts) => {
+    let a = 0, b = pts.length - 1; if (b < 0) return null;
+    while (b - a > 1) { const c = (a + b) >> 1; if (pts[c].t < t) a = c; else b = c; }
+    return Math.abs(pts[a].t - t) <= Math.abs(pts[b].t - t) ? pts[a] : pts[b];
+  };
+  const rows = [];
+  g.series.forEach((s, k) => { const p = near(s.pts); if (p) rows.push({ s, p, k }); });
+  if (!rows.length) return;
+  const t0 = rows[0].p.t, x = g.X(t0);
+  const cross = $(".c-cross", svg); cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.setAttribute("visibility", "visible");
+  const dots = $$(".c-dot", svg);
+  dots.forEach((c) => c.setAttribute("visibility", "hidden"));
+  for (const r of rows) { const c = dots[r.k]; c.setAttribute("cx", g.X(r.p.t)); c.setAttribute("cy", g.Y(r.p.y)); c.setAttribute("visibility", "visible"); }
+  const tip = g.tip; if (!tip) return;
+  tip.replaceChildren(el("b", { text: tlabel(t0, g.hist.to - g.hist.from > 86400) }),
+    ...rows.map((r) => el("div", { class: "tip-row" }, el("span", { class: "tip-key", style: "background:" + colorOf(r.s.dev) }),
+      el("span", { class: "tip-name", text: r.s.dev.name }), el("span", { class: "tip-val", text: fmt(r.p.y, g.m.dec) + " " + g.m.unit }))));
+  tip.hidden = false;
+  const wrap = svg.parentElement.getBoundingClientRect(), sx = (x / g.W) * rect.width + (rect.left - wrap.left);
+  const w = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(sx + 12, wrap.width - w)) + "px";
+}
+function clearHover(svg) {
+  if (!svg._geo) return;
+  $(".c-cross", svg).setAttribute("visibility", "hidden");
+  $$(".c-dot", svg).forEach((c) => c.setAttribute("visibility", "hidden"));
+  if (svg._geo.tip) svg._geo.tip.hidden = true;
+}
+function bindChart(svg) {
+  svg.addEventListener("pointerdown", (e) => hoverChart(svg, e));
+  svg.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.buttons) hoverChart(svg, e); });
+  svg.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") clearHover(svg); });
+  svg.addEventListener("pointercancel", () => clearHover(svg));
+}
+
+/* ---------- ciclo de actualización ---------- */
+function startPolling(onTick, getSeg = () => 5) {
+  let timer = null;
+  const tick = async () => { await onTick(); timer = document.hidden ? null : setTimeout(tick, getSeg() * 1000); };
+  const stop = () => { clearTimeout(timer); timer = null; };
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else if (!timer) tick(); });
+  tick();
+  return { restart: () => { stop(); tick(); } };
+}
+</script>
+
+<script>
+/* =====================================================================
+   Interfaz táctil de TeleHome. LAYOUT decide el armazón:
+     "iphone" → una columna con pestañas abajo
+     "ipad"   → vista dividida: lista a la izquierda, gráfica y resumen a la derecha
+   Los paneles (dispositivos, gráfica, resumen, ajustes) son los mismos.
+   Solo consulta y controla: para dar de alta dispositivos se usa la interfaz completa.
+   ===================================================================== */
+const RANGES = [["1 h", 3600], ["6 h", 21600], ["24 h", 86400], ["7 d", 604800], ["30 d", 2592000]];
+const ICONOS = {
+  refrescar: "M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6",
+  admin: "M12 3l7 3v5c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6z",
+  ajustes: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
+  grafica: "M4 19h16M6 15l4-5 3 3 5-7",
+  lista: "M4 6h16M4 12h16M4 18h16",
+  tabla: "M3 5h18v14H3zM3 10h18M9 10v9",
+  subir: "M6 15l6-6 6 6", parar: "M7 7h10v10H7z", bajar: "M6 9l6 6 6-6",
+  descargar: "M12 3v12M7 10l5 5 5-5M5 21h14",
+};
+const icono = (d, cls) => {
+  const s = sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2",
+    "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+  if (cls) s.setAttribute("class", cls);
+  s.append(sv("path", { d })); return s;
+};
+let toastT = null;
+function toast(txt, malo) {
+  const t = $("#toast"); t.textContent = txt; t.className = "toast" + (malo ? " bad" : ""); t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, malo ? 6000 : 2600);
+}
+/* ---------- hoja modal (confirmar, pedir contraseña) ---------- */
+let cerrarHoja = null;
+function hoja({ titulo, texto, campo, ok, okClase, onOk }) {
+  const bg = $("#sheetBg"), sh = $("#sheet");
+  const input = campo ? el("input", { type: "password", autocomplete: "current-password", "aria-label": campo, placeholder: campo }) : null;
+  const err = el("div", { class: "msg bad" });
+  const cerrar = () => { bg.hidden = sh.hidden = true; sh.replaceChildren(); cerrarHoja = null; };
+  cerrarHoja = cerrar;
+  const aceptar = async (e) => {
+    e.preventDefault();
+    const r = await onOk(input ? input.value : null);
+    if (r) { err.textContent = r; if (input) input.focus(); } else cerrar();
+  };
+  const form = el("form", { onsubmit: aceptar },
+    el("h2", { text: titulo }), texto ? el("p", { text: texto }) : null, input, err,
+    el("div", { class: "btns" },
+      el("button", { type: "button", text: "Cancelar", onclick: cerrar }),
+      el("button", { type: "submit", class: "pri" + (okClase ? " " + okClase : ""), text: ok })));
+  sh.replaceChildren(form); bg.hidden = sh.hidden = false;
+  bg.onclick = cerrar;
+  if (input) setTimeout(() => input.focus(), 50);
+}
+
+/* ---------- controles de un dispositivo ---------- */
+function control(d) {
+  const t = T(d), s = stOf(d), listo = online(d) && !APP.busy.has(d.id) && puedeMandar();
+  const parar = (e) => e.stopPropagation();
+  if (t.control === "switch" || t.control === "level") {
+    const caja = el("span", { class: "lvl" });
+    if (t.control === "level") {
+      const pc = s.br != null ? s.br : vals(d).br;
+      const sl = el("input", { type: "range", min: "0", max: "100", step: "5", value: String(Math.round(pc || 0)),
+        "aria-label": "Brillo de " + d.name, onclick: parar });
+      sl.disabled = !listo;
+      sl.addEventListener("change", (e) => { parar(e); mandar(d, "level", +e.target.value); });
+      caja.append(sl);
+    }
+    const sw = el("button", { class: "sw" + (APP.busy.has(d.id) ? " busy" : ""), type: "button", role: "switch",
+      "aria-checked": String(!!s.on), "aria-label": "Encender o apagar " + d.name });
+    sw.disabled = !listo;
+    sw.addEventListener("click", (e) => { parar(e); pedirEncendido(d, !s.on); });
+    caja.append(sw);
+    return caja;
+  }
+  if (t.control === "position") {
+    const bt = (lab, path, action, value) => {
+      const b = el("button", { type: "button", "aria-label": lab + " " + d.name, title: lab, onclick: (e) => { parar(e); mandar(d, action, value); } }, icono(path));
+      b.disabled = !listo; return b;
+    };
+    return el("span", { class: "pos", role: "group", "aria-label": "Persiana " + d.name },
+      bt("Subir", ICONOS.subir, "position", 100), bt("Parar", ICONOS.parar, "stop", null), bt("Bajar", ICONOS.bajar, "position", 0));
+  }
+  return null;        // sin control: la fila no necesita decir nada
+}
+async function mandar(d, action, value) {
+  if (!puedeMandar()) return pedirAdmin("Entra como administrador para manejar los dispositivos.");
+  pintar();
+  const err = await enviar(d, action, value);
+  if (err) toast(err, true);
+  else {
+    const q = action === "switch" ? (value ? "encendido" : "apagado") : action === "level" ? "al " + value + " %"
+      : action === "stop" ? "parada" : value >= 100 ? "subiendo" : "bajando";
+    toast("«" + d.name + "» " + q + ".");
+  }
+  await recargar();
+}
+/* Apagar algo encendido se confirma: es fácil tocarlo sin querer */
+function pedirEncendido(d, quiero) {
+  if (quiero || !puedeMandar()) return mandar(d, "switch", quiero);
+  hoja({ titulo: "¿Apagar «" + d.name + "»?", texto: "Dejará de dar corriente a lo que tenga conectado.",
+    ok: "Apagar", okClase: "danger", onOk: async () => { await mandar(d, "switch", false); return ""; } });
+}
+
+/* ---------- panel: dispositivos ---------- */
+function filaDev(d) {
+  const t = T(d), p = principal(d), met = metaTexto(d), hayBar = t.bar && online(d);
+  const fila = el("article", { class: "dev" + (APP.sel === d.id ? " sel" : ""), style: "--c:" + colorOf(d),
+    tabindex: "0", role: "button", "aria-pressed": String(APP.sel === d.id),
+    "aria-label": d.name + ", " + estadoTexto(d) + (online(d) ? ", " + p.txt + " " + p.unit : "") });
+  const elegir = () => { APP.sel = APP.sel === d.id ? "all" : d.id; APP.hidden.clear(); pintar(); recargarHistorico(); };
+  fila.addEventListener("click", elegir);
+  fila.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === fila) { e.preventDefault(); elegir(); } });
+  const est = estadoTexto(d);
+  const sub = el("div", { class: "sub" }, el("span", { class: online(d) ? (stOf(d).on ? "on" : "") : "off", text: est }));
+  if (met.length) sub.append(" · " + met.join(" · "));
+  const id = el("div", { class: "id" }, el("div", { class: "nm", text: d.name }), sub);
+  if (hayBar) {
+    const m = METRICS[t.bar], v = vals(d)[t.bar] || 0;
+    const tope = t.bar === "p" ? Math.max(...devs().map((x) => (vals(x).p || 0)), 1) : 100;
+    id.append(el("div", { class: "gauge" }, el("i", { style: "width:" + Math.min(100, (v / tope) * 100) + "%" })));
+    if (m) { /* la barra compara con el máximo del momento */ }
+  }
+  fila.append(id);
+  if (online(d) && p.v != null) fila.append(el("div", { class: "val" }, el("b", { text: p.txt }), el("span", { text: p.unit })));
+  const ctl = control(d); if (ctl) fila.append(ctl);   // los de solo lectura no llevan control
+  return fila;
+}
+function panelDispositivos() {
+  const caja = el("div");
+  if (!devs().length) {
+    caja.append(el("div", { class: "card", style: "padding:22px;text-align:center" },
+      el("p", { style: "margin:0 0 6px;font-weight:600", text: "Aún no hay dispositivos" }),
+      el("p", { style: "margin:0;color:var(--ink2);font-size:15px", text: "Se dan de alta en la interfaz completa de TeleHome." })));
+    return caja;
+  }
+  const hi = typesPresent().map(destacado).filter(Boolean);
+  if (hi.length) {
+    const fila = el("div", { class: "card", style: "display:flex;flex-wrap:wrap;gap:14px;padding:14px;margin-bottom:18px" });
+    for (const h of hi) fila.append(el("div", { style: "flex:1 1 130px" },
+      el("div", { style: "color:var(--ink2);font-size:13px", text: h.label }),
+      el("div", { style: "font-size:" + (h.main ? "30" : "22") + "px;font-weight:650;letter-spacing:-.6px;font-variant-numeric:tabular-nums" },
+        h.txt, el("span", { style: "font-size:14px;color:var(--ink2);margin-left:3px", text: h.unit }))));
+    caja.append(fila);
+  }
+  for (const k of typesPresent()) {
+    const t = TYPES[k] || TIPO_DESCONOCIDO, list = devsOfType(k);
+    const g = el("section", { class: "grp" },
+      el("div", { class: "grp-h" }, icono(t.icon), t.plural, el("span", { class: "n", text: list.length })));
+    const card = el("div", { class: "card" });
+    for (const d of list) card.append(filaDev(d));
+    g.append(card); caja.append(g);
+  }
+  return caja;
+}
+
+/* ---------- panel: gráfica ---------- */
+function panelGrafica(alto) {
+  const caja = el("div");
+  const ms = metricsPresent();
+  if (!ms.length) { caja.append(el("div", { class: "card", style: "padding:22px;text-align:center;color:var(--ink2)", text: "Aún no hay dispositivos que medir." })); return caja; }
+  const segM = el("div", { class: "seg", role: "group", "aria-label": "Magnitud" });
+  for (const k of ms) segM.append(el("button", { type: "button", text: METRICS[k].label, "aria-pressed": String(APP.metric === k),
+    onclick: () => { APP.metric = k; APP.hidden.clear(); pintar(); recargarHistorico(); } }));
+  const segR = el("div", { class: "seg", role: "group", "aria-label": "Intervalo", style: "margin-top:8px" });
+  for (const [lab, secs] of RANGES) segR.append(el("button", { type: "button", text: lab, "aria-pressed": String(APP.range === secs),
+    onclick: () => { APP.range = secs; prefs.set("range", secs); pintar(); recargarHistorico(); } }));
+  caja.append(segM, segR);
+
+  const svg = sv("svg", { class: "chart", role: "img", "aria-label": "Histórico de " + (METRICS[APP.metric] || {}).label });
+  const tip = el("div", { class: "tip", hidden: true });
+  const wrap = el("div", { class: "chart-wrap", style: "margin-top:12px" }, svg, tip);
+  caja.append(el("div", { class: "card", style: "padding:12px" }, wrap));
+  const list = metricDevs();
+  if (list.length > 1) {
+    const lg = el("div", { class: "legend", role: "group", "aria-label": "Series visibles" });
+    for (const d of list) lg.append(el("button", { type: "button", "aria-pressed": String(!APP.hidden.has(d.id)),
+      onclick: () => { APP.hidden.has(d.id) ? APP.hidden.delete(d.id) : APP.hidden.add(d.id); pintar(); } },
+      el("span", { class: "k", style: "background:" + colorOf(d) }), d.name));
+    caja.append(lg);
+  }
+  if (APP.sel !== "all") {
+    const d = devs().find((x) => x.id === APP.sel);
+    caja.append(el("div", { class: "legend" },
+      el("button", { type: "button", onclick: () => { APP.sel = "all"; pintar(); recargarHistorico(); }, text: "Ver todos" }),
+      d ? el("a", { class: "legend-a", href: csvUrl(d.id), download: "" },
+        el("button", { type: "button", onclick: (e) => { e.preventDefault(); descargarCsv(d); } }, icono(ICONOS.descargar), "CSV de " + d.name)) : null));
+  }
+  requestAnimationFrame(() => { drawChart(svg, tip, alto); bindChart(svg); });
+  return caja;
+}
+/* El CSV puede necesitar la contraseña del servicio o la sesión de administrador: se baja por fetch */
+async function descargarCsv(d) {
+  try {
+    const h = { "X-TeleHome": "1" };
+    if (APP.admin.token) h["X-TeleHome-Admin"] = APP.admin.token;
+    const r = await fetch(csvUrl(d.id), { headers: h, cache: "no-store" });
+    if (!r.ok) throw new Error("Error " + r.status);
+    const a = el("a", { href: URL.createObjectURL(await r.blob()), download: "telehome-" + d.id + ".csv" });
+    document.body.append(a); a.click(); a.remove();
+    toast("CSV de «" + d.name + "» descargado.");
+  } catch (e) { toast("No se pudo descargar el CSV: " + e.message, true); }
+}
+
+/* ---------- panel: resumen ---------- */
+function panelResumen() {
+  const caja = el("div");
+  const lab = RANGES.find((r) => r[1] === APP.range);
+  caja.append(el("div", { class: "grp-h", style: "padding-left:4px" }, "Últimas " + (lab ? lab[0] : "")));
+  const filas = sumRows();
+  if (!APP.sum) { caja.append(el("div", { class: "card", style: "padding:22px;text-align:center;color:var(--ink2)", text: "Cargando…" })); return caja; }
+  for (const k of typesPresent()) {
+    const t = TYPES[k] || TIPO_DESCONOCIDO, list = devsOfType(k).filter((d) => filas[d.id]);
+    if (!list.length) continue;
+    const cols = t.summary || [];
+    const thead = el("tr", {}, el("th", { text: t.label }));
+    for (const c of cols) thead.append(el("th", { text: c.label }));
+    const tbody = el("tbody");
+    for (const d of list) {
+      const tr = el("tr", {}, el("td", {}, el("span", { class: "key", style: "background:" + colorOf(d) }), d.name));
+      for (const c of cols) tr.append(el("td", { text: sumCell(c, filas[d.id]) }));
+      tbody.append(tr);
+    }
+    const tfoot = el("tfoot");
+    if (cols.some((c) => c.total === "sum")) {
+      const tr = el("tr", {}, el("td", { text: "Total" }));
+      for (const c of cols) {
+        if (c.total !== "sum") { tr.append(el("td", { text: "" })); continue; }
+        const suma = list.reduce((a, d) => a + (+sumValue(filas[d.id], c.key) || 0), 0);
+        tr.append(el("td", { text: fmt(suma, c.dec) + (c.unit ? " " + c.unit : "") }));
+      }
+      tfoot.append(tr);
+    }
+    caja.append(el("section", { class: "grp" },
+      el("div", { class: "card tscroll" }, el("table", {}, el("thead", {}, thead), tbody, tfoot))));
+  }
+  if (!caja.querySelector("table")) caja.append(el("div", { class: "card", style: "padding:22px;text-align:center;color:var(--ink2)", text: "Aún no hay datos en este intervalo." }));
+  return caja;
+}
+
+/* ---------- panel: ajustes ---------- */
+function filaAjuste(lab, sub, accion) {
+  return el("div", { class: "row" }, el("div", { class: "lab" }, lab, sub ? el("small", { text: sub }) : null), accion);
+}
+function panelAjustes() {
+  const caja = el("div");
+  const rows = el("div", { class: "rows" });
+  /* modo Administrador */
+  if (APP.admin.required) {
+    rows.append(filaAjuste("Modo Administrador",
+      APP.admin.active ? "Puedes manejar los dispositivos y cambiar ajustes." : "Ahora solo puedes ver los datos.",
+      el("button", { class: "act", type: "button", text: APP.admin.active ? "Salir" : "Entrar",
+        onclick: async () => {
+          if (APP.admin.active) { await salirAdmin(); toast("Has salido del modo Administrador."); await recargar(); }
+          else pedirAdmin();
+        } })));
+  } else {
+    rows.append(filaAjuste("Modo Administrador", "Este servicio no tiene contraseña de administrador: se puede manejar todo.", el("span", { class: "ro", text: "no activo" })));
+  }
+  /* API */
+  const manual = prefs.get("api", "");
+  const inp = el("input", { type: "text", value: manual, placeholder: APP.base || "/rafa/telehome/api/", spellcheck: "false", "aria-label": "URL de la API" });
+  rows.append(el("div", { class: "row", style: "flex-wrap:wrap" },
+    el("div", { class: "lab", style: "flex:1 0 100%" }, "URL de la API",
+      el("small", { text: APP.base ? "Ahora: " + APP.base : "No se encuentra el servicio." })),
+    inp,
+    el("button", { class: "act", type: "button", text: "Guardar", onclick: async () => {
+      const v = inp.value.trim();
+      v ? prefs.set("api", v) : prefs.del("api");
+      APP.base = null; toast("Buscando el servicio…"); await recargar();
+    } })));
+  /* intervalo de refresco */
+  const seg = el("div", { class: "seg", style: "flex:0 0 auto" });
+  for (const s of [3, 5, 10, 30]) seg.append(el("button", { type: "button", text: s + " s", "aria-pressed": String(prefs.get("poll", 5) === s),
+    onclick: () => { prefs.set("poll", s); pintar(); } }));
+  rows.append(filaAjuste("Actualizar cada", null, seg));
+  caja.append(rows);
+  caja.append(el("div", { class: "hint" }, "Dar de alta dispositivos, el modo nube y las contraseñas se hacen en la ",
+    el("a", { href: APP.base ? APP.base.replace(/api\/$/, "") : INTERFAZ_COMPLETA, text: "interfaz completa de TeleHome" }), "."));
+  caja.append(el("div", { class: "foot" },
+    "TeleHome · " + LAYOUT_LABEL + " v" + VERSION + (APP.state ? " · servicio " + APP.state.version : ""), el("br"),
+    "Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche", el("br"),
+    "Generado con IA · Revisado por el autor · Última modificación: " + MODIFICADO));
+  return caja;
+}
+function pedirAdmin(texto) {
+  hoja({ titulo: "Modo Administrador", texto: texto || "Escribe la contraseña de administrador para manejar los dispositivos y cambiar ajustes.",
+    campo: "Contraseña de administrador", ok: "Entrar",
+    onOk: async (pw) => {
+      try { await entrarAdmin(pw); } catch (e) { return e.message; }
+      toast("Modo Administrador activado."); await recargar(); return "";
+    } });
+}
+
+/* ---------- aviso de conexión ---------- */
+function pintarAviso() {
+  const b = $("#banner");
+  if (APP.needAuth) {
+    b.replaceChildren("El servicio pide contraseña. Ábrelo una vez en el navegador para escribirla y vuelve aquí.",
+      el("button", { type: "button", text: "Abrir la interfaz completa",
+        onclick: () => { location.href = APP.base ? APP.base.replace(/api\/$/, "") : INTERFAZ_COMPLETA; } }));
+    b.hidden = false; return;
+  }
+  if (APP.error) { b.replaceChildren(APP.error + " Comprueba que el servicio está en marcha o pon su URL en Ajustes."); b.hidden = false; return; }
+  b.hidden = true;
+}
+</script>
+
+<script>
+/* =====================================================================
+   TeleHome · iPad — vista dividida: dispositivos a la izquierda,
+   gráfica y resumen a la derecha; los ajustes se abren en un panel.
+   ===================================================================== */
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 16:12", LAYOUT_LABEL = "iPad";
+let ajustesAbiertos = false, derecha = "grafica";   // "grafica" | "resumen"
+
+function subtitulo() {
+  if (!APP.state) return APP.error || "Conectando…";
+  const n = devs().length, on = devs().filter(online).length;
+  return n ? on + " de " + n + " en línea" : "Sin dispositivos";
+}
+function pintar() {
+  pintarAviso();
+  $("#sub").textContent = subtitulo();
+  const ro = APP.admin.required && !APP.admin.active;
+  $("#roBadge").hidden = !ro;
+  $("#btnAdmin").hidden = !APP.admin.required;
+  $("#btnAdmin").setAttribute("aria-pressed", String(!ro));
+  $("#btnAdmin").setAttribute("aria-label", ro ? "Entrar como administrador" : "Salir del modo administrador");
+  $("#btnAjustes").setAttribute("aria-pressed", String(ajustesAbiertos));
+  $("#aside").replaceChildren(panelDispositivos());
+  const main = $("#main");
+  if (ajustesAbiertos) { main.replaceChildren(panelAjustes()); return; }
+  const seg = el("div", { class: "seg", role: "group", "aria-label": "Vista", style: "max-width:260px;margin-bottom:14px" });
+  for (const [k, lab] of [["grafica", "Gráfica"], ["resumen", "Resumen"]])
+    seg.append(el("button", { type: "button", text: lab, "aria-pressed": String(derecha === k),
+      onclick: () => { derecha = k; pintar(); recargarHistorico(); } }));
+  main.replaceChildren(seg, derecha === "grafica" ? panelGrafica(320) : panelResumen());
+}
+async function recargar() { await loadState(); pintar(); }
+async function recargarHistorico() { await loadHistory(); pintar(); }
+
+$("#btnRefresh").addEventListener("click", async (e) => {
+  const b = e.currentTarget; b.classList.add("spin");
+  await loadState(); await loadHistory(); pintar();
+  setTimeout(() => b.classList.remove("spin"), 400);
+});
+$("#btnAdmin").addEventListener("click", async () => {
+  if (APP.admin.active) { await salirAdmin(); toast("Has salido del modo Administrador."); await recargar(); }
+  else pedirAdmin();
+});
+$("#btnAjustes").addEventListener("click", () => { ajustesAbiertos = !ajustesAbiertos; pintar(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && cerrarHoja) cerrarHoja(); });
+window.addEventListener("resize", () => { if (!ajustesAbiertos && derecha === "grafica") pintar(); });
+
+pintar();
+startPolling(async () => { await loadState(); await loadHistory(); pintar(); }, () => prefs.get("poll", 5));
+</script>
+</body>
+</html>

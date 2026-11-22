@@ -412,7 +412,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:20</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 14:35</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -1037,14 +1037,24 @@ window.TELEHOME_BACKEND = {
   },
   async exportConfig() {                // descarga la configuración completa del servicio (sin su contraseña)
     if (CONN.mode !== "server") throw new Error("No disponible en la demostración: conecta con un servicio TeleHome real (pie de página).");
-    const res = await fetch(CONN.base + "api/config/export", { method: "POST", headers: AUTH.headers({ "X-TeleHome": "1" }),
-      credentials: /^https?:/i.test(CONN.base) ? "include" : "same-origin" });
+    /* la ruta del servicio al que está conectada la app va en el fichero, para que la otra persona se conecte al mismo sitio */
+    const u = new URL(CONN.base || ".", location.href), ruta = u.origin === location.origin ? u.pathname : u.origin + u.pathname;
+    const res = await fetch(CONN.base + "api/config/export", { method: "POST", headers: AUTH.headers({ "X-TeleHome": "1", "Content-Type": "application/json" }),
+      body: JSON.stringify({ ruta }), credentials: /^https?:/i.test(CONN.base) ? "include" : "same-origin" });
     if (!res.ok) {
       let m = res.status === 404 ? "Este servicio es anterior a la exportación: actualízalo." : "Error " + res.status;
       try { m = (await res.json()).error || m; } catch (e) { /* no es JSON */ }
       throw new Error(m);
     }
     return { blob: await res.blob(), name: (/filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "") || [])[1] };
+  },
+  isServer() { return CONN.mode === "server"; },
+  rutaActual() { const u = new URL(CONN.base || ".", location.href); return u.origin === location.origin ? u.pathname : u.origin + u.pathname; },
+  async connectTo(ruta) {               // conecta con la ruta de un fichero de configuración (la misma lógica que el pie de página)
+    let base; try { base = normBase(ruta); } catch (e) { return { ok: false, why: e.message }; }
+    q("#connBase").value = base;
+    const ok = await connect(base);
+    return { ok, why: PROBE_WHY, needAuth: CONN.needAuth };
   },
   banner() {
     if (CONN.mode !== "server" && CONN.needAuth) return "El servicio TeleHome pide contraseña: escríbela en el campo «Contraseña» del pie de página y pulsa Conectar. Mientras tanto se ven datos de demostración.";
@@ -1973,13 +1983,22 @@ function bindDialog() {
     const file = $("#cfgFile").files[0]; if (!file) return;
     const modo = document.querySelector('input[name="cfgModo"]:checked').value;
     let data; try { data = JSON.parse(await file.text()); } catch (e) { return setMsg("#cfgMsg", "El fichero no es un JSON válido.", false); }
+    /* si el fichero trae la ruta del servicio y la app aún no está conectada a ninguno, se conecta ahí antes de importar */
+    const ruta = data && data.servicio && typeof data.servicio.ruta === "string" ? data.servicio.ruta : "";
+    if (ruta && BACKEND && BACKEND.connectTo && !BACKEND.isServer()) {
+      setMsg("#cfgMsg", "Conectando con el servicio indicado en el fichero (" + ruta + ")…", true);
+      const c = await BACKEND.connectTo(ruta);
+      if (!c.ok) return setMsg("#cfgMsg", "El fichero indica el servicio «" + ruta + "», pero no se puede conectar" + (c.why ? ": " + c.why : "") + (c.needAuth ? "" : " — conecta con tu servicio en el pie de página e importa de nuevo."), false);
+      S.sel = "all"; S.hidden.clear(); await refresh(); await loadChart();
+    }
     if (modo === "reemplazar" && !confirm("Los dispositivos actuales se sustituirán por los del fichero. ¿Continuar?")) return;
     try {
       const r = await api("api/config/import", { method: "POST", body: { config: data, modo } });
       const partes = [r["añadidos"].length + " añadidos", r["actualizados"].length + " actualizados"];
       if (r["omitidos"].length) partes.push(r["omitidos"].length + " omitidos (" + r["omitidos"].map((o) => o.name + ": " + o.motivo).join("; ") + ")");
       await refresh(); fillOptions(); renderDevList();
-      setMsg("#cfgMsg", "Configuración importada: " + partes.join(", ") + (r.opciones.length ? ". Ajustes aplicados: " + r.opciones.length + "." : "."), !r["omitidos"].length);
+      setMsg("#cfgMsg", "Configuración importada: " + partes.join(", ") + (r.opciones.length ? ". Ajustes aplicados: " + r.opciones.length + "." : ".") +
+        (ruta && BACKEND.rutaActual && BACKEND.rutaActual() !== ruta ? " Nota: el fichero indicaba el servicio «" + ruta + "»; esta app está conectada a «" + BACKEND.rutaActual() + "»." : ""), !r["omitidos"].length);
       $("#cfgFile").value = ""; $("#btnCfgImport").disabled = true;
     } catch (err) { setMsg("#cfgMsg", err.message, false); }
   });

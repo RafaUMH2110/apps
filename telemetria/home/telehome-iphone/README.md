@@ -13,12 +13,20 @@ instalado. Solo **consulta y maneja** (ver valores, encender y apagar, regular e
 gráficas, resumen y CSV). **Dar de alta dispositivos, el modo nube y las contraseñas se siguen haciendo en la
 interfaz completa.**
 
-## Modo Administrador
+## Niveles de acceso
 
-Si el servicio tiene contraseña de administrador (`telehome admin-password`), la app arranca en **solo lectura**:
-se ven los dispositivos y sus medidas, pero los controles están desactivados. El escudo de la cabecera pide la
-contraseña y abre una sesión que dura mientras la pestaña siga abierta. Sin contraseña de administrador en el
-servicio, todo está disponible desde el principio.
+Si el servicio tiene contraseñas puestas, la app arranca en **solo lectura**: se ven los dispositivos y sus medidas,
+pero los controles están desactivados. El escudo de la cabecera pide la contraseña y abre una sesión que dura
+mientras la pestaña siga abierta; el distintivo de la cabecera dice en qué nivel estás.
+
+| Con qué entras | Ve los datos | Maneja los dispositivos | Configura |
+|---|---|---|---|
+| Nada | Sí | No | No |
+| Contraseña de usuario (`telehome user-password`) | Sí | Sí | No |
+| Contraseña de administrador (`telehome admin-password`) | Sí | Sí | Sí |
+
+Configurar se hace siempre en la interfaz completa; esta app nunca cambia ajustes. Si el servicio no tiene ninguna
+contraseña puesta, todo está disponible desde el principio.
 
 ## Despliegue en Apache (como el resto de apps)
 

@@ -244,7 +244,7 @@ Notas:
 - Si un enchufe se cae se reintenta con espera creciente (hasta 60 s) y se marca «sin conexión».
 - Histórico: 30 días por defecto (configurable). Al eliminar un enchufe se borra su histórico.
 
-### 6.4. Modo Administrador (servicio 0.7.0 o posterior)
+### 6.4. Niveles de acceso: solo lectura, usuario de confianza y administrador (servicio 0.8.0 o posterior)
 
 Con una contraseña de administrador puesta, quien abra la app **solo ve las lecturas** de los dispositivos: no puede
 encenderlos ni apagarlos, ni tocar la configuración. El servicio tampoco le envía Device ID, IP, versión, mapas de datos,
@@ -255,7 +255,23 @@ sudo telehome admin-password            # la pide por teclado (mín. 8 caractere
 sudo telehome admin-password --quitar   # vuelve a quedar todo abierto
 ```
 
-Para administrar, pulsa **«Administrador»** en la cabecera de la app y escribe la contraseña. La sesión dura 12 horas y se
+Desde la 0.8.0 hay un nivel intermedio para gente de confianza:
+
+```bash
+sudo telehome user-password             # la pide por teclado (mín. 8 caracteres)
+sudo telehome user-password --quitar
+```
+
+| Con qué entras | Ve los datos | Maneja los dispositivos | Configura y cambia contraseñas |
+|---|---|---|---|
+| Nada | Sí | No | No |
+| Contraseña de usuario | Sí | Sí | No |
+| Contraseña de administrador | Sí | Sí | Sí |
+
+Quien entre como usuario tampoco recibe Device ID, IP, mapas de datos ni credenciales de Tuya: ve lo mismo que quien
+solo mira. Las dos contraseñas se ponen por separado y son independientes de la del servicio (sección 10).
+
+Para entrar, pulsa **«Entrar»** en la cabecera de la app y escribe la contraseña. La sesión dura 12 horas y se
 cierra al cerrar la pestaña o con «Salir de administrador». Es **distinta** de la contraseña del servicio (sección 10):
 aquella decide quién puede *ver* la interfaz, y esta quién puede *cambiar* algo. No se incluye al exportar la configuración.
 
@@ -358,6 +374,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | `cloud-import [ids…]` | Importa dispositivos de la nube |
 | `password [--quitar]` | Pone, cambia o quita la contraseña del servicio |
 | `admin-password [--quitar]` | Pone, cambia o quita la contraseña del modo Administrador |
+| `user-password [--quitar]` | Pone, cambia o quita la contraseña del usuario de confianza |
 | `export-config [-o fichero] [--ruta /ruta/]` | Exporta dispositivos, credenciales de Tuya, ajustes y la ruta del servicio (sin la contraseña del servicio) |
 | `import-config <fichero> [--anadir]` | Aplica un fichero creado con `export-config` |
 

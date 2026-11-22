@@ -334,7 +334,8 @@ const APP = {
   hist: null, sum: null,
   hidden: new Set(),       // series ocultas en la gráfica
   needAuth: false,         // el servicio pide contraseña (HTTP Basic)
-  admin: { required: false, active: true, token: sess.get("admin") },
+  /* nivel: "none" solo lectura · "user" maneja los dispositivos · "admin" además configura */
+  admin: { nivel: "admin", adminRequired: false, userRequired: false, token: sess.get("admin") },
   error: "",
   busy: new Set(),
 };
@@ -349,8 +350,8 @@ async function api(path, opt = {}) {
   const r = await fetch(APP.base + path, init);
   let data = null;
   try { data = await r.json(); } catch (e) { /* respuesta no JSON */ }
-  if (r.status === 403 && data && data.admin_required) {        // la sesión de administrador caducó
-    APP.admin.required = true; APP.admin.active = false; APP.admin.token = ""; sess.set("admin", "");
+  if (r.status === 403 && data && data.admin_required) {        // la sesión caducó o el nivel no basta
+    if (data.nivel_necesario !== "admin" || APP.admin.nivel !== "user") { APP.admin.nivel = "none"; APP.admin.token = ""; sess.set("admin", ""); }
   }
   if (!r.ok) { const err = new Error((data && data.error) || ("Error " + r.status)); err.status = r.status; throw err; }
   return data;
@@ -397,10 +398,13 @@ async function loadState() {
   if (!APP.base) { const p = await detectApi(); if (!p) { APP.error = "No encuentro el servicio TeleHome."; APP.state = null; return false; } }
   try {
     APP.state = await api("state");
-    const a = APP.state.admin || null;
-    APP.admin.required = !!(a && a.required);
-    APP.admin.active = a ? !!a.active : true;
-    if (!APP.admin.required && APP.admin.token) { APP.admin.token = ""; sess.set("admin", ""); }
+    const ses = APP.state.sesion, a = APP.state.admin || null;
+    if (ses) { APP.admin.nivel = ses.nivel; APP.admin.adminRequired = !!ses.admin_required; APP.admin.userRequired = !!ses.user_required; }
+    else {   // servicios anteriores a 0.8.0: solo había administrador
+      APP.admin.adminRequired = !!(a && a.required); APP.admin.userRequired = false;
+      APP.admin.nivel = a ? (a.active ? "admin" : "none") : "admin";
+    }
+    if (!pideClave() && APP.admin.token) { APP.admin.token = ""; sess.set("admin", ""); }
     APP.error = ""; APP.needAuth = false;
     fixMetric();
     return true;
@@ -429,16 +433,27 @@ async function enviar(dev, action, value) {
   catch (e) { return e.message; }
   finally { APP.busy.delete(dev.id); }
 }
+/* Entra con la contraseña de usuario o la de administrador. Los servicios anteriores a 0.8.0 solo tienen admin/login. */
 async function entrarAdmin(password) {
-  const r = await api("admin/login", { method: "POST", body: { password } });
-  APP.admin.token = r.token || ""; APP.admin.active = true; APP.admin.required = !!r.required;
+  let r;
+  try { r = await api("login", { method: "POST", body: { password } }); }
+  catch (e) {
+    if (!/404/.test(e.message)) throw e;
+    r = await api("admin/login", { method: "POST", body: { password } });
+    r.nivel = "admin";
+  }
+  APP.admin.token = r.token || ""; APP.admin.nivel = r.nivel || "admin";
   sess.set("admin", APP.admin.token);
+  return APP.admin.nivel;
 }
 async function salirAdmin() {
-  try { await api("admin/logout", { method: "POST", body: {} }); } catch (e) { /* el token se tira igualmente */ }
-  APP.admin.token = ""; APP.admin.active = false; sess.set("admin", "");
+  try { await api("logout", { method: "POST", body: {} }); } catch (e) { /* el token se tira igualmente */ }
+  APP.admin.token = ""; APP.admin.nivel = "none"; sess.set("admin", "");
 }
-const puedeMandar = () => APP.admin.active;
+const pideClave = () => APP.admin.adminRequired || APP.admin.userRequired;
+const puedeMandar = () => APP.admin.nivel === "user" || APP.admin.nivel === "admin";
+const esAdmin = () => APP.admin.nivel === "admin";
+const etiquetaNivel = () => (esAdmin() ? "Administrador" : APP.admin.nivel === "user" ? "Usuario" : "Solo lectura");
 function csvUrl(id) { return APP.base + "export.csv?dev=" + encodeURIComponent(id) + "&range=" + APP.range; }
 
 /* ---------- valores de una lectura ---------- */
@@ -692,7 +707,7 @@ function control(d) {
   return null;        // sin control: la fila no necesita decir nada
 }
 async function mandar(d, action, value) {
-  if (!puedeMandar()) return pedirAdmin("Entra como administrador para manejar los dispositivos.");
+  if (!puedeMandar()) return pedirAdmin("Escribe tu contraseña para manejar los dispositivos.");
   pintar();
   const err = await enviar(d, action, value);
   if (err) toast(err, true);
@@ -854,16 +869,18 @@ function panelAjustes() {
   const caja = el("div");
   const rows = el("div", { class: "rows" });
   /* modo Administrador */
-  if (APP.admin.required) {
-    rows.append(filaAjuste("Modo Administrador",
-      APP.admin.active ? "Puedes manejar los dispositivos y cambiar ajustes." : "Ahora solo puedes ver los datos.",
-      el("button", { class: "act", type: "button", text: APP.admin.active ? "Salir" : "Entrar",
+  if (pideClave()) {
+    rows.append(filaAjuste("Sesión: " + etiquetaNivel(),
+      esAdmin() ? "Puedes manejar los dispositivos y cambiar ajustes."
+        : puedeMandar() ? "Puedes manejar los dispositivos, pero no cambiar la configuración."
+        : "Ahora solo puedes ver los datos. Entra con tu contraseña de usuario o de administrador.",
+      el("button", { class: "act", type: "button", text: APP.admin.nivel !== "none" ? "Salir" : "Entrar",
         onclick: async () => {
-          if (APP.admin.active) { await salirAdmin(); toast("Has salido del modo Administrador."); await recargar(); }
+          if (APP.admin.nivel !== "none") { await salirAdmin(); toast("Has salido: vuelves al modo de solo lectura."); await recargar(); }
           else pedirAdmin();
         } })));
   } else {
-    rows.append(filaAjuste("Modo Administrador", "Este servicio no tiene contraseña de administrador: se puede manejar todo.", el("span", { class: "ro", text: "no activo" })));
+    rows.append(filaAjuste("Sesión", "Este servicio no pide contraseña: se puede manejar todo.", el("span", { class: "ro", text: "abierto" })));
   }
   /* API */
   const manual = prefs.get("api", "");
@@ -892,11 +909,11 @@ function panelAjustes() {
   return caja;
 }
 function pedirAdmin(texto) {
-  hoja({ titulo: "Modo Administrador", texto: texto || "Escribe la contraseña de administrador para manejar los dispositivos y cambiar ajustes.",
-    campo: "Contraseña de administrador", ok: "Entrar",
+  hoja({ titulo: "Entrar", texto: texto || "Escribe tu contraseña. La de usuario permite manejar los dispositivos; la de administrador, además, configurarlo todo.",
+    campo: "Contraseña", ok: "Entrar",
     onOk: async (pw) => {
       try { await entrarAdmin(pw); } catch (e) { return e.message; }
-      toast("Modo Administrador activado."); await recargar(); return "";
+      toast("Has entrado como " + etiquetaNivel().toLowerCase() + "."); await recargar(); return "";
     } });
 }
 
@@ -919,7 +936,7 @@ function pintarAviso() {
    TeleHome · iPad — vista dividida: dispositivos a la izquierda,
    gráfica y resumen a la derecha; los ajustes se abren en un panel.
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 16:12", LAYOUT_LABEL = "iPad";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 16:23", LAYOUT_LABEL = "iPad";
 let ajustesAbiertos = false, derecha = "grafica";   // "grafica" | "resumen"
 
 function subtitulo() {
@@ -930,11 +947,12 @@ function subtitulo() {
 function pintar() {
   pintarAviso();
   $("#sub").textContent = subtitulo();
-  const ro = APP.admin.required && !APP.admin.active;
-  $("#roBadge").hidden = !ro;
-  $("#btnAdmin").hidden = !APP.admin.required;
-  $("#btnAdmin").setAttribute("aria-pressed", String(!ro));
-  $("#btnAdmin").setAttribute("aria-label", ro ? "Entrar como administrador" : "Salir del modo administrador");
+  const dentro = APP.admin.nivel !== "none";
+  $("#roBadge").textContent = etiquetaNivel();
+  $("#roBadge").hidden = esAdmin();
+  $("#btnAdmin").hidden = !pideClave();
+  $("#btnAdmin").setAttribute("aria-pressed", String(dentro));
+  $("#btnAdmin").setAttribute("aria-label", dentro ? "Salir (" + etiquetaNivel().toLowerCase() + ")" : "Entrar con tu contraseña");
   $("#btnAjustes").setAttribute("aria-pressed", String(ajustesAbiertos));
   $("#aside").replaceChildren(panelDispositivos());
   const main = $("#main");
@@ -954,7 +972,7 @@ $("#btnRefresh").addEventListener("click", async (e) => {
   setTimeout(() => b.classList.remove("spin"), 400);
 });
 $("#btnAdmin").addEventListener("click", async () => {
-  if (APP.admin.active) { await salirAdmin(); toast("Has salido del modo Administrador."); await recargar(); }
+  if (APP.admin.nivel !== "none") { await salirAdmin(); toast("Has salido: vuelves al modo de solo lectura."); await recargar(); }
   else pedirAdmin();
 });
 $("#btnAjustes").addEventListener("click", () => { ajustesAbiertos = !ajustesAbiertos; pintar(); });

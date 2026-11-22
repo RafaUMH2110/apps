@@ -290,7 +290,7 @@ servicio la conoce; solo se puede sustituir por otra. La del propio modo Adminis
 
 En **Ajustes → Programaciones** se encienden, apagan o regulan dispositivos solos: a una hora fija, al amanecer o
 al anochecer (con minutos de adelanto o retraso), los días de la semana que elijas. Las ejecuta el servicio, así
-que no hace falta tener la app abierta.
+que no hace falta tener la app abierta. **Si no marcas ningún día, se ejecuta una sola vez** y queda desactivada.
 
 Dos opciones que evitan sorpresas:
 

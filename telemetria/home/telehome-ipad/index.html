@@ -944,6 +944,7 @@ function ordenProg(x) {
   return "parar";
 }
 function diasProg(d) {
+  if (!d.length) return "una sola vez";
   if (d.length === 7) return "todos los días";
   if (String(d) === "1,2,3,4,5") return "de lunes a viernes";
   if (String(d) === "6,7") return "fines de semana";
@@ -978,7 +979,7 @@ function pintarAviso() {
    TeleHome · iPad — vista dividida: dispositivos a la izquierda,
    gráfica y resumen a la derecha; los ajustes se abren en un panel.
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 19:15", LAYOUT_LABEL = "iPad";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 20:00", LAYOUT_LABEL = "iPad";
 let ajustesAbiertos = false, derecha = "grafica";   // "grafica" | "resumen"
 
 function subtitulo() {

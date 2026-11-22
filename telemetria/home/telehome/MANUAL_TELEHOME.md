@@ -782,10 +782,11 @@ cada 20 s, así que funcionan con la app cerrada; lo único que tiene que estar 
 |---|---|
 | `action`, `value` | La orden: `switch` (booleano), `level` y `position` (0-100) o `stop` (sin valor) |
 | `when.kind` | `clock` con `time` en `HH:MM`, o `sunrise`/`sunset` con `offset` en minutos (±720) |
-| `days` | Días en formato ISO: 1 lunes … 7 domingo |
+| `days` | Días en formato ISO: 1 lunes … 7 domingo. **Lista vacía: se ejecuta una sola vez** |
 | `condition` | Opcional. `metric`, `op` (`<`, `<=`, `>`, `>=`), `value` y `for` en segundos |
 | `skip_if_manual` | No hacerlo si has manejado el aparato a mano desde la vez anterior |
 | `last_fire`, `last_result` | Los escribe el servicio: cuándo se evaluó y qué pasó |
+| `created`, `once` | Los calcula el servicio: cuándo se creó y si es de un solo uso |
 
 Máximo **32** programaciones. Los identificadores se derivan del nombre.
 
@@ -798,9 +799,17 @@ El hilo mira el reloj cada 20 s y busca, para cada programación activa, el inst
   NOAA sin dependencias, a partir de `lat` y `lon` de las opciones (Elche por omisión; se cambian en la pestaña o
   con `PUT api/place`). Si ese día el Sol no sale ni se pone, la programación no toca.
 
-Dispara si ese instante ya pasó, **hace menos de una hora** y es posterior a su `last_fire`. La ventana de una
-hora es deliberada: si el servicio estuvo parado toda la noche, al arrancar por la mañana no se ejecuta de golpe
-todo lo que tocaba de madrugada.
+Dispara si ese instante ya pasó, **hace menos de una hora**, es posterior a su `last_fire` y posterior a
+`created`. La ventana de una hora es deliberada: si el servicio estuvo parado toda la noche, al arrancar por la
+mañana no se ejecuta de golpe todo lo que tocaba de madrugada. Lo de `created` evita la otra sorpresa: crear a
+las 07:30 una programación de las 07:00 no la dispara en el acto, sino al día siguiente.
+
+### Una sola vez
+
+Si no se marca ningún día, la programación vale para **cualquier** día y se gasta en la primera evaluación: se
+ejecuta en el próximo momento que llegue y queda desactivada, con el resultado anotado. Se gasta aunque se salte
+por la condición o por el mando manual, porque «una sola vez» significa una sola evaluación, no un reintento
+indefinido. Para repetirla basta con volver a activarla.
 
 ### Condición
 
@@ -950,4 +959,4 @@ curl -s http://SERVIDOR/rafa/telehome/api/health
 
 ---
 
-*Última modificación: 2026-11-22 19:17*
+*Última modificación: 2026-11-22 20:02*

@@ -244,6 +244,18 @@ Notas:
 - Si un enchufe se cae se reintenta con espera creciente (hasta 60 s) y se marca «sin conexión».
 - Histórico: 30 días por defecto (configurable). Al eliminar un enchufe se borra su histórico.
 
+### 6.4. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
+
+Para que otra persona use los mismos dispositivos sin configurar nada:
+
+1. **Exportar** (en tu servicio): ajustes de la app → pestaña **Compartir** → «Exportar configuración», o por línea de órdenes
+   `telehome export-config -o config.json`. El fichero incluye los dispositivos (con su Local Key), el Access ID y el Access Secret
+   de tuya.com y el resto de ajustes. **No incluye la contraseña del servicio.**
+2. **Importar** (en el servicio de la otra persona): pestaña **Compartir** → «Importar configuración», o
+   `telehome import-config config.json` (con `--anadir` solo añade lo que falte; por defecto reemplaza sus dispositivos, y los que ya existían conservan su histórico). Su contraseña del servicio no se modifica.
+
+El fichero contiene credenciales y claves: compártelo solo con quien debas y bórralo cuando ya no haga falta.
+
 ---
 
 ## 7. Usar la app TeleHome
@@ -322,6 +334,8 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | `cloud-list` | Lista los dispositivos de la nube |
 | `cloud-import [ids…]` | Importa dispositivos de la nube |
 | `password [--quitar]` | Pone, cambia o quita la contraseña |
+| `export-config [-o fichero]` | Exporta dispositivos, credenciales de Tuya y ajustes (sin la contraseña del servicio) |
+| `import-config <fichero> [--anadir]` | Aplica un fichero creado con `export-config` |
 
 ---
 

@@ -49,6 +49,14 @@ input { -webkit-user-select:text; user-select:text; }
 @keyframes spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
 
+/* ---- Cabecera: piezas comunes ---- */
+.logo { border-radius:7px; flex:none; display:block; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--muted); flex:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--muted) 22%, transparent); }
+.dot[data-estado="good"] { background:var(--good); box-shadow:0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+.dot[data-estado="warn"] { background:var(--series-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--series-4) 25%, transparent); }
+.dot[data-estado="bad"] { background:var(--critical); box-shadow:0 0 0 3px color-mix(in srgb, var(--critical) 22%, transparent); }
+.icon-btn .lbl { display:none; }
+
 /* ---- Avisos ---- */
 .banner { background:var(--warn-bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:15px; }
 .banner button { margin-top:8px; border:none; background:var(--accent); color:var(--on-accent); border-radius:9px; min-height:36px; padding:0 14px; font-weight:600; }
@@ -158,20 +166,25 @@ tfoot td { border-top:.5px solid var(--border); font-weight:700; }
 
 html { -webkit-text-size-adjust:100%; overflow-x:hidden; }
 /* ---- Barra superior ---- */
-.bar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
-  padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 18px) 10px calc(env(safe-area-inset-left) + 18px);
+.bar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:10px;
+  padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 18px) 8px calc(env(safe-area-inset-left) + 18px);
   background:var(--bar); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:.5px solid var(--border); }
 .bar h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-.3px; }
-.bar .sub { color:var(--ink2); font-size:14px; margin-left:10px; flex:1; min-width:0; }
-.icon-btn { min-width:44px; height:44px; padding:0 10px; border:none; background:transparent; color:var(--accent);
-  border-radius:11px; display:inline-grid; place-items:center; }
+.bar .grow { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:8px; margin-left:6px; padding:5px 12px 5px 10px; border-radius:999px;
+  background:color-mix(in srgb, var(--ink) 6%, transparent); min-width:0; }
+.pill .sub { color:var(--ink2); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.icon-btn { min-width:44px; height:44px; padding:0 12px; border:none; background:transparent; color:var(--accent);
+  border-radius:11px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+.icon-btn .lbl { display:inline; font-size:15px; font-weight:600; }
+@media (max-width:640px) { .icon-btn .lbl { display:none; } }
 .icon-btn[aria-pressed="true"] { background:color-mix(in srgb, var(--good) 18%, transparent); color:var(--good); }
 #btnAjustes[aria-pressed="true"] { background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
 .banner { margin:12px calc(env(safe-area-inset-right) + 18px) 0 calc(env(safe-area-inset-left) + 18px); }
 /* ---- Vista dividida ---- */
 .split { display:grid; grid-template-columns:minmax(300px, 380px) 1fr; gap:20px; align-items:start;
   padding:16px calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 28px) calc(env(safe-area-inset-left) + 18px); }
-.split > aside { position:sticky; top:84px; }
+.split > aside { position:sticky; top:calc(env(safe-area-inset-top) + 76px); }
 @media (max-width:860px) { .split { grid-template-columns:1fr; } .split > aside { position:static; } }
 .dev { padding:13px 15px; }
 
@@ -184,13 +197,16 @@ html { -webkit-text-size-adjust:100%; overflow-x:hidden; }
 </head>
 <body data-app-title="TeleHome · iPad" data-app-description="TeleHome para iPad: vista dividida con tus dispositivos y la gráfica de su histórico." data-categories="telemetria,automatizacion,docencia" data-tags="domotica,hogar,iot,tuya,enchufes inteligentes,sensores,luces,persianas,ipad,tactil,pantalla de inicio">
 <header class="bar">
-  <h1>TeleHome <span class="ro-badge" id="roBadge" hidden>Solo lectura</span></h1>
-  <div class="sub" id="sub">Conectando…</div>
+  <img class="logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='fondo' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b8cf0'/%3E%3Cstop offset='1' stop-color='%231250a6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23fondo)'/%3E%3Cpath fill='%23fff' d='M32 10.5 8 31.5h6.5v20a2.5 2.5 0 0 0 2.5 2.5h30a2.5 2.5 0 0 0 2.5-2.5v-20H56z'/%3E%3Cpath fill='none' stroke='%231a5fc0' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round' d='M19.5 43h7l3.5-8.5 5 15 3.5-6.5h6'/%3E%3C/svg%3E" alt="" width="30" height="30">
+  <h1>TeleHome</h1>
+  <span class="ro-badge" id="roBadge" hidden>Solo lectura</span>
+  <span class="estado pill" id="estado" role="status"><i class="dot" id="dot" data-estado="idle"></i><span class="sub" id="sub" aria-live="polite">Conectando…</span></span>
+  <span class="grow"></span>
   <button class="icon-btn" id="btnAdmin" type="button" hidden aria-pressed="false" aria-label="Entrar como administrador">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6z"/></svg></button>
-  <button class="icon-btn" id="btnAjustes" type="button" aria-pressed="false" aria-label="Ajustes">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
-  <button class="icon-btn" id="btnRefresh" type="button" aria-label="Actualizar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6z"/></svg><span class="lbl">Entrar</span></button>
+  <button class="icon-btn" id="btnAjustes" type="button" aria-pressed="false" aria-label="Ajustes" title="Ajustes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span class="lbl">Ajustes</span></button>
+  <button class="icon-btn" id="btnRefresh" type="button" aria-label="Actualizar" title="Actualizar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
 </header>
 <div class="banner" id="banner" hidden></div>
@@ -339,6 +355,7 @@ const INTERFAZ_COMPLETA = "/rafa/telehome/";
 const APP = {
   base: null,              // URL base de la API detectada
   state: null,             // respuesta de api/state
+  updated: 0,              // instante (ms) de la última lectura correcta
   range: prefs.get("range", 86400),
   metric: null,            // magnitud de la gráfica
   sel: "all",              // "all" o id de dispositivo
@@ -416,7 +433,7 @@ async function loadState() {
       APP.admin.nivel = a ? (a.active ? "admin" : "none") : "admin";
     }
     if (!pideClave() && APP.admin.token) { APP.admin.token = ""; sess.set("admin", ""); }
-    APP.error = ""; APP.needAuth = false;
+    APP.error = ""; APP.needAuth = false; APP.updated = Date.now();
     fixMetric();
     return true;
   } catch (e) {
@@ -995,6 +1012,31 @@ function pedirClaveServicio() {
 }
 
 /* ---------- aviso de conexión ---------- */
+/* Cabecera común: estado de la conexión (punto + texto), distintivo de nivel y botón de acceso. */
+function estadoCabecera() {
+  const hora = APP.updated ? new Date(APP.updated).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "";
+  if (APP.needAuth) return { nivel: "warn", txt: "Contraseña requerida" };
+  if (!APP.state) return APP.error ? { nivel: "bad", txt: "Sin conexión" } : { nivel: "idle", txt: "Conectando…" };
+  const n = devs().length, on = devs().filter(online).length;
+  if (!n) return { nivel: "idle", txt: "Sin dispositivos" };
+  const txt = (on === n ? (n === 1 ? "1 en línea" : "Todos en línea (" + n + ")") : on ? on + " de " + n + " en línea" : "Ninguno en línea") + (hora ? " · " + hora : "");
+  return { nivel: on === n ? "good" : on ? "warn" : "bad", txt };
+}
+function pintarCabecera() {
+  const e = estadoCabecera(), dentro = APP.admin.nivel !== "none";
+  $("#sub").textContent = e.txt;
+  $("#dot").dataset.estado = e.nivel;
+  $("#estado").title = e.txt;
+  $("#roBadge").textContent = etiquetaNivel();
+  $("#roBadge").hidden = esAdmin();
+  const b = $("#btnAdmin");
+  b.hidden = !pideClave();
+  b.setAttribute("aria-pressed", String(dentro));
+  b.setAttribute("aria-label", dentro ? "Salir (" + etiquetaNivel().toLowerCase() + ")" : "Entrar con tu contraseña");
+  b.title = b.getAttribute("aria-label");
+  const l = $("#btnAdmin .lbl"); if (l) l.textContent = dentro ? "Salir" : "Entrar";
+}
+
 function pintarAviso() {
   const b = $("#banner");
   if (APP.needAuth) {
@@ -1012,23 +1054,11 @@ function pintarAviso() {
    TeleHome · iPad — vista dividida: dispositivos a la izquierda,
    gráfica y resumen a la derecha; los ajustes se abren en un panel.
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 22:02", LAYOUT_LABEL = "iPad";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 22:11", LAYOUT_LABEL = "iPad";
 let ajustesAbiertos = false, derecha = "grafica";   // "grafica" | "resumen"
 
-function subtitulo() {
-  if (!APP.state) return APP.error || "Conectando…";
-  const n = devs().length, on = devs().filter(online).length;
-  return n ? on + " de " + n + " en línea" : "Sin dispositivos";
-}
 function pintar() {
-  pintarAviso();
-  $("#sub").textContent = subtitulo();
-  const dentro = APP.admin.nivel !== "none";
-  $("#roBadge").textContent = etiquetaNivel();
-  $("#roBadge").hidden = esAdmin();
-  $("#btnAdmin").hidden = !pideClave();
-  $("#btnAdmin").setAttribute("aria-pressed", String(dentro));
-  $("#btnAdmin").setAttribute("aria-label", dentro ? "Salir (" + etiquetaNivel().toLowerCase() + ")" : "Entrar con tu contraseña");
+  pintarAviso(); pintarCabecera();
   $("#btnAjustes").setAttribute("aria-pressed", String(ajustesAbiertos));
   $("#aside").replaceChildren(panelDispositivos());
   const main = $("#main");

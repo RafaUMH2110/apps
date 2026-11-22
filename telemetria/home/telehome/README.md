@@ -7,6 +7,13 @@ App de telemetría del hogar en un solo fichero (`index.html`), **genérica**: l
 
 En esta primera versión ya funcionan cuatro tipos: **enchufes** Wi-Fi (potencia, tensión, corriente y energía), **sensores de temperatura y humedad**, **luces regulables** y **persianas**. En el catálogo aparecen además, marcados como previstos, **termostato** y **contador general**.
 
+## Documentación
+
+| Documento | Para qué |
+|---|---|
+| [MANUAL.md](MANUAL.md) | Manual técnico: arquitectura, catálogo, API, niveles de acceso, despliegue y referencia |
+| [INSTALACION.md](INSTALACION.md) | Instalar, configurar y poner en marcha, paso a paso |
+
 ## Estructura
 
 El fichero tiene tres bloques de código, en este orden:

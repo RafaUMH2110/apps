@@ -7,6 +7,9 @@ Versión de la app: primera versión genérica · Versión del servicio: TeleHom
 
 ---
 
+> Para la referencia técnica completa —arquitectura, protocolo, niveles de acceso, modelo de datos y
+> cómo añadir tipos— está el [manual](MANUAL.md). Esta guía es el paso a paso de la instalación.
+
 ## 1. Qué es TeleHome y cómo se relaciona con TeleHome Enchufes
 
 **TeleHome** es una app web de un solo archivo HTML (HTML + CSS + JavaScript, sin librerías externas) que muestra y controla **varios tipos de dispositivos** domésticos. Deriva de TeleHome-enchufes y mantiene su funcionalidad, pero su estructura es genérica: cada tipo de dispositivo se describe en un catálogo declarativo y la interfaz se construye a partir de él.

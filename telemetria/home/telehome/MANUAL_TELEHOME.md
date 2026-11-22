@@ -861,4 +861,4 @@ curl -s http://SERVIDOR/rafa/telehome/api/health
 
 ---
 
-*Última modificación: 2026-11-22 16:40*
+*Última modificación: 2026-11-22 16:43*

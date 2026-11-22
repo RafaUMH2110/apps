@@ -11,7 +11,7 @@ En esta primera versión ya funcionan cuatro tipos: **enchufes** Wi-Fi (potencia
 
 | Documento | Para qué |
 |---|---|
-| [MANUAL.md](MANUAL.md) | Manual técnico: arquitectura, catálogo, API, niveles de acceso, despliegue y referencia |
+| [MANUAL_TELEHOME.md](MANUAL_TELEHOME.md) | Manual técnico: arquitectura, catálogo, API, niveles de acceso, despliegue y referencia |
 | [INSTALACION.md](INSTALACION.md) | Instalar, configurar y poner en marcha, paso a paso |
 
 ## Estructura

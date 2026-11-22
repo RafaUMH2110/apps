@@ -8,7 +8,7 @@ Versión de la app: primera versión genérica · Versión del servicio: TeleHom
 ---
 
 > Para la referencia técnica completa —arquitectura, protocolo, niveles de acceso, modelo de datos y
-> cómo añadir tipos— está el [manual](MANUAL.md). Esta guía es el paso a paso de la instalación.
+> cómo añadir tipos— está el [manual](MANUAL_TELEHOME.md). Esta guía es el paso a paso de la instalación.
 
 ## 1. Qué es TeleHome y cómo se relaciona con TeleHome Enchufes
 

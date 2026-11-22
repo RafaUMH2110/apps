@@ -406,7 +406,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 03:48</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 13:58</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -921,7 +921,7 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
     const res = await fetch(base + "api/health", { headers: { "X-TeleHome": "1" }, signal: ctl.signal, credentials: /^https?:/i.test(base) ? "include" : "same-origin" });
     let j = null; try { j = await res.json(); } catch (e) { /* no es JSON */ }
     if (!res.ok) {
-      PROBE_WHY = res.status === 401 ? "Apache pide usuario y contraseña (401): abre " + (base || "/") + " en otra pestaña, inicia sesión y vuelve a pulsar Conectar"
+      PROBE_WHY = res.status === 401 ? "el servicio tiene contraseña (401): abre " + (base || "/") + " en otra pestaña, escríbela (el usuario puede quedar vacío) y vuelve a pulsar Conectar"
         : res.status === 404 ? "la ruta no existe en este servidor (404): ¿falta el proxy de Apache?"
         : res.status === 403 ? "el servicio rechaza esta petición (403" + (j && j.error ? ": " + j.error : "") + "): revisa --allow-host / --allow-origin"
         : (res.status === 502 || res.status === 503 || res.status === 504) ? "Apache no alcanza el servicio (" + res.status + "): ¿está arrancado?"

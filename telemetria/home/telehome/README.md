@@ -3,7 +3,7 @@
 **Autor:** Rafa · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · r.puerto@umh.es
 *Generado con IA · Revisado por el autor*
 
-App de telemetría del hogar en un solo fichero (`index.html`), **genérica**: la misma plantilla sirve para varios tipos de dispositivo, no solo para enchufes. Es la versión general de [TeleHome Enchufes](../telehome-enchufes/) y está pensada para ir creciendo: cada tipo nuevo se declara en un catálogo y la interfaz sale de ahí.
+App de telemetría del hogar en un solo fichero (`index.html`), **genérica**: la misma plantilla sirve para varios tipos de dispositivo, no solo para enchufes. Es la versión general de TeleHome y habla con su [servicio](https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-servicio) y está pensada para ir creciendo: cada tipo nuevo se declara en un catálogo y la interfaz sale de ahí.
 
 En esta primera versión ya funcionan cuatro tipos: **enchufes** Wi-Fi (potencia, tensión, corriente y energía), **sensores de temperatura y humedad**, **luces regulables** y **persianas**. En el catálogo aparecen además, marcados como previstos, **termostato** y **contador general**.
 
@@ -86,7 +86,7 @@ En el servicio, el tipo nuevo solo tiene que leer sus DPS o códigos y devolver 
 | Modo | Cuándo | Qué hace |
 |---|---|---|
 | **Servicio TeleHome** | La página la sirve el propio servicio, o escribes en el pie su ruta en el mismo servidor (p. ej. `/rafa/telehome/`). Se reconoce porque `api/health` responde `"api": "telehome"` (o `"app": "TeleHome"`) | Todos los tipos que el servicio declare en `types`, con dispositivos reales |
-| **Servicio TeleHome Enchufes anterior** | `api/health` responde `TeleHome Enchufes` **sin** `"api": "telehome"` (versiones hasta la 0.4.0) | Un adaptador traduce sus respuestas al modelo genérico: se ven y se controlan los enchufes reales, y los demás tipos quedan deshabilitados hasta actualizar el servicio. Desde la 0.5.0 el servicio habla el protocolo genérico y el adaptador ya no interviene |
+| **Servicio anterior a la 0.5.0** (solo enchufes) | `api/health` responde `TeleHome Enchufes` **sin** `"api": "telehome"` (versiones hasta la 0.4.0) | Un adaptador traduce sus respuestas al modelo genérico: se ven y se controlan los enchufes reales, y los demás tipos quedan deshabilitados hasta actualizar el servicio. Desde la 0.5.0 el servicio habla el protocolo genérico y el adaptador ya no interviene |
 | **Demostración** | No se encuentra ningún servicio (p. ej. en GitHub Pages) | Siete dispositivos simulados de los cuatro tipos; se pueden controlar, añadir y exportar a CSV. Los datos se guardan solo en el navegador (`localStorage`, clave `telehome_demo_v1`; «Reiniciar demo» los borra) |
 
 Notas:

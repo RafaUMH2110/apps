@@ -437,7 +437,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 20:00</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-22 20:40</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -837,8 +837,8 @@ window.TELEHOME_READY = Object.keys(TELEHOME_TYPES).filter((k) => !TELEHOME_TYPE
 <script>
 "use strict";
 /* =======================================================================
-   CONEXIÓN: servicio TeleHome real del mismo servidor, servicio TeleHome
-   Enchufes heredado (mediante adaptador) o modo demostración.
+   CONEXIÓN: servicio TeleHome real del mismo servidor, servicio heredado
+   anterior a la 0.5.0 (mediante adaptador) o modo demostración.
    Esta parte solo está en la versión web del repositorio «apps»; la página
    que sirve el propio servicio no la necesita.
    ======================================================================= */
@@ -1048,7 +1048,7 @@ const DEMO = (() => {
   };
 })();
 
-/* ---------------- adaptador del servicio heredado «TeleHome Enchufes» ----------------
+/* ---------------- adaptador del servicio heredado (anterior a la 0.5.0, solo enchufes) ----------------
    Mantiene esta app funcionando contra el servicio que solo conoce enchufes:
    traduce sus respuestas al modelo genérico y sus órdenes al endpoint antiguo. */
 const LEGACY = {
@@ -1132,8 +1132,8 @@ async function probe(base) {            // ¿hay un servicio TeleHome en esta ru
     }
     if (!j || typeof j.app !== "string") { PROBE_WHY = "la ruta responde, pero no es un servicio TeleHome (no devuelve JSON de api/health)"; return null; }
     /* «api: telehome» es el saludo del protocolo genérico: lo anuncian tanto el servicio
-       TeleHome como un TeleHome Enchufes ya actualizado (que conserva su nombre para no
-       romper las apps anteriores). Sin ese campo, se habla por el adaptador. */
+       TeleHome (hasta la 0.9.0 se anunciaba como «TeleHome Enchufes»). Sin ese campo, se
+       habla por el adaptador del servicio heredado. */
     if (j.api === "telehome" || j.app === "TeleHome") return "telehome";
     if (j.app === "TeleHome Enchufes") return "enchufes";
     PROBE_WHY = "el servicio de esa ruta es otro (" + j.app + ")";

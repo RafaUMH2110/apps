@@ -3,21 +3,21 @@
 **Autor:** Rafa · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · r.puerto@umh.es
 *Generado con IA · Revisado por el autor*
 
-Versión de la app: primera versión genérica · Versión del servicio: TeleHome Enchufes 0.5.2 (protocolo genérico; servicio «telehome») · Fecha: 21/11/2026
+Versión de la app: primera versión genérica · Versión del servicio: TeleHome 0.9.0 (protocolo genérico; servicio «telehome») · Fecha: 22/11/2026
 
 ---
 
 > Para la referencia técnica completa —arquitectura, protocolo, niveles de acceso, modelo de datos y
 > cómo añadir tipos— está el [manual](MANUAL_TELEHOME.md). Esta guía es el paso a paso de la instalación.
 
-## 1. Qué es TeleHome y cómo se relaciona con TeleHome Enchufes
+## 1. Qué es TeleHome y cómo se relaciona con su servicio
 
-**TeleHome** es una app web de un solo archivo HTML (HTML + CSS + JavaScript, sin librerías externas) que muestra y controla **varios tipos de dispositivos** domésticos. Deriva de TeleHome-enchufes y mantiene su funcionalidad, pero su estructura es genérica: cada tipo de dispositivo se describe en un catálogo declarativo y la interfaz se construye a partir de él.
+**TeleHome** es una app web de un solo archivo HTML (HTML + CSS + JavaScript, sin librerías externas) que muestra y controla **varios tipos de dispositivos** domésticos. Deriva de la primera versión (TeleHome Enchufes, solo enchufes) y mantiene su funcionalidad, pero su estructura es genérica: cada tipo de dispositivo se describe en un catálogo declarativo y la interfaz se construye a partir de él.
 
-**TeleHome Enchufes** es el **servicio Python** que habla con los dispositivos reales (enchufes Wi-Fi Tuya, p. ej. Energeeks EG-EW008MC / EG-EW009MC) y guarda el histórico en SQLite. Desde la versión 0.5.0 incorpora el **protocolo genérico de TeleHome**.
+El **servicio TeleHome** (antes «TeleHome Enchufes») es el **servicio Python** que habla con los dispositivos reales (enchufes Wi-Fi Tuya, p. ej. Energeeks EG-EW008MC / EG-EW009MC) y guarda el histórico en SQLite. Desde la versión 0.5.0 incorpora el **protocolo genérico de TeleHome**.
 
 ```
-navegador ──▶ index.html (TeleHome) ──HTTP──▶ telehome_enchufes (Python) ──TCP 6668──────────▶ enchufes (modo local, misma LAN)
+navegador ──▶ index.html (TeleHome) ──HTTP──▶ telehome (Python) ──TCP 6668──────────▶ enchufes (modo local, misma LAN)
                                                     │                    └──HTTPS (API Tuya)──▶ nube de Tuya ◀── enchufes (modo nube)
                                                     └── SQLite (telemetría)
 ```
@@ -40,7 +40,7 @@ navegador ──▶ index.html (TeleHome) ──HTTP──▶ telehome_enchufes 
 | Modo | Qué hace | Cuándo usarlo |
 |---|---|---|
 | **Servicio TeleHome** (genérico) | Detecta `api/health` con `"api":"telehome"` | Servicio 0.5.0 o superior |
-| **TeleHome Enchufes (heredado)** | Adaptador que traduce respuestas y órdenes | Servicio anterior a 0.5.0, sin actualizar |
+| **Servicio heredado** («TeleHome Enchufes») | Adaptador que traduce respuestas y órdenes | Servicio anterior a 0.5.0, sin actualizar |
 | **Demostración** | 7 dispositivos simulados en el navegador (`localStorage`, clave `telehome_demo_v1`, máx. 16) | Probar sin hardware ni servicio |
 
 ---
@@ -63,48 +63,25 @@ La app y el servicio están en repositorios distintos:
 | Pieza | Repositorio | Ruta |
 |---|---|---|
 | App TeleHome (HTML) | `RafaUMH2110/apps` | `telemetria/home/telehome/index.html` (+ `README.md`) |
-| Servicio TeleHome Enchufes | `RafaUMH2110/code` | `telemetria/home/telehome-enchufes/` |
+| Servicio TeleHome | `RafaUMH2110/code` | `telemetria/home/telehome-servicio/` |
 
 Clonado ligero del servicio (solo la carpeta necesaria):
 
 ```bash
 git clone --depth 1 --filter=blob:none --sparse https://github.com/RafaUMH2110/code.git
-cd code && git sparse-checkout set telemetria/home/telehome-enchufes
-cd telemetria/home/telehome-enchufes
+cd code && git sparse-checkout set telemetria/home/telehome-servicio
+cd telemetria/home/telehome-servicio
 ```
 
-### 3.1. Aplicar el parche del protocolo genérico (0.5.0)
-
-Si en `RafaUMH2110/code` el servicio aún está en una versión anterior a 0.5.0, aplica el parche `telehome-enchufes-protocolo-generico-0.5.0.patch` desde la raíz del repositorio clonado:
-
-```bash
-cd code                                   # raíz del repositorio
-git apply --check /ruta/telehome-enchufes-protocolo-generico-0.5.0.patch   # comprobar (no cambia nada)
-git apply /ruta/telehome-enchufes-protocolo-generico-0.5.0.patch           # aplicar
-git status                                # ver los archivos modificados
-```
-
-Para subirlo al repositorio:
-
-```bash
-git checkout -b telehome-protocolo-generico
-git add telemetria/home/telehome-enchufes
-git commit -m "TeleHome Enchufes 0.5.0: protocolo genérico (tipos, órdenes, resumen por magnitud)"
-git push -u origin telehome-protocolo-generico   # o directamente a main, según prefieras
-```
-
-Cambios del parche: `__init__.py` (versión 0.5.0), `config.py` (campos `type` y `room`), `monitor.py` (`command`, `actions_for`, `state` ampliado), `store.py` (resumen por magnitud `m` y `on_ratio`), `server.py` (rutas genéricas), `README.md` y 3 tests nuevos (33 en total).
-
----
 
 ## 4. Instalar el servicio
 
-> Desde la 0.5.2 el servicio Linux se llama **`telehome`** (antes `telehome-enchufes`): unidad systemd, orden, `/opt/telehome` y `/var/lib/telehome`. Si ya lo tenías instalado, vuelve a ejecutar el instalador: migra solo el nombre anterior y conserva los datos. La carpeta del código y el módulo Python siguen llamándose `telehome-enchufes` / `telehome_enchufes`.
+> Desde la 0.5.2 el servicio Linux se llama **`telehome`** (antes `telehome-enchufes`): unidad systemd, orden, `/opt/telehome` y `/var/lib/telehome`. Si ya lo tenías instalado, vuelve a ejecutar el instalador: migra solo el nombre anterior y conserva los datos. Desde la 0.9.0 la carpeta del código es `telehome-servicio` y el módulo Python `telehome`.
 
 ### 4.1. macOS
 
 ```bash
-cd telemetria/home/telehome-enchufes
+cd telemetria/home/telehome-servicio
 ./macos/instalar-macos.sh              # crea .venv e instala dependencias
 ./macos/instalar-macos.sh --launchd    # opcional: arranca al iniciar sesión (LaunchAgent)
 ```
@@ -115,7 +92,7 @@ cd telemetria/home/telehome-enchufes
 ### 4.2. Linux (p. ej. una VM de Azure)
 
 ```bash
-cd telemetria/home/telehome-enchufes
+cd telemetria/home/telehome-servicio
 sudo ./linux/instalar-linux.sh
 ```
 
@@ -172,7 +149,7 @@ cd scripts/instalar-todo
 ```
 
 Resultado:
-- Servicio: proxy en `http://lorca.umh.es/rafa/telehome/` (interfaz propia de TeleHome Enchufes).
+- Servicio: proxy en `http://lorca.umh.es/rafa/telehome/` (interfaz propia de TeleHome).
 - App TeleHome: `http://lorca.umh.es/rafa/apps/telemetria/home/telehome/`. En *Servicio TeleHome* escribe `/rafa/telehome/` y pulsa Conectar (mismo origen: no hace falta CORS).
 - Si el portal no muestra las apps nuevas, es que no se ha vuelto a ejecutar el instalador.
 
@@ -182,12 +159,12 @@ Sin HTTPS la contraseña viaja sin cifrar: pon contraseña (`sudo telehome passw
 
 | Caso | Orden |
 |---|---|
-| macOS, doble clic | `macos/iniciar-telehome-enchufes.command` (abre el navegador en <http://127.0.0.1:8765/>) |
-| Línea de órdenes (venv) | `.venv/bin/python -m telehome_enchufes serve` |
+| macOS, doble clic | `macos/iniciar-telehome.command` (abre el navegador en <http://127.0.0.1:8765/>) |
+| Línea de órdenes (venv) | `.venv/bin/python -m telehome serve` |
 | Linux (servicio) | `sudo systemctl start telehome` |
-| **Sin hardware (simulado)** | `.venv/bin/python -m telehome_enchufes serve --simulate 4` |
+| **Sin hardware (simulado)** | `.venv/bin/python -m telehome serve --simulate 4` |
 
-Opciones de `serve`: `--host`, `--port` (por defecto 8765), `--no-browser`, `--simulate N`, `--allow-host NOMBRE`, `--allow-origin ORIGEN`, `--data-dir RUTA`. También se puede fijar la carpeta de datos con la variable `TELEHOME_ENCHUFES_DIR`.
+Opciones de `serve`: `--host`, `--port` (por defecto 8765), `--no-browser`, `--simulate N`, `--allow-host NOMBRE`, `--allow-origin ORIGEN`, `--data-dir RUTA`. También se puede fijar la carpeta de datos con la variable `TELEHOME_DIR`.
 
 El modo `--simulate` usa una carpeta de datos aparte, así que no mezcla datos de prueba con los reales.
 
@@ -209,12 +186,12 @@ Necesitas: **Device ID**, **Local Key**, IP (o `Auto`) y versión del protocolo 
    Genera `devices.json`. La clave cambia si borras el enchufe de la app o lo restableces.
 3. Impórtalos:
    - Interfaz: **Ajustes → Importar devices.json**, o
-   - Terminal: `python -m telehome_enchufes import devices.json`
-4. También puedes añadirlos a mano, y buscar IP/Device ID con **Buscar en la red** (`python -m telehome_enchufes scan`).
+   - Terminal: `python -m telehome import devices.json`
+4. También puedes añadirlos a mano, y buscar IP/Device ID con **Buscar en la red** (`python -m telehome scan`).
 
 Con IP `Auto` el servicio localiza el enchufe por su Device ID y se adapta si el router cambia la IP. Lo ideal es reservar una IP fija en el router.
 
-**Mapa de datos (DPS) por defecto:** interruptor `1`, corriente `18` (mA), potencia `19` (÷10 → W), tensión `20` (÷10 → V). No verificado con un EG-EW008MC real: si las lecturas salen mal, mira los DPS crudos con `python -m telehome_enchufes probe <nombre>` y ajústalos en *Ajustes → Avanzado* del enchufe.
+**Mapa de datos (DPS) por defecto:** interruptor `1`, corriente `18` (mA), potencia `19` (÷10 → W), tensión `20` (÷10 → V). No verificado con un EG-EW008MC real: si las lecturas salen mal, mira los DPS crudos con `python -m telehome probe <nombre>` y ajústalos en *Ajustes → Avanzado* del enchufe.
 
 ### 6.2. Modo nube (API de Tuya)
 
@@ -321,18 +298,18 @@ El fichero contiene credenciales y claves: compártelo solo con quien debas y b�
 ### 7.1. Abrirla
 
 - **Modo demostración** (sin nada instalado): abre `index.html` (desde el repo `apps`, GitHub Pages, o el archivo local). Si no encuentra servicio, arranca en demostración.
-- **Con el servicio local:** abre <http://127.0.0.1:8765/> (el servicio también sirve la interfaz de TeleHome Enchufes).
+- **Con el servicio local:** abre <http://127.0.0.1:8765/> (el servicio también sirve su propia interfaz).
 - **Servicio en otra dirección u origen (p. ej. app en GitHub Pages y servicio en tu máquina):** en *Ajustes → Servicio TeleHome* escribe la dirección completa, p. ej. `http://127.0.0.1:8765/`. El servicio debe autorizar el origen de la web con `--allow-origin` (ver 7.1.1). Sin eso el navegador bloquea la conexión.
 - **App y servicio bajo el mismo servidor (Apache de `isa.umh.es`):** copia `index.html` a `/var/www/htdocs/rafa/telehome/`, define un proxy en la misma web (`ProxyPass /rafa/telehome-api/ http://127.0.0.1:8765/`), instala con `--allow-host isa.umh.es` y escribe en el campo la ruta `/rafa/telehome-api/` (no hace falta `--allow-origin`).
 - Con el campo **vacío** usa el servicio que sirve esa misma página.
 
-> Antes de conectar, la app consulta `api/health` en esa dirección (2,5 s de espera). Si no hay servicio TeleHome o TeleHome Enchufes, sigue en demostración.
+> Antes de conectar, la app consulta `api/health` en esa dirección (2,5 s de espera). Si no hay servicio TeleHome, sigue en demostración.
 
 #### 7.1.1. Autorizar una web externa: `--allow-origin` (servicio 0.5.0 con este cambio)
 
 ```bash
 # macOS / manual
-.venv/bin/python -m telehome_enchufes serve --allow-origin https://rafaumh2110.github.io
+.venv/bin/python -m telehome serve --allow-origin https://rafaumh2110.github.io
 # Linux (servicio systemd)
 sudo ./linux/instalar-linux.sh --allow-origin https://rafaumh2110.github.io
 ```
@@ -379,7 +356,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 
 ## 9. Órdenes de la línea de comandos
 
-(`telehome …` en el servicio Linux, o `python -m telehome_enchufes …` en el venv.)
+(`telehome …` en el servicio Linux, o `python -m telehome …` en el venv.)
 
 | Orden | Descripción |
 |---|---|
@@ -429,7 +406,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 ## 12. Desarrollo y pruebas
 
 ```bash
-cd telemetria/home/telehome-enchufes
+cd telemetria/home/telehome-servicio
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt pytest
 .venv/bin/python -m pytest -q          # 38 tests

@@ -46,7 +46,7 @@ el navegador la pide al conectar; si no puede, la app muestra un aviso con un bo
 ## Probar en local
 
 ```bash
-cd ../../../code/telemetria/home/telehome-enchufes && python3 -m telehome_enchufes serve --simulate 3 --no-browser
+cd ../../../code/telemetria/home/telehome-servicio && python3 -m telehome serve --simulate 3 --no-browser
 cd - && python3 servir.py                   # app en http://127.0.0.1:8080/
 python3 servir.py --host 0.0.0.0            # visible desde el iPhone de tu Wi-Fi (solo para probar)
 ```

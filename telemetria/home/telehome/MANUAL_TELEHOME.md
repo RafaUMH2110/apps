@@ -103,10 +103,8 @@ lo publica directamente.
 | App genérica (web) | `apps` | `telemetria/home/telehome/index.html` |
 | App para iPhone | `apps` | `telemetria/home/telehome-iphone/` |
 | App para iPad | `apps` | `telemetria/home/telehome-ipad/` |
-| Demostración de Enchufes | `apps` | `telemetria/home/telehome-enchufes/index.html` |
-| Servicio (Python) | `code` | `telemetria/home/telehome-enchufes/` |
-| Interfaz que sirve el servicio | `code` | `telemetria/home/telehome-enchufes/telehome_enchufes/static/index.html` |
-| Apps de Enchufes para iPhone/iPad | `code` | `telemetria/home/telehome-enchufes-{iphone,ipad}/` |
+| Servicio (Python) | `code` | `telemetria/home/telehome-servicio/` |
+| Interfaz que sirve el servicio | `code` | `telemetria/home/telehome-servicio/telehome/static/index.html` |
 | Instaladores | `code` | `scripts/instalar-todo/` |
 
 Dentro del paquete Python:
@@ -125,9 +123,9 @@ Dentro del paquete Python:
 | `static/index.html` | La interfaz que el propio servicio sirve en `/` |
 
 > **Nota sobre los nombres.** El servicio se llama `telehome` (unidad de systemd, `/opt/telehome`,
-> `/var/lib/telehome`, orden `telehome`). La carpeta y el módulo conservan el nombre antiguo
-> `telehome-enchufes` / `telehome_enchufes` para no romper instalaciones anteriores, y `api/health`
-> sigue devolviendo `"app": "TeleHome Enchufes"` por lo mismo.
+> `/var/lib/telehome`, orden `telehome`). En el repo `code`, la carpeta es `telehome-servicio` y el módulo
+> Python `telehome`. Hasta la 0.9.0 la carpeta y el módulo se llamaban `telehome-enchufes` / `telehome_enchufes`
+> y `api/health` devolvía `"app": "TeleHome Enchufes"`; ahora devuelve `"app": "TeleHome"`.
 
 ---
 
@@ -350,7 +348,7 @@ página de la interfaz.
 
 ```json
 {
-  "app": "TeleHome Enchufes", "version": "0.8.0", "api": "telehome",
+  "app": "TeleHome", "version": "0.9.0", "api": "telehome",
   "types": ["enchufe"], "max_devices": 7, "server_time": 1795359880.7,
   "simulate": false,
   "admin":  { "required": true, "active": false },
@@ -503,13 +501,13 @@ La app genérica admite tres modos y los recuerda en el navegador:
 
 1. **Servicio real**, por una ruta del mismo servidor (`/rafa/telehome/`) o por una URL completa
    (`http://127.0.0.1:8765/`), que exige `--allow-origin`.
-2. **TeleHome Enchufes heredado**, mediante un adaptador que traduce el protocolo antiguo. Solo se ven
+2. **Servicio heredado** (anterior a la 0.5.0, que se anunciaba como «TeleHome Enchufes»), mediante un adaptador que traduce el protocolo antiguo. Solo se ven
    enchufes, y la app lo avisa en un cartel.
 3. **Demostración** (apartado 11).
 
 Al arrancar prueba la ruta guardada y, si no, la ruta de la propia página. El sondeo es un `GET api/health`
 con un límite de 2,5 s; si responde con `api: "telehome"` o `app: "TeleHome"` usa el protocolo genérico, y si
-responde `app: "TeleHome Enchufes"` sin más, el adaptador.
+responde `app: "TeleHome Enchufes"` sin más (servicio heredado), el adaptador.
 
 Cuando el sondeo falla, el cartel del pie dice **por qué**, que es lo que suele ahorrar la depuración:
 
@@ -663,7 +661,7 @@ El fichero se crea con permisos 600 y contiene credenciales: hay que tratarlo co
 | Simulación | subcarpeta `simulacion/` de la anterior |
 
 Dentro: `config.json` (permisos 600) y `telemetria.sqlite3`. Si solo existe la carpeta con el nombre antiguo
-`telehome-enchufes`, se sigue usando. La variable `TELEHOME_ENCHUFES_DIR` y la opción `--data-dir` la cambian.
+`telehome-enchufes`, se sigue usando. La variable `TELEHOME_DIR` y la opción `--data-dir` la cambian.
 
 > El modo simulación usa **otra** carpeta de configuración. Para ponerle contraseña a un servicio arrancado
 > con `--simulate` hay que apuntar a esa subcarpeta con `--data-dir`.
@@ -691,7 +689,7 @@ Las apps de iPhone y iPad usan el prefijo `telehome.`: `telehome.api`, `telehome
 
 ## 14. Línea de órdenes
 
-`telehome …` en el servicio Linux; `python3 -m telehome_enchufes …` dentro del entorno virtual.
+`telehome …` en el servicio Linux; `python3 -m telehome …` dentro del entorno virtual.
 
 Opciones generales: `--version`, `-v/--verbose`, `--data-dir CARPETA`.
 
@@ -868,7 +866,7 @@ El servicio trae una batería con `pytest`: 67 pruebas que cubren configuración
 acceso, nube y línea de órdenes.
 
 ```bash
-cd telemetria/home/telehome-enchufes
+cd telemetria/home/telehome-servicio
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt pytest
 python3 -m pytest -q
 ```
@@ -876,7 +874,7 @@ python3 -m pytest -q
 Para probar sin hardware:
 
 ```bash
-python3 -m telehome_enchufes serve --simulate 3 --no-browser     # servicio simulado en :8765
+python3 -m telehome serve --simulate 3 --no-browser     # servicio simulado en :8765
 ```
 
 Las apps de iPhone y iPad traen un `servir.py` que sirve la carpeta y reenvía `/rafa/telehome/*` al servicio,

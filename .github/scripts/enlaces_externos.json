@@ -1,6 +1,6 @@
 [
   {
-    "title": "TeleHome Enchufes",
+    "title": "TeleHome (servicio)",
     "description": "Servicio y app de telemetría y control de enchufes Wi-Fi con medidor de consumo (Energeeks EG-EW008MC, Tuya), hasta 7 enchufes, en macOS o Linux. Lee en modo local o en la nube de Tuya, guarda el histórico en SQLite y ofrece su propia interfaz web (potencia, tensión, corriente, energía, gráficas y CSV). Habla el protocolo genérico de TeleHome. Se instala en tu equipo o servidor; el enlace lleva a su carpeta en el repositorio de código, con README e instrucciones.",
     "categories": ["telemetria", "automatizacion", "analisis-datos", "docencia", "hogar"],
     "tags": ["enchufes inteligentes", "tuya", "energeeks", "consumo electrico", "potencia", "energia", "hogar", "iot", "servicio", "python", "sqlite"],
@@ -8,6 +8,6 @@
     "clase": "",
     "group": "telemetria",
     "subgroup": "home",
-    "url": "https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-enchufes"
+    "url": "https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-servicio"
   }
 ]

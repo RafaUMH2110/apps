@@ -9,7 +9,7 @@ imitando lo que hace Apache en el servidor (la app busca la API en /rafa/telehom
     python3 servir.py --host 0.0.0.0           # visible desde el iPhone de la misma red Wi-Fi
 
 El servicio se arranca aparte (en simulación, sin dispositivos reales):
-    cd ../../../../code/telemetria/home/telehome-enchufes && python3 -m telehome_enchufes serve --simulate 3 --no-browser
+    cd ../../../../code/telemetria/home/telehome-servicio && python3 -m telehome serve --simulate 3 --no-browser
 
 Aviso: con --host 0.0.0.0 cualquiera de tu red puede abrir la app y, a través de ella, el servicio.
 Úsalo solo para probar y con el servicio en simulación o con contraseña.

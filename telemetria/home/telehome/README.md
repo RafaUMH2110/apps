@@ -112,3 +112,7 @@ POST   api/cloud/import · POST api/discover · POST api/devices/import
 ```
 
 `api/state` devuelve `types` con los tipos que admite el servicio: la app deshabilita en el alta los que no estén. Se mantiene `api/plugs/<id>/power` como alias de `command` con `action: "switch"`, y `plug=` como alias de `dev=`.
+
+## Icono
+
+El icono de la familia TeleHome (app genérica, iPhone, iPad y la interfaz del servicio) es una casa blanca con una línea de pulso (telemetría) sobre fondo azul. Fuente única: [`favicon.svg`](favicon.svg), con [`favicon.ico`](favicon.ico) (16, 32 y 48 px) y [`apple-touch-icon.png`](apple-touch-icon.png) (180 px, a sangre: iOS aplica su propio redondeo). Cada página lleva el SVG incrustado en `<link rel="icon">`, de modo que sigue siendo un solo fichero; la interfaz del servicio (repo `code`) incrusta también el PNG de iOS. Si cambias el icono, actualiza los cuatro HTML y los `apple-touch-icon.png` de `telehome-iphone/` y `telehome-ipad/`.

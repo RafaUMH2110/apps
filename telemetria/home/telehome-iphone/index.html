@@ -457,6 +457,10 @@ async function salirAdmin() {
 }
 const pideClave = () => APP.admin.adminRequired || APP.admin.userRequired;
 const puedeMandar = () => APP.admin.nivel === "user" || APP.admin.nivel === "admin";
+/* Programaciones: el servicio solo se las manda a un administrador (api/state) */
+const progs = () => (APP.state && APP.state.schedules) || [];
+async function progActivar(id, enabled) { return api("schedules/" + id, { method: "PUT", body: { enabled } }); }
+async function progProbar(id) { return api("schedules/" + id + "/run", { method: "POST", body: {} }); }
 const esAdmin = () => APP.admin.nivel === "admin";
 const etiquetaNivel = () => (esAdmin() ? "Administrador" : APP.admin.nivel === "user" ? "Usuario" : "Solo lectura");
 function csvUrl(id) { return APP.base + "export.csv?dev=" + encodeURIComponent(id) + "&range=" + APP.range; }
@@ -905,6 +909,24 @@ function panelAjustes() {
     onclick: () => { prefs.set("poll", s); pintar(); } }));
   rows.append(filaAjuste("Actualizar cada", null, seg));
   caja.append(rows);
+  /* programaciones: el servicio solo se las manda a un administrador */
+  if (esAdmin() && progs().length) {
+    const filas = el("div", { class: "rows" });
+    for (const x of progs()) {
+      const sub = ordenProg(x) + " «" + nombreProg(x.device) + "» " + momentoProg(x.when) + ", " + diasProg(x.days)
+        + (x.last_result ? " · última vez: " + x.last_result : "");
+      filas.append(el("div", { class: "row" },
+        el("div", { class: "lab", style: x.enabled ? "" : "opacity:.5" }, x.name, el("small", { text: sub })),
+        el("button", { class: "act", type: "button", text: x.enabled ? "Desactivar" : "Activar",
+          onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            try { await progActivar(x.id, !x.enabled); toast(x.enabled ? "Desactivada." : "Activada."); await recargar(); }
+            catch (err) { e.currentTarget.disabled = false; toast(err.message, true); }
+          } })));
+    }
+    caja.append(el("div", { class: "grp-h", style: "padding:14px 4px 6px" }, "Programaciones"), filas,
+      el("div", { class: "hint", text: "Se crean y se cambian en la interfaz completa; aquí se activan y se desactivan." }));
+  }
   caja.append(el("div", { class: "hint" }, "Dar de alta dispositivos, el modo nube y las contraseñas se hacen en la ",
     el("a", { href: APP.base ? APP.base.replace(/api\/$/, "") : INTERFAZ_COMPLETA, text: "interfaz completa de TeleHome" }), "."));
   caja.append(el("div", { class: "foot" },
@@ -913,6 +935,26 @@ function panelAjustes() {
     "Generado con IA · Revisado por el autor · Última modificación: " + MODIFICADO));
   return caja;
 }
+/* textos de una programación, como en la app completa */
+const DIAS_P = [["L", 1], ["M", 2], ["X", 3], ["J", 4], ["V", 5], ["S", 6], ["D", 7]];
+function momentoProg(w) {
+  if (w.kind === "clock") return "a las " + w.time;
+  const cual = w.kind === "sunrise" ? "amanecer" : "anochecer", off = w.offset || 0;
+  return off ? Math.abs(off) + " min " + (off < 0 ? "antes" : "después") + " del " + cual : "al " + cual;
+}
+function ordenProg(x) {
+  if (x.action === "switch") return x.value ? "encender" : "apagar";
+  if (x.action === "level") return "brillo al " + x.value + " %";
+  if (x.action === "position") return "abrir al " + x.value + " %";
+  return "parar";
+}
+function diasProg(d) {
+  if (d.length === 7) return "todos los días";
+  if (String(d) === "1,2,3,4,5") return "de lunes a viernes";
+  if (String(d) === "6,7") return "fines de semana";
+  return DIAS_P.filter(([, n]) => d.includes(n)).map(([l]) => l).join(" ");
+}
+const nombreProg = (id) => { const d = devs().find((x) => x.id === id); return d ? d.name : id; };
 function pedirAdmin(texto) {
   hoja({ titulo: "Entrar", texto: texto || "Escribe tu contraseña. La de usuario permite manejar los dispositivos; la de administrador, además, configurarlo todo.",
     campo: "Contraseña", ok: "Entrar",
@@ -940,7 +982,7 @@ function pintarAviso() {
 /* =====================================================================
    TeleHome · iPhone — armazón de una columna con pestañas abajo
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 16:23", LAYOUT_LABEL = "iPhone";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-22 19:15", LAYOUT_LABEL = "iPhone";
 const PESTANAS = [
   ["dispositivos", "Dispositivos", ICONOS.lista],
   ["grafica", "Gráfica", ICONOS.grafica],

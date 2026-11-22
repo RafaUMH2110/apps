@@ -286,7 +286,23 @@ Estando en modo Administrador, en **«Ajustes → Opciones → Contraseña del s
 servicio la conoce; solo se puede sustituir por otra. La del propio modo Administrador se gestiona únicamente con
 `telehome admin-password`.
 
-### 6.5. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
+### 6.5. Programaciones (servicio 0.9.0 o posterior)
+
+En **Ajustes → Programaciones** se encienden, apagan o regulan dispositivos solos: a una hora fija, al amanecer o
+al anochecer (con minutos de adelanto o retraso), los días de la semana que elijas. Las ejecuta el servicio, así
+que no hace falta tener la app abierta.
+
+Dos opciones que evitan sorpresas:
+
+- **Condición:** la orden solo se da si se cumple algo, por ejemplo «apagar si la potencia lleva 10 minutos por
+  debajo de 5 W», para apagar la lavadora al terminar.
+- **No me pises:** se salta la orden si has manejado ese aparato a mano desde la vez anterior.
+
+El amanecer y el anochecer se calculan con el lugar que se guarda al final de esa pestaña (Elche por omisión).
+Desde la línea de órdenes, `telehome schedules` las lista y `--activar`, `--desactivar` y `--borrar` las cambian.
+Solo las ve y las toca un administrador.
+
+### 6.6. Compartir la configuración con otra persona (servicio 0.6.0 o posterior)
 
 Para que otra persona use los mismos dispositivos sin configurar nada:
 
@@ -378,6 +394,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | `password [--quitar]` | Pone, cambia o quita la contraseña del servicio |
 | `admin-password [--quitar]` | Pone, cambia o quita la contraseña del modo Administrador |
 | `user-password [--quitar]` | Pone, cambia o quita la contraseña del usuario de confianza |
+| `schedules [--activar\|--desactivar\|--borrar ID]` | Lista las programaciones, o cambia una |
 | `export-config [-o fichero] [--ruta /ruta/]` | Exporta dispositivos, credenciales de Tuya, ajustes y la ruta del servicio (sin la contraseña del servicio) |
 | `import-config <fichero> [--anadir]` | Aplica un fichero creado con `export-config` |
 

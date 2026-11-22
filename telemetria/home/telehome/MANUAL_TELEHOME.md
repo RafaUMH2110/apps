@@ -8,7 +8,7 @@ los dos, los niveles de acceso y el despliegue. Para instalarlo paso a paso est�
 [guía de instalación](INSTALACION.md); este manual explica **cómo funciona y por qué**, y sirve de referencia
 cuando haya que tocar algo.
 
-Versión del servicio documentada: **0.8.0**. Cada apartado indica desde qué versión existe lo que describe.
+Versión del servicio documentada: **0.9.0**. Cada apartado indica desde qué versión existe lo que describe.
 
 ---
 
@@ -29,11 +29,12 @@ Versión del servicio documentada: **0.8.0**. Cada apartado indica desde qué ve
 13. [Almacenamiento](#13-almacenamiento)
 14. [Línea de órdenes](#14-línea-de-órdenes)
 15. [Despliegue](#15-despliegue)
-16. [Añadir un tipo de dispositivo nuevo](#16-añadir-un-tipo-de-dispositivo-nuevo)
-17. [Desarrollo y pruebas](#17-desarrollo-y-pruebas)
-18. [Solución de problemas](#18-solución-de-problemas)
-19. [Límites conocidos](#19-límites-conocidos)
-20. [Referencia rápida](#20-referencia-rápida)
+16. [Programaciones](#16-programaciones)
+17. [Añadir un tipo de dispositivo nuevo](#17-añadir-un-tipo-de-dispositivo-nuevo)
+18. [Desarrollo y pruebas](#18-desarrollo-y-pruebas)
+19. [Solución de problemas](#19-solución-de-problemas)
+20. [Límites conocidos](#20-límites-conocidos)
+21. [Referencia rápida](#21-referencia-rápida)
 
 ---
 
@@ -51,8 +52,10 @@ Qué hace:
 - **Presenta** los valores del momento, un histórico por magnitud, un resumen por tipo y exportación a CSV.
 - **Separa quién puede hacer qué** en tres niveles: mirar, manejar y configurar.
 
-Qué **no** hace: no es un sistema de automatización. No hay reglas, escenas, horarios ni alarmas. No habla
-con asistentes de voz ni con HomeKit. Solo lee, muestra y obedece órdenes manuales.
+- **Programa** encendidos y apagados por hora, amanecer o anochecer (apartado 16).
+
+Qué **no** hace: no es un sistema de automatización completo. No hay escenas, ni reglas encadenadas, ni avisos, ni
+condiciones que dependan de otro dispositivo. No habla con asistentes de voz ni con HomeKit.
 
 ---
 
@@ -117,6 +120,8 @@ Dentro del paquete Python:
 | `devices.py` | Diálogo con los dispositivos (modo local, TinyTuya) y descubrimiento en red |
 | `cloud.py` | Diálogo con la nube de Tuya y recuento de llamadas |
 | `store.py` | SQLite: lecturas, histórico, resumen, CSV, retención |
+| `scheduler.py` | Hilo de programaciones: decide qué toca y lo dispara |
+| `sun.py` | Amanecer y anochecer (algoritmo del NOAA), sin dependencias |
 | `static/index.html` | La interfaz que el propio servicio sirve en `/` |
 
 > **Nota sobre los nombres.** El servicio se llama `telehome` (unidad de systemd, `/opt/telehome`,
@@ -285,7 +290,7 @@ CREATE TABLE api_calls (day TEXT PRIMARY KEY, n INTEGER NOT NULL);
 ```
 
 El esquema todavía habla de `plug` y de las tres magnitudes del enchufe: es la parte que falta por generalizar
-(apartado 19). La retención se aplica al vuelo según `retention_days`.
+(apartado 20). La retención se aplica al vuelo según `retention_days`.
 
 ### El CSV
 
@@ -751,7 +756,89 @@ en Pages solo tiene sentido la demostración.
 
 ---
 
-## 16. Añadir un tipo de dispositivo nuevo
+## 16. Programaciones
+
+Desde 0.9.0 el servicio puede encender, apagar o regular un dispositivo por su cuenta. Las evalúa un hilo propio
+cada 20 s, así que funcionan con la app cerrada; lo único que tiene que estar en marcha es el servicio.
+
+### Cómo se define una
+
+```json
+{
+  "id": "luz-al-anochecer",
+  "name": "Luz al anochecer",
+  "enabled": true,
+  "device": "luz-salon",
+  "action": "switch", "value": true,
+  "when": { "kind": "sunset", "offset": -15 },
+  "days": [1, 2, 3, 4, 5],
+  "condition": { "metric": "p", "op": "<", "value": 5, "for": 600 },
+  "skip_if_manual": true,
+  "last_fire": 1795359880.0, "last_result": "ejecutada"
+}
+```
+
+| Campo | Qué significa |
+|---|---|
+| `action`, `value` | La orden: `switch` (booleano), `level` y `position` (0-100) o `stop` (sin valor) |
+| `when.kind` | `clock` con `time` en `HH:MM`, o `sunrise`/`sunset` con `offset` en minutos (±720) |
+| `days` | Días en formato ISO: 1 lunes … 7 domingo |
+| `condition` | Opcional. `metric`, `op` (`<`, `<=`, `>`, `>=`), `value` y `for` en segundos |
+| `skip_if_manual` | No hacerlo si has manejado el aparato a mano desde la vez anterior |
+| `last_fire`, `last_result` | Los escribe el servicio: cuándo se evaluó y qué pasó |
+
+Máximo **32** programaciones. Los identificadores se derivan del nombre.
+
+### Cuándo dispara
+
+El hilo mira el reloj cada 20 s y busca, para cada programación activa, el instante que le tocaba hoy o ayer:
+
+- **`clock`** usa la hora local del servidor, con su horario de verano.
+- **`sunrise` y `sunset`** calculan el orto y el ocaso de ese día con `sun.py`, que implementa el algoritmo del
+  NOAA sin dependencias, a partir de `lat` y `lon` de las opciones (Elche por omisión; se cambian en la pestaña o
+  con `PUT api/place`). Si ese día el Sol no sale ni se pone, la programación no toca.
+
+Dispara si ese instante ya pasó, **hace menos de una hora** y es posterior a su `last_fire`. La ventana de una
+hora es deliberada: si el servicio estuvo parado toda la noche, al arrancar por la mañana no se ejecuta de golpe
+todo lo que tocaba de madrugada.
+
+### Condición
+
+Se comprueba al disparar, contra la última lectura del dispositivo. Con `for` mayor que cero se exige además que
+se haya mantenido durante ese tiempo, y eso se mira en el histórico: si no hay datos en esa ventana, **no se
+ejecuta**, porque es más prudente no hacer nada que actuar a ciegas.
+
+El caso que motiva esto es apagar la lavadora al terminar: «apagar si la potencia lleva 10 minutos por debajo de
+5 W». Hoy las magnitudes disponibles son `p`, `v` e `i`, que es lo que guarda el almacén.
+
+### «No me pises»
+
+Con `skip_if_manual`, antes de actuar se mira si alguien dio una orden **a mano** a ese dispositivo después de la
+vez anterior en que esta programación se disparó (o en las últimas 24 h si nunca lo hizo). Si es así, se salta y
+lo anota. Las órdenes que manda el propio programador no cuentan como manuales, de modo que una programación
+nunca se salta a sí misma.
+
+### Resultados
+
+Cada evaluación deja un texto en `last_result`, que la app muestra bajo cada programación: `ejecutada`,
+`saltada: lo manejaste a mano después de la vez anterior`, `saltada: no se cumple la condición (p < 5, vale 29.5)`,
+`saltada: no hay histórico para comprobar la condición`, `saltada: el dispositivo ya no existe` o `error: …`.
+También se registran en el diario del servicio.
+
+### Dónde se gestionan
+
+En **Ajustes → Programaciones** de la app completa: alta, edición, activar y desactivar, **Probar** (que la
+dispara al momento, saltándose el reloj pero no la condición) y el lugar para el amanecer. En iPhone y iPad se
+ven y se activan o desactivan, pero no se editan. Por línea de órdenes, `telehome schedules`.
+
+Solo un **administrador** las ve y las toca: a quien no lo es, `api/state` le manda la lista vacía.
+
+Se incluyen al exportar la configuración, junto con el lugar. Al importar se descartan las que apunten a un
+dispositivo que no venga en el fichero.
+
+---
+
+## 17. Añadir un tipo de dispositivo nuevo
 
 Dos mitades, y se pueden hacer por separado.
 
@@ -766,7 +853,7 @@ el servicio no lo declare en `api/health`, la app lo muestra en el catálogo per
 
 ---
 
-## 17. Desarrollo y pruebas
+## 18. Desarrollo y pruebas
 
 El servicio trae una batería con `pytest`: 67 pruebas que cubren configuración, almacén, servidor, niveles de
 acceso, nube y línea de órdenes.
@@ -790,7 +877,7 @@ Al editar cualquiera de las apps hay que actualizar la fecha de **Última modifi
 
 ---
 
-## 18. Solución de problemas
+## 19. Solución de problemas
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
@@ -809,7 +896,7 @@ cada petición) y `/var/log/apache2/error.log`.
 
 ---
 
-## 19. Límites conocidos
+## 20. Límites conocidos
 
 - **Máximo 7 dispositivos**, sumando los dos modos.
 - **Intervalos**: local mínimo 5 s (los medidores Tuya no admiten más), nube mínimo 60 s (cupo de la cuenta
@@ -823,11 +910,13 @@ cada petición) y `/var/log/apache2/error.log`.
 - **Un solo dispositivo por Device ID**, y los dispositivos Tuya suelen admitir **una sola conexión TCP**.
 - **Sin HTTPS propio**: el cifrado, si lo hay, lo pone Apache. En un servidor sin HTTPS las contraseñas viajan
   en claro por la red.
-- **Sin automatizaciones**: ni reglas, ni escenas, ni horarios, ni avisos.
+- **Las programaciones son simples**: una orden, a una hora o al orto/ocaso, con una sola condición sobre una
+  magnitud del propio dispositivo. No hay escenas, encadenamientos, avisos ni condiciones cruzadas entre aparatos.
+- **La condición solo mira potencia, tensión y corriente**, porque es lo único que guarda el almacén.
 
 ---
 
-## 20. Referencia rápida
+## 21. Referencia rápida
 
 ```bash
 # Servicio
@@ -853,12 +942,12 @@ curl -s http://SERVIDOR/rafa/telehome/api/health
 | Quiero… | Dónde |
 |---|---|
 | Instalarlo paso a paso | [INSTALACION.md](INSTALACION.md) |
-| Añadir un tipo | Apartado 16 |
+| Añadir un tipo | Apartado 17 |
 | Saber qué devuelve una ruta | Apartado 6 |
 | Entender los permisos | Apartado 7 |
 | Dar acceso a otra persona | Apartados 7.2 y 12 |
-| Depurar una conexión | Apartados 8 y 18 |
+| Depurar una conexión | Apartados 8 y 19 |
 
 ---
 
-*Última modificación: 2026-11-22 16:43*
+*Última modificación: 2026-11-22 19:17*

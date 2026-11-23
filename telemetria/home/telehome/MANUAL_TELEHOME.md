@@ -548,8 +548,16 @@ encendidas, apertura media. Para los enchufes hay además un contador de energí
 Agrupados por tipo, por estancia o sin agrupar. Cada fila lleva nombre, estado, valores secundarios,
 minigráfica, valor principal y su control. Pulsando una fila se filtra el histórico a ese dispositivo.
 
-Dos botones en la cabecera del grupo: **Ocultar gráficas**, que esconde solo las minigráficas, y, dentro de la
-ficha del histórico, **Ocultar gráfica**, que la pliega.
+Botones en la cabecera de la sección: **Actualizar**, que pide al servicio leer ya todos los dispositivos, y
+**Ocultar gráficas**, que esconde solo las minigráficas. Dentro de la ficha del histórico, **Ocultar gráfica**,
+que la pliega.
+
+**Por qué existe «Actualizar».** Para no gastar la cuota gratuita de Tuya, el servicio lee la nube cada 300 s
+(*Ajustes → Opciones*). Si enciendes, apagas o cambias un dispositivo con otra app, TeleHome no lo ve hasta la
+siguiente lectura. Pulsa **Actualizar** y el servidor vuelve a leer todos al momento (una sola llamada a Tuya
+para todos los de la nube). Puedes pulsarlo aunque solo estés mirando, sin contraseña. Si lo pulsas dos veces
+seguidas, la segunda dentro de 5 s no hace nada y te dice cuánto esperar. Requiere un servicio 0.9.4 o posterior;
+con uno anterior el botón solo recarga lo que el servicio ya tenía.
 
 ### Histórico
 
@@ -838,6 +846,8 @@ En **Ajustes → Programaciones** de la app completa: alta, edición, activar y 
 dispara al momento, saltándose el reloj pero no la condición) y el lugar para el amanecer. En iPhone y iPad se
 ven y se activan o desactivan, pero no se editan. Por línea de órdenes, `telehome schedules`.
 
+En el formulario, los días se marcan uno a uno o de golpe: la casilla **Todos los días** (queda a medias si hay algunos marcados) y los atajos **Lunes a viernes** y **Fin de semana**. Desmarcar todo deja la programación «una sola vez», y el formulario lo avisa.
+
 Solo un **administrador** las ve y las toca: a quien no lo es, `api/state` le manda la lista vacía.
 
 Se incluyen al exportar la configuración, junto con el lugar. Al importar se descartan las que apunten a un
@@ -893,6 +903,7 @@ Al editar cualquiera de las apps hay que actualizar la fecha de **Última modifi
 | «Host no permitido» (403) | Falta `--allow-host` con el nombre que usas | Reinstalar repitiendo **todas** las opciones |
 | 404 en `/rafa/telehome/api/health` | Falta el proxy o `a2enconf`/recarga | Revisar `telehome.conf` y `a2enmod proxy proxy_http` |
 | 502 | El servicio está parado | `systemctl status telehome` |
+| Un dispositivo cambiado con otra app tarda en verse | El servicio lee la nube cada 300 s | Pulsa **Actualizar** en *Dispositivos* (servicio 0.9.4 o posterior) |
 | La app no se actualiza tras publicar | Caché del navegador, o falta `instalar-todo` | Ctrl+Mayús+R; en el servidor, reinstalar |
 | Un dispositivo «sin conexión» | Tuya admite una sola conexión TCP | Cerrar la app del móvil |
 | Cambios que no se aplican | Otro proceso editó `config.json` | El servicio lo recarga solo al detectar el cambio |

@@ -394,6 +394,11 @@ async function api(path, opt = {}) {
   if (!r.ok) { const err = new Error((data && data.error) || ("Error " + r.status)); err.status = r.status; throw err; }
   return data;
 }
+/* Pide al servicio que lea ya todos los dispositivos (si no, la nube solo se lee cada 300 s). Servicios anteriores a la 0.9.4: se ignora. */
+async function forzarLectura() {
+  try { return await api("refresh", { method: "POST", body: {} }); }
+  catch (e) { if (e.status === 404 || e.status === 405) return null; throw e; }
+}
 /* ¿Hay un servicio TeleHome en «base»? "ok", "auth" (pide contraseña) o null */
 async function probe(base) {
   try {
@@ -1063,7 +1068,7 @@ function pintarAviso() {
 /* =====================================================================
    TeleHome · iPhone — armazón de una columna con pestañas abajo
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-22 22:11", LAYOUT_LABEL = "iPhone";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-23 22:44", LAYOUT_LABEL = "iPhone";
 const PESTANAS = [
   ["dispositivos", "Dispositivos", ICONOS.lista],
   ["grafica", "Gráfica", ICONOS.grafica],
@@ -1100,6 +1105,11 @@ async function recargarHistorico() { if (tab === "grafica" || tab === "resumen")
 
 $("#btnRefresh").addEventListener("click", async (e) => {
   const b = e.currentTarget; b.classList.add("spin");
+  try {
+    const r = await forzarLectura();
+    if (r && r.refrescado === false) toast("Ya se actualizó hace un momento.");
+    else if (r && r.pendientes) toast(r.pendientes + " dispositivo(s) no respondieron a tiempo.");
+  } catch (err) { toast("No se pudo forzar la lectura: " + err.message); }
   await loadState(); await loadHistory(); pintar();
   setTimeout(() => b.classList.remove("spin"), 400);
 });

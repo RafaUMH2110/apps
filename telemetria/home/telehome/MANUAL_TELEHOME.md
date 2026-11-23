@@ -897,6 +897,7 @@ Al editar cualquiera de las apps hay que actualizar la fecha de **Última modifi
 | Un dispositivo «sin conexión» | Tuya admite una sola conexión TCP | Cerrar la app del móvil |
 | Cambios que no se aplican | Otro proceso editó `config.json` | El servicio lo recarga solo al detectar el cambio |
 | `journalctl` vacío | El usuario no está en `adm` ni `systemd-journal` | Usarlo con `sudo` |
+| «No se pudo conectar con la nube de Tuya…» | El servidor no llega a `openapi.tuyaeu.com`: sin DNS, sin salida por el 443, proxy o certificado | El propio mensaje dice cuál de los cuatro; el texto técnico está plegado en «Detalle técnico» y entero en `journalctl -u telehome` |
 
 Registros útiles: `sudo journalctl -u telehome -f`, `/var/log/apache2/access.log` (el código de respuesta de
 cada petición) y `/var/log/apache2/error.log`.

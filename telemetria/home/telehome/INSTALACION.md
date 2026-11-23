@@ -396,6 +396,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 | Lecturas absurdas (W, V, mA) | DPS distintos: usa `probe <enchufe>` y ajusta en *Avanzado* |
 | Nube: «No permissions. This project is not authorized…» | Falta *Controllable* en *Device Permission* o la autorización de IoT Core/Authorization (ver 6.2) |
 | Nube: sin conexión con error de API | Caducó el plan de prueba de IoT Core: renovar en iot.tuya.com |
+| Nube: «No se pudo conectar con la nube de Tuya (openapi.tuyaeu.com)…» | El servidor no llega a internet. El mensaje distingue DNS, salida bloqueada por el puerto 443, proxy, certificado y tiempo agotado; en «Detalle técnico» (y en `journalctl -u telehome`) está el error original. Comprobar desde el servidor: `curl -sS https://openapi.tuyaeu.com/v1.0/token` |
 | Nube: error 28841105 | Dispositivo virtual `vdevo…`: no admite órdenes, quitarlo |
 | Error 403 / «Host no permitido» tras proxy | Reinstalar o ejecutar con `--allow-host tu-dominio` |
 | `python3 -m pytest` → `No module named pytest` | pytest solo es necesario para desarrollar; ver apartado 12 |
@@ -409,7 +410,7 @@ Modelo de lectura: `{ts, online, error, state:{…}, values:{p,v,i,t,h,br,pos}}`
 cd telemetria/home/telehome-servicio
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt pytest
-.venv/bin/python -m pytest -q          # 38 tests
+.venv/bin/python -m pytest -q          # 107 tests
 ```
 
 pytest **no** es necesario para ejecutar el servicio, solo para las pruebas.

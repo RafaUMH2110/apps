@@ -179,6 +179,10 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .luz-sw button:hover { transform:scale(1.08); }
 .luz-sw button:disabled { opacity:.4; cursor:not-allowed; transform:none; }
 .luz-sw.txt button { width:auto; height:30px; border-radius:999px; padding:0 12px; font-size:13px; font-weight:600; color:#222; border:1px solid rgba(0,0,0,.18); box-shadow:none; }
+/* Los atajos del temporizador no llevan color de fondo propio: van con los colores del tema (si no, en
+   modo oscuro quedaba texto casi negro sobre fondo oscuro). */
+.luz-sw.txt button.pill { background:var(--surface); color:var(--ink); border:1px solid var(--border); }
+.luz-sw.txt button.pill:hover:not(:disabled) { background:var(--sunk); border-color:var(--border-strong); }
 .luz-hex { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink2); }
 .luz-hex input[type=color] { width:44px; height:32px; padding:0; border:1px solid var(--border-strong); border-radius:8px; background:transparent; cursor:pointer; }
 .pos { display:inline-flex; gap:2px; background:var(--sunk); border:1px solid var(--border); border-radius:11px; padding:3px; }
@@ -333,6 +337,8 @@ form.f label.sch-chk input { width:auto; margin:0; accent-color:var(--accent); }
   background:#16202f; color:#fff; border-radius:14px; padding:12px 16px; font-size:14px; box-shadow:0 12px 32px rgba(0,0,0,.3); display:flex; gap:12px; align-items:flex-start; }
 .toast.bad { background:#7f1d1d; }
 .toast button { border:none; background:transparent; color:#fff; opacity:.8; cursor:pointer; font-size:18px; line-height:1; padding:0 2px; }
+.toast .toast-acc { border:1px solid rgba(255,255,255,.55); border-radius:9px; padding:4px 11px; font-size:13px; font-weight:650; opacity:1; white-space:nowrap; }
+.toast .toast-acc:hover { background:rgba(255,255,255,.14); }
 
 /* Ocultar minigráficas de la lista (botón «Ocultar gráficas»; la elección se recuerda en el navegador) */
 html.sin-graficas .d-spark { display:none; }
@@ -389,7 +395,7 @@ details.hint > p { margin:6px 0 0; }
 /* ===================== TeleHome Pro ===================== */
 .pro-badge { font-size:12px; font-weight:750; letter-spacing:.04em; color:#0d1b26; background:linear-gradient(135deg,#ffd98a,#ffb15e); border-radius:999px; padding:1px 10px; }
 .pro-sec { margin-top:28px; }
-.pro-sec h3 { margin:0 0 8px; font-size:14px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.05em; }
+.pro-sec h3 { margin:0 0 8px; flex:0 0 auto; font-size:14px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.05em; }
 .pro-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .scn-w { display:inline-flex; align-items:stretch; }
 .scn { border:1px solid var(--border); background:var(--surface); border-radius:12px; padding:9px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; font-weight:650; font-size:14px; }
@@ -435,6 +441,24 @@ details.hint > p { margin:6px 0 0; }
 .luz-more { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .luz-more select { max-width:220px; }
 .luz-note { font-size:13px; color:var(--ink2); background:var(--sunk); border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+.scn[aria-pressed=true] { border-color:var(--series-1); box-shadow:inset 0 0 0 1px var(--series-1); }
+.pro-sec h3 .hint { font-size:12px; color:var(--ink2); font-weight:500; text-transform:none; letter-spacing:0; margin-left:8px; }
+.pro-sec-h { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.pro-sec-h h3 { margin-bottom:0; }
+.pro-sec-h .btn { font-size:13px; padding:3px 10px; font-weight:650; }
+.pro-strip .it .sp { flex:1; min-width:180px; }
+.pro-strip .it .btn { padding:3px 10px; font-size:13px; }
+.tm-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px 14px; }
+.tm-grid label { display:grid; gap:3px; font-size:13px; font-weight:650; color:var(--ink2); }
+.tm-pre { display:flex; gap:6px; flex-wrap:wrap; }
+.tm-pre button { border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:4px 12px; font-size:13px; cursor:pointer; }
+.tm-pre button[aria-pressed=true] { background:var(--series-1); border-color:var(--series-1); color:#fff; }
+#dlgTimer { width:min(580px,95vw); }
+@media (max-width:560px) {
+  .pro-row > .btn, .scn-w { flex:1 1 auto; }
+  .scn { flex:1; justify-content:center; }
+  .grp .gc .chip { flex:1 1 auto; text-align:center; }
+}
 </style>
 </head>
 <body data-app-title="TeleHome Pro" data-app-description="TeleHome Pro: la versión avanzada de TeleHome. Además de enchufes, sensores y persianas, maneja las luces Tuya con escenas guardadas, grupos, transiciones graduales, temporizadores y parámetros por bombilla (brillo mínimo y máximo, kelvin, códigos y escalas, datos crudos). Necesita el servicio TeleHome 0.11.0 o posterior; sin él funciona en modo demostración." data-categories="telemetria,automatizacion,analisis-datos,docencia" data-tags="domotica,hogar,iot,tuya,luces,escenas,grupos,transiciones,temporizador,bombillas,enchufes inteligentes,sensores,temperatura,humedad,consumo electrico,graficas,csv,modo demostracion,pro" data-client-only="true">
@@ -530,10 +554,10 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 18:08</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 18:35</span></p>
 </footer>
 
-<div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
+<div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" class="toast-acc" id="toastAcc" hidden></button><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
 
 <dialog id="dlgLuz" aria-labelledby="luzTitle">
   <div class="dlg-h"><h2 id="luzTitle">Luz</h2><button class="btn" id="luzClose" type="button">Cerrar</button></div>
@@ -574,7 +598,7 @@ details.hint > p { margin:6px 0 0; }
     <div class="luz-row" id="rowFade">
       <label for="luzFade">Transición <output id="luzFadeV"></output></label>
       <select id="luzFade" aria-label="Duración de la transición"></select>
-      <div class="luz-ends"><span>Al cambiar brillo, blanco o color, la luz va poco a poco hasta el nuevo valor.</span></div>
+      <div class="luz-ends"><span id="luzFadeNota">Al cambiar brillo, blanco o color, la luz va poco a poco hasta el nuevo valor.</span></div>
     </div>
     <div class="luz-row" id="rowTimer">
       <span class="lb">Temporizador <output id="luzTimerV"></output></span>
@@ -615,6 +639,24 @@ details.hint > p { margin:6px 0 0; }
       </div>
     </form>
     <div class="msg" id="grMsg" role="alert"></div>
+  </div>
+</dialog>
+
+<dialog id="dlgTimer" aria-labelledby="tmTitle">
+  <div class="dlg-h"><h2 id="tmTitle">Temporizador</h2><button class="btn" id="tmClose" type="button">Cerrar</button></div>
+  <div class="dlg-b">
+    <p class="desc">Apaga o enciende un dispositivo dentro de un rato. Lo guarda el servicio, así que un reinicio no lo pierde. Para algo a una hora fija, usa una programación.</p>
+    <form class="f" id="tmForm">
+      <div class="full tm-grid">
+        <label>Dispositivo<select name="device" required></select></label>
+        <label>Qué hace<select name="action"><option value="off">Apagar</option><option value="on">Encender</option></select></label>
+        <label>Dentro de (minutos)<input name="minutes" type="number" min="1" max="1440" value="30" required></label>
+        <label id="tmFadeBox">Transición<select name="fade"></select></label>
+      </div>
+      <div class="full tm-pre" id="tmPre" role="group" aria-label="Tiempos habituales"></div>
+      <div class="full pro-row"><button class="btn primary" type="submit">Poner el temporizador</button><output id="tmCuando" class="pro-note"></output></div>
+    </form>
+    <div class="msg" id="tmMsg" role="alert"></div>
   </div>
 </dialog>
 
@@ -1158,7 +1200,10 @@ const DEMO = (() => {
     for (const f of (t && t.fields) || []) if (f.v !== undefined) o[f.n] = f.v;
     return o;
   }
-  const FEAT = ["luces", "escenas", "grupos", "transiciones", "temporizadores", "parametros-luz"];
+  const FEAT = ["luces", "escenas", "grupos", "transiciones", "temporizadores", "parametros-luz",
+    "escena-puntual", "escena-transicion", "temporizador-persistente"];
+  const LIMITS = { max_devices: MAXD, max_scenes: 24, max_groups: 8, max_schedules: 20, max_fade: 3600,
+    max_timer: 1440, fade_max_steps: 20, fade_step_cloud: 4, fade_step_local: 1.5 };
   const save = () => store.set(KEY, JSON.stringify(devs));
   const pub = (d) => { const o = Object.assign({}, d); delete o.st; delete o.sim_base; delete o.local_key;
     if ((TYPES[d.type] || {}).light) {
@@ -1249,12 +1294,12 @@ const DEMO = (() => {
       const u = new URL(path, "http://x/"), q = u.searchParams, p = u.pathname.replace(/^\//, "");
       const m = opt.method || "GET", now = Date.now() / 1000, body = opt.body || {};
       let r;
-      if (p === "api/health") return { app: "TeleHome", version: "0.1.0 · demo", features: FEAT };
+      if (p === "api/health") return { app: "TeleHome", version: "0.1.0 · demo", features: FEAT, limits: LIMITS };
       if (p === "api/state") {
         timersAlDia(now);
         return {
           app: "TeleHome", version: "0.1.0 · demo", simulate: true, max_devices: MAXD, server_time: now,
-          types: READY, features: FEAT, scenes: PRO.scenes, groups: PRO.groups, max_scenes: 24, max_groups: 8,
+          types: READY, features: FEAT, limits: LIMITS, scenes: PRO.scenes, groups: PRO.groups, max_scenes: 24, max_groups: 8,
           timers: PRO.timers.map((t) => Object.assign({}, t)), fades: [],
           options: { poll_interval: 10, cloud_poll_interval: 300, retention_days: 30, cloud_region: "eu", cloud_api_key: "", cloud_secret_set: false, group_by: "tipo" },
           regions: REGIONS, cloud: { configured: false, calls: 0 },
@@ -1323,6 +1368,13 @@ const DEMO = (() => {
         return { id: d.id, mode: "nube", type: d.type, claves: "códigos de Tuya (simulado)", datos: {
           switch_led: !!s.on, work_mode: s.mode || "white", bright_value_v2: Math.round((s.br || 60) * 10), temp_value_v2: Math.round((s.temp != null ? s.temp : 30) * 10),
           colour_data_v2: JSON.stringify({ h: c.h, s: c.s * 10, v: c.v * 10 }), countdown_1: 0 } };
+      }
+      if (p === "api/scenes/apply" && m === "POST") {        // escena puntual: no se guarda
+        if (!Array.isArray(body.items) || !body.items.length) throw new Error("Una escena necesita al menos un dispositivo");
+        const res = body.items.map((it) => { const d = devs.find((x) => x.id === it.device);
+          if (!d) throw new Error("No hay ningún dispositivo con el identificador «" + it.device + "»");
+          aplicarItem(d, it); return { device: d.id, ok: true }; });
+        save(); return { id: null, ok: true, resultados: res };
       }
       if (p === "api/scenes" && m === "POST") {
         if (!String(body.name || "").trim()) throw new Error("El nombre de la escena es obligatorio");
@@ -1712,9 +1764,13 @@ const fixMetric = () => { const ms = metricsPresent(); if (!ms.length) S.metric 
 
 /* ---------- avisos ---------- */
 let toastT = null;
-function toast(text, bad = false) {
+function toast(text, bad = false, accion = null) {
   $("#toastTxt").textContent = text; $("#toast").className = "toast" + (bad ? " bad" : ""); $("#toast").hidden = false;
-  clearTimeout(toastT); toastT = setTimeout(() => { $("#toast").hidden = true; }, bad ? 12000 : 3500);
+  const b = $("#toastAcc");                       // botón opcional, hoy solo «Deshacer»
+  b.hidden = !accion;
+  b.onclick = accion ? () => { $("#toast").hidden = true; accion.fn(); } : null;
+  if (accion) b.textContent = accion.texto;
+  clearTimeout(toastT); toastT = setTimeout(() => { $("#toast").hidden = true; }, bad || accion ? 12000 : 3500);
 }
 function setStatus(ok, text, when, title) {
   $("#status").querySelector(".dot").className = "dot" + (ok ? "" : " off");
@@ -3153,8 +3209,21 @@ async function actualizarAhora() {
    ===================================================================== */
 const FADE_KEY = "telehomepro_fade";
 const FADES = [["Inmediata", 0], ["2 s", 2], ["10 s", 10], ["30 s", 30], ["1 min", 60], ["5 min", 300], ["15 min", 900]];
-const P = { fade: (() => { try { const v = parseInt(localStorage.getItem(FADE_KEY), 10); return FADES.some((f) => f[1] === v) ? v : 0; } catch (e) { return 0; } })() };
-const pro = () => !!(S.state && Array.isArray(S.state.features) && S.state.features.includes("escenas"));
+const P = { tocando: false, fade: (() => { try { const v = parseInt(localStorage.getItem(FADE_KEY), 10); return FADES.some((f) => f[1] === v) ? v : 0; } catch (e) { return 0; } })() };
+const feats = () => (S.state && Array.isArray(S.state.features) && S.state.features) || [];
+const pro = () => feats().includes("escenas");
+/* 0.12.0 del servicio: escena puntual (deshacer y acciones rápidas), transición al aplicar una escena y
+   temporizadores en cualquier dispositivo. Con un servicio 0.11.0 estos extras no aparecen. */
+const proPlus = () => feats().includes("escena-puntual");
+const LIM = () => (S.state && S.state.limits) || {};
+/* Llamadas que cuesta una transición: el servicio da los pasos poco a poco, con un mínimo entre pasos
+   (4 s por la nube) y un tope de pasos, así que un minuto no son 60 llamadas a Tuya sino unas 15. */
+function pasosFade(seg, nube) {
+  const L = LIM(), paso = nube ? (L.fade_step_cloud || 4) : (L.fade_step_local || 1.5);
+  return Math.max(1, Math.min(L.fade_max_steps || 20, Math.floor(seg / paso)));
+}
+const txtFade = (seg) => (FADES.find((f) => f[1] === seg) || ["", seg])[0] || seg + " s";
+const enNube = (ids) => (ids || []).some((id) => { const d = devs().find((x) => x.id === id); return d && d.mode === "nube"; });
 const escenas = () => (S.state && S.state.scenes) || [];
 const grupos = () => (S.state && S.state.groups) || [];
 const extraModo = (s) => s && (s.mode === "scene" || s.mode === "music");
@@ -3163,6 +3232,26 @@ const tempTxtK = (d, t) => tempTxt(t) + (d && d.kelvin_min ? " · " + new Intl.N
 const luces = () => devs().filter((d) => d.type === "luz");
 const swatchDe = (it) => it.on === false ? "#8a8f95" : it.mode === "colour" && it.color ? it.color : window.TH_COLOR.swatch({ temp: it.temp });
 const hhmm = (t) => new Date(t * 1000).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+/* Estado de un dispositivo escrito como elemento de escena (capturar, deshacer, acciones rápidas) */
+function itemActual(d) {
+  const s = st(d);
+  if (d.type !== "luz") return { device: d.id, on: !!s.on };
+  if (!s.on) return { device: d.id, on: false };
+  if (s.mode === "colour" && s.hex) return { device: d.id, on: true, mode: "colour", color: s.hex, level: Math.round(s.br || 100) };
+  return { device: d.id, on: true, mode: "white", level: Math.round(s.br || 60), temp: Math.round(s.temp != null ? s.temp : 30) };
+}
+/* Escena puntual: deja varios dispositivos como se diga, sin guardar nada (servicio 0.12.0) */
+const aplicarPuntual = (items, nombre, aviso) => proLlamar("api/scenes/apply", "POST", { name: nombre || "Escena puntual", items: items }, aviso);
+/* Hace algo que mueve varios dispositivos y ofrece deshacerlo con el estado que tenían justo antes */
+async function conDeshacer(ids, texto, fn) {
+  const antes = proPlus() ? ids.map((id) => devs().find((d) => d.id === id)).filter((d) => d && online(d)).map(itemActual) : [];
+  const r = await fn();
+  if (!r) return null;                                      // del error ya ha avisado proLlamar
+  const msg = typeof texto === "function" ? texto(r) : texto;
+  toast(msg, false, antes.length ? { texto: "Deshacer", fn: () => aplicarPuntual(antes, "Deshacer", "Se ha vuelto al estado anterior.") } : null);
+  return r;
+}
 
 async function proLlamar(path, metodo, cuerpo, aviso) {
   if (!ADMIN.can()) return abrirAdmin("Escribe tu contraseña para manejar los dispositivos.");
@@ -3173,47 +3262,97 @@ async function proLlamar(path, metodo, cuerpo, aviso) {
     return r || true;
   } catch (e) { toast(e.message, true); try { await refresh(); } catch (e2) { /* ya avisa refresh() */ } return null; }
 }
-const aplicarEscena = (sc) => proLlamar("api/scenes/" + sc.id + "/apply", "POST", {}, (r) => {
+const resumenEscena = (nombre) => (r) => {
   const mal = (r.resultados || []).filter((x) => !x.ok);
-  return mal.length ? "Escena «" + sc.name + "» aplicada, pero " + mal.length + " dispositivo(s) fallaron: " + (mal[0].error || "") : "Escena «" + sc.name + "» aplicada.";
-});
+  return mal.length ? "Escena «" + nombre + "» aplicada, pero " + mal.length + " dispositivo(s) han fallado: " + (mal[0].error || "")
+    : "Escena «" + nombre + "» aplicada." + (P.fade && proPlus() ? " Las luces van poco a poco." : "");
+};
+const aplicarEscena = (sc) => conDeshacer(sc.items.map((i) => i.device), resumenEscena(sc.name),
+  () => proLlamar("api/scenes/" + sc.id + "/apply", "POST", P.fade && proPlus() ? { fade: P.fade } : {}, null));
 const ordenGrupo = (g, action, value) => {
   const cuerpo = { action: action, value: value };
   if (P.fade && (action === "level" || action === "temp" || action === "color")) cuerpo.fade = P.fade;
-  return proLlamar("api/groups/" + g.id + "/command", "POST", cuerpo);
+  return conDeshacer(g.devices, "Grupo «" + g.name + "» actualizado.",
+    () => proLlamar("api/groups/" + g.id + "/command", "POST", cuerpo, null));
 };
+/* Acciones rápidas: apagar las luces o todo, con «Deshacer» */
+function apagar(soloLuces) {
+  const lista = devs().filter((d) => online(d) && st(d).on && (soloLuces ? d.type === "luz" : d.type === "luz" || d.type === "enchufe"));
+  if (!lista.length) return toast(soloLuces ? "No hay ninguna luz encendida." : "No hay nada encendido.");
+  return conDeshacer(lista.map((d) => d.id), (soloLuces ? "Luces apagadas" : "Todo apagado") + " (" + lista.length + ").",
+    () => aplicarPuntual(lista.map((d) => ({ device: d.id, on: false })), soloLuces ? "Apagar las luces" : "Apagar todo", null));
+}
+/* ¿Está puesta ya esta escena? (con holgura: las bombillas redondean el brillo) */
+function escenaPuesta(sc) {
+  const cerca = (a, b) => a != null && b != null && Math.abs(a - b) <= 3;
+  return sc.items.every((it) => {
+    const d = devs().find((x) => x.id === it.device);
+    if (!d || !online(d)) return false;
+    const s = st(d);
+    if (it.on === false) return !s.on;
+    if (!s.on) return false;
+    if (d.type !== "luz") return true;
+    if (it.mode === "colour") {                      // el color de la escena se guarda a brillo 100: compara tono y saturación
+      if (s.mode !== "colour" || !s.color) return false;
+      const c = window.TH_COLOR.hexToHsv(it.color || "#000000");
+      return Math.abs(((s.color.h - c.h + 540) % 360) - 180) <= 6 && cerca(s.color.s, c.s) && cerca(s.br, it.level);
+    }
+    if (s.mode !== "white") return false;
+    return (it.level == null || cerca(s.br, it.level)) && (it.temp == null || cerca(s.temp, it.temp));
+  });
+}
 const ponerTemporizador = (d, min, accion) => proLlamar("api/devices/" + d.id + "/timer", "POST", { minutes: min, action: accion || "off", fade: P.fade },
   "«" + d.name + "» se " + ((accion || "off") === "off" ? "apagará" : "encenderá") + " dentro de " + (min >= 60 ? (min / 60) + " h" : min + " min") + ".");
 const cancelarTemporizador = (id) => proLlamar("api/devices/" + id + "/timer", "DELETE", undefined, "Temporizador cancelado.");
 
 /* ---------- panel de escenas y grupos ---------- */
-function renderPro() {
+/* Se redibuja solo cuando cambia algo y nunca mientras se toca un control: con un refresco cada 3 s,
+   redibujar a ciegas cortaba el arrastre del deslizador de brillo del grupo. */
+let proFirma = "";
+function firmaPro() {
+  const d = devs().map((x) => [x.id, x.name, x.type, online(x), st(x).on, st(x).br, st(x).temp, st(x).mode, st(x).hex, x.level_min, x.level_max]);
+  return JSON.stringify([pro(), proPlus(), ADMIN.isAdmin(), ADMIN.can(), P.fade, escenas(), grupos(), S.state.timers, S.state.fades, d]);
+}
+function renderPro(forzar) {
   const box = $("#proPanel"); if (!box) return;
-  const hayLuces = luces().length > 0;
-  box.hidden = !(S.state && (pro() || hayLuces));
+  box.hidden = !(S.state && (pro() || luces().length));
   if (box.hidden) return;
+  if (P.tocando && !forzar) return;                        // no cortar un arrastre en curso
+  const firma = firmaPro();
+  if (!forzar && firma === proFirma) return;
+  proFirma = firma;
   box.replaceChildren();
   const admin = ADMIN.isAdmin(), manda = ADMIN.can();
-  box.append(el("div", { class: "panel-h" }, el("h2", { text: "Escenas y grupos" }),
-    pro() && admin ? el("span", { class: "pro-row" },
-      el("button", { class: "btn", type: "button", text: "+ Escena", onclick: () => abrirEscena(null) }),
-      el("button", { class: "btn", type: "button", text: "+ Grupo", onclick: () => abrirGrupo(null) })) : null));
+  const encendidos = devs().filter((d) => online(d) && st(d).on && (d.type === "luz" || d.type === "enchufe"));
+  const cab = el("div", { class: "panel-h" }, el("h2", { text: "Escenas y grupos" }));
+  if (pro() && proPlus() && manda && encendidos.length) {
+    cab.append(el("button", { class: "btn", type: "button", text: "Apagar las luces", title: "Apaga todas las luces encendidas; se puede deshacer", onclick: () => apagar(true) }));
+    if (encendidos.some((d) => d.type !== "luz")) cab.append(el("button", { class: "btn", type: "button", text: "Apagar todo", title: "Apaga luces y enchufes; se puede deshacer", onclick: () => apagar(false) }));
+  }
+  if (pro() && admin) cab.append(el("button", { class: "btn", type: "button", text: "+ Escena", onclick: () => abrirEscena(null) }),
+    el("button", { class: "btn", type: "button", text: "+ Grupo", onclick: () => abrirGrupo(null) }));
+  box.append(cab);
   if (!pro()) {
     box.append(el("p", { class: "pro-note", text: "Las escenas, los grupos, las transiciones y los temporizadores necesitan el servicio TeleHome 0.11.0 o posterior. El servicio conectado es anterior: actualízalo para usarlos." }));
     return;
   }
-  const sec = (titulo, ...kids) => el("div", { class: "pro-sec" }, el("h3", { text: titulo }), ...kids);
-  // escenas
+  const sec = (titulo, pista, extra, ...kids) => el("div", { class: "pro-sec" },
+    el("div", { class: "pro-sec-h" }, el("h3", {}, titulo, pista ? el("span", { class: "hint", text: pista }) : null), extra || null), ...kids);
+  // --- escenas ---
   const fila = el("div", { class: "pro-row" });
   for (const sc of escenas()) {
+    const puesta = escenaPuesta(sc);
     const puntos = el("span", { class: "dots" }, ...sc.items.slice(0, 4).map((it) => el("i", { style: "--lc:" + swatchDe(it) })));
-    const b = el("button", { class: "scn", type: "button", title: "Aplicar la escena (" + sc.items.length + " dispositivo" + (sc.items.length === 1 ? "" : "s") + ")",
+    const b = el("button", { class: "scn", type: "button", "aria-pressed": String(puesta),
+      title: (puesta ? "Ya está puesta. " : "") + "Aplicar la escena (" + sc.items.length + " dispositivo" + (sc.items.length === 1 ? "" : "s") + ")",
       onclick: () => aplicarEscena(sc) }, puntos, sc.name);
     b.disabled = !manda;
     fila.append(el("span", { class: "scn-w" }, b, admin ? el("button", { class: "scn-e", type: "button", title: "Editar la escena", "aria-label": "Editar la escena " + sc.name, text: "✎", onclick: () => abrirEscena(sc) }) : null));
   }
-  box.append(sec("Escenas", escenas().length ? fila : el("p", { class: "pro-note", text: admin ? "Aún no hay escenas. Pulsa «+ Escena», o ajusta tus luces como quieras y usa «Capturar el estado actual»." : "Aún no hay escenas." })));
-  // grupos
+  const pistaEsc = escenas().length && P.fade && proPlus() ? "se aplican con transición de " + txtFade(P.fade) : "";
+  box.append(sec("Escenas", pistaEsc, null, escenas().length ? fila
+    : el("p", { class: "pro-note", text: admin ? "Aún no hay escenas. Pulsa «+ Escena», o deja las luces como quieras y usa «Capturar el estado actual»." : "Aún no hay escenas." })));
+  // --- grupos ---
   const lista = el("div", { class: "grp-list" });
   for (const g of grupos()) {
     const miembros = g.devices.map((id) => devs().find((d) => d.id === id)).filter(Boolean);
@@ -3226,27 +3365,32 @@ function renderPro() {
     const sl = el("input", { type: "range", min: "1", max: "100", step: "1", value: String(Math.max(1, media)), "aria-label": "Brillo del grupo " + g.name });
     sl.disabled = !manda || !ls.length;
     sl.addEventListener("change", () => ordenGrupo(g, "level", +sl.value));
-    const chips = LUZ_BLANCOS.map(([nombre, t]) => { const c = el("button", { class: "chip", type: "button", text: nombre, style: "background:" + window.TH_COLOR.swatch({ temp: t }),
+    const chips = LUZ_BLANCOS.map(([nombre, t]) => { const c = el("button", { class: "chip", type: "button", text: nombre, "aria-label": nombre + " en el grupo " + g.name, style: "background:" + window.TH_COLOR.swatch({ temp: t }),
       onclick: () => ordenGrupo(g, "temp", t) }); c.disabled = !manda || !ls.length; return c; });
+    const sinCon = miembros.length - vivos.length;
     lista.append(el("div", { class: "grp" },
-      el("div", { class: "gt" }, el("b", { text: g.name }), el("small", { text: miembros.length + " dispositivo" + (miembros.length === 1 ? "" : "s") + " · " + enc + " encendido" + (enc === 1 ? "" : "s") })),
+      el("div", { class: "gt" }, el("b", { text: g.name }), el("small", { text: miembros.length + " dispositivo" + (miembros.length === 1 ? "" : "s") + " · " + enc + " encendido" + (enc === 1 ? "" : "s") + (sinCon ? " · " + sinCon + " sin conexión" : "") })),
       el("div", { class: "gc" }, ls.length ? sl : el("span", { class: "pro-note", text: "Sin luces" }), ...(ls.length ? chips : [])),
       el("div", { class: "pro-row" }, sw, admin ? el("button", { class: "btn", type: "button", text: "Editar", onclick: () => abrirGrupo(g) }) : null)));
   }
-  box.append(sec("Grupos", grupos().length ? lista : el("p", { class: "pro-note", text: admin ? "Aún no hay grupos. Un grupo mueve varias luces a la vez." : "Aún no hay grupos." })));
-  // temporizadores y transiciones en curso
+  box.append(sec("Grupos", "", null, grupos().length ? lista
+    : el("p", { class: "pro-note", text: admin ? "Aún no hay grupos. Un grupo mueve varias luces a la vez." : "Aún no hay grupos." })));
+  // --- temporizadores y transiciones en curso ---
   const tm = (S.state.timers || []), fd = (S.state.fades || []);
-  if (tm.length || fd.length) {
-    const tira = el("div", { class: "pro-strip" });
-    for (const t of tm) {
-      const d = devs().find((x) => x.id === t.device);
-      tira.append(el("div", { class: "it" }, "⏲ «" + (d ? d.name : t.device) + "» se " + (t.action === "off" ? "apagará" : "encenderá") + " a las " + hhmm(t.at) + (t.fade ? " (con transición de " + t.fade + " s)" : ""),
-        el("button", { class: "btn", type: "button", text: "Cancelar", onclick: () => cancelarTemporizador(t.device) })));
-    }
-    for (const f of fd) { const d = devs().find((x) => x.id === f.device);
-      tira.append(el("div", { class: "it" }, "↗ Transición en curso en «" + (d ? d.name : f.device) + "» hasta las " + hhmm(f.until))); }
-    box.append(sec("En curso", tira));
+  const tira = el("div", { class: "pro-strip", "aria-live": "polite" });
+  for (const t of tm) {
+    const d = devs().find((x) => x.id === t.device);
+    tira.append(el("div", { class: "it" },
+      el("span", { class: "sp", text: "⏲ «" + (d ? d.name : t.device) + "» se " + (t.action === "off" ? "apagará" : "encenderá") + " a las " + hhmm(t.at) + (t.fade ? " (transición de " + txtFade(t.fade) + ")" : "") }),
+      manda ? el("button", { class: "btn", type: "button", text: "Cancelar", onclick: () => cancelarTemporizador(t.device) }) : null));
   }
+  for (const f of fd) {
+    const d = devs().find((x) => x.id === f.device);
+    tira.append(el("div", { class: "it" }, el("span", { class: "sp", text: "↗ Transición en curso en «" + (d ? d.name : f.device) + "» hasta las " + hhmm(f.until) })));
+  }
+  if (!tm.length && !fd.length) tira.append(el("p", { class: "pro-note", text: "Nada pendiente ahora mismo." }));
+  box.append(sec("Temporizadores y transiciones", "",
+    proPlus() && manda ? el("button", { class: "btn", type: "button", text: "+ Temporizador", onclick: () => abrirTimer(null) }) : null, tira));
 }
 
 /* ---------- panel de luz: transición, temporizador, modos de Tuya y parámetros ---------- */
@@ -3254,12 +3398,13 @@ function enlazarLuzPro() {
   const sel = $("#luzFade");
   for (const [txt, v] of FADES) sel.append(el("option", { value: String(v), text: txt }));
   sel.value = String(P.fade);
-  sel.addEventListener("change", () => { P.fade = +sel.value; try { localStorage.setItem(FADE_KEY, String(P.fade)); } catch (e) { /* sin almacenamiento */ } pintarLuz(); });
+  sel.addEventListener("change", () => { P.fade = +sel.value; try { localStorage.setItem(FADE_KEY, String(P.fade)); } catch (e) { /* sin almacenamiento */ } pintarLuz(); renderPro(true); });
   const pre = $("#timerPre");
   for (const [txt, min] of [["Apagar en 15 min", 15], ["30 min", 30], ["1 h", 60], ["2 h", 120]]) {
-    pre.append(el("button", { type: "button", text: txt, "data-min": String(min), onclick: () => { const d = luzDev(); if (d) ponerTemporizador(d, min, "off"); } }));
+    pre.append(el("button", { type: "button", class: "pill", text: txt, "data-min": String(min), onclick: () => { const d = luzDev(); if (d) ponerTemporizador(d, min, "off"); } }));
   }
-  pre.append(el("button", { type: "button", id: "timerCancel", text: "Cancelar", onclick: () => { const d = luzDev(); if (d) cancelarTemporizador(d.id); } }));
+  pre.append(el("button", { type: "button", class: "pill", id: "timerCancel", text: "Cancelar", onclick: () => { const d = luzDev(); if (d) cancelarTemporizador(d.id); } }));
+  pre.append(el("button", { type: "button", class: "pill", id: "timerMas", text: "Otro…", title: "Elegir el dispositivo, el tiempo y si apaga o enciende", onclick: () => { const d = luzDev(); if (d) abrirTimer(d); } }));
   $("#luzParams").addEventListener("click", () => { const d = luzDev(); if (d) abrirParams(d); });
 }
 function pintarLuzPro(d, s, ok) {
@@ -3269,11 +3414,15 @@ function pintarLuzPro(d, s, ok) {
   $("#luzExtraNote").hidden = !(on && extraModo(s));
   if (!on) return;
   $("#luzFade").value = String(P.fade); $("#luzFade").disabled = !ok;
-  $("#luzFadeV").textContent = P.fade ? "· " + (FADES.find((f) => f[1] === P.fade) || ["", P.fade])[0] : "";
+  $("#luzFadeV").textContent = P.fade ? "· " + txtFade(P.fade) : "";
+  $("#luzFadeNota").textContent = !P.fade ? "Al cambiar brillo, blanco o color, la luz va poco a poco hasta el nuevo valor."
+    : d.mode === "nube" ? "Cada paso es una llamada a Tuya: esta transición cuesta unas " + pasosFade(P.fade, true) + "."
+    : "La luz irá en unos " + pasosFade(P.fade, false) + " pasos por la red local.";
   const t = ((S.state && S.state.timers) || []).find((x) => x.device === d.id);
   $("#luzTimerV").textContent = t ? "· se " + (t.action === "off" ? "apagará" : "encenderá") + " a las " + hhmm(t.at) : "";
   for (const b of $("#timerPre").querySelectorAll("button")) b.disabled = !ok;
   $("#timerCancel").hidden = !t;
+  $("#timerMas").hidden = !proPlus();
   const rg = ((S.state && S.state.fades) || []).find((x) => x.device === d.id);
   if (rg) $("#luzSub").textContent += " · en transición hasta las " + hhmm(rg.until);
 }
@@ -3321,14 +3470,7 @@ function abrirEscena(sc) {
 function capturarEscena() {
   const dev = $("#scItems"); dev.replaceChildren();
   for (const d of devs().filter((x) => x.type === "luz" || x.type === "enchufe")) {
-    const s = st(d);
-    if (!online(d)) { dev.append(filaEscena(d, null)); continue; }
-    let it;
-    if (d.type !== "luz") it = { device: d.id, on: !!s.on };
-    else if (!s.on) it = { device: d.id, on: false };
-    else if (s.mode === "colour" && s.hex) it = { device: d.id, on: true, mode: "colour", color: s.hex, level: Math.round(s.br || 100) };
-    else it = { device: d.id, on: true, mode: "white", level: Math.round(s.br || 60), temp: Math.round(s.temp != null ? s.temp : 30) };
-    dev.append(filaEscena(d, it));
+    dev.append(filaEscena(d, online(d) ? itemActual(d) : null));
   }
   setMsg("#scMsg", "Estado actual capturado: marca los dispositivos que quieres en la escena y guarda.", true);
 }
@@ -3387,7 +3529,53 @@ function abrirParams(d) {
   $("#dlgParams").showModal();
 }
 
+/* ---------- temporizador de cualquier dispositivo (también enchufes) ---------- */
+const TM_PRE = [["15 min", 15], ["30 min", 30], ["1 h", 60], ["2 h", 120], ["8 h", 480]];
+function abrirTimer(dev) {
+  const f = $("#tmForm"), apagables = devs().filter((d) => d.type === "luz" || d.type === "enchufe");
+  f.device.replaceChildren(...apagables.map((d) => el("option", { value: d.id, text: d.name + " · " + T(d).label })));
+  if (dev) f.device.value = dev.id;
+  const ya = ((S.state && S.state.timers) || []).find((t) => t.device === f.device.value);
+  f.action.value = ya ? ya.action : "off";
+  f.minutes.value = "30";
+  f.minutes.max = String(LIM().max_timer || 1440);
+  f.fade.replaceChildren(...FADES.map(([txt, v]) => el("option", { value: String(v), text: txt })));
+  f.fade.value = "0";
+  setMsg("#tmMsg", "", true);
+  pintarTimer();
+  $("#dlgTimer").showModal();
+}
+function pintarTimer() {
+  const f = $("#tmForm"), d = devs().find((x) => x.id === f.device.value), min = +f.minutes.value || 0;
+  $("#tmFadeBox").hidden = !(d && d.type === "luz" && f.action.value === "off");
+  for (const b of $("#tmPre").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.min === min));
+  const ya = ((S.state && S.state.timers) || []).find((t) => t.device === f.device.value);
+  $("#tmCuando").textContent = !(min > 0) ? ""
+    : "Se " + (f.action.value === "off" ? "apagará" : "encenderá") + " a las " + hhmm(Date.now() / 1000 + min * 60)
+      + (ya ? " · sustituye al temporizador que ya tenía" : "");
+}
+
 function bindPro() {
+  $("#tmClose").addEventListener("click", () => $("#dlgTimer").close());
+  for (const [txt, min] of TM_PRE) {
+    $("#tmPre").append(el("button", { type: "button", text: txt, "data-min": String(min), "aria-pressed": "false",
+      onclick: () => { $("#tmForm").minutes.value = String(min); pintarTimer(); } }));
+  }
+  for (const campo of ["device", "action", "minutes"]) $("#tmForm")[campo].addEventListener("input", pintarTimer);
+  $("#tmForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = $("#tmForm"), d = devs().find((x) => x.id === f.device.value);
+    const cuerpo = { minutes: +f.minutes.value, action: f.action.value, fade: $("#tmFadeBox").hidden ? 0 : +f.fade.value };
+    try {
+      await api("api/devices/" + f.device.value + "/timer", { method: "POST", body: cuerpo });
+      await refresh(); $("#dlgTimer").close();
+      toast("«" + (d ? d.name : f.device.value) + "» se " + (cuerpo.action === "off" ? "apagará" : "encenderá") + " a las " + hhmm(Date.now() / 1000 + cuerpo.minutes * 60) + ".");
+    } catch (err) { setMsg("#tmMsg", err, false); }
+  });
+  /* mientras se toca el panel no se redibuja, para no cortar el arrastre del deslizador */
+  const panel = $("#proPanel");
+  panel.addEventListener("pointerdown", () => { P.tocando = true; });
+  for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => { P.tocando = false; });
   $("#scClose").addEventListener("click", () => $("#dlgScene").close());
   $("#scCapture").addEventListener("click", capturarEscena);
   $("#scForm").addEventListener("submit", async (e) => {

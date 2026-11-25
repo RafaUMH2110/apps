@@ -5,7 +5,7 @@
 
 La versión avanzada de [TeleHome](../telehome/README.md): la misma app (un solo `index.html`, mismos tipos, gráficas, resumen, CSV y niveles de acceso) más lo que hace falta para manejar bien las **luces**: escenas guardadas, grupos, transiciones graduales, temporizadores y parámetros por bombilla. Es una app aparte; la genérica no cambia.
 
-Necesita el servicio **TeleHome 0.11.0 o posterior** ([documentación](https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-servicio#telehome-pro-escenas-grupos-transiciones-y-temporizadores-0110)). Con un servicio anterior, o sin servicio, los controles Pro no aparecen (el panel avisa) o funcionan en el **modo demostración**, que simula todo en el navegador.
+Necesita el servicio **TeleHome 0.11.0 o posterior** (con la **0.12.0** se añaden deshacer, acciones rápidas, temporizadores para enchufes y escenas con transición) ([documentación](https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-servicio#telehome-pro-escenas-grupos-transiciones-y-temporizadores-0110)). Con un servicio anterior, o sin servicio, los controles Pro no aparecen (el panel avisa) o funcionan en el **modo demostración**, que simula todo en el navegador.
 
 ## Qué añade
 
@@ -18,11 +18,16 @@ Necesita el servicio **TeleHome 0.11.0 o posterior** ([documentación](https://g
 | **Parámetros de la bombilla** | Brillo mínimo y máximo (TeleHome recorta antes de mandar), kelvin del blanco más cálido y más frío (solo para mostrar «2 700 K»), códigos, DPS y escalas de Tuya, y **Ver datos de la bombilla** (códigos que devuelve) | Administrador |
 | **Modos de Tuya** | Botones «Escena Tuya» y «Música»: pone el modo que la bombilla tenga guardado en la app de Tuya (TeleHome no cambia sus colores) | Usuario de confianza |
 | **Programaciones** | Nueva acción «Aplicar una escena», destino «Grupo: …» y campo de transición en segundos | Administrador |
+| **Deshacer** | Tras aplicar una escena, mandar a un grupo o apagar en bloque, el aviso ofrece **Deshacer**: devuelve cada dispositivo al estado que tenía justo antes (servicio 0.12.0) | Usuario de confianza |
+| **Acciones rápidas** | «Apagar las luces» y «Apagar todo» en la cabecera del panel, también con deshacer (servicio 0.12.0) | Usuario de confianza |
+| **Escena puesta** | La escena que coincide con el estado actual aparece marcada, para saber de un vistazo cuál está aplicada | — |
+| **Temporizador de cualquier cosa** | «+ Temporizador» (u «Otro…» en el panel de la luz) abre un diálogo para elegir dispositivo —**también enchufes**—, tiempo, apagar o encender y transición (servicio 0.12.0) | Usuario de confianza |
 
 ## Cosas que conviene saber
 
-- **Los temporizadores están en la memoria del servicio**: si se reinicia, se pierden. Para algo a una hora fija usa una programación, que sí se guarda.
-- **Las transiciones cuestan llamadas a Tuya** por la nube: mínimo 4 s entre pasos y como mucho 20 pasos, es decir, unas 15 llamadas para una transición de un minuto. En red local el paso mínimo es 1,5 s. Una orden manual sobre la luz cancela la transición.
+- **Los temporizadores se guardan en el servicio** (0.12.0): un reinicio no los pierde. Si uno vence mientras el servicio está parado, al arrancar se cumple si fue hace menos de 15 minutos y se descarta si fue hace más. Con un servicio 0.11.0 siguen estando solo en memoria. Para algo a una hora fija, una programación.
+- **Las transiciones cuestan llamadas a Tuya** por la nube: mínimo 4 s entre pasos y como mucho 20 pasos, es decir, unas 15 llamadas para una transición de un minuto. En red local el paso mínimo es 1,5 s. La app dice cuántos pasos costará al elegir la duración. Una orden manual sobre la luz cancela la transición.
+- **«Deshacer» no es un viaje en el tiempo**: guarda el estado que tenían los dispositivos *en la app* justo antes de la orden y lo vuelve a aplicar. Si algo estaba sin conexión, ese dispositivo se queda fuera.
 - Con escenas y grupos no hay condiciones en las programaciones.
 - Los modos «Escena Tuya» y «Música» no están verificados con bombillas reales, y el modo local de las luces solo se ha probado con bombillas simuladas.
 - Máximo 7 dispositivos en el servicio (enchufes y luces juntos).
@@ -30,7 +35,7 @@ Necesita el servicio **TeleHome 0.11.0 o posterior** ([documentación](https://g
 
 ## Modo demostración
 
-Sin servicio, la app arranca con ocho dispositivos simulados, dos luces entre ellos, un grupo «Salón» y dos escenas («Cine» y «Lectura»). Escenas, grupos y temporizadores se guardan en el navegador (`localStorage`, claves `telehomepro_demo_v1` y `telehomepro_demo_pro_v1`; «Reiniciar demo» los borra). En la demostración las transiciones son inmediatas.
+Sin servicio, la app arranca con ocho dispositivos simulados, dos luces entre ellos, un grupo «Salón» y dos escenas («Cine» y «Lectura»). Escenas, grupos y temporizadores se guardan en el navegador (`localStorage`, claves `telehomepro_demo_v1` y `telehomepro_demo_pro_v1`; «Reiniciar demo» los borra). La demostración simula también el servicio 0.12.0 (escena puntual, deshacer, acciones rápidas y temporizadores de enchufe); las transiciones, eso sí, son inmediatas.
 
 ## Conexión
 
@@ -39,7 +44,8 @@ Igual que la genérica: la página servida por el propio servicio, o una ruta de
 ## API que usa (además de la de TeleHome)
 
 ```
-POST   api/scenes · PUT|DELETE api/scenes/<id> · POST api/scenes/<id>/apply
+POST   api/scenes · PUT|DELETE api/scenes/<id> · POST api/scenes/<id>/apply   → { fade? }
+POST   api/scenes/apply                → { items, fade? }  escena puntual: no se guarda (deshacer, apagar todo)
 POST   api/groups · PUT|DELETE api/groups/<id> · POST api/groups/<id>/command
 POST   api/devices/<id>/command        → { action, value, fade? }   (fade: segundos, 0-3600)
 POST   api/devices/<id>/timer          → { minutes: 1-1440, action: "off"|"on", fade? } · DELETE lo cancela
@@ -47,8 +53,8 @@ GET    api/devices/<id>/raw            → códigos o DPS que devuelve la bombil
 PUT    api/devices/<id>                → level_min, level_max, kelvin_min, kelvin_max, code_*, dp_*, scale_*
 ```
 
-`api/state` añade `features`, `scenes`, `groups`, `timers` y `fades`; cada luz lleva además `level_min`, `level_max`, `kelvin_min` y `kelvin_max`.
+`api/state` añade `features`, `limits`, `scenes`, `groups`, `timers` y `fades`; cada luz lleva además `level_min`, `level_max`, `kelvin_min` y `kelvin_max`. De `limits` salen los topes y el coste estimado de una transición, en vez de llevarlos escritos en la app.
 
 ## Estructura del fichero
 
-Es el `index.html` de la app genérica con un bloque nuevo, «TeleHome Pro», delante del ciclo de la interfaz (`renderPro`, `enlazarLuzPro`, escenas, grupos, parámetros) y los diálogos `#dlgScene`, `#dlgGroup` y `#dlgParams`. El motor de demostración se amplía con escenas, grupos, temporizadores y parámetros. Cada app es autocontenida: si cambias la genérica, los cambios comunes se llevan a mano a esta.
+Es el `index.html` de la app genérica con un bloque nuevo, «TeleHome Pro», delante del ciclo de la interfaz (`renderPro`, `enlazarLuzPro`, escenas, grupos, parámetros) y los diálogos `#dlgScene`, `#dlgGroup`, `#dlgTimer` y `#dlgParams`. El panel se redibuja solo cuando cambia algo (`firmaPro`) y nunca mientras se está tocando un control: con un refresco cada 3 s, redibujar a ciegas cortaba el arrastre del deslizador de brillo del grupo. El motor de demostración se amplía con escenas, grupos, temporizadores y parámetros. Cada app es autocontenida: si cambias la genérica, los cambios comunes se llevan a mano a esta.

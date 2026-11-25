@@ -218,6 +218,8 @@ Smart Life como *enchufe*. El servicio 0.10.0 se da cuenta (el dispositivo respo
 → Editar → Tipo*; al cambiar el tipo se ponen los códigos por defecto de ese tipo. Al importar desde la nube, el tipo
 sale de la categoría de Tuya (`dj`, `dd`, `xdd`, `fwd`, `dc`, `tgq` → luz).
 
+**Más allá de lo básico.** Escenas guardadas, grupos, transiciones, temporizadores y parámetros por bombilla (servicio 0.11.0) no están en esta app: viven en la versión avanzada, [TeleHome Pro](../telehome-pro/README.md).
+
 ### Columnas del resumen
 
 Cada entrada de `summary` tiene `key`, `label` y opcionalmente `unit`, `dec`, `pct`, `bar` y `total`. La clave

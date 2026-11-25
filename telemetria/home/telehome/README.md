@@ -81,6 +81,10 @@ Claves: `metrics` (de `METRICS`) y `primary`; `meta` y `bar` para la fila; `cont
 
 En el servicio, el tipo nuevo solo tiene que leer sus DPS o códigos y devolver las magnitudes en `reading.values`.
 
+## Estancias
+
+Al añadir o editar un dispositivo, la **estancia** se elige en un desplegable con las que ya existen, o se crea una nueva en el momento («＋ Nueva estancia…»). Con el servicio 0.13.0 la lista y su orden vienen de él (`api/state` → `rooms`) y la agrupación «Por estancia» los respeta; con un servicio anterior, el desplegable se arma con las estancias que ya usen los dispositivos. Definir, renombrar, borrar y ordenar estancias se hace en [TeleHome Pro](../telehome-pro/README.md).
+
 ## Modos de funcionamiento
 
 | Modo | Cuándo | Qué hace |

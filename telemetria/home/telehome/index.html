@@ -478,7 +478,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 17:32</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 19:19</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -776,7 +776,7 @@ const TELEHOME_METRICS = {
 /* ---- ayudas para declarar campos de alta ---- */
 const F = {
   name:    { n: "name", l: "Nombre", t: "text", req: true, max: 40, ph: "Nevera" },
-  room:    { n: "room", l: "Estancia (opcional)", t: "text", max: 24, ph: "Cocina" },
+  room:    { n: "room", l: "Estancia (opcional)", t: "room", max: 24, ph: "Cocina" },
   mode:    { n: "mode", l: "Modo", t: "select", opts: [["local", "Local (misma red)"], ["nube", "Nube de Tuya"]] },
   dev_id:  { n: "dev_id", l: "Device ID", t: "text", req: true, pat: "[A-Za-z0-9]{8,40}", ph: "bf1234…", w: "full", mono: true },
   key:     { n: "local_key", l: "Local Key", t: "password", ph: "16 caracteres", only: "local", keep: true },
@@ -1404,7 +1404,9 @@ const el = (tag, props = {}, ...kids) => {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) {
     if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v != null) e.setAttribute(k, v);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, "");
+    else if (v != null && v !== false) e.setAttribute(k, v);   // ojo: disabled="false" deshabilitaría igual
   }
   for (const c of kids) if (c != null) e.append(c);
   return e;
@@ -1657,7 +1659,9 @@ function groupsBase(list) {
   if (S.group === "estancia") {
     const names = [];
     for (const d of list) { const r = (d.room || "").trim() || "Sin estancia"; if (!names.includes(r)) names.push(r); }
-    names.sort((a, b) => a === "Sin estancia" ? 1 : b === "Sin estancia" ? -1 : a.localeCompare(b, "es"));
+    const orden = ((S.state && S.state.rooms) || []).map((r) => r.name.toLowerCase());   // el orden definido en el servicio
+    const pos = (x) => { const i = orden.indexOf(x.toLowerCase()); return i < 0 ? 1e6 : i; };
+    names.sort((a, b) => a === "Sin estancia" ? 1 : b === "Sin estancia" ? -1 : (pos(a) - pos(b)) || a.localeCompare(b, "es"));
     return names.map((r) => ({ key: r, label: r, devs: list.filter((d) => ((d.room || "").trim() || "Sin estancia") === r) }));
   }
   return [{ key: "all", label: "", devs: list, flat: true }];
@@ -2275,6 +2279,7 @@ function pickType(k) {
   if (antes && antes.type !== k) {       /* cambio de tipo: se conserva lo común; los códigos vuelven a los del tipo nuevo */
     const f = $("#devForm").elements;
     for (const n of ["name", "room", "mode", "dev_id", "ip", "version"]) if (f[n] && antes[n] != null) f[n].value = antes[n];
+    if (f.room) pintarEstancias(f.room, (antes.room || "").trim());
     if (f.mode) applyMode(f.mode.value);
     setMsg("#formMsg", "Al cambiar a «" + TYPES[k].label + "» se usan los códigos por omisión de ese tipo; revísalos en «Avanzado».", true);
     return;
@@ -2289,9 +2294,45 @@ function pickType(k) {
   if (!S.editing) { $("#formTitle").textContent = "Añadir · " + TYPES[k].label; $("#btnSave").textContent = "Añadir"; }
   setMsg("#formMsg", "", true);
 }
+/* Estancias conocidas: las que manda el servicio (0.13.0) y, si no, las que usen los dispositivos.
+   Definirlas, renombrarlas y borrarlas se hace en TeleHome Pro; aquí se eligen y se pueden crear al vuelo. */
+function estancias() {
+  const dela = ((S.state && S.state.rooms) || []).map((r) => r.name);
+  for (const d of devs()) { const r = (d.room || "").trim(); if (r && !dela.some((x) => x.toLowerCase() === r.toLowerCase())) dela.push(r); }
+  return dela;
+}
+const NUEVA = "\u0000nueva";                    // valor imposible como nombre de estancia
+function pintarEstancias(sel, valor) {
+  const actual = valor != null ? valor : sel.value;
+  const lista = estancias();
+  if (actual && actual !== NUEVA && !lista.some((x) => x.toLowerCase() === actual.toLowerCase())) lista.push(actual);
+  sel.replaceChildren(el("option", { value: "", text: "— Sin estancia —" }),
+    ...lista.map((r) => el("option", { value: r, text: r })),
+    el("option", { value: NUEVA, text: "＋ Nueva estancia…" }));
+  sel.value = actual === NUEVA ? NUEVA : (actual || "");
+}
+function valorEstancia(form) {
+  const sel = form.elements.room;
+  if (!sel) return undefined;
+  if (sel.value !== NUEVA) return sel.value;
+  return String((form.elements.room_nueva || {}).value || "").trim().slice(0, 24);
+}
 function fieldBox(f) {
   const lab = el("label", { class: f.w === "full" ? "full" : null }, f.l);
   let inp;
+  if (f.t === "room") {
+    inp = el("select", { name: f.n });
+    const nueva = el("input", { type: "text", name: "room_nueva", maxlength: 24, placeholder: "Nombre de la estancia nueva", autocomplete: "off", hidden: true, style: "margin-top:6px" });
+    pintarEstancias(inp, "");
+    inp.addEventListener("change", () => {
+      nueva.hidden = inp.value !== NUEVA;
+      if (!nueva.hidden) { nueva.value = ""; nueva.focus(); }
+    });
+    lab.append(inp, nueva);
+    const w = el("div", { style: "display:contents" });
+    w.append(lab);
+    return w;
+  }
   if (f.t === "select") {
     inp = el("select", { name: f.n });
     for (const o of f.opts) { const [v, l] = Array.isArray(o) ? o : [o, o]; inp.append(el("option", { value: v, text: l })); }
@@ -2372,6 +2413,7 @@ function editDev(d) {
   pickType(d.type);
   const f = $("#devForm");
   for (const n of formFieldNames()) if (f.elements[n] && d[n] !== undefined && d[n] !== null) f.elements[n].value = d[n];
+  if (f.elements.room) pintarEstancias(f.elements.room, (d.room || "").trim());
   if (f.elements.mode) applyMode(f.elements.mode.value);
   if (f.elements.local_key) { f.elements.local_key.value = ""; f.elements.local_key.placeholder = d.has_key ? "(sin cambios)" : "16 caracteres"; }
   renderTypePick();
@@ -2773,6 +2815,7 @@ function bindDialog() {
     for (const n of formFieldNames()) {
       const i = f.elements[n]; if (!i || i.disabled) continue;
       if (n === "local_key") { if (i.value) body.local_key = i.value.trim(); continue; }
+      if (n === "room") { body.room = valorEstancia(f); continue; }
       body[n] = String(i.value).trim();
     }
     try {

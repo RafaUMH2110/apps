@@ -103,7 +103,10 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .sec-h h2 { margin:0; font-size:18px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; gap:9px; }
 .sec-h h2 svg { width:17px; height:17px; color:var(--ink2); flex:none; }
 .sec-h span { font-size:13px; color:var(--muted); }
-.grp-h { display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; padding:11px 24px 11px 30px; background:var(--sunk); border-bottom:1px solid var(--border); }
+.grp-h { display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; padding:11px 24px 11px 30px; background:var(--sunk); border-bottom:1px solid var(--border); cursor:pointer; transition:background-color .15s; }
+.grp-h:hover { background:color-mix(in srgb,var(--accent) 6%,var(--sunk)); }
+.grp-h.sel { background:color-mix(in srgb,var(--accent) 13%,var(--sunk)); }
+.grp-h.sel h3 { color:var(--accent); }
 .grp-h h3 { margin:0; font-size:14.5px; font-weight:700; letter-spacing:.01em; display:flex; align-items:center; gap:8px; }
 .grp-h h3 svg { width:16px; height:16px; color:var(--ink2); flex:none; }
 .grp-h .agg { font-size:13px; color:var(--ink2); margin-left:auto; font-variant-numeric:tabular-nums; }
@@ -565,7 +568,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 19:19</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 21:02</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" class="toast-acc" id="toastAcc" hidden></button><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -1798,6 +1801,39 @@ function setHistHidden(hide, save) {
 const S = { state: null, range: savedRange(), scale: savedScale(), metric: null, sel: "all", hidden: new Set(), group: "tipo",
   hist: null, sum: null, hover: null, editing: null, pick: null, busy: new Set(), lastOk: 0 };
 
+/* ---------- selección activa de la gráfica y el resumen ----------
+   S.sel puede ser "all" (sin filtrar), el id de un dispositivo concreto, o un grupo entero —
+   codificado como "grp:tipo:<clave>" o "grp:estancia:<nombre>" — cuando se pincha en la cabecera
+   de un grupo con la agrupación «Por tipo» o «Por estancia». */
+const GRP_PREFIX = "grp:";
+const grpSelId = (kind, key) => GRP_PREFIX + kind + ":" + key;
+const parseGrpSel = (sel) => {
+  if (typeof sel !== "string" || !sel.startsWith(GRP_PREFIX)) return null;
+  const i = sel.indexOf(":", GRP_PREFIX.length);
+  if (i < 0) return null;
+  return { kind: sel.slice(GRP_PREFIX.length, i), key: sel.slice(i + 1) };
+};
+/* ¿Entra este dispositivo en la selección activa? "all" no filtra nada. */
+function enSel(d) {
+  const g = parseGrpSel(S.sel);
+  if (g) return g.kind === "tipo" ? d.type === g.key : ((d.room || "").trim() || "Sin estancia") === g.key;
+  return S.sel === "all" || S.sel === d.id;
+}
+/* Etiqueta de la selección activa (nombre del dispositivo, o del tipo/estancia), o "" si es "all" */
+function filtroLabel() {
+  const g = parseGrpSel(S.sel);
+  if (g) return g.kind === "tipo" ? (TYPES[g.key] ? (TYPES[g.key].plural || TYPES[g.key].label) : g.key) : g.key;
+  if (S.sel !== "all") { const d = devs().find((x) => x.id === S.sel); return d ? d.name : ""; }
+  return "";
+}
+/* Etiqueta bajo el título de la gráfica: cuenta de dispositivos para "all" y para un grupo, nombre para uno solo */
+function selEtiqueta(list) {
+  const n = list.length, cuenta = n + (n === 1 ? " dispositivo" : " dispositivos");
+  if (S.sel === "all") return cuenta;
+  if (parseGrpSel(S.sel)) return filtroLabel() + " · " + cuenta;
+  return filtroLabel();
+}
+
 async function api(path, opt = {}) {
   if (BACKEND) return BACKEND.api(path, opt);
   const init = { method: opt.method || "GET", headers: { "X-TeleHome": "1" } };
@@ -2257,18 +2293,38 @@ function renderGroups() {
   for (const g of groupsOf(list)) {
     if (!g.devs.length) continue;
     const sec = el("section", { class: "devs", "aria-label": g.label || "Dispositivos" });
-    if (!g.flat) sec.append(el("div", { class: "grp-h" },
-      el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs)));
+    if (!g.flat) {
+      const activo = S.sel === grpSelId(S.group, g.key);
+      const cab = el("div", { class: "grp-h" + (activo ? " sel" : ""), role: "button", tabindex: "0",
+        "aria-pressed": String(activo), title: "Ver solo «" + g.label + "» en la gráfica y el resumen",
+        "aria-label": "Ver solo «" + g.label + "» en la gráfica y el resumen" },
+        el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs));
+      cab.addEventListener("click", () => selectGroup(S.group, g.key));
+      cab.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === cab) { e.preventDefault(); cab.click(); } });
+      sec.append(cab);
+    }
     for (const d of g.devs) sec.append(devRow(d));
     box.append(sec);
   }
 }
-function selectDev(id) {
-  S.sel = id;
-  if (id !== "all") { const d = devs().find((x) => x.id === id);   /* si el tipo no mide la magnitud actual, cambia a la suya */
-    if (d && S.metric && !hasMetric(d, S.metric) && T(d).primary) S.metric = T(d).primary; }
+/* Fija la selección activa (un dispositivo, un grupo o "all") y repinta todo lo que depende de ella */
+function setSel(sel) {
+  S.sel = sel;
+  const g = parseGrpSel(sel);
+  if (g) {    /* si ningún dispositivo del grupo mide la magnitud actual, cambia a la primera que sí midan */
+    const list = devs().filter(enSel);
+    if (S.metric && !list.some((d) => hasMetric(d, S.metric))) {
+      const otro = list.find((d) => T(d).primary);
+      if (otro) S.metric = T(otro).primary;
+    }
+  } else if (sel !== "all") {
+    const d = devs().find((x) => x.id === sel);   /* si el tipo no mide la magnitud actual, cambia a la suya */
+    if (d && S.metric && !hasMetric(d, S.metric) && T(d).primary) S.metric = T(d).primary;
+  }
   renderGroups(); renderFilters(); renderLegend(); drawChart(); renderSummary();
 }
+function selectDev(id) { setSel(id); }
+function selectGroup(kind, key) { const id = grpSelId(kind, key); setSel(S.sel === id ? "all" : id); }
 
 /* ---------- gráfica (una magnitud, los dispositivos que la miden) ---------- */
 function niceTicks(lo, hi, n = 5) {
@@ -2284,7 +2340,7 @@ function tlabel(t, withDate) {
   const d = new Date(t * 1000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
   return withDate ? pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + (d.getHours() || d.getMinutes() ? " " + hm : "") : hm;
 }
-const metricDevs = () => devs().filter((d) => S.metric && hasMetric(d, S.metric) && (S.sel === "all" || S.sel === d.id));
+const metricDevs = () => devs().filter((d) => S.metric && hasMetric(d, S.metric) && enSel(d));
 const visibleDevs = () => metricDevs().filter((d) => !S.hidden.has(d.id));
 
 function stepOf(pts, bucket) {
@@ -2447,7 +2503,7 @@ function renderLegend() {
   const lg = $("#legend"); lg.replaceChildren();
   const m = METRICS[S.metric], list = metricDevs();
   $("#chartTitle").replaceChildren(m ? m.label + " " : "Histórico",
-    el("small", { text: m ? "(" + m.unit + ")" + (S.sel === "all" ? " · " + list.length + (list.length === 1 ? " dispositivo" : " dispositivos") : " · " + (list[0] ? list[0].name : "")) : "" }));
+    el("small", { text: m ? "(" + m.unit + ") · " + selEtiqueta(list) : "" }));
   lg.hidden = list.length < 2;
   if (list.length < 2) return;
   for (const d of list) {
@@ -2476,9 +2532,13 @@ function renderFilters() {
   const gg = $("#groupGrp"); gg.replaceChildren();
   for (const [lab, key] of GROUPINGS) {
     const b = el("button", { type: "button", text: lab, "aria-pressed": String(S.group === key) });
-    b.addEventListener("click", () => { S.group = key; renderFilters(); renderGroups(); }); gg.append(b);
+    b.addEventListener("click", () => {
+      S.group = key;
+      if (parseGrpSel(S.sel)) S.sel = "all";   /* el grupo seleccionado era de la agrupación anterior */
+      renderFilters(); renderGroups(); renderLegend(); drawChart(); renderSummary();
+    }); gg.append(b);
   }
-  const uno = S.sel !== "all" || devs().length === 1;
+  const uno = (S.sel !== "all" && !parseGrpSel(S.sel)) || devs().length === 1;
   const sg = $("#scaleGrp"); sg.replaceChildren(); sg.hidden = uno || metricDevs().length < 2; $("#scaleLbl").hidden = sg.hidden;
   for (const [k, lab, tit] of SCALES) {
     const b = el("button", { type: "button", text: lab, title: tit, "aria-pressed": String(S.scale === k) });
@@ -2507,15 +2567,16 @@ function sumCell(col, row) {
 function renderSummary() {
   const box = $("#sumBox"); box.replaceChildren();
   const lab = RANGES.find((r) => r[1] === S.range);
-  $("#sumTitle").replaceChildren("Resumen ", el("small", { text: "· últimas " + (lab ? lab[0] : "") }));
+  const fl = filtroLabel();
+  $("#sumTitle").replaceChildren("Resumen ", el("small", { text: "· últimas " + (lab ? lab[0] : "") + (fl ? " · " + fl : "") }));
   const rows = (S.sum && S.sum.devices) || null;
   const notas = [];
   if (!rows) { $("#sumHint").textContent = ""; return; }
-  const tipos = typesPresent().filter((k) => devs().some((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id)));
+  const tipos = typesPresent().filter((k) => devs().some((d) => d.type === k && rows[d.id] && enSel(d)));
   for (const k of tipos) {
     const t = TYPES[k], cols = t.summary || [];
     if (!cols.length) continue;
-    const list = devs().filter((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id));
+    const list = devs().filter((d) => d.type === k && rows[d.id] && enSel(d));
     const head = el("tr", {}, el("th", { text: t.label }), ...cols.map((c) => el("th", { text: c.label })));
     const body = el("tbody"), foot = el("tfoot");
     const maxBar = {}, tot = {};
@@ -2887,7 +2948,7 @@ function cerrarMenuCsv() {
 }
 function abrirMenuCsv() {
   const m = $("#csvMenu"); m.replaceChildren(el("div", { class: "m-h", text: "Descargar las lecturas de…" }));
-  for (const d of devs()) {
+  for (const d of devs().filter(enSel)) {
     const b = el("button", { type: "button", role: "menuitem" }, el("span", { class: "key", style: "border-color:" + color(d) }), d.name);
     b.addEventListener("click", () => { cerrarMenuCsv(); downloadCsv(d.id); });
     m.append(b);
@@ -3370,7 +3431,7 @@ function bindDialog() {
     e.target.value = "";
   });
   $("#btnCsv").addEventListener("click", () => {
-    const unico = S.sel !== "all" || devs().length === 1;
+    const unico = (S.sel !== "all" && !parseGrpSel(S.sel)) || devs().length === 1;
     if (unico) { const id = S.sel !== "all" ? S.sel : (devs()[0] && devs()[0].id); if (id) downloadCsv(id); return; }
     $("#csvMenu").hidden ? abrirMenuCsv() : cerrarMenuCsv();
   });
@@ -3852,7 +3913,7 @@ async function refresh() {
   ADMIN.sync(S.state);
   renderAdmin();
   if ($("#dlg").open) aplicarSoloLectura();
-  if (S.sel !== "all" && !devs().some((d) => d.id === S.sel)) S.sel = "all";
+  if (S.sel !== "all" && !devs().some(enSel)) S.sel = "all";
   fixMetric();
   renderHero(); renderGroups(); renderFilters(); renderPro();
   if ($("#dlg").open) { renderDevList(); renderRooms(); updateEstimate(); }

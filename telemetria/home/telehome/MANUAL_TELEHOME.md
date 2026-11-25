@@ -163,7 +163,7 @@ De cada entrada de `TYPES` salen, sin escribir ni una línea de interfaz:
 |---|---|---|---|---|
 | `enchufe` | Enchufe | `p`, `v`, `i` | interruptor | `switch` |
 | `sensor-th` | Sensor T/H | `t`, `h` | ninguno | — |
-| `luz` | Luz regulable | `br` | nivel | `switch`, `level` |
+| `luz` | Luz | `br` | nivel + panel de luz | `switch`, `level`, `temp`, `color`, `mode` |
 | `persiana` | Persiana | `pos` | posición | `position`, `stop` |
 | `termostato` | Termostato | `t` | consigna | *previsto* |
 | `contador` | Contador general | `p` | ninguno | *previsto* |
@@ -190,6 +190,33 @@ dar de alta.
 | `fields` | Campos del formulario de alta |
 | `state` | Estado inicial en el simulador |
 | `sim` | Función que inventa lecturas en modo demostración |
+
+### Luces
+
+Una luz (`luz`) lleva en su lectura `state: {on, br, temp, mode, color:{h,s,v}, hex}` y `values: {br}` (0 si está
+apagada). Todo viaja en las mismas unidades, sean cuales sean las de la bombilla: brillo y blanco de 0 a 100
+(blanco: 0 cálido, 100 frío), color con `h` de 0 a 360 y `s`, `v` de 0 a 100. El servicio convierte a la escala de Tuya.
+
+Cada dispositivo de luz trae además `caps` (`mode`, `level`, `temp`, `color`): lo que **esa** bombilla sabe hacer, deducido
+de los códigos que devuelve. La app lo usa para decidir qué controles ofrece: una bombilla solo blanca no enseña el
+selector de color. Si el servicio no manda `caps` (anterior a la 0.10.0) solo se ofrece el brillo.
+
+En la fila de una luz hay, junto al interruptor y el deslizador de brillo, un botón de **paleta** (si la luz admite
+blanco o color). Abre el **panel de luz**: interruptor, brillo, selector *Blanco / Color* (si admite ambos), el
+deslizador cálido↔frío con tres blancos rápidos, o bien el tono y la intensidad del color con ocho colores rápidos.
+Cada cambio se manda al soltar el deslizador, y el panel se repinta con lo que el servicio responde. En modo color el
+brillo es el valor `v` del color: bajar el brillo oscurece el color, no cambia otro código. Las apps de iPhone y de iPad
+tienen el mismo panel como hoja inferior.
+
+En una programación, la acción de una luz puede ser `switch`, `level`, `temp`, `color` o `mode`. Las opciones del
+formulario dependen del dispositivo elegido y de sus `caps`. «Cálido al 30 % a las 21:00» son dos programaciones
+(`temp` 10 y `level` 30), porque cada una lleva una sola orden.
+
+**Una bombilla importada como enchufe.** Las versiones de TeleHome anteriores a la 0.10.0 daban de alta toda bombilla de
+Smart Life como *enchufe*. El servicio 0.10.0 se da cuenta (el dispositivo responde con códigos de luz), la convierte a
+`luz` por sí solo y conserva nombre, estancia, Device ID y clave. También puede hacerse a mano: *Ajustes → Dispositivos
+→ Editar → Tipo*; al cambiar el tipo se ponen los códigos por defecto de ese tipo. Al importar desde la nube, el tipo
+sale de la categoría de Tuya (`dj`, `dd`, `xdd`, `fwd`, `dc`, `tgq` → luz).
 
 ### Columnas del resumen
 
@@ -219,7 +246,8 @@ Es el contrato entre el servicio y la app. El servicio solo tiene que devolver, 
 - `ts`: instante de la lectura, en **segundos** epoch (no milisegundos).
 - `online`: si se pudo hablar con el dispositivo.
 - `error`: texto del fallo, o `null`.
-- `state`: lo que se puede mandar cambiar (`on`, `br`, `pos`).
+- `state`: lo que se puede mandar cambiar (`on`, `br`, `pos`). En una luz, además `temp`, `mode`, `color` y `hex`
+  (ver «Luces» más abajo).
 - `values`: lo que se mide, con las claves de `METRICS`.
 
 Los campos planos antiguos (`on`, `power_w`, `voltage_v`, `current_a`) se siguen enviando para que las apps
@@ -375,8 +403,10 @@ página de la interfaz.
 | `POST api/devices/import` | `{"devices":[…],"mode":"local"\|"nube"}` | admin |
 | `POST api/discover` | Busca por UDP en la red local | admin |
 
-Órdenes de `command`: `switch` (booleano), `level` (0-100), `position` (0-100) y `stop` (sin valor). El
-servicio comprueba que el tipo las admita y devuelve 400 si no.
+Órdenes de `command`: `switch` (booleano), `level` (0-100), `position` (0-100) y `stop` (sin valor) y, solo para
+luces (servicio 0.10.0 o posterior), `temp` (0 cálido … 100 frío), `color` (`"#rrggbb"` o `{h,s,v}`) y `mode`
+(`white` o `colour`). `level`, `temp` y `color` encienden la luz; `mode` no. El servicio comprueba que el tipo las
+admita y devuelve 400 si no. Para una luz la respuesta trae su estado completo (`state`).
 
 ### Opciones, nube y contraseñas
 
@@ -786,7 +816,7 @@ cada 20 s, así que funcionan con la app cerrada; lo único que tiene que estar 
 
 | Campo | Qué significa |
 |---|---|
-| `action`, `value` | La orden: `switch` (booleano), `level` y `position` (0-100) o `stop` (sin valor) |
+| `action`, `value` | La orden: `switch` (booleano), `level`, `position` y `temp` (0-100), `color` (`#rrggbb`), `mode` (`white`/`colour`) o `stop` (sin valor) |
 | `when.kind` | `clock` con `time` en `HH:MM`, o `sunrise`/`sunset` con `offset` en minutos (±720) |
 | `days` | Días en formato ISO: 1 lunes … 7 domingo. **Lista vacía: se ejecuta una sola vez** |
 | `condition` | Opcional. `metric`, `op` (`<`, `<=`, `>`, `>=`), `value` y `for` en segundos |
@@ -824,7 +854,7 @@ se haya mantenido durante ese tiempo, y eso se mira en el histórico: si no hay 
 ejecuta**, porque es más prudente no hacer nada que actuar a ciegas.
 
 El caso que motiva esto es apagar la lavadora al terminar: «apagar si la potencia lleva 10 minutos por debajo de
-5 W». Hoy las magnitudes disponibles son `p`, `v` e `i`, que es lo que guarda el almacén.
+5 W». Las magnitudes disponibles son `p`, `v` e `i` (enchufes) y `br` (brillo de las luces), que es lo que guarda el almacén.
 
 ### «No me pises»
 
@@ -905,6 +935,8 @@ Al editar cualquiera de las apps hay que actualizar la fecha de **Última modifi
 | 502 | El servicio está parado | `systemctl status telehome` |
 | Un dispositivo cambiado con otra app tarda en verse | El servicio lee la nube cada 300 s | Pulsa **Actualizar** en *Dispositivos* (servicio 0.9.4 o posterior) |
 | La app no se actualiza tras publicar | Caché del navegador, o falta `instalar-todo` | Ctrl+Mayús+R; en el servidor, reinstalar |
+| Una bombilla aparece como enchufe, sin brillo ni color | Se dio de alta con una versión anterior a la 0.10.0 | Actualiza el servicio (`instalar-todo-lorca.sh --telehome`): la convierte sola. O *Editar* → Tipo → Luz |
+| Una luz no muestra el selector de color | La bombilla no devuelve códigos de color (es solo blanca) o el servicio es anterior a la 0.10.0 | Mirar `caps` en `GET api/state`; actualizar el servicio |
 | Un dispositivo «sin conexión» | Tuya admite una sola conexión TCP | Cerrar la app del móvil |
 | Cambios que no se aplican | Otro proceso editó `config.json` | El servicio lo recarga solo al detectar el cambio |
 | `journalctl` vacío | El usuario no está en `adm` ni `systemd-journal` | Usarlo con `sudo` |

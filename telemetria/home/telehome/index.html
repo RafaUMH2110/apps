@@ -153,6 +153,34 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .level { display:flex; align-items:center; gap:9px; }
 .level input[type=range] { width:104px; accent-color:var(--c); background:transparent; }
 .level .pc { font-size:13px; color:var(--ink2); font-variant-numeric:tabular-nums; min-width:34px; text-align:right; }
+/* Luz: botón de la paleta con el color actual y panel de color y blancos */
+.lt-btn { border:1px solid var(--border); background:var(--surface); border-radius:50%; width:32px; height:32px; padding:0; cursor:pointer; display:grid; place-items:center; flex:none; }
+.lt-btn:hover { border-color:var(--border-strong); }
+.lt-btn:disabled { opacity:.4; cursor:not-allowed; }
+.lt-btn i { display:block; width:18px; height:18px; border-radius:50%; background:var(--lc,#ffb15e); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); }
+#dlgLuz { width:min(520px,95vw); }
+.luz-body { padding:16px 20px 20px; display:grid; gap:16px; }
+.luz-top { display:flex; align-items:center; gap:16px; }
+.luz-prev { width:68px; height:68px; border-radius:50%; flex:none; background:var(--lc,#ffb15e); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 5px var(--sunk); opacity:var(--lo,1); transition:background-color .2s, opacity .2s; }
+.luz-top .t { flex:1; min-width:0; }
+.luz-top .t b { display:block; font-size:15px; }
+.luz-top .t span { color:var(--ink2); font-size:13px; }
+.luz-row { display:grid; gap:6px; }
+.luz-row > label, .luz-row > .lb { font-size:13px; font-weight:650; color:var(--ink2); display:flex; justify-content:space-between; align-items:baseline; }
+.luz-row output { font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink); }
+.luz-row input[type=range] { width:100%; height:26px; margin:0; background:transparent; accent-color:var(--series-1); }
+.luz-row input.rg { -webkit-appearance:none; appearance:none; height:12px; border-radius:7px; border:1px solid var(--border); }
+.luz-row input.rg::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#fff; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.35); cursor:pointer; }
+.luz-row input.rg::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#fff; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.35); cursor:pointer; }
+.luz-row input.rg:disabled { opacity:.45; }
+.luz-ends { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+.luz-sw { display:flex; flex-wrap:wrap; gap:8px; }
+.luz-sw button { width:34px; height:34px; border-radius:50%; border:2px solid var(--surface); box-shadow:0 0 0 1px var(--border-strong); cursor:pointer; padding:0; background:var(--c); }
+.luz-sw button:hover { transform:scale(1.08); }
+.luz-sw button:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.luz-sw.txt button { width:auto; height:30px; border-radius:999px; padding:0 12px; font-size:13px; font-weight:600; color:#222; border:1px solid rgba(0,0,0,.18); box-shadow:none; }
+.luz-hex { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink2); }
+.luz-hex input[type=color] { width:44px; height:32px; padding:0; border:1px solid var(--border-strong); border-radius:8px; background:transparent; cursor:pointer; }
 .pos { display:inline-flex; gap:2px; background:var(--sunk); border:1px solid var(--border); border-radius:11px; padding:3px; }
 .pos button { border:none; background:transparent; width:32px; height:30px; border-radius:8px; cursor:pointer; display:grid; place-items:center; color:var(--ink2); }
 .pos button:hover { background:var(--surface); color:var(--ink); }
@@ -450,10 +478,47 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-23 22:44</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 17:32</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
+
+<dialog id="dlgLuz" aria-labelledby="luzTitle">
+  <div class="dlg-h"><h2 id="luzTitle">Luz</h2><button class="btn" id="luzClose" type="button">Cerrar</button></div>
+  <div class="luz-body">
+    <div class="luz-top">
+      <div class="luz-prev" id="luzPrev" aria-hidden="true"></div>
+      <div class="t"><b id="luzEstado">—</b><span id="luzSub"></span></div>
+      <button class="switch" id="luzSw" role="switch" type="button" aria-label="Encender o apagar" aria-checked="false"></button>
+    </div>
+    <div class="luz-row" id="rowBr">
+      <label for="luzBr">Brillo <output id="luzBrV">—</output></label>
+      <input type="range" id="luzBr" min="1" max="100" step="1">
+    </div>
+    <div class="luz-row" id="rowMode">
+      <span class="lb">Modo</span>
+      <span class="seg" id="luzMode" role="group" aria-label="Modo de la luz">
+        <button type="button" data-m="white" aria-pressed="false">Blanco</button>
+        <button type="button" data-m="colour" aria-pressed="false">Color</button>
+      </span>
+    </div>
+    <div id="boxWhite" class="luz-row">
+      <label for="luzTemp">Blanco <output id="luzTempV">—</output></label>
+      <input type="range" id="luzTemp" class="rg" min="0" max="100" step="1" style="background:linear-gradient(90deg,#ffb15e,#fff1e0 50%,#c9dfff)">
+      <div class="luz-ends"><span>Cálido</span><span>Frío</span></div>
+      <div class="luz-sw txt" id="whitePre"></div>
+    </div>
+    <div id="boxColour" class="luz-row" style="gap:12px">
+      <span class="lb">Color <output id="luzHexV"></output></span>
+      <input type="range" id="luzHue" class="rg" min="0" max="360" step="1" aria-label="Tono"
+        style="background:linear-gradient(90deg,#f00,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00)">
+      <input type="range" id="luzSat" class="rg" min="0" max="100" step="1" aria-label="Saturación">
+      <div class="luz-sw" id="colorPre" aria-label="Colores rápidos"></div>
+      <div class="luz-hex"><label for="luzPick">Otro color</label><input type="color" id="luzPick"></div>
+    </div>
+    <div class="msg" id="luzMsg" role="alert"></div>
+  </div>
+</dialog>
 
 <dialog id="admDlg" aria-labelledby="admTitle">
   <div class="dlg-h"><h2 id="admTitle">Entrar</h2><button class="btn" id="admClose" type="button">Cerrar</button></div>
@@ -611,11 +676,16 @@ details.hint > p { margin:6px 0 0; }
           <label>Qué hace<select name="action">
             <option value="switch">Encender o apagar</option>
             <option value="level">Poner un brillo</option>
+            <option value="temp">Poner un blanco (cálido a frío)</option>
+            <option value="color">Poner un color</option>
+            <option value="mode">Cambiar a modo blanco o color</option>
             <option value="position">Poner una apertura</option>
             <option value="stop">Parar</option>
           </select></label>
           <label id="schValSwitch">Valor<select name="onoff"><option value="1">Encender</option><option value="0">Apagar</option></select></label>
-          <label id="schValPct" hidden>Porcentaje<input name="pct" type="number" min="0" max="100" value="50"></label>
+          <label id="schValPct" hidden><span id="schPctLab">Porcentaje</span><input name="pct" type="number" min="0" max="100" value="50"></label>
+          <label id="schValColor" hidden>Color<input name="colorv" type="color" value="#ff7a00"></label>
+          <label id="schValMode" hidden>Modo<select name="modev"><option value="white">Blanco</option><option value="colour">Color</option></select></label>
           <label>Cuándo<select name="kind">
             <option value="clock">A una hora</option>
             <option value="sunrise">Al amanecer</option>
@@ -785,10 +855,10 @@ const TELEHOME_TYPES = {
   },
 
   luz: {
-    label: "Luz regulable", plural: "Luces", desc: "Encendido y nivel de brillo",
+    label: "Luz", plural: "Luces", desc: "Encendido, brillo, blancos cálido/frío y color",
     icon: "M9.5 18.5h5M10.5 22h3M12 2a7 7 0 0 0-4 12.8v3.7h8v-3.7A7 7 0 0 0 12 2z",
     metrics: ["br"], primary: "br", meta: [], bar: "br",
-    control: "level", actions: ["switch", "level"],
+    control: "level", light: true, actions: ["switch", "level", "temp", "color", "mode"],
     hi: { kind: "count", label: "Luces encendidas" },
     summary: [
       { key: "m.br.avg", label: "Brillo medio", unit: "%", dec: 0 },
@@ -796,13 +866,15 @@ const TELEHOME_TYPES = {
       { key: "on_ratio", label: "Tiempo encendida", pct: true },
       { key: "availability", label: "Disponibilidad", pct: true },
     ],
-    note: "El brillo se guarda aunque la luz esté apagada: al encenderla vuelve al último nivel.",
+    note: "El brillo se guarda aunque la luz esté apagada: al encenderla vuelve al último nivel. Las bombillas de color tienen además blanco cálido/frío y color (botón de la paleta).",
     fields: tuya([
-      dp("switch", "interruptor", 20), dp("level", "brillo", 22),
-      code("switch", "interruptor", "switch_led"), code("level", "brillo", "bright_value_v2"),
-      scale("level", "brillo (a %)", 10),
+      dp("switch", "interruptor", 20), dp("mode", "modo (blanco/color)", 21), dp("level", "brillo", 22),
+      dp("temp", "temperatura del blanco", 23), dp("color", "color", 24),
+      code("switch", "interruptor", "switch_led"), code("mode", "modo", "work_mode"), code("level", "brillo", "bright_value_v2"),
+      code("temp", "temperatura", "temp_value_v2"), code("color", "color", "colour_data_v2"),
+      scale("level", "brillo (a %)", 10), scale("temp", "temperatura (a 0-100)", 10), scale("color", "saturación y valor (a %)", 10),
     ]),
-    state: { on: false, br: 60 },
+    state: { on: false, br: 60, temp: 30, mode: "white", color: { h: 210, s: 80, v: 70 } },
     sim(d, t, st) { return { br: st.on ? Math.round(st.br) : 0 }; },
   },
 
@@ -843,6 +915,27 @@ const TELEHOME_TYPES = {
 
 window.TELEHOME_METRICS = TELEHOME_METRICS;
 window.TELEHOME_TYPES = TELEHOME_TYPES;
+/* Color de las luces: tono 0-360, saturación y valor 0-100 (como el servicio) */
+window.TH_COLOR = {
+  hsvToHex(h, s, v) {
+    s = Math.max(0, Math.min(100, s)) / 100; v = Math.max(0, Math.min(100, v)) / 100; h = ((h % 360) + 360) % 360;
+    const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+  },
+  hexToHsv(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim()); if (!m) return null;
+    const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { h: Math.round(((h * 60) + 360) % 360), s: Math.round(mx ? d / mx * 100 : 0), v: Math.round(mx * 100) };
+  },
+  /* color con el que se ve la luz: el de su color si está en modo color, o un blanco entre cálido (0) y frío (100) */
+  swatch(s) {
+    if (s && s.mode === "colour" && s.hex) return s.hex;
+    const t = Math.max(0, Math.min(100, s && s.temp != null ? s.temp : 30)) / 100, a = [255, 177, 94], b = [201, 223, 255];
+    return "#" + a.map((x, i) => Math.round(x + (b[i] - x) * t).toString(16).padStart(2, "0")).join("");
+  },
+};
 /* Tipos que ya se pueden dar de alta */
 window.TELEHOME_READY = Object.keys(TELEHOME_TYPES).filter((k) => !TELEHOME_TYPES[k].soon);
 </script>
@@ -933,12 +1026,19 @@ const DEMO = (() => {
     return o;
   }
   const save = () => store.set(KEY, JSON.stringify(devs));
-  const pub = (d) => { const o = Object.assign({}, d); delete o.st; delete o.sim_base; delete o.local_key; return o; };
+  const pub = (d) => { const o = Object.assign({}, d); delete o.st; delete o.sim_base; delete o.local_key;
+    if ((TYPES[d.type] || {}).light) o.caps = { mode: true, level: true, temp: true, color: true };
+    return o; };
+  const luzEstado = (st) => {            // la luz de demostración con todos sus datos, aunque se guardara con menos
+    const c = st.color || { h: 210, s: 80, v: 70 };
+    return Object.assign({}, st, { temp: st.temp != null ? st.temp : 30, mode: st.mode || "white", color: c, hex: window.TH_COLOR.hsvToHex(c.h, c.s, c.v) });
+  };
   const values = (d, t) => {
     const T = TYPES[d.type]; if (!T || !T.sim) return {};
     return T.sim(d, t, d.st || {}, H);
   };
-  const reading = (d, t) => ({ ts: t, online: true, error: null, state: Object.assign({}, d.st), values: values(d, t) });
+  const reading = (d, t) => ({ ts: t, online: true, error: null,
+    state: (TYPES[d.type] || {}).light ? luzEstado(d.st) : Object.assign({}, d.st), values: values(d, t) });
   const energyKwh = (d, t0, t1) => {     // integra la potencia simulada en el intervalo
     if (!TYPES[d.type] || !TYPES[d.type].metrics.includes("p")) return undefined;
     let e = 0; const n = 60, dt = (t1 - t0) / n;
@@ -960,11 +1060,19 @@ const DEMO = (() => {
     if (!acts.includes(action)) throw new Error("«" + (T.label || d.type) + "» no admite la orden «" + action + "».");
     d.st = d.st || {};
     if (action === "switch") d.st.on = !!value;
-    else if (action === "level") { d.st.br = clamp(value, 0, 100); d.st.on = d.st.br > 0; }
+    else if (action === "level") { d.st.br = clamp(value, 0, 100); d.st.on = d.st.br > 0;
+      if (d.st.mode === "colour" && d.st.br > 0) { d.st.color = d.st.color || { h: 210, s: 80, v: 70 }; d.st.color.v = d.st.br; } }
+    else if (action === "temp") { d.st.temp = clamp(value, 0, 100); d.st.mode = "white"; d.st.on = true; }
+    else if (action === "color") {
+      const c = typeof value === "string" ? window.TH_COLOR.hexToHsv(value) : value;
+      if (!c || !(c.h >= 0 && c.h <= 360 && c.s >= 0 && c.s <= 100 && c.v >= 0 && c.v <= 100)) throw new Error("El color debe ser #rrggbb");
+      d.st.color = { h: c.h % 360, s: c.s, v: Math.max(1, c.v) }; d.st.br = d.st.color.v; d.st.mode = "colour"; d.st.on = true;
+    }
+    else if (action === "mode") { if (value !== "white" && value !== "colour") throw new Error("El modo debe ser white o colour"); d.st.mode = value; }
     else if (action === "position") d.st.pos = clamp(value, 0, 100);
     else if (action === "setpoint") d.st.sp = +value;
     save();
-    return { id: d.id, online: true, error: null, state: Object.assign({}, d.st) };
+    return { id: d.id, online: true, error: null, state: (T.light ? luzEstado(d.st) : Object.assign({}, d.st)) };
   }
 
   return {
@@ -1570,6 +1678,15 @@ function control(d) {
       sl.addEventListener("change", (e) => { stop(e); send(d, "level", +e.target.value); });
       box.append(el("div", { class: "level" }, sl, lab));
     }
+    const caps = d.caps || {};
+    if (t.light && (caps.temp || caps.color)) {
+      const lb = el("button", { class: "lt-btn", type: "button", title: "Blanco y color", "aria-label": "Blanco y color de " + d.name,
+        style: "--lc:" + window.TH_COLOR.swatch(s) }, el("i"));
+      lb.disabled = !ok;
+      lb.addEventListener("click", (e) => { stop(e); abrirLuz(d.id); });
+      lb.addEventListener("keydown", stop);
+      box.append(lb);
+    }
     const sw = el("button", { class: "switch" + (S.busy.has(d.id) ? " busy" : ""), role: "switch", type: "button",
       "aria-label": "Alimentación de " + d.name, "aria-checked": String(!!s.on) });
     sw.disabled = !ok;
@@ -1601,11 +1718,109 @@ async function send(d, action, value) {
   try {
     await api("api/devices/" + d.id + "/command", { method: "POST", body: { action: action, value: value } });
     const q = action === "switch" ? (value ? "encendido" : "apagado") : action === "level" ? "al " + value + " %"
+      : action === "temp" ? "con el blanco " + tempTxt(value) : action === "color" ? "con el color cambiado"
+      : action === "mode" ? (value === "colour" ? "en modo color" : "en modo blanco")
       : action === "stop" ? "parada" : value >= 100 ? "subiendo" : value <= 0 ? "bajando" : "al " + value + " %";
     toast("«" + d.name + "» " + q + ".");
   } catch (err) { toast(err.message, true); }
   S.busy.delete(d.id);
   await refresh();
+}
+/* ---------- panel de luz: brillo, blanco cálido/frío y color ---------- */
+const tempTxt = (t) => (t < 34 ? "cálido" : t > 66 ? "frío" : "neutro") + " (" + Math.round(t) + " %)";
+const LUZ_COLORES = [["#ff0000", "Rojo"], ["#ff7a00", "Naranja"], ["#ffd400", "Amarillo"], ["#22cc44", "Verde"],
+  ["#00d5d5", "Cian"], ["#1f6fff", "Azul"], ["#8a3dff", "Violeta"], ["#ff3da0", "Rosa"]];
+const LUZ_BLANCOS = [["Cálido", 10], ["Neutro", 50], ["Frío", 90]];
+const L = { id: null, drag: false, busy: false };
+const luzDev = () => devs().find((d) => d.id === L.id);
+function abrirLuz(id) {
+  L.id = id; L.drag = false;
+  const dlg = $("#dlgLuz");
+  if (!dlg.dataset.listo) { dlg.dataset.listo = "1"; enlazarLuz(); }
+  setMsg("#luzMsg", "", true); pintarLuz();
+  if (!dlg.open) dlg.showModal();
+}
+function luzBrillo() { return Math.max(1, Math.round(+$("#luzBr").value || 100)); }
+function enlazarLuz() {
+  const dlg = $("#dlgLuz");
+  $("#luzClose").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("close", () => { L.id = null; });
+  $("#luzSw").addEventListener("click", () => { const d = luzDev(); if (d) enviarLuz("switch", !st(d).on); });
+  const deslizador = (id, vivo, enviar) => {
+    const r = $(id);
+    const empezar = () => { L.drag = true; };
+    r.addEventListener("pointerdown", empezar); r.addEventListener("keydown", empezar);
+    r.addEventListener("input", () => { L.drag = true; vivo(+r.value); });
+    r.addEventListener("change", () => { L.drag = false; enviar(+r.value); });
+  };
+  deslizador("#luzBr", (v) => { $("#luzBrV").textContent = v + " %"; },
+    (v) => enviarLuz("level", v));
+  deslizador("#luzTemp", (v) => { $("#luzTempV").textContent = tempTxt(v);
+      $("#luzPrev").style.setProperty("--lc", window.TH_COLOR.swatch({ temp: v })); },
+    (v) => enviarLuz("temp", v));
+  const tono = () => ({ h: +$("#luzHue").value, s: +$("#luzSat").value, v: luzBrillo() });
+  const vivoColor = () => {
+    const c = tono(), hex = window.TH_COLOR.hsvToHex(c.h, c.s, c.v);
+    $("#luzPrev").style.setProperty("--lc", hex); $("#luzHexV").textContent = hex;
+    $("#luzSat").style.background = "linear-gradient(90deg,#fff," + window.TH_COLOR.hsvToHex(c.h, 100, 100) + ")";
+  };
+  deslizador("#luzHue", vivoColor, () => enviarLuz("color", tono()));
+  deslizador("#luzSat", vivoColor, () => enviarLuz("color", tono()));
+  $("#luzPick").addEventListener("change", (e) => {
+    const c = window.TH_COLOR.hexToHsv(e.target.value); if (c) enviarLuz("color", { h: c.h, s: c.s, v: luzBrillo() });
+  });
+  $("#luzMode").addEventListener("click", (e) => { const b = e.target.closest("button[data-m]"); if (b) enviarLuz("mode", b.dataset.m); });
+  const pre = $("#colorPre");
+  for (const [hex, nombre] of LUZ_COLORES) {
+    const b = el("button", { type: "button", title: nombre, "aria-label": nombre, style: "--c:" + hex });
+    b.addEventListener("click", () => { const c = window.TH_COLOR.hexToHsv(hex); enviarLuz("color", { h: c.h, s: c.s, v: luzBrillo() }); });
+    pre.append(b);
+  }
+  const bl = $("#whitePre");
+  for (const [nombre, t] of LUZ_BLANCOS) {
+    const b = el("button", { type: "button", text: nombre, style: "background:" + window.TH_COLOR.swatch({ temp: t }) });
+    b.addEventListener("click", () => enviarLuz("temp", t));
+    bl.append(b);
+  }
+}
+async function enviarLuz(action, value) {
+  const d = luzDev(); if (!d) return;
+  if (!ADMIN.can()) { $("#dlgLuz").close(); return abrirAdmin("Escribe tu contraseña para manejar los dispositivos."); }
+  L.busy = true; setMsg("#luzMsg", "", true); pintarLuz();
+  try { await api("api/devices/" + d.id + "/command", { method: "POST", body: { action: action, value: value } }); }
+  catch (err) { setMsg("#luzMsg", err, false); }
+  try { await refresh(); } catch (e) { /* el aviso de conexión ya lo pinta refresh() */ }
+  L.busy = false; pintarLuz();
+}
+function pintarLuz() {
+  const dlg = $("#dlgLuz"), d = luzDev();
+  if (!d) { if (dlg.open) dlg.close(); return; }
+  const s = st(d), caps = Object.assign({ level: true, temp: true, color: true, mode: true }, d.caps || {});
+  const ok = online(d) && ADMIN.can() && !L.busy, colorMode = caps.color && (s.mode === "colour");
+  $("#luzTitle").textContent = d.name;
+  const c = s.color || { h: 0, s: 100, v: 100 };
+  const br = s.br != null ? s.br : (vals(d).br || 100);
+  const vivo = !L.drag;             // mientras se arrastra un deslizador, el sondeo no se lo mueve de debajo del dedo
+  $("#luzPrev").style.setProperty("--lc", window.TH_COLOR.swatch(s));
+  $("#luzPrev").style.setProperty("--lo", online(d) && s.on ? "1" : ".35");
+  $("#luzEstado").textContent = !online(d) ? "Sin conexión" : s.on ? "Encendida" : "Apagada";
+  $("#luzSub").textContent = !online(d) ? "" : colorMode ? "Color " + (s.hex || "") + " · brillo " + Math.round(br) + " %"
+    : (caps.temp && s.temp != null ? "Blanco " + tempTxt(s.temp) + " · " : "") + "brillo " + Math.round(br) + " %";
+  const sw = $("#luzSw"); sw.setAttribute("aria-checked", String(!!s.on)); sw.disabled = !ok; sw.classList.toggle("busy", L.busy);
+  $("#rowBr").hidden = !caps.level;
+  $("#rowMode").hidden = !(caps.mode && caps.color);
+  $("#boxWhite").hidden = !caps.temp || colorMode;
+  $("#boxColour").hidden = !colorMode;
+  for (const b of $("#luzMode").querySelectorAll("button")) { b.setAttribute("aria-pressed", String(b.dataset.m === (colorMode ? "colour" : "white"))); b.disabled = !ok; }
+  if (vivo) {
+    $("#luzBr").value = String(Math.max(1, Math.round(br))); $("#luzBrV").textContent = Math.round(br) + " %";
+    $("#luzTemp").value = String(Math.round(s.temp != null ? s.temp : 30)); $("#luzTempV").textContent = s.temp != null ? tempTxt(s.temp) : "—";
+    $("#luzHue").value = String(c.h); $("#luzSat").value = String(c.s);
+    const hex = window.TH_COLOR.hsvToHex(c.h, c.s, c.v);
+    $("#luzHexV").textContent = hex; $("#luzPick").value = hex;
+    $("#luzSat").style.background = "linear-gradient(90deg,#fff," + window.TH_COLOR.hsvToHex(c.h, 100, 100) + ")";
+  }
+  for (const el_ of dlg.querySelectorAll("input,#colorPre button,#whitePre button")) el_.disabled = !ok;
 }
 function sparkline(d) {
   const svg = sv("svg", { class: "spark", viewBox: "0 0 128 36", "aria-hidden": "true" });
@@ -1972,6 +2187,7 @@ async function loadChart() {
 
 /* ---------- ajustes: alta de dispositivos con formulario generado ---------- */
 const CONTROLS = { switch: "Encendido y apagado", level: "Encendido y brillo", position: "Subir, parar y bajar", setpoint: "Temperatura de consigna", none: "Solo lectura" };
+const CAT_TIPO = { dj: "luz", dd: "tira de luz", xdd: "luz de techo", fwd: "luz ambiente", dc: "guirnalda", tgq: "regulador", cz: "enchufe", pc: "regleta" };
 const supported = (k) => !TYPES[k].soon && (!S.state || !S.state.types || S.state.types.includes(k));
 
 function showTab(name) {
@@ -2046,14 +2262,23 @@ function renderTypePick() {
       el("span", { class: "de", text: t.desc || "" }),
       t.soon ? el("span", { class: "so", text: "Próximamente" })
         : (!supported(k) ? el("span", { class: "so", text: "No disponible en el servicio conectado" }) : null));
-    b.disabled = !!t.soon || !supported(k) || (!!S.editing && S.pick !== k);
+    b.disabled = !!t.soon || !supported(k) || (!!S.editing && S.pick !== k && !(CAMBIABLES.includes(S.pick) && CAMBIABLES.includes(k)));
     b.addEventListener("click", () => pickType(k));
     box.append(b);
   }
 }
+const CAMBIABLES = ["enchufe", "luz"];   // al editar se puede pasar de uno a otro: comparten cuenta, Device ID y modo
 function pickType(k) {
+  const antes = S.editing ? devs().find((x) => x.id === S.editing) : null;
   S.pick = k; renderTypePick(); buildForm(k);
   $("#devForm").hidden = false;
+  if (antes && antes.type !== k) {       /* cambio de tipo: se conserva lo común; los códigos vuelven a los del tipo nuevo */
+    const f = $("#devForm").elements;
+    for (const n of ["name", "room", "mode", "dev_id", "ip", "version"]) if (f[n] && antes[n] != null) f[n].value = antes[n];
+    if (f.mode) applyMode(f.mode.value);
+    setMsg("#formMsg", "Al cambiar a «" + TYPES[k].label + "» se usan los códigos por omisión de ese tipo; revísalos en «Avanzado».", true);
+    return;
+  }
   if (S.scan && !S.editing) {            /* viene de «Buscar en la red local»: rellena lo encontrado */
     const f = $("#devForm").elements;
     if (f.dev_id) f.dev_id.value = S.scan.dev_id || "";
@@ -2202,6 +2427,9 @@ function momentoTxt(w) {
 function ordenTxt(x) {
   if (x.action === "switch") return x.value ? "encender" : "apagar";
   if (x.action === "level") return "brillo al " + x.value + " %";
+  if (x.action === "temp") return "blanco " + tempTxt(x.value);
+  if (x.action === "color") return "color " + x.value;
+  if (x.action === "mode") return x.value === "colour" ? "modo color" : "modo blanco";
   if (x.action === "position") return "abrir al " + x.value + " %";
   return "parar";
 }
@@ -2293,12 +2521,27 @@ function schAvisoUnaVez() {
   if (todos) { todos.checked = n === 7; todos.indeterminate = n > 0 && n < 7; }
 }
 function schModo() {
+  schAcciones();
   const f = $("#schForm"), a = f.action.value, k = f.kind.value;
   $("#schValSwitch").hidden = a !== "switch";
-  $("#schValPct").hidden = !(a === "level" || a === "position");
+  $("#schValPct").hidden = !(a === "level" || a === "position" || a === "temp");
+  $("#schPctLab").textContent = a === "temp" ? "Blanco (0 cálido, 100 frío)" : a === "level" ? "Brillo (%)" : "Porcentaje";
+  $("#schValColor").hidden = a !== "color";
+  $("#schValMode").hidden = a !== "mode";
   $("#schTimeBox").hidden = k !== "clock";
   $("#schOffsetBox").hidden = k === "clock";
   $("#schCondBox").hidden = !f.hascond.checked;
+}
+/* Solo se ofrecen las órdenes que admite el dispositivo elegido (una luz con color, un enchufe solo enciende y apaga) */
+function schAcciones() {
+  const f = $("#schForm"), d = schDevs().find((x) => x.id === f.device.value);
+  const t = d && typeof TYPES === "object" ? TYPES[d.type] : null;
+  if (!t || !t.actions) return;
+  const caps = d.caps || {};
+  const ok = (a) => (a === "stop" ? t.actions.includes("stop") : t.actions.includes(a)) &&
+    !(a === "temp" && d.caps && !caps.temp) && !(a === "color" && d.caps && !caps.color) && !(a === "mode" && d.caps && !(caps.mode && caps.color));
+  for (const o of f.action.options) { o.hidden = !ok(o.value); o.disabled = !ok(o.value); }
+  if (!ok(f.action.value)) { f.action.value = Array.from(f.action.options).find((o) => !o.disabled).value; }
 }
 function schNuevo() {
   schEditando = null;
@@ -2319,6 +2562,8 @@ function schEditar(x) {
   f.name.value = x.name; f.device.value = x.device; f.action.value = x.action; f.kind.value = x.when.kind;
   f.onoff.value = x.value ? "1" : "0";
   f.pct.value = String(typeof x.value === "number" ? x.value : 50);
+  f.colorv.value = x.action === "color" && /^#[0-9a-f]{6}$/i.test(x.value) ? x.value : "#ff7a00";
+  f.modev.value = x.action === "mode" && x.value === "colour" ? "colour" : "white";
   f.time.value = x.when.time || "07:00"; f.offset.value = String(x.when.offset || 0);
   f.hascond.checked = !!x.condition;
   if (x.condition) { f.cmetric.value = x.condition.metric; f.cop.value = x.condition.op;
@@ -2345,6 +2590,8 @@ function schDesdeFormulario() {
       value: +f.cvalue.value, "for": +f.cfor.value || 0 } : null,
   };
   if (f.action.value === "switch") cuerpo.value = f.onoff.value === "1";
+  else if (f.action.value === "color") cuerpo.value = f.colorv.value;
+  else if (f.action.value === "mode") cuerpo.value = f.modev.value;
   else if (f.action.value !== "stop") cuerpo.value = +f.pct.value;
   return cuerpo;
 }
@@ -2449,7 +2696,7 @@ function bindDialog() {
   /* ---- programaciones ---- */
   $("#btnSchNew").addEventListener("click", schNuevo);
   $("#btnSchCancel").addEventListener("click", () => { $("#schFormBox").hidden = true; });
-  for (const n of ["action", "kind"]) $("#schForm")[n].addEventListener("change", schModo);
+  for (const n of ["device", "action", "kind"]) $("#schForm")[n].addEventListener("change", schModo);
   $("#schForm").hascond.addEventListener("change", schModo);
   $("#schForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -2564,13 +2811,14 @@ function bindDialog() {
         add.addEventListener("click", async () => {
           add.disabled = true;
           try {
-            const rep = await api("api/cloud/import", { method: "POST", body: { dev_ids: [f.dev_id], type: f.type || "enchufe" } });
+            /* sin «type», el servicio elige por la categoría de Tuya (bombillas y tiras → luz) */
+            const rep = await api("api/cloud/import", { method: "POST", body: f.type ? { dev_ids: [f.dev_id], type: f.type } : { dev_ids: [f.dev_id] } });
             if (rep["omitidos"] && rep["omitidos"].length) throw new Error(rep["omitidos"][0].motivo);
             add.textContent = "Añadido"; await refresh(); renderDevList();
           } catch (err) { setMsg("#cloudMsg", err, false); add.disabled = false; }
         });
         out.append(el("div", { class: "found" },
-          el("code", { text: f.name + " · " + f.dev_id + (f.category ? " · " + f.category : "") + (f.online === false ? " · desconectado" : "") +
+          el("code", { text: f.name + " · " + f.dev_id + (f.category ? " · " + (CAT_TIPO[f.category] || f.category) : "") + (f.online === false ? " · desconectado" : "") +
             (/^vdevo/i.test(f.dev_id) ? " · virtual (solo pruebas)" : "") }), add));
       }
     } catch (err) { setMsg("#cloudMsg", err, false); }
@@ -2664,6 +2912,7 @@ async function refresh() {
   fixMetric();
   renderHero(); renderGroups(); renderFilters();
   if ($("#dlg").open) { renderDevList(); updateEstimate(); }
+  if ($("#dlgLuz").open) pintarLuz();
 }
 async function init() {
   let oculto = false;

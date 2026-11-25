@@ -164,6 +164,36 @@ tfoot td { border-top:.5px solid var(--border); font-weight:700; }
 .foot { color:var(--muted); font-size:12px; text-align:center; padding:16px 10px 4px; line-height:1.5; }
 .foot a { color:var(--muted); }
 
+/* ---------- luces: botón de color en la fila y hoja de control ---------- */
+.lt-btn { width:34px; height:34px; flex:none; border-radius:50%; border:2px solid var(--lc,#ffb15e); background:transparent; color:var(--lc,#ffb15e); display:grid; place-items:center; padding:0; }
+.lt-btn svg { width:18px; height:18px; }
+.lt-btn:disabled { opacity:.4; }
+.lz-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.lz-sw { width:42px; height:42px; flex:none; border-radius:50%; background:var(--lc,#ffb15e); box-shadow:0 0 18px var(--lc,#ffb15e); }
+.lz-t { flex:1; min-width:0; }
+.lz-t h2 { margin:0; font-size:18px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lz-sub { color:var(--ink2); font-size:14px; }
+.lz-row { margin-bottom:14px; }
+.lz-l { display:flex; justify-content:space-between; font-size:14px; color:var(--ink2); margin-bottom:6px; }
+.lz-l b { color:var(--ink); font-weight:600; }
+.lz-row input[type=range] { display:block; width:100%; height:28px; margin:0 0 8px; padding:0; border:none; border-radius:14px; accent-color:var(--accent); }
+.lz-row input[type=range]:disabled { opacity:.4; }
+.lz-pre { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+.lz-pre .chip { flex:1; min-height:40px; border-radius:10px; border:1px solid var(--border); background:var(--grid); color:var(--ink); font-weight:600; }
+.lz-pre .dot { width:36px; height:36px; border-radius:50%; border:2px solid var(--page); box-shadow:0 0 0 1px var(--border); padding:0; }
+.lz-pre button:disabled { opacity:.4; }
+.lz-seg { display:flex; gap:4px; background:var(--grid); border-radius:12px; padding:3px; margin-bottom:14px; }
+.lz-seg button { flex:1; min-height:38px; border:none; border-radius:10px; background:transparent; color:var(--ink); font-weight:600; }
+.lz-seg button[aria-pressed="true"] { background:var(--page); box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.lz-seg button:disabled { opacity:.5; }
+.sheet .lz-row input[type=range] { margin-bottom:8px; }
+.lz-row input[type=range] { -webkit-appearance:none; appearance:none; background:var(--grid); height:22px; }
+.lz-row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:30px; height:30px; border-radius:50%; background:#fff; border:1px solid rgba(0,0,0,.25); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.lz-row input[type=range]::-moz-range-thumb { width:28px; height:28px; border-radius:50%; background:#fff; border:1px solid rgba(0,0,0,.25); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.lz-pre { margin-bottom:6px; }
+.sheet .lz-pre + .btns, .sheet .lz-row + .btns, .sheet .lz-seg + .btns { margin-top:14px; }
+.sheet .btns { margin-top:14px; }
+
 html { -webkit-text-size-adjust:100%; }
 body { overscroll-behavior-y:contain; }
 /* ---- Cabecera: título grande que se compacta al desplazar ---- */
@@ -329,10 +359,10 @@ const TYPES = {
     ],
   },
   luz: {
-    label: "Luz regulable", plural: "Luces",
+    label: "Luz", plural: "Luces",
     icon: "M9.5 18.5h5M10.5 22h3M12 2a7 7 0 0 0-4 12.8v3.7h8v-3.7A7 7 0 0 0 12 2z",
     metrics: ["br"], primary: "br", meta: [], bar: "br",
-    control: "level", actions: ["switch", "level"],
+    control: "level", light: true, actions: ["switch", "level", "temp", "color", "mode"],
     hi: { kind: "count", label: "Luces encendidas" },
     summary: [
       { key: "m.br.avg", label: "Brillo medio", unit: "%", dec: 0 },
@@ -356,6 +386,34 @@ const TYPES = {
 };
 const TIPO_DESCONOCIDO = { label: "Dispositivo", plural: "Otros dispositivos", icon: "M4 6h16v12H4zM8 10h8", metrics: [], meta: [], control: "none", actions: [], summary: [{ key: "availability", label: "Disponibilidad", pct: true }] };
 const T = (d) => TYPES[d && d.type] || TIPO_DESCONOCIDO;
+
+/* ---------- luces: colores y blancos (la escala es la del servicio: brillo y blanco 0-100, color h 0-360 / s,v 0-100) ---------- */
+const COLOR = {
+  hsvToHex(h, s, v) {
+    s = Math.max(0, Math.min(100, s)) / 100; v = Math.max(0, Math.min(100, v)) / 100; h = ((h % 360) + 360) % 360;
+    const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+  },
+  hexToHsv(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim()); if (!m) return null;
+    const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { h: Math.round(((h * 60) + 360) % 360), s: Math.round(mx ? d / mx * 100 : 0), v: Math.round(mx * 100) };
+  },
+  /* con qué color se ve la luz: el suyo en modo color, o un blanco entre cálido (0) y frío (100) */
+  swatch(s) {
+    if (s && s.mode === "colour" && s.hex) return s.hex;
+    const t = Math.max(0, Math.min(100, s && s.temp != null ? s.temp : 30)) / 100, a = [255, 177, 94], b = [201, 223, 255];
+    return "#" + a.map((x, i) => Math.round(x + (b[i] - x) * t).toString(16).padStart(2, "0")).join("");
+  },
+};
+const tempTxt = (t) => (t < 34 ? "cálido" : t > 66 ? "frío" : "neutro") + " (" + Math.round(t) + " %)";
+const LUZ_COLORES = [["#ff0000", "Rojo"], ["#ff7a00", "Naranja"], ["#ffd400", "Amarillo"], ["#22cc44", "Verde"],
+  ["#00d5d5", "Cian"], ["#1f6fff", "Azul"], ["#8a3dff", "Violeta"], ["#ff3da0", "Rosa"]];
+const LUZ_BLANCOS = [["Cálido", 10], ["Neutro", 50], ["Frío", 90]];
+/* qué sabe hacer esta luz; un servicio anterior no manda «caps» y entonces solo hay brillo */
+const capsLuz = (d) => Object.assign({ mode: false, level: true, temp: false, color: false }, d && d.caps || {});
 
 /* ---------- dónde buscar la API ---------- */
 const API_CANDIDATAS = ["/rafa/telehome/api/", "api/", "/rafa/telehome/enchufes/api/"];
@@ -528,7 +586,12 @@ function estadoTexto(d) {
   if (!online(d)) return "Sin conexión";
   const t = T(d), s = stOf(d);
   if (t.control === "position") { const p = s.pos != null ? s.pos : vals(d).pos; return p >= 100 ? "Abierta" : p <= 0 ? "Cerrada" : "Abierta " + fmt(p, 0) + " %"; }
-  if (t.control === "level") return s.on ? "Encendida " + fmt(s.br != null ? s.br : vals(d).br, 0) + " %" : "Apagada";
+  if (t.control === "level") {
+    if (!s.on) return "Apagada";
+    const k = capsLuz(d), br = fmt(s.br != null ? s.br : vals(d).br, 0) + " %";
+    if (k.color && s.mode === "colour" && s.hex) return "Encendida " + br + " · color";
+    return "Encendida " + br + (k.temp && s.temp != null ? " · " + tempTxt(s.temp).replace(/ \(.*/, "") : "");
+  }
   if (t.control === "switch") return s.on ? "Encendido" : "Apagado";
   return "En línea";
 }
@@ -691,6 +754,7 @@ const ICONOS = {
   tabla: "M3 5h18v14H3zM3 10h18M9 10v9",
   subir: "M6 15l6-6 6 6", parar: "M7 7h10v10H7z", bajar: "M6 9l6 6 6-6",
   descargar: "M12 3v12M7 10l5 5 5-5M5 21h14",
+  paleta: "M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.3-1-1.6-1-2.7 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01",
 };
 const icono = (d, cls) => {
   const s = sv("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2",
@@ -740,6 +804,12 @@ function control(d) {
       sl.addEventListener("change", (e) => { parar(e); mandar(d, "level", +e.target.value); });
       caja.append(sl);
     }
+    const k = capsLuz(d);
+    if (t.light && (k.temp || k.color)) {
+      const lc = el("button", { class: "lt-btn", type: "button", "aria-label": "Color y blanco de " + d.name, title: "Color y blanco",
+        style: "--lc:" + COLOR.swatch(s), onclick: (e) => { parar(e); abrirLuz(d.id); } }, icono(ICONOS.paleta));
+      lc.disabled = !listo; caja.append(lc);
+    }
     const sw = el("button", { class: "sw" + (APP.busy.has(d.id) ? " busy" : ""), type: "button", role: "switch",
       "aria-checked": String(!!s.on), "aria-label": "Encender o apagar " + d.name });
     sw.disabled = !listo;
@@ -764,11 +834,90 @@ async function mandar(d, action, value) {
   if (err) toast(err, true);
   else {
     const q = action === "switch" ? (value ? "encendido" : "apagado") : action === "level" ? "al " + value + " %"
+      : action === "temp" ? "en blanco " + tempTxt(value) : action === "color" ? "en color" : action === "mode" ? (value === "colour" ? "en modo color" : "en modo blanco")
       : action === "stop" ? "parada" : value >= 100 ? "subiendo" : "bajando";
     toast("«" + d.name + "» " + q + ".");
   }
   await recargar();
 }
+/* ---------- hoja de una luz: brillo, blanco cálido/frío, color y modo ---------- */
+let luzId = null, luzArr = false, luzOcupada = false;
+const luzActual = () => devs().find((d) => d.id === luzId);
+function abrirLuz(id) {
+  luzId = id; luzArr = false;
+  const bg = $("#sheetBg"), sh = $("#sheet");
+  if (cerrarHoja) cerrarHoja();
+  cerrarHoja = () => { bg.hidden = sh.hidden = true; sh.replaceChildren(); cerrarHoja = null; luzId = null; };
+  bg.onclick = () => cerrarHoja && cerrarHoja();
+  bg.hidden = sh.hidden = false;
+  pintarLuz();
+}
+/* manda una orden desde la hoja sin cerrarla; el sondeo no mueve un deslizador que se está arrastrando */
+async function ordenLuz(action, value) {
+  const d = luzActual(); if (!d) return;
+  if (!puedeMandar()) { if (cerrarHoja) cerrarHoja(); return pedirAdmin("Escribe tu contraseña para manejar los dispositivos."); }
+  luzOcupada = true; pintarLuz();
+  const err = await enviar(d, action, value);
+  luzOcupada = false;
+  if (err) toast(err, true);
+  await recargar(); pintarLuz();
+}
+function pintarLuz() {
+  const d = luzActual(), sh = $("#sheet");
+  if (!d) { if (cerrarHoja) cerrarHoja(); return; }
+  if (luzArr) return;                       // mientras se arrastra, el sondeo no cambia lo que hay bajo el dedo
+  const s = stOf(d), k = capsLuz(d), ok = online(d) && puedeMandar() && !luzOcupada;
+  const color = k.color && s.mode === "colour", c = s.color || { h: 0, s: 100, v: 100 };
+  const br = s.br != null ? s.br : (vals(d).br || 100);
+  const desl = (id, lab, min, max, val, fondo, alCambiar, alMover) => {
+    const r = el("input", { type: "range", id, min: String(min), max: String(max), step: "1", value: String(Math.round(val)), "aria-label": lab });
+    if (fondo) r.style.background = fondo;
+    r.disabled = !ok;
+    r.addEventListener("input", () => { luzArr = true; if (alMover) alMover(+r.value); });
+    r.addEventListener("change", () => { luzArr = false; alCambiar(+r.value); });
+    return r;
+  };
+  const fila = (txt, valId, valTxt, ...ctl) => el("div", { class: "lz-row" },
+    el("div", { class: "lz-l" }, el("span", { text: txt }), el("b", { id: valId, text: valTxt })), ...ctl);
+  const botones = (lista, activo, accion) => el("div", { class: "lz-pre" }, ...lista.map(([a, b]) => {
+    const bt = el("button", { type: "button", class: accion.cls, "aria-label": accion.lab(a, b), onclick: () => accion.go(a, b) },
+      accion.cls === "dot" ? null : b);
+    if (accion.cls === "dot") bt.style.background = a;
+    bt.disabled = !ok; return bt;
+  }));
+  const hex = COLOR.hsvToHex(c.h, c.s, c.v);
+  const cuerpo = [
+    el("div", { class: "lz-head" },
+      el("span", { class: "lz-sw", style: "--lc:" + COLOR.swatch(s) + ";opacity:" + (online(d) && s.on ? 1 : 0.35) }),
+      el("div", { class: "lz-t" }, el("h2", { text: d.name }),
+        el("div", { class: "lz-sub", text: !online(d) ? "Sin conexión" : !s.on ? "Apagada" : color ? "Color " + (s.hex || hex) + " · brillo " + Math.round(br) + " %"
+          : (k.temp && s.temp != null ? "Blanco " + tempTxt(s.temp) + " · " : "") + "brillo " + Math.round(br) + " %" })),
+      (() => { const sw = el("button", { class: "sw", type: "button", role: "switch", "aria-checked": String(!!s.on), "aria-label": "Encender o apagar " + d.name,
+        onclick: () => ordenLuz("switch", !s.on) }); sw.disabled = !ok; return sw; })()),
+  ];
+  if (k.level) cuerpo.push(fila("Brillo", "lzBrV", Math.round(br) + " %",
+    desl("lzBr", "Brillo", 1, 100, Math.max(1, br), null, (v) => ordenLuz("level", v), (v) => { $("#lzBrV").textContent = v + " %"; })));
+  if (k.mode && k.color) cuerpo.push(el("div", { class: "lz-seg", role: "group", "aria-label": "Modo" },
+    ...[["white", "Blanco"], ["colour", "Color"]].map(([m, t]) => { const b = el("button", { type: "button", "aria-pressed": String(m === (color ? "colour" : "white")), text: t,
+      onclick: () => ordenLuz("mode", m) }); b.disabled = !ok; return b; })));
+  if (k.temp && !color) {
+    cuerpo.push(fila("Blanco", "lzTempV", s.temp != null ? tempTxt(s.temp) : "—",
+      desl("lzTemp", "Blanco, de cálido a frío", 0, 100, s.temp != null ? s.temp : 30, "linear-gradient(90deg,#ffb15e,#c9dfff)",
+        (v) => ordenLuz("temp", v), (v) => { $("#lzTempV").textContent = tempTxt(v); })),
+      el("div", { class: "lz-pre" }, ...LUZ_BLANCOS.map(([nom, val]) => { const b = el("button", { type: "button", class: "chip", text: nom, "aria-label": "Blanco " + nom.toLowerCase(), onclick: () => ordenLuz("temp", val) }); b.disabled = !ok; return b; })));
+  }
+  if (k.color && color) {
+    cuerpo.push(fila("Color", "lzHexV", s.hex || hex,
+      desl("lzHue", "Tono", 0, 360, c.h, "linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)",
+        (v) => ordenLuz("color", COLOR.hsvToHex(v, +$("#lzSat").value, br)), (v) => { $("#lzHexV").textContent = COLOR.hsvToHex(v, +$("#lzSat").value, br); }),
+      desl("lzSat", "Intensidad del color", 0, 100, c.s, "linear-gradient(90deg,#fff," + COLOR.hsvToHex(c.h, 100, 100) + ")",
+        (v) => ordenLuz("color", COLOR.hsvToHex(+$("#lzHue").value, v, br)), (v) => { $("#lzHexV").textContent = COLOR.hsvToHex(+$("#lzHue").value, v, br); })),
+      botones(LUZ_COLORES, null, { cls: "dot", lab: (a, b) => b, go: (a) => { const c2 = COLOR.hexToHsv(a); ordenLuz("color", COLOR.hsvToHex(c2.h, c2.s, Math.max(1, br))); } }));
+  }
+  cuerpo.push(el("div", { class: "btns" }, el("button", { type: "button", class: "pri", text: "Hecho", onclick: () => cerrarHoja && cerrarHoja() })));
+  sh.replaceChildren(...cuerpo);
+}
+
 /* Apagar algo encendido se confirma: es fácil tocarlo sin querer */
 function pedirEncendido(d, quiero) {
   if (quiero || !puedeMandar()) return mandar(d, "switch", quiero);
@@ -993,6 +1142,9 @@ function momentoProg(w) {
 function ordenProg(x) {
   if (x.action === "switch") return x.value ? "encender" : "apagar";
   if (x.action === "level") return "brillo al " + x.value + " %";
+  if (x.action === "temp") return "blanco " + tempTxt(x.value);
+  if (x.action === "color") return "color " + x.value;
+  if (x.action === "mode") return x.value === "colour" ? "modo color" : "modo blanco";
   if (x.action === "position") return "abrir al " + x.value + " %";
   return "parar";
 }
@@ -1068,7 +1220,7 @@ function pintarAviso() {
 /* =====================================================================
    TeleHome · iPhone — armazón de una columna con pestañas abajo
    ===================================================================== */
-const VERSION = "1.0.0", MODIFICADO = "2026-11-23 22:44", LAYOUT_LABEL = "iPhone";
+const VERSION = "1.0.0", MODIFICADO = "2026-11-25 17:32", LAYOUT_LABEL = "iPhone";
 const PESTANAS = [
   ["dispositivos", "Dispositivos", ICONOS.lista],
   ["grafica", "Gráfica", ICONOS.grafica],
@@ -1100,7 +1252,7 @@ function pintar() {
   else if (tab === "resumen") v.replaceChildren(panelResumen());
   else v.replaceChildren(panelAjustes());
 }
-async function recargar() { await loadState(); pintar(); }
+async function recargar() { await loadState(); pintar(); if (typeof luzId !== "undefined" && luzId) pintarLuz(); }
 async function recargarHistorico() { if (tab === "grafica" || tab === "resumen") { await loadHistory(); pintar(); } }
 
 $("#btnRefresh").addEventListener("click", async (e) => {

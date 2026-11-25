@@ -64,6 +64,8 @@ python3 servir.py --host 0.0.0.0            # visible desde el iPad de tu Wi-Fi 
 | `apple-touch-icon.png` | Icono de 180×180 para la pantalla de inicio |
 | `servir.py` | Servidor de pruebas (ver arriba) |
 
+**Luces:** cada luz tiene, junto al interruptor y al brillo, un botón de paleta que abre una hoja con interruptor, brillo, blanco cálido↔frío, color y modo (solo lo que admite esa bombilla; hace falta el servicio 0.10.0 o posterior, con uno anterior solo hay brillo).
+
 El núcleo (catálogo de tipos, cliente de la API, modo Administrador y gráfica) es el mismo que el de
 [la otra versión](../telehome-iphone/README.md): lo que se corrija aquí conviene corregirlo también allí.
 

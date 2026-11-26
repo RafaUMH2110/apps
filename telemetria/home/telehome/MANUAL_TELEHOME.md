@@ -8,7 +8,7 @@ los dos, los niveles de acceso y el despliegue. Para instalarlo paso a paso est�
 [guía de instalación](INSTALACION.md); este manual explica **cómo funciona y por qué**, y sirve de referencia
 cuando haya que tocar algo.
 
-Versión del servicio documentada: **0.9.0**. Cada apartado indica desde qué versión existe lo que describe.
+Versión del servicio documentada: **0.13.0**. Cada apartado indica desde qué versión existe lo que describe.
 
 ---
 
@@ -270,6 +270,9 @@ anteriores funcionen.
 }
 ```
 
+`room` es el nombre de la estancia, no un identificador: es lo que enlaza el dispositivo con la lista de
+`rooms` del estado, y por eso renombrar una estancia reescribe el campo en todos los suyos.
+
 `id` es el identificador interno, derivado del nombre. `slot` fija el color de la serie (0-6) y no cambia
 aunque se borren otros dispositivos. **Los campos del segundo bloque solo se envían a un administrador**
 (apartado 7). La *Local Key* no sale nunca por la API: solo `has_key`.
@@ -380,7 +383,8 @@ página de la interfaz.
 {
   "app": "TeleHome", "version": "0.9.0", "api": "telehome",
   "types": ["enchufe"], "max_devices": 7, "server_time": 1795359880.7,
-  "simulate": false,
+  "simulate": false, "features": ["estancias", …], "limits": { "max_rooms": 24, … },
+  "rooms": [ { "id": "cocina", "name": "Cocina", "devices": 2 } ],
   "admin":  { "required": true, "active": false },
   "sesion": { "nivel": "user", "admin_required": true, "user_required": true, "puede_mandar": true },
   "options": { … }, "regions": { … },
@@ -392,6 +396,10 @@ página de la interfaz.
 
 `types` dice qué tipos sabe leer **este** servicio: la app deshabilita en el alta los que no estén.
 `sesion` existe desde 0.8.0; `admin` se mantiene para las apps anteriores.
+
+`features` y `rooms` existen desde 0.13.0. `features` es la lista de lo que admite el servicio y es como la app
+decide qué enseñar: sin `"estancias"` no ofrece gestionarlas y se limita a listar las que ya usen los
+dispositivos. `rooms` va en el orden elegido por el usuario, y cada entrada trae cuántos dispositivos tiene.
 
 ### Dispositivos
 
@@ -409,6 +417,23 @@ página de la interfaz.
 luces (servicio 0.10.0 o posterior), `temp` (0 cálido … 100 frío), `color` (`"#rrggbb"` o `{h,s,v}`) y `mode`
 (`white` o `colour`). `level`, `temp` y `color` encienden la luz; `mode` no. El servicio comprueba que el tipo las
 admita y devuelve 400 si no. Para una luz la respuesta trae su estado completo (`state`).
+
+### Estancias
+
+Desde 0.13.0. Una estancia es un nombre con un orden; el vínculo con el dispositivo es su campo `room`, por
+nombre y no por identificador.
+
+| Ruta | Para qué | Nivel |
+|---|---|---|
+| `POST api/rooms` | Alta: `{"name": "Cocina"}` | admin |
+| `PUT api/rooms/<id>` | Renombrar: `{"name": "Sala de estar"}` | admin |
+| `DELETE api/rooms/<id>` | Baja | admin |
+| `PUT api/rooms` | Reordenar: `{"ids": ["salon", "cocina", …]}` | admin |
+
+Renombrar cambia el nombre **en todos los dispositivos de esa estancia**, en la misma operación; la respuesta
+dice a cuántos ha afectado. Borrar deja sus dispositivos con `room` vacío y **no borra ninguno**. Los nombres
+se normalizan (espacios de sobra fuera, 24 caracteres como mucho) y no se repiten, sin distinguir mayúsculas.
+Una estancia escrita a mano al dar de alta un dispositivo se añade sola a la lista.
 
 ### Opciones, nube y contraseñas
 
@@ -580,6 +605,13 @@ encendidas, apertura media. Para los enchufes hay además un contador de energí
 Agrupados por tipo, por estancia o sin agrupar. Cada fila lleva nombre, estado, valores secundarios,
 minigráfica, valor principal y su control. Pulsando una fila se filtra el histórico a ese dispositivo.
 
+Agrupando por tipo o por estancia, la **cabecera del grupo también se pulsa** y filtra la gráfica y el resumen
+a todos sus dispositivos. La selección activa (`S.sel`) es por eso de tres clases: `"all"`, el identificador de
+un dispositivo, o `"grp:<tipo|estancia>:<clave>"`; el predicado `enSel(d)` es el único sitio que las distingue,
+y de él tiran la gráfica, el resumen y el menú del CSV. Si nada de la selección mide la magnitud que está
+puesta, se cambia a la del primero que mida algo. Al cambiar de agrupación la selección de grupo se descarta,
+porque ese grupo ya no existe en la vista nueva.
+
 Botones en la cabecera de la sección: **Actualizar**, que pide al servicio leer ya todos los dispositivos, y
 **Ocultar gráficas**, que esconde solo las minigráficas. Dentro de la ficha del histórico, **Ocultar gráfica**,
 que la pliega.
@@ -613,6 +645,7 @@ Una tabla por tipo con las columnas que declara su catálogo, y fila de totales 
 | Pestaña | Contenido |
 |---|---|
 | Dispositivos | Alta, edición, borrado y reordenación con ▲▼ |
+| Estancias | Alta, renombrado, borrado y orden de las estancias (servicio 0.13.0) |
 | Tipos | Catálogo, con lo que mide cada tipo y cuántos hay |
 | Nube de Tuya | Credenciales, prueba, listado e importación |
 | Buscar e importar | Búsqueda por UDP e importación del `devices.json` de TinyTuya |
@@ -652,6 +685,9 @@ derivada del identificador: el mismo dispositivo dibuja siempre la misma curva.
 
 La energía se integra sobre la potencia simulada, igual que hace el servicio. Las operaciones que no tienen
 sentido sin servicio real (nube, búsqueda en red, exportación de configuración) avisan en vez de fallar.
+
+La demostración también implementa `api/rooms`, de modo que las estancias se pueden crear, renombrar, borrar y
+ordenar sin servicio real, con los mismos avisos y las mismas comprobaciones.
 
 «Reiniciar demo» borra los datos guardados y vuelve a los siete iniciales.
 
@@ -718,6 +754,7 @@ App genérica, en `localStorage`:
 | `telehome_orden` | Orden de los dispositivos |
 | `telehome_sin_graficas`, `telehome_sin_historico` | Qué está oculto |
 | `telehome_demo_v1` | Los dispositivos de la demostración |
+| `telehome_demo_v1_rooms` | Las estancias de la demostración |
 
 En `sessionStorage`: `telehome_admin` (el token de sesión) y, si no se marcó «Recordar», también la
 contraseña del servicio.
@@ -1000,7 +1037,8 @@ curl -s http://SERVIDOR/rafa/telehome/api/health
 | Entender los permisos | Apartado 7 |
 | Dar acceso a otra persona | Apartados 7.2 y 12 |
 | Depurar una conexión | Apartados 8 y 19 |
+| Explicárselo a quien solo lo va a usar | [Manual de usuario de TeleHome Pro](../telehome-pro/manual/) |
 
 ---
 
-*Última modificación: 2026-11-22 20:02*
+*Última modificación: 2026-11-25 22:25*

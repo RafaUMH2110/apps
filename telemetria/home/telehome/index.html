@@ -103,7 +103,10 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .sec-h h2 { margin:0; font-size:18px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; gap:9px; }
 .sec-h h2 svg { width:17px; height:17px; color:var(--ink2); flex:none; }
 .sec-h span { font-size:13px; color:var(--muted); }
-.grp-h { display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; padding:11px 24px 11px 30px; background:var(--sunk); border-bottom:1px solid var(--border); }
+.grp-h { display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; padding:11px 24px 11px 30px; background:var(--sunk); border-bottom:1px solid var(--border); cursor:pointer; transition:background-color .15s; }
+.grp-h:hover { background:color-mix(in srgb,var(--accent) 6%,var(--sunk)); }
+.grp-h.sel { background:color-mix(in srgb,var(--accent) 13%,var(--sunk)); }
+.grp-h.sel h3 { color:var(--accent); }
 .grp-h h3 { margin:0; font-size:14.5px; font-weight:700; letter-spacing:.01em; display:flex; align-items:center; gap:8px; }
 .grp-h h3 svg { width:16px; height:16px; color:var(--ink2); flex:none; }
 .grp-h .agg { font-size:13px; color:var(--ink2); margin-left:auto; font-variant-numeric:tabular-nums; }
@@ -201,6 +204,16 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .btn.primary { background:var(--btn); color:#fff; border-color:transparent; }
 .btn.primary:hover { filter:brightness(1.1); background:var(--btn); }
 .btn.danger { color:var(--critical); }
+.pro-note { color:var(--ink2); font-size:13.5px; margin:6px 0 0; }
+.room-list { display:grid; gap:8px; }
+.room-it { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; border:1px solid var(--border); border-radius:12px; padding:9px 12px; background:var(--surface); }
+.room-it .ord { display:flex; flex-direction:column; gap:2px; }
+.room-it .ord button { border:1px solid var(--border); background:var(--surface); border-radius:6px; width:24px; height:17px; line-height:1; font-size:11px; cursor:pointer; color:var(--ink2); padding:0; }
+.room-it .ord button:disabled { opacity:.35; cursor:default; }
+.room-it .nm { font-weight:650; }
+.room-it .nm small { display:block; font-weight:500; color:var(--ink2); font-size:12.5px; }
+.room-it input[type=text] { font-weight:650; }
+.room-it .acc { display:flex; gap:6px; flex-wrap:wrap; }
 .btn:disabled { opacity:.45; cursor:not-allowed; }
 .seg { display:inline-flex; background:var(--sunk); border:1px solid var(--border); border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap; }
 .seg button { border:none; background:transparent; padding:0 12px; min-height:30px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--ink2); }
@@ -478,7 +491,7 @@ details.hint > p { margin:6px 0 0; }
   </div>
   <p>TeleHome <span id="ver"></span> · <span id="footMode">conectado al servicio o en modo demostración</span></p>
   <p>Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · <a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a></p>
-  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 19:19</span></p>
+  <p>Generado con IA · Revisado por el autor · Última modificación: <span id="lastmod">2026-11-25 22:15</span></p>
 </footer>
 
 <div class="toast" id="toast" hidden role="alert"><span id="toastTxt"></span><button type="button" id="toastX" aria-label="Cerrar aviso">×</button></div>
@@ -540,6 +553,7 @@ details.hint > p { margin:6px 0 0; }
   <p class="msg bad" id="roNote" hidden>Solo un administrador puede cambiar la configuración. Si has entrado como usuario, puedes manejar los dispositivos pero no tocar los ajustes.</p>
   <div class="tabs" role="tablist" aria-label="Secciones de ajustes">
     <button type="button" role="tab" data-tab="dispositivos" aria-selected="true">Dispositivos</button>
+    <button type="button" role="tab" data-tab="estancias" aria-selected="false">Estancias</button>
     <button type="button" role="tab" data-tab="tipos" aria-selected="false">Tipos</button>
     <button type="button" role="tab" data-tab="nube" aria-selected="false">Nube de Tuya</button>
     <button type="button" role="tab" data-tab="buscar" aria-selected="false">Buscar e importar</button>
@@ -565,6 +579,19 @@ details.hint > p { margin:6px 0 0; }
           </div>
         </form>
         <div class="msg" id="formMsg" role="alert"></div>
+      </section>
+    </div>
+
+    <div data-panel="estancias" role="tabpanel" hidden>
+      <section>
+        <h3>Gestión de estancias</h3>
+        <p class="desc">Las estancias agrupan los dispositivos en la lista («Por estancia») y se eligen al añadir o editar cada uno. Cambiar el nombre de una estancia lo cambia en todos sus dispositivos; borrarla deja a sus dispositivos sin estancia, pero no borra ninguno.</p>
+        <form class="f" id="roomForm" autocomplete="off">
+          <label class="full">Nueva estancia<input name="name" type="text" maxlength="24" placeholder="Cocina" required></label>
+          <div class="full actions"><button class="btn primary" type="submit">Añadir estancia</button></div>
+        </form>
+        <div id="roomList" style="margin-top:14px"></div>
+        <div class="msg" id="roomMsg" role="alert"></div>
       </section>
     </div>
 
@@ -1026,6 +1053,28 @@ const DEMO = (() => {
     return o;
   }
   const save = () => store.set(KEY, JSON.stringify(devs));
+
+  /* Estancias: lista con nombre y orden, igual que en el servicio 0.13.0 */
+  const RKEY = KEY + "_rooms";
+  const FEAT = ["estancias"];
+  const MAXR = 24;
+  let rooms;
+  try { rooms = JSON.parse(store.get(RKEY) || "null"); } catch (e) { rooms = null; }
+  if (!Array.isArray(rooms)) rooms = [];
+  const saveRooms = () => store.set(RKEY, JSON.stringify(rooms));
+  const limpiaSala = (x) => String(x || "").replace(/\s+/g, " ").trim().slice(0, 24);
+  const salaPorNombre = (n) => rooms.find((r) => r.name.toLowerCase() === limpiaSala(n).toLowerCase());
+  const roomId = (n) => { let id = slug(n) || "estancia", k = 2; while (rooms.some((r) => r.id === id)) id = (slug(n) || "estancia") + "-" + k++; return id; };
+  function sincronizaSalas() {           // las estancias escritas a mano en un dispositivo pasan a la lista
+    let cambia = false;
+    for (const d of devs) {
+      const n = limpiaSala(d.room);
+      if (n && !salaPorNombre(n) && rooms.length < MAXR) { rooms.push({ id: roomId(n), name: n }); cambia = true; }
+    }
+    if (cambia) saveRooms();
+  }
+  const cuentaSala = (n) => devs.filter((d) => limpiaSala(d.room).toLowerCase() === n.toLowerCase()).length;
+  const salasPub = () => { sincronizaSalas(); return rooms.map((r) => ({ id: r.id, name: r.name, devices: cuentaSala(r.name) })); };
   const pub = (d) => { const o = Object.assign({}, d); delete o.st; delete o.sim_base; delete o.local_key;
     if ((TYPES[d.type] || {}).light) o.caps = { mode: true, level: true, temp: true, color: true };
     return o; };
@@ -1080,11 +1129,11 @@ const DEMO = (() => {
       const u = new URL(path, "http://x/"), q = u.searchParams, p = u.pathname.replace(/^\//, "");
       const m = opt.method || "GET", now = Date.now() / 1000, body = opt.body || {};
       let r;
-      if (p === "api/health") return { app: "TeleHome", version: "0.1.0 · demo" };
+      if (p === "api/health") return { app: "TeleHome", version: "0.1.0 · demo", features: FEAT };
       if (p === "api/state") {
         return {
           app: "TeleHome", version: "0.1.0 · demo", simulate: true, max_devices: MAXD, server_time: now,
-          types: READY,
+          types: READY, features: FEAT, rooms: salasPub(),
           options: { poll_interval: 10, cloud_poll_interval: 300, retention_days: 30, cloud_region: "eu", cloud_api_key: "", cloud_secret_set: false, group_by: "tipo" },
           regions: REGIONS, cloud: { configured: false, calls: 0 },
           devices: devs.map((d) => Object.assign(pub(d), { reading: reading(d, now), accum: accum(d, now) })),
@@ -1162,11 +1211,45 @@ const DEMO = (() => {
           Object.assign(devs[i], b, { st: keep, has_key: devs[i].has_key || !!body.local_key }); save(); return pub(devs[i]);
         }
       }
+      if (p === "api/rooms" && m === "POST") {
+        const n = limpiaSala(body.name);
+        if (!n) throw new Error("El nombre de la estancia es obligatorio");
+        if (salaPorNombre(n)) throw new Error("Ya hay una estancia que se llama «" + n + "»");
+        if (rooms.length >= MAXR) throw new Error("Máximo " + MAXR + " estancias");
+        const nueva = { id: roomId(n), name: n };
+        rooms.push(nueva); saveRooms(); return nueva;
+      }
+      if (p === "api/rooms" && m === "PUT") {                       // reordenar
+        const ids = Array.isArray(body.ids) ? body.ids : [];
+        const orden = ids.map((id) => { const x = rooms.find((y) => y.id === id); if (!x) throw new Error("No hay ninguna estancia con el identificador «" + id + "»"); return x; });
+        rooms = orden.concat(rooms.filter((x) => !ids.includes(x.id)));
+        saveRooms(); return { rooms: salasPub() };
+      }
+      if ((r = /^api\/rooms\/([a-z0-9-]+)$/.exec(p))) {
+        const i = rooms.findIndex((x) => x.id === r[1]);
+        if (i < 0) throw new Error("No encontrado");
+        const antes = rooms[i].name;
+        const afectados = devs.filter((d) => limpiaSala(d.room).toLowerCase() === antes.toLowerCase());
+        if (m === "PUT") {
+          const n = limpiaSala(body.name);
+          if (!n) throw new Error("El nombre de la estancia es obligatorio");
+          const otra = salaPorNombre(n);
+          if (otra && otra.id !== rooms[i].id) throw new Error("Ya hay una estancia que se llama «" + n + "»");
+          rooms[i].name = n;
+          for (const d of afectados) d.room = n;
+          saveRooms(); save(); return { id: rooms[i].id, name: n, devices: afectados.length };
+        }
+        if (m === "DELETE") {
+          rooms.splice(i, 1);
+          for (const d of afectados) d.room = "";
+          saveRooms(); save(); return { ok: true };
+        }
+      }
       if (p === "api/refresh" && m === "POST") return { refrescado: true, dispositivos: devs.length, pendientes: 0 };
       if (p === "api/options" && m === "PUT") return Object.assign({ poll_interval: 10, cloud_poll_interval: 300, retention_days: 30 }, body);
       return nope();
     },
-    reset() { try { localStorage.removeItem(KEY); } catch (e) { /* nada */ } },
+    reset() { try { localStorage.removeItem(KEY); localStorage.removeItem(RKEY); } catch (e) { /* nada */ } },
   };
 })();
 
@@ -1450,6 +1533,33 @@ function setHistHidden(hide, save) {
 }
 const S = { state: null, range: savedRange(), scale: savedScale(), metric: null, sel: "all", hidden: new Set(), group: "tipo",
   hist: null, sum: null, hover: null, editing: null, pick: null, busy: new Set(), lastOk: 0 };
+
+/* ---------- selección activa de la gráfica y el resumen ---------- */
+const GRP_PREFIX = "grp:";
+const grpSelId = (kind, key) => GRP_PREFIX + kind + ":" + key;
+const parseGrpSel = (sel) => {
+  if (typeof sel !== "string" || !sel.startsWith(GRP_PREFIX)) return null;
+  const i = sel.indexOf(":", GRP_PREFIX.length);
+  if (i < 0) return null;
+  return { kind: sel.slice(GRP_PREFIX.length, i), key: sel.slice(i + 1) };
+};
+function enSel(d) {
+  const g = parseGrpSel(S.sel);
+  if (g) return g.kind === "tipo" ? d.type === g.key : ((d.room || "").trim() || "Sin estancia") === g.key;
+  return S.sel === "all" || S.sel === d.id;
+}
+function filtroLabel() {
+  const g = parseGrpSel(S.sel);
+  if (g) return g.kind === "tipo" ? (TYPES[g.key] ? (TYPES[g.key].plural || TYPES[g.key].label) : g.key) : g.key;
+  if (S.sel !== "all") { const d = devs().find((x) => x.id === S.sel); return d ? d.name : ""; }
+  return "";
+}
+function selEtiqueta(list) {
+  const n = list.length, cuenta = n + (n === 1 ? " dispositivo" : " dispositivos");
+  if (S.sel === "all") return cuenta;
+  if (parseGrpSel(S.sel)) return filtroLabel() + " · " + cuenta;
+  return filtroLabel();
+}
 
 async function api(path, opt = {}) {
   if (BACKEND) return BACKEND.api(path, opt);
@@ -1895,18 +2005,37 @@ function renderGroups() {
   for (const g of groupsOf(list)) {
     if (!g.devs.length) continue;
     const sec = el("section", { class: "devs", "aria-label": g.label || "Dispositivos" });
-    if (!g.flat) sec.append(el("div", { class: "grp-h" },
-      el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs)));
+    if (!g.flat) {
+      const activo = S.sel === grpSelId(S.group, g.key);
+      const cab = el("div", { class: "grp-h" + (activo ? " sel" : ""), role: "button", tabindex: "0",
+        "aria-pressed": String(activo), title: "Ver solo «" + g.label + "» en la gráfica y el resumen",
+        "aria-label": "Ver solo «" + g.label + "» en la gráfica y el resumen" },
+        el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs));
+      cab.addEventListener("click", () => selectGroup(S.group, g.key));
+      cab.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === cab) { e.preventDefault(); cab.click(); } });
+      sec.append(cab);
+    }
     for (const d of g.devs) sec.append(devRow(d));
     box.append(sec);
   }
 }
-function selectDev(id) {
-  S.sel = id;
-  if (id !== "all") { const d = devs().find((x) => x.id === id);   /* si el tipo no mide la magnitud actual, cambia a la suya */
-    if (d && S.metric && !hasMetric(d, S.metric) && T(d).primary) S.metric = T(d).primary; }
+function setSel(sel) {
+  S.sel = sel;
+  const g = parseGrpSel(sel);
+  if (g) {   /* si nada del grupo mide la magnitud actual, cambia a la del primero que tenga una */
+    const list = devs().filter(enSel);
+    if (S.metric && !list.some((d) => hasMetric(d, S.metric))) {
+      const otro = list.find((d) => T(d).primary);
+      if (otro) S.metric = T(otro).primary;
+    }
+  } else if (sel !== "all") {   /* si el tipo no mide la magnitud actual, cambia a la suya */
+    const d = devs().find((x) => x.id === sel);
+    if (d && S.metric && !hasMetric(d, S.metric) && T(d).primary) S.metric = T(d).primary;
+  }
   renderGroups(); renderFilters(); renderLegend(); drawChart(); renderSummary();
 }
+function selectDev(id) { setSel(id); }
+function selectGroup(kind, key) { const id = grpSelId(kind, key); setSel(S.sel === id ? "all" : id); }
 
 /* ---------- gráfica (una magnitud, los dispositivos que la miden) ---------- */
 function niceTicks(lo, hi, n = 5) {
@@ -1922,7 +2051,7 @@ function tlabel(t, withDate) {
   const d = new Date(t * 1000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
   return withDate ? pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + (d.getHours() || d.getMinutes() ? " " + hm : "") : hm;
 }
-const metricDevs = () => devs().filter((d) => S.metric && hasMetric(d, S.metric) && (S.sel === "all" || S.sel === d.id));
+const metricDevs = () => devs().filter((d) => S.metric && hasMetric(d, S.metric) && enSel(d));
 const visibleDevs = () => metricDevs().filter((d) => !S.hidden.has(d.id));
 
 function stepOf(pts, bucket) {
@@ -2085,7 +2214,7 @@ function renderLegend() {
   const lg = $("#legend"); lg.replaceChildren();
   const m = METRICS[S.metric], list = metricDevs();
   $("#chartTitle").replaceChildren(m ? m.label + " " : "Histórico",
-    el("small", { text: m ? "(" + m.unit + ")" + (S.sel === "all" ? " · " + list.length + (list.length === 1 ? " dispositivo" : " dispositivos") : " · " + (list[0] ? list[0].name : "")) : "" }));
+    el("small", { text: m ? "(" + m.unit + ")" + " · " + selEtiqueta(list) : "" }));
   lg.hidden = list.length < 2;
   if (list.length < 2) return;
   for (const d of list) {
@@ -2114,9 +2243,13 @@ function renderFilters() {
   const gg = $("#groupGrp"); gg.replaceChildren();
   for (const [lab, key] of GROUPINGS) {
     const b = el("button", { type: "button", text: lab, "aria-pressed": String(S.group === key) });
-    b.addEventListener("click", () => { S.group = key; renderFilters(); renderGroups(); }); gg.append(b);
+    b.addEventListener("click", () => {
+      S.group = key;
+      if (parseGrpSel(S.sel)) S.sel = "all";
+      renderFilters(); renderGroups(); renderLegend(); drawChart(); renderSummary();
+    }); gg.append(b);
   }
-  const uno = S.sel !== "all" || devs().length === 1;
+  const uno = (S.sel !== "all" && !parseGrpSel(S.sel)) || devs().length === 1;
   const sg = $("#scaleGrp"); sg.replaceChildren(); sg.hidden = uno || metricDevs().length < 2; $("#scaleLbl").hidden = sg.hidden;
   for (const [k, lab, tit] of SCALES) {
     const b = el("button", { type: "button", text: lab, title: tit, "aria-pressed": String(S.scale === k) });
@@ -2145,15 +2278,16 @@ function sumCell(col, row) {
 function renderSummary() {
   const box = $("#sumBox"); box.replaceChildren();
   const lab = RANGES.find((r) => r[1] === S.range);
-  $("#sumTitle").replaceChildren("Resumen ", el("small", { text: "· últimas " + (lab ? lab[0] : "") }));
+  const fl = filtroLabel();
+  $("#sumTitle").replaceChildren("Resumen ", el("small", { text: "· últimas " + (lab ? lab[0] : "") + (fl ? " · " + fl : "") }));
   const rows = (S.sum && S.sum.devices) || null;
   const notas = [];
   if (!rows) { $("#sumHint").textContent = ""; return; }
-  const tipos = typesPresent().filter((k) => devs().some((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id)));
+  const tipos = typesPresent().filter((k) => devs().some((d) => d.type === k && rows[d.id] && enSel(d)));
   for (const k of tipos) {
     const t = TYPES[k], cols = t.summary || [];
     if (!cols.length) continue;
-    const list = devs().filter((d) => d.type === k && rows[d.id] && (S.sel === "all" || S.sel === d.id));
+    const list = devs().filter((d) => d.type === k && rows[d.id] && enSel(d));
     const head = el("tr", {}, el("th", { text: t.label }), ...cols.map((c) => el("th", { text: c.label })));
     const body = el("tbody"), foot = el("tfoot");
     const maxBar = {}, tot = {};
@@ -2218,10 +2352,10 @@ function renderAdmin() {                 // refleja en la interfaz si se puede c
   $("#roBadge").textContent = ADMIN.etiqueta();
   $("#roBadge").hidden = ADMIN.isAdmin();
   $("#btnSettings").disabled = false;
-  if (S.state) { renderGroups(); if ($("#dlg").open) renderDevList(); }
+  if (S.state) { renderGroups(); if ($("#dlg").open) { renderDevList(); renderRooms(); } }
 }
 function openDialog(tab) {
-  renderTypePick(); renderDevList(); renderCatalogue();
+  renderTypePick(); renderDevList(); renderCatalogue(); renderRooms();
   showTab(typeof tab === "string" ? tab : (ADMIN.isAdmin() ? "dispositivos" : "opciones"));
   $("#dlg").showModal(); fillOptions();
   aplicarSoloLectura();
@@ -2295,7 +2429,7 @@ function pickType(k) {
   setMsg("#formMsg", "", true);
 }
 /* Estancias conocidas: las que manda el servicio (0.13.0) y, si no, las que usen los dispositivos.
-   Definirlas, renombrarlas y borrarlas se hace en TeleHome Pro; aquí se eligen y se pueden crear al vuelo. */
+   Con el servicio 0.13.0 se definen, renombran, borran y ordenan en Ajustes → Estancias. */
 function estancias() {
   const dela = ((S.state && S.state.rooms) || []).map((r) => r.name);
   for (const d of devs()) { const r = (d.room || "").trim(); if (r && !dela.some((x) => x.toLowerCase() === r.toLowerCase())) dela.push(r); }
@@ -2317,6 +2451,89 @@ function valorEstancia(form) {
   if (sel.value !== NUEVA) return sel.value;
   return String((form.elements.room_nueva || {}).value || "").trim().slice(0, 24);
 }
+/* ---------- gestión de estancias (servicio 0.13.0 o posterior) ---------- */
+const feats = () => (S.state && Array.isArray(S.state.features) && S.state.features) || [];
+const gestionEstancias = () => feats().includes("estancias");
+const roomsSrv = () => (S.state && S.state.rooms) || [];
+const dispositivosDe = (nombre) => devs().filter((d) => (d.room || "").trim().toLowerCase() === String(nombre).toLowerCase());
+let roomEditando = null;
+async function roomApi(path, metodo, cuerpo, aviso) {
+  try {
+    const r = await api(path, { method: metodo, body: cuerpo });
+    roomEditando = null;
+    await refresh(); renderRooms(); renderGroups();
+    if ($("#devForm") && $("#devForm").elements.room) pintarEstancias($("#devForm").elements.room);
+    setMsg("#roomMsg", aviso || "", true);
+    return r;
+  } catch (e) { setMsg("#roomMsg", e, false); return null; }
+}
+function renderRooms() {
+  const box = $("#roomList"); if (!box) return;
+  const admin = ADMIN.isAdmin(), hay = gestionEstancias();
+  $("#roomForm").hidden = !(admin && hay);
+  box.replaceChildren();
+  if (!hay) {
+    box.append(el("p", { class: "pro-note", text: "Para definir, renombrar y borrar estancias hace falta el servicio TeleHome 0.13.0 o posterior. Con uno anterior, la estancia se escribe en cada dispositivo y aquí solo se listan las que ya se usan." }));
+    const usadas = estancias();
+    if (usadas.length) box.append(el("div", { class: "room-list" }, ...usadas.map((r) => el("div", { class: "room-it" },
+      el("span", {}), el("span", { class: "nm" }, r, el("small", { text: dispositivosDe(r).map((d) => d.name).join(", ") || "sin dispositivos" })), el("span", {})))));
+    return;
+  }
+  const lista = roomsSrv();
+  if (!lista.length) {
+    box.append(el("p", { class: "pro-note", text: admin ? "Aún no hay estancias. Añade una arriba, o escribe una al dar de alta un dispositivo y se creará sola." : "Aún no hay estancias." }));
+    return;
+  }
+  const cont = el("div", { class: "room-list" });
+  lista.forEach((r, i) => {
+    const nombres = dispositivosDe(r.name).map((d) => d.name).join(", ");
+    const ord = el("span", { class: "ord" },
+      el("button", { type: "button", title: "Subir", "aria-label": "Subir " + r.name, text: "▲", disabled: i === 0 || !admin, onclick: () => moverEstancia(i, -1) }),
+      el("button", { type: "button", title: "Bajar", "aria-label": "Bajar " + r.name, text: "▼", disabled: i === lista.length - 1 || !admin, onclick: () => moverEstancia(i, 1) }));
+    let medio, acciones;
+    if (roomEditando === r.id) {
+      const inp = el("input", { type: "text", value: r.name, maxlength: 24, "aria-label": "Nombre de la estancia" });
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); guardarNombre(r, inp.value); } if (e.key === "Escape") { roomEditando = null; renderRooms(); } });
+      medio = inp;
+      acciones = el("span", { class: "acc" },
+        el("button", { class: "btn primary", type: "button", text: "Guardar", onclick: () => guardarNombre(r, inp.value) }),
+        el("button", { class: "btn", type: "button", text: "Cancelar", onclick: () => { roomEditando = null; renderRooms(); } }));
+      setTimeout(() => { inp.focus(); inp.select(); }, 0);
+    } else {
+      medio = el("span", { class: "nm" }, r.name,
+        el("small", { text: r.devices ? r.devices + (r.devices === 1 ? " dispositivo: " : " dispositivos: ") + nombres : "sin dispositivos" }));
+      acciones = el("span", { class: "acc" },
+        el("button", { class: "btn", type: "button", text: "Renombrar", disabled: !admin, onclick: () => { roomEditando = r.id; renderRooms(); } }),
+        el("button", { class: "btn danger", type: "button", text: "Borrar", disabled: !admin, onclick: () => borrarEstancia(r) }));
+    }
+    cont.append(el("div", { class: "room-it" }, ord, medio, acciones));
+  });
+  const sueltos = devs().filter((d) => !(d.room || "").trim());
+  if (sueltos.length) cont.append(el("div", { class: "room-it", style: "background:var(--sunk)" }, el("span", {}),
+    el("span", { class: "nm" }, "Sin estancia",
+      el("small", { text: sueltos.length + (sueltos.length === 1 ? " dispositivo: " : " dispositivos: ") + sueltos.map((d) => d.name).join(", ") })),
+    el("span", { class: "acc" }, el("span", { class: "pro-note", text: "Se les pone estancia al editarlos" }))));
+  box.append(cont);
+}
+const guardarNombre = (r, valor) => {
+  const n = String(valor || "").trim();
+  if (!n) return setMsg("#roomMsg", "El nombre de la estancia no puede quedar vacío.", false);
+  if (n === r.name) { roomEditando = null; return renderRooms(); }
+  return roomApi("api/rooms/" + r.id, "PUT", { name: n }, "Estancia renombrada" + (r.devices ? " en " + r.devices + " dispositivo(s)." : "."));
+};
+function borrarEstancia(r) {
+  const aviso = r.devices ? "¿Borrar la estancia «" + r.name + "»? Sus " + r.devices + " dispositivo(s) se quedarán sin estancia (no se borra ninguno)."
+    : "¿Borrar la estancia «" + r.name + "»?";
+  if (!confirm(aviso)) return;
+  return roomApi("api/rooms/" + r.id, "DELETE", undefined, "Estancia borrada.");
+}
+function moverEstancia(i, delta) {
+  const ids = roomsSrv().map((r) => r.id);
+  if (i + delta < 0 || i + delta >= ids.length) return;
+  [ids[i], ids[i + delta]] = [ids[i + delta], ids[i]];
+  return roomApi("api/rooms", "PUT", { ids: ids }, "Orden guardado.");
+}
+
 function fieldBox(f) {
   const lab = el("label", { class: f.w === "full" ? "full" : null }, f.l);
   let inp;
@@ -2443,7 +2660,7 @@ function cerrarMenuCsv() {
 }
 function abrirMenuCsv() {
   const m = $("#csvMenu"); m.replaceChildren(el("div", { class: "m-h", text: "Descargar las lecturas de…" }));
-  for (const d of devs()) {
+  for (const d of devs().filter(enSel)) {
     const b = el("button", { type: "button", role: "menuitem" }, el("span", { class: "key", style: "border-color:" + color(d) }), d.name);
     b.addEventListener("click", () => { cerrarMenuCsv(); downloadCsv(d.id); });
     m.append(b);
@@ -2808,6 +3025,12 @@ function bindDialog() {
   });
   $("#btnSettings").addEventListener("click", () => openDialog());
   $("#btnClose").addEventListener("click", () => $("#dlg").close());
+  $("#roomForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, n = f.name.value.trim();
+    const r = await roomApi("api/rooms", "POST", { name: n }, "Estancia «" + n + "» añadida.");
+    if (r) f.reset();
+  });
   $("#btnCancel").addEventListener("click", () => { resetForm(); renderDevList(); });
   $("#devForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -2895,7 +3118,7 @@ function bindDialog() {
     e.target.value = "";
   });
   $("#btnCsv").addEventListener("click", () => {
-    const unico = S.sel !== "all" || devs().length === 1;
+    const unico = (S.sel !== "all" && !parseGrpSel(S.sel)) || devs().length === 1;
     if (unico) { const id = S.sel !== "all" ? S.sel : (devs()[0] && devs()[0].id); if (id) downloadCsv(id); return; }
     $("#csvMenu").hidden ? abrirMenuCsv() : cerrarMenuCsv();
   });
@@ -2951,10 +3174,10 @@ async function refresh() {
   ADMIN.sync(S.state);
   renderAdmin();
   if ($("#dlg").open) aplicarSoloLectura();
-  if (S.sel !== "all" && !devs().some((d) => d.id === S.sel)) S.sel = "all";
+  if (S.sel !== "all" && !devs().some(enSel)) S.sel = "all";
   fixMetric();
   renderHero(); renderGroups(); renderFilters();
-  if ($("#dlg").open) { renderDevList(); updateEstimate(); }
+  if ($("#dlg").open) { renderDevList(); renderRooms(); updateEstimate(); }
   if ($("#dlgLuz").open) pintarLuz();
 }
 async function init() {

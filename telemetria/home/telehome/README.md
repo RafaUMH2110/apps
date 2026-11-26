@@ -53,6 +53,7 @@ El histórico es `series[<id>] = [{ t, <magnitud>: valor, … }]`, con las clave
 
 - **Contador adaptativo**: el bloque grande es el del tipo que declara `hi.main` (los enchufes: potencia total, reparto por dispositivo y contador de energía del día). Los demás grupos aparecen como cifras destacadas al lado (temperatura media, luces encendidas, apertura media). Si no hay enchufes, el bloque grande pasa a ser el primer grupo que haya, así que la cabecera siempre dice algo útil.
 - **Lista agrupada** por tipo (por omisión), por estancia o sin agrupar. Cada grupo lleva su propio total en la cabecera.
+- **Filtrar por grupo:** al agrupar «Por tipo» o «Por estancia», pinchar la cabecera de un grupo limita la gráfica y el resumen a todos sus dispositivos (igual que pinchar un dispositivo los limita a ese). Vuelve a pinchar la cabecera para ver todos. Al cambiar de agrupación o quitarla se pierde el grupo elegido.
 - **Fila de dispositivo**: estado, magnitud principal en grande con barra opcional, minigráfica de esa magnitud, magnitudes secundarias, acumulado y su control.
 - **Controles** según el tipo: interruptor, interruptor + nivel, subir/parar/bajar, o «solo lectura».
 - **Gráfica**: una magnitud a la vez, con los dispositivos que la miden; al elegir un dispositivo de otro tipo, la magnitud cambia a la principal de ese tipo.
@@ -83,7 +84,9 @@ En el servicio, el tipo nuevo solo tiene que leer sus DPS o códigos y devolver 
 
 ## Estancias
 
-Al añadir o editar un dispositivo, la **estancia** se elige en un desplegable con las que ya existen, o se crea una nueva en el momento («＋ Nueva estancia…»). Con el servicio 0.13.0 la lista y su orden vienen de él (`api/state` → `rooms`) y la agrupación «Por estancia» los respeta; con un servicio anterior, el desplegable se arma con las estancias que ya usen los dispositivos. Definir, renombrar, borrar y ordenar estancias se hace en [TeleHome Pro](../telehome-pro/README.md).
+Al añadir o editar un dispositivo, la **estancia** se elige en un desplegable con las que ya existen, o se crea una nueva en el momento («＋ Nueva estancia…»). Con el servicio 0.13.0 la lista y su orden vienen de él (`api/state` → `rooms`) y la agrupación «Por estancia» los respeta; con un servicio anterior, el desplegable se arma con las estancias que ya usen los dispositivos.
+
+**Gestión de estancias** en *Ajustes → Estancias* (servicio 0.13.0 y administrador): definirlas, renombrarlas, borrarlas y ordenarlas con ▲▼. Renombrar cambia el nombre en todos sus dispositivos a la vez; borrar los deja sin estancia, pero no borra ninguno. El orden fija el de los grupos en la lista «Por estancia».
 
 ## Modos de funcionamiento
 

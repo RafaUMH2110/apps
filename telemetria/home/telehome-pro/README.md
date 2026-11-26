@@ -5,6 +5,8 @@
 
 La versión avanzada de [TeleHome](../telehome/README.md): la misma app (un solo `index.html`, mismos tipos, gráficas, resumen, CSV y niveles de acceso) más lo que hace falta para manejar bien las **luces**: escenas guardadas, grupos, transiciones graduales, temporizadores y parámetros por bombilla. Es una app aparte; la genérica no cambia.
 
+📖 **[Manual de usuario, con figuras](manual/)** (no técnico). Para la parte interna, el [manual técnico de TeleHome](../telehome/MANUAL_TELEHOME.md).
+
 Necesita el servicio **TeleHome 0.11.0 o posterior** (con la **0.12.0** se añaden deshacer, acciones rápidas, temporizadores para enchufes y escenas con transición; con la **0.13.0**, la gestión de estancias) ([documentación](https://github.com/RafaUMH2110/code/tree/main/telemetria/home/telehome-servicio#telehome-pro-escenas-grupos-transiciones-y-temporizadores-0110)). Con un servicio anterior, o sin servicio, los controles Pro no aparecen (el panel avisa) o funcionan en el **modo demostración**, que simula todo en el navegador.
 
 ## Qué añade

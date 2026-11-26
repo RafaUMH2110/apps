@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TeleHome Pro · Manual de usuario</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Manual de usuario de TeleHome Pro: cómo ver y manejar enchufes, sensores, luces y persianas desde el navegador, con figuras y diagramas.">
+<meta name="theme-color" content="#132742">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='fondo' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b8cf0'/%3E%3Cstop offset='1' stop-color='%231250a6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23fondo)'/%3E%3Cpath fill='%23fff' d='M32 10.5 8 31.5h6.5v20a2.5 2.5 0 0 0 2.5 2.5h30a2.5 2.5 0 0 0 2.5-2.5v-20H56z'/%3E%3Cpath fill='none' stroke='%231a5fc0' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round' d='M19.5 43h7l3.5-8.5 5 15 3.5-6.5h6'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#1b2430; --ink2:#5b6676; --border:#e2e6ec; --surface:#fff; --sunk:#f4f6f9;
+    --accent:#1d63c8; --accent-ink:#0d3f85; --warn-bg:#fff7e6; --warn-bd:#f2c94c;
+    --ok-bg:#eafaf1; --ok-bd:#34b56a;
+    font-size:17px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--sunk); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:0 20px 80px;}
+  header.portada{
+    background:linear-gradient(135deg,#132742,#1d63c8 120%); color:#fff; padding:56px 20px 46px;
+    margin-bottom:34px;
+  }
+  header.portada .in{max-width:900px; margin:0 auto;}
+  header.portada .kicker{font-size:14px; letter-spacing:.08em; text-transform:uppercase; opacity:.85; font-weight:600;}
+  header.portada .kicker a{color:#fff; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.45);}
+  header.portada .kicker a:hover{border-bottom-color:#fff;}
+  header.portada h1{font-size:clamp(30px,5vw,44px); margin:10px 0 6px; line-height:1.15;}
+  header.portada h1 em{font-style:normal; opacity:.85; font-weight:500;}
+  header.portada p.lede{font-size:18px; max-width:640px; opacity:.92; margin:0 0 22px;}
+  header.portada .meta{font-size:14px; opacity:.85; border-top:1px solid rgba(255,255,255,.25); padding-top:14px; max-width:640px;}
+  header.portada .meta b{font-weight:600;}
+
+  h2{font-size:26px; margin:56px 0 6px; padding-top:10px; border-top:1px solid var(--border); scroll-margin-top:16px;}
+  h2 .n{color:var(--accent); font-variant-numeric:tabular-nums; margin-right:10px;}
+  h2:first-of-type{border-top:none;}
+  h3{font-size:19px; margin:28px 0 8px;}
+  p{margin:12px 0;}
+  .lede-sec{color:var(--ink2); font-size:16.5px; margin-top:2px;}
+
+  nav.toc{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 26px; margin:-30px 0 10px;}
+  nav.toc h2{margin:0 0 10px; font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink2); border:none; padding:0;}
+  nav.toc ol{columns:2; column-gap:28px; margin:0; padding-left:20px; font-size:15px;}
+  nav.toc li{margin-bottom:6px; break-inside:avoid;}
+  nav.toc a{color:var(--accent-ink); text-decoration:none;}
+  nav.toc a:hover{text-decoration:underline;}
+
+  figure{margin:20px 0 28px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; }
+  figure img{display:block; width:100%; height:auto; border-radius:8px; border:1px solid var(--border);}
+  figcaption{font-size:14.5px; color:var(--ink2); margin-top:10px; padding:0 4px;}
+  figcaption b{color:var(--ink);}
+  .fig-tight img{max-width:560px; margin:0 auto;}
+  .fig-row{display:flex; gap:16px; flex-wrap:wrap;}
+  .fig-row figure{flex:1 1 260px; margin:20px 0;}
+
+  .nota, .aviso, .ok{border-radius:12px; padding:14px 18px; margin:18px 0; font-size:15.5px;}
+  .nota{background:#eef4ff; border:1px solid #c7dbfb;}
+  .aviso{background:var(--warn-bg); border:1px solid var(--warn-bd);}
+  .ok{background:var(--ok-bg); border:1px solid var(--ok-bd);}
+  .nota b, .aviso b, .ok b{display:block; margin-bottom:3px;}
+
+  ol.pasos{padding-left:22px;}
+  ol.pasos li{margin-bottom:10px;}
+
+  table{width:100%; border-collapse:collapse; margin:16px 0; font-size:15px;}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--ink2); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.02em;}
+  tr:last-child td{border-bottom:none;}
+
+  dl.glos{margin:0;}
+  dl.glos dt{font-weight:700; margin-top:16px;}
+  dl.glos dd{margin:3px 0 0; color:var(--ink2);}
+
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--sunk); border:1px solid var(--border); border-radius:999px; padding:3px 12px; font-size:14px; font-weight:600;}
+  svg.diag{width:100%; height:auto; display:block;}
+  .diag-cap{font-size:14.5px; color:var(--ink2); text-align:center; margin-top:10px;}
+
+  footer.pie a{color:var(--accent-ink);}
+  footer.pie{margin-top:60px; padding-top:20px; border-top:1px solid var(--border); color:var(--ink2); font-size:14px;}
+
+  @media print{
+    header.portada{background:#132742 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    nav.toc{break-after:page;}
+    h2{break-before:page;}
+  }
+</style>
+</head>
+<body>
+
+<header class="portada">
+  <div class="in">
+    <div class="kicker"><a class="volver" href="../">&larr; TeleHome Pro</a> · Manual de usuario</div>
+    <h1>TeleHome Pro <em>· cómo ver y manejar tu casa</em></h1>
+    <p class="lede">Guía de uso para quien quiere ver y controlar sus enchufes, sensores, luces y persianas desde el navegador, sin entrar en cómo está construida la app por dentro.</p>
+    <div class="meta">
+      <b>Autor:</b> Rafael Puerto · Departamento de Ingeniería de Sistemas y Automática · Universidad Miguel Hernández de Elche · r.puerto@umh.es<br>
+      Generado con IA · Revisado por el autor · 25 de noviembre de 2026
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc" aria-label="Índice">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#que-es">Qué es TeleHome Pro</a></li>
+    <li><a href="#empezar">Antes de empezar</a></li>
+    <li><a href="#pantalla">La pantalla principal</a></li>
+    <li><a href="#dispositivos">Tus dispositivos</a></li>
+    <li><a href="#agrupar">Agrupar y filtrar</a></li>
+    <li><a href="#historico">La gráfica y el resumen</a></li>
+    <li><a href="#luz">Controlar una luz</a></li>
+    <li><a href="#escenas">Escenas, grupos y temporizadores</a></li>
+    <li><a href="#deshacer">Avisos y «Deshacer»</a></li>
+    <li><a href="#estancias">Las estancias</a></li>
+    <li><a href="#ajustes">Ajustes, dispositivos y niveles</a></li>
+    <li><a href="#exportar">Exportar a Excel</a></li>
+    <li><a href="#demo">Modo demostración</a></li>
+    <li><a href="#faq">Preguntas frecuentes</a></li>
+    <li><a href="#glosario">Glosario</a></li>
+  </ol>
+</nav>
+
+<h2 id="que-es"><span class="n">1</span>Qué es TeleHome Pro</h2>
+<p>TeleHome Pro es una página web que muestra y controla los dispositivos conectados de tu casa: enchufes
+inteligentes, sensores de temperatura y humedad, luces regulables y persianas. Es la versión avanzada de
+TeleHome: además de ver y manejar lo de siempre, añade <b>escenas</b>, <b>grupos de luces</b>,
+<b>transiciones</b> (que una luz cambie poco a poco) y <b>temporizadores</b>.</p>
+<p>No hace falta instalar nada en tu ordenador o móvil: todo ocurre dentro de esta misma página, que habla con
+un pequeño programa (el «servicio TeleHome») que es quien realmente se conecta a tus dispositivos.</p>
+
+<figure class="fig-tight">
+  <svg class="diag" viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagrama: tu navegador habla con el servicio TeleHome, que habla con tus dispositivos, en tu red local o a través de la nube de Tuya">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#5b6676"/>
+      </marker>
+    </defs>
+    <!-- caja 1: navegador -->
+    <rect x="10" y="55" width="200" height="100" rx="16" fill="#eef4ff" stroke="#1d63c8" stroke-width="2"/>
+    <text x="110" y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#132742">Tu navegador</text>
+    <text x="110" y="118" text-anchor="middle" font-size="12.5" fill="#5b6676">esta misma página</text>
+    <text x="110" y="135" text-anchor="middle" font-size="12.5" fill="#5b6676">(móvil, tablet u ordenador)</text>
+
+    <!-- caja 2: servicio -->
+    <rect x="280" y="55" width="210" height="100" rx="16" fill="#fff" stroke="#1d63c8" stroke-width="2"/>
+    <text x="385" y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#132742">Servicio TeleHome</text>
+    <text x="385" y="118" text-anchor="middle" font-size="12.5" fill="#5b6676">en tu ordenador o</text>
+    <text x="385" y="135" text-anchor="middle" font-size="12.5" fill="#5b6676">en un servidor</text>
+
+    <!-- caja 3: dispositivos -->
+    <rect x="560" y="20" width="190" height="80" rx="16" fill="#eafaf1" stroke="#34b56a" stroke-width="2"/>
+    <text x="655" y="55" text-anchor="middle" font-size="14" font-weight="700" fill="#15532d">Tus dispositivos</text>
+    <text x="655" y="75" text-anchor="middle" font-size="12.5" fill="#416652">en tu red Wi-Fi</text>
+
+    <!-- caja 4: nube tuya -->
+    <rect x="560" y="130" width="190" height="80" rx="16" fill="#fff7e6" stroke="#caa233" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="655" y="165" text-anchor="middle" font-size="14" font-weight="700" fill="#7a5b10">o la nube de Tuya</text>
+    <text x="655" y="185" text-anchor="middle" font-size="12.5" fill="#8a7030">si no están en tu red</text>
+
+    <line x1="212" y1="105" x2="276" y2="105" stroke="#5b6676" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="276" y1="105" x2="212" y2="105" stroke="#5b6676" stroke-width="2" marker-end="url(#arrow)" transform="translate(0,16)" opacity="0"/>
+    <line x1="492" y1="90" x2="556" y2="60" stroke="#5b6676" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="492" y1="120" x2="556" y2="165" stroke="#5b6676" stroke-width="2" marker-end="url(#arrow)"/>
+  </svg>
+  <figcaption class="diag-cap">La página solo habla con el servicio TeleHome; es el servicio quien, por detrás, lee y manda
+  órdenes a los dispositivos — directamente si están en tu misma red Wi-Fi, o a través de la nube de Tuya cuando no lo están.</figcaption>
+</figure>
+
+<h2 id="empezar"><span class="n">2</span>Antes de empezar</h2>
+<p>Al abrir TeleHome Pro ocurre una de estas dos cosas:</p>
+<ul>
+  <li><b>Encuentra el servicio TeleHome</b> (en tu ordenador o en un servidor) y muestra tus dispositivos
+  reales. Si el servicio tiene contraseña, te la pedirá antes de dejarte ver nada.</li>
+  <li><b>No lo encuentra</b> y arranca en <b>modo demostración</b>, con ocho dispositivos de ejemplo que no son
+  los tuyos (apartado 13). Es perfecto para practicar sin tocar nada real.</li>
+</ul>
+<p>Si entras con una contraseña de «usuario de confianza» podrás ver y manejar los dispositivos, pero no
+cambiar los ajustes. Si entras como administrador podrás además añadir dispositivos, crear escenas y grupos, y
+tocar cualquier opción. Sin contraseña, el acceso suele ser de solo lectura (ver el apartado 11).</p>
+
+<h2 id="pantalla"><span class="n">3</span>La pantalla principal</h2>
+<p>Lo primero que ves es un resumen del estado general: la magnitud más relevante en grande (potencia total,
+temperatura media…), la energía acumulada hoy, un desglose de qué dispositivo pesa más, y unas fichas con el
+resto de magnitudes.</p>
+<figure>
+  <img src="img/01-cabecera.png" alt="Cabecera de TeleHome Pro con el resumen de potencia, energía de hoy, temperatura media, luces encendidas y apertura media">
+  <figcaption><b>Cabecera y resumen.</b> El punto de color indica si los datos son reales o, como aquí, de la demostración.
+  El botón «Ajustes y dispositivos» es la puerta a todo lo que no es del día a día: añadir aparatos, estancias, nube de Tuya, etc.</figcaption>
+</figure>
+
+<h2 id="dispositivos"><span class="n">4</span>Tus dispositivos</h2>
+<p>Debajo del resumen está la lista de dispositivos, uno por fila. Cada fila trae: el nombre, el estado (encendido,
+apagado, sin conexión…), el valor principal, un pequeño gráfico de los últimos minutos, algunos valores
+secundarios y, a la derecha, su control.</p>
+<figure>
+  <img src="img/02-dispositivos-tipo.png" alt="Lista de dispositivos agrupados por tipo: enchufes, sensores, luces y persianas, cada uno con su fila de controles">
+  <figcaption><b>La lista, agrupada por tipo.</b> Enchufes (interruptor), sensores de temperatura y humedad (solo lectura),
+  luces (interruptor + brillo + color) y persianas (subir, parar, bajar).</figcaption>
+</figure>
+<table>
+  <tr><th>Tipo</th><th>Qué puedes hacer</th></tr>
+  <tr><td>Enchufe</td><td>Encender y apagar; se ve su potencia, tensión, corriente y la energía consumida hoy.</td></tr>
+  <tr><td>Sensor de temperatura/humedad</td><td>Solo lectura: temperatura y humedad del momento.</td></tr>
+  <tr><td>Luz</td><td>Encender, apagar, subir o bajar el brillo, y — en las que lo admiten — elegir blanco o color (apartado 7).</td></tr>
+  <tr><td>Persiana</td><td>Subir, parar o bajar, y se ve su apertura actual en porcentaje.</td></tr>
+</table>
+
+<h2 id="agrupar"><span class="n">5</span>Agrupar y filtrar</h2>
+<p>Encima de la lista hay tres botones — <span class="chip">Por tipo</span> <span class="chip">Por estancia</span>
+<span class="chip">Sin agrupar</span> — que deciden cómo se organiza. Con «Por tipo» o «Por estancia» aparece una
+cabecera gris por cada grupo, con su nombre y un resumen (potencia total, cuántos están en línea…).</p>
+<p>Tanto la <b>gráfica</b> como el <b>resumen</b>, más abajo en la página, pueden ceñirse a una parte de tus
+dispositivos en vez de mostrarlos todos a la vez:</p>
+<ol class="pasos">
+  <li>Pincha un <b>dispositivo</b> para ver solo el suyo.</li>
+  <li>O pincha la <b>cabecera de un grupo entero</b> («Enchufes», «Cocina»…) para ver todos los suyos juntos.</li>
+  <li>Vuelve a pinchar lo mismo para ver otra vez todos los dispositivos.</li>
+</ol>
+<figure>
+  <img src="img/03-grupo-seleccionado.png" alt="Cabecera del grupo Enchufes resaltada en azul tras pincharla, con sus tres dispositivos debajo">
+  <figcaption><b>Un grupo seleccionado.</b> Al pinchar «Enchufes», su cabecera se resalta y la gráfica y el resumen pasan a
+  hablar solo de esos tres dispositivos.</figcaption>
+</figure>
+<figure>
+  <img src="img/05-dispositivos-estancia.png" alt="La misma lista agrupada por estancia: Cocina, Despacho, Salón y Terraza">
+  <figcaption><b>Agrupando «Por estancia»</b> en vez de «Por tipo», las cabeceras pasan a ser «Cocina», «Despacho», «Salón»…
+  y se pinchan exactamente igual.</figcaption>
+</figure>
+<div class="nota"><b>Un detalle que conviene saber</b>Si cambias de agrupación, o pasas a «Sin agrupar», el grupo que
+tuvieras elegido se olvida y la gráfica vuelve a mostrar todos los dispositivos — porque ese grupo concreto ya
+no existe en la nueva vista.</div>
+
+<h2 id="historico"><span class="n">6</span>La gráfica y el resumen</h2>
+<p>Debajo de la lista hay una gráfica con el histórico de una magnitud (potencia, temperatura, brillo…), y más
+abajo una tabla de resumen con medias, máximos y energía por dispositivo.</p>
+<figure>
+  <img src="img/04-grafica-filtrada.png" alt="Gráfica de potencia de los tres enchufes en las últimas 24 horas, con una serie por dispositivo">
+  <figcaption><b>La gráfica.</b> Arriba eliges el intervalo (1 h a 30 días) y la magnitud; a la derecha, si hay más de un
+  dispositivo, puedes elegir si cada uno lleva su propia escala vertical o si comparten una común. El título de arriba
+  («Potencia · Enchufes · 3 dispositivos») confirma qué estás viendo.</figcaption>
+</figure>
+<figure>
+  <img src="img/08-resumen.png" alt="Tabla de resumen con una sección por tipo de dispositivo: enchufes, sensores, luces y persianas">
+  <figcaption><b>El resumen.</b> Una tabla por tipo de dispositivo, con las columnas que tienen sentido para ese tipo
+  (energía y potencia para los enchufes, temperatura y humedad para los sensores…).</figcaption>
+</figure>
+<p>El botón <b>Exportar CSV</b>, junto al título de la gráfica, descarga las lecturas (apartado 12). Pasando el
+ratón o el dedo por la gráfica se ve el valor exacto de cada momento; con el teclado, las flechas izquierda y
+derecha.</p>
+
+<h2 id="luz"><span class="n">7</span>Controlar una luz</h2>
+<p>En las luces que admiten color o blanco regulable aparece un botón redondo junto al interruptor: ábrelo para
+ver su panel completo.</p>
+<figure class="fig-tight">
+  <img src="img/07-panel-luz.png" alt="Panel de control de una luz: brillo al 72%, modo blanco cálido, selector de transición y temporizadores rápidos">
+  <figcaption><b>Panel de una luz.</b> Brillo, el modo (blanco, color, o lo que tenga guardado en la app de Tuya),
+  una transición para que el cambio no sea brusco, y accesos rápidos para apagarla dentro de un rato.</figcaption>
+</figure>
+<table>
+  <tr><th>Control</th><th>Qué hace</th></tr>
+  <tr><td>Brillo</td><td>De 0 a 100 %, con el deslizador.</td></tr>
+  <tr><td>Blanco</td><td>Más cálido o más frío; los botones «Cálido», «Neutro» y «Frío» van directos a un punto habitual.</td></tr>
+  <tr><td>Color</td><td>Elige tono y saturación, con colores rápidos o «Otro color» para cualquier tono.</td></tr>
+  <tr><td>Escena Tuya / Música</td><td>Deja que la bombilla siga el efecto que ya tuviera guardado en la app de Tuya; TeleHome no cambia sus colores en ese modo.</td></tr>
+  <tr><td>Transición</td><td>De inmediata a 15 minutos: el brillo, el blanco o el color van cambiando poco a poco hasta el valor nuevo, en vez de saltar de golpe.</td></tr>
+  <tr><td>Temporizador</td><td>«Apagar en 15/30/60/120 min» con un toque, u «Otro…» para elegir tiempo, dispositivo (también enchufes) y si enciende o apaga.</td></tr>
+</table>
+
+<h2 id="escenas"><span class="n">8</span>Escenas, grupos y temporizadores</h2>
+<p>Debajo de la lista de dispositivos, el panel <b>«Escenas y grupos»</b> reúne todo lo que combina varios
+aparatos a la vez.</p>
+<figure>
+  <img src="img/06-escenas-grupos.png" alt="Panel de Escenas y grupos: dos escenas (Cine, Lectura), un grupo Salón con control de brillo y blancos, y temporizadores pendientes">
+  <figcaption><b>Escenas, grupos y temporizadores</b>, todo en un mismo panel.</figcaption>
+</figure>
+<h3>Escenas</h3>
+<p>Una escena deja varios dispositivos tal como tú quieras (encendidos o apagados, con un brillo y un color o
+blanco concretos) con un solo toque. Se crean desde cero, eligiendo dispositivo a dispositivo, o con
+<b>«Capturar el estado actual»</b>: dejas las luces como te gustan y la escena guarda justo eso. La escena que
+coincide con el estado actual de tus luces aparece marcada, para saber de un vistazo cuál está puesta.</p>
+<h3>Grupos</h3>
+<p>Un grupo junta varias luces para encenderlas, apagarlas o cambiarles el brillo y el blanco todas a la vez,
+con un único interruptor y deslizador. Si algún miembro no admite la orden (un enchufe no tiene brillo), esa
+orden simplemente no le llega a él.</p>
+<h3>Temporizadores y transiciones en curso</h3>
+<p>Aquí se ven los temporizadores pendientes («se apagará a las…») y las transiciones que están en marcha
+(«subiendo poco a poco hasta las…»), con un botón para cancelarlos. El botón <b>«+ Temporizador»</b> abre un
+diálogo para ponerle uno a cualquier dispositivo, también a un enchufe.</p>
+<p>Arriba del todo, <b>«Apagar las luces»</b> y <b>«Apagar todo»</b> apagan en bloque con un solo toque — y,
+como se explica a continuación, se pueden deshacer.</p>
+
+<h2 id="deshacer"><span class="n">9</span>Avisos y «Deshacer»</h2>
+<p>Cada acción deja un aviso abajo confirmando qué ha pasado. Cuando aplicas una escena, mandas una orden a un
+grupo, o apagas en bloque, el aviso trae además un botón <b>Deshacer</b> durante unos segundos.</p>
+<figure class="fig-tight">
+  <img src="img/10-aviso-deshacer.png" alt="Aviso «Escena «Cine» aplicada» con un botón Deshacer">
+  <figcaption><b>Deshacer no es viajar en el tiempo:</b> guarda cómo estaban los dispositivos justo antes de la orden y
+  los vuelve a dejar así. Un dispositivo que estuviera sin conexión en ese momento se queda fuera.</figcaption>
+</figure>
+<p>Encender o apagar un único dispositivo con su propio interruptor, en cambio, no ofrece deshacer: basta con
+volver a pulsarlo.</p>
+
+<h2 id="estancias"><span class="n">10</span>Las estancias</h2>
+<p>Una estancia es simplemente el sitio de la casa donde está un dispositivo («Cocina», «Salón»…), y sirve para
+agruparlos en la lista (apartado 5). Al añadir o editar un dispositivo, su estancia se elige en un desplegable
+con las que ya existen, o se escribe una nueva ahí mismo.</p>
+<p>Si eres administrador, la pestaña <b>Ajustes → Estancias</b> deja definir, renombrar, borrar y ordenar las
+estancias de la casa:</p>
+<figure>
+  <img src="img/09-gestion-estancias.png" alt="Pestaña de gestión de estancias: Cocina, Despacho, Salón y Terraza, con botones para renombrar, borrar y reordenar">
+  <figcaption><b>Gestión de estancias.</b> Renombrar una estancia cambia el nombre en todos sus dispositivos a la vez;
+  borrarla los deja sin estancia, pero no borra ningún dispositivo. Las flechas ▲▼ fijan el orden en que aparecen los
+  grupos en la lista «Por estancia».</figcaption>
+</figure>
+
+<h2 id="ajustes"><span class="n">11</span>Ajustes, dispositivos y niveles</h2>
+<p>El botón <b>«Ajustes y dispositivos»</b> de la cabecera abre una hoja con varias pestañas: Dispositivos,
+Estancias, Tipos (qué mide cada tipo), Nube de Tuya, Buscar e importar, Opciones, Programaciones y Compartir.
+Si entras sin ser administrador, la hoja se abre igual pero los campos están bloqueados, con un aviso
+explicándolo.</p>
+<table>
+  <tr><th>Nivel</th><th>Puede</th></tr>
+  <tr><td>Sin entrar (solo lectura)</td><td>Ver los datos, pero no tocar nada.</td></tr>
+  <tr><td>Usuario de confianza</td><td>Ver y manejar los dispositivos (encender, regular, aplicar escenas…), pero no cambiar ajustes.</td></tr>
+  <tr><td>Administrador</td><td>Todo lo anterior, más añadir y configurar dispositivos, estancias, escenas, grupos y contraseñas.</td></tr>
+</table>
+
+<h2 id="exportar"><span class="n">12</span>Exportar a Excel</h2>
+<p>El botón <b>«Exportar CSV»</b>, junto al título de la gráfica, descarga las lecturas del dispositivo o grupo
+que tengas seleccionado (apartado 5) en un archivo que se abre con Excel, Numbers o Google Sheets. Si lo que
+tienes a la vista son varios dispositivos sin filtrar, el botón abre antes un menú para elegir de cuál
+descargarlas.</p>
+
+<h2 id="demo"><span class="n">13</span>Modo demostración</h2>
+<p>Sin un servicio real que encontrar, TeleHome Pro arranca con ocho dispositivos de ejemplo (enchufes,
+sensores, luces y una persiana), dos escenas y un grupo ya creados, para que se pueda probar todo sin arriesgar
+nada real. Los cambios que hagas se guardan en este navegador; el botón <b>«Reiniciar demo»</b> del pie de la
+página los borra y vuelve a empezar.</p>
+
+<h2 id="faq"><span class="n">14</span>Preguntas frecuentes</h2>
+<p><b>¿Por qué un dispositivo aparece «Sin conexión»?</b><br>
+El servicio no ha podido hablar con él en la última consulta. Si es un enchufe o una bombilla en modo local,
+comprueba que no haya otra app del móvil conectada a la vez: estos dispositivos solo admiten una conexión.</p>
+<p><b>¿Por qué no veo el botón de color en una luz?</b><br>
+Esa bombilla concreta no admite color (o no se ha activado para ella); sigue pudiendo regular brillo y, si lo
+admite, blanco cálido/frío.</p>
+<p><b>¿Puedo deshacer el apagado de un solo enchufe?</b><br>
+No hace falta botón de deshacer ahí: simplemente vuelve a encenderlo con su interruptor.</p>
+<p><b>Cambié de agrupación y perdí el grupo que tenía seleccionado, ¿es normal?</b><br>
+Sí: el grupo seleccionado pertenece a la agrupación en la que lo elegiste («Enchufes» solo existe agrupando
+«Por tipo», por ejemplo), así que al cambiarla se vuelve a ver todo.</p>
+<p><b>¿Quién puede crear escenas y grupos?</b><br>
+Verlas y aplicarlas, cualquier usuario de confianza; crearlas, editarlas o borrarlas, solo un administrador.</p>
+
+<h2 id="glosario"><span class="n">15</span>Glosario</h2>
+<dl class="glos">
+  <dt>Escena</dt><dd>Un conjunto de dispositivos con un estado guardado (encendido, brillo, color…) que se aplica con un toque.</dd>
+  <dt>Grupo</dt><dd>Varias luces manejadas a la vez con un único interruptor y deslizador de brillo.</dd>
+  <dt>Transición</dt><dd>El cambio de brillo, blanco o color se hace poco a poco en vez de de golpe.</dd>
+  <dt>Temporizador</dt><dd>Una orden programada para dentro de un rato («apagar en 30 min»), que se puede cancelar mientras no se cumpla.</dd>
+  <dt>Estancia</dt><dd>El lugar de la casa donde está un dispositivo; sirve para agruparlos en la lista.</dd>
+  <dt>Deshacer</dt><dd>Vuelve los dispositivos al estado que tenían justo antes de la última escena, orden de grupo o apagado en bloque.</dd>
+  <dt>Modo demostración</dt><dd>La app funciona con dispositivos de ejemplo, guardados solo en tu navegador, sin servicio real.</dd>
+  <dt>Usuario de confianza / Administrador</dt><dd>Los dos niveles de acceso con contraseña: el primero maneja los dispositivos, el segundo además configura la app.</dd>
+</dl>
+
+<footer class="pie">
+  Manual de usuario de TeleHome Pro · 25 de noviembre de 2026 ·
+  <a href="../">abrir la app</a> ·
+  <a href="../../telehome/MANUAL_TELEHOME.md">manual técnico</a>
+</footer>
+
+</div>
+</body>
+</html>

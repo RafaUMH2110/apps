@@ -112,6 +112,12 @@ main.wrap { padding-top:22px; padding-bottom:12px; }
 .grp-h h3 svg { width:16px; height:16px; color:var(--ink2); flex:none; }
 .grp-h .agg { font-size:13px; color:var(--ink2); margin-left:auto; font-variant-numeric:tabular-nums; }
 .grp-h .agg b { color:var(--ink); font-weight:650; }
+.grp-h .gord { display:inline-flex; gap:4px; }
+.grp-h .gord button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:26px; padding:0; font-size:11px; line-height:1;
+  border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--ink2); cursor:pointer; }
+.grp-h .gord button:hover:not(:disabled) { color:var(--accent); border-color:var(--accent); }
+.grp-h .gord button:disabled { opacity:.3; cursor:default; }
+.seg button.reset { border:1px dashed var(--border); color:var(--ink2); font-weight:600; }
 .devs { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
 .devs + .devs { margin-top:14px; }
 .dev-row { position:relative; display:grid; grid-template-columns:minmax(0,1.25fr) minmax(130px,.85fr) 128px minmax(0,1.35fr) auto; grid-template-areas:"id val spark meta ctl";
@@ -1860,6 +1866,25 @@ const online = (d) => !!(d.reading && d.reading.online);
 /* Orden elegido en «Ajustes y dispositivos» (se guarda en este navegador; los dispositivos nuevos van al final) */
 const ORDER_KEY = "telehome_orden";
 const ordenIds = () => { try { const v = JSON.parse(localStorage.getItem(ORDER_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+/* Orden de los grupos elegido a mano con las flechas de la ventana principal; se guarda en este navegador,
+   uno por agrupación: los tipos para «Por tipo» y los nombres de estancia para «Por estancia». */
+const GRP_ORDER_KEY = { tipo: "telehome_orden_tipos", estancia: "telehome_orden_estancias" };
+const claveGrupo = (modo, k) => modo === "estancia" ? String(k).toLowerCase() : String(k);
+const ordenGrupos = (modo) => {
+  const key = GRP_ORDER_KEY[modo]; if (!key) return [];
+  try { const v = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(v) ? v.map(String) : []; } catch (e) { return []; }
+};
+const guardarOrdenGrupos = (modo, claves) => {
+  const key = GRP_ORDER_KEY[modo]; if (!key) return;
+  try { claves ? localStorage.setItem(key, JSON.stringify(claves)) : localStorage.removeItem(key); } catch (e) { /* sin almacenamiento */ }
+};
+/* Reordena las claves de grupo según lo guardado; lo que no esté guardado (un tipo o una estancia nuevos)
+   se queda al final, en el orden que tendría de siempre. */
+const ordenarGrupos = (claves, modo) => {
+  const o = ordenGrupos(modo); if (!o.length) return claves;
+  const pos = (k) => { const i = o.indexOf(claveGrupo(modo, k)); return i < 0 ? 1e9 : i; };
+  return claves.map((k, i) => [k, i]).sort((a, b) => pos(a[0]) - pos(b[0]) || a[1] - b[1]).map((x) => x[0]);
+};
 const devs = () => {
   const l = (S.state && S.state.devices) || [], o = ordenIds();
   if (!o.length) return l;
@@ -1868,8 +1893,8 @@ const devs = () => {
 };
 const unit = (k) => (METRICS[k] ? METRICS[k].unit : "");
 const mfmt = (k, v) => v == null ? "—" : fmt(v, METRICS[k] ? METRICS[k].dec : 1);
-/* Tipos presentes, en el orden del catálogo */
-const typesPresent = () => Object.keys(TYPES).filter((k) => devs().some((d) => d.type === k));
+/* Tipos presentes, en el orden elegido en la ventana principal y, si no se ha tocado, en el del catálogo */
+const typesPresent = () => ordenarGrupos(Object.keys(TYPES).filter((k) => devs().some((d) => d.type === k)), "tipo");
 /* Magnitudes que mide algún dispositivo configurado */
 const metricsPresent = () => Object.keys(METRICS).filter((k) => devs().some((d) => T(d).metrics.includes(k)));
 const hasMetric = (d, k) => T(d).metrics.includes(k);
@@ -2035,6 +2060,7 @@ function groupAgg(list) {
 }
 function groupsOf(list) {
   const g = groupsBase(list);
+  if (ordenGrupos(S.group).length) return g;                   // orden puesto a mano con las flechas: manda sobre todo lo demás
   if (ordenIds().length && !(g.length === 1 && g[0].flat)) {   // con orden personalizado, los grupos salen por su primer dispositivo
     const first = (x) => { const i = list.indexOf(x.devs[0]); return i < 0 ? 1e9 : i; };
     return g.map((x, i) => [x, i]).sort((a, b) => first(a[0]) - first(b[0]) || a[1] - b[1]).map((x) => x[0]);
@@ -2050,7 +2076,7 @@ function groupsBase(list) {
     const orden = roomsSrv().map((r) => r.name.toLowerCase());        // el orden que se haya puesto en «Estancias»
     const pos = (x) => { const i = orden.indexOf(x.toLowerCase()); return i < 0 ? 1e6 : i; };
     names.sort((a, b) => a === "Sin estancia" ? 1 : b === "Sin estancia" ? -1 : (pos(a) - pos(b)) || a.localeCompare(b, "es"));
-    return names.map((r) => ({ key: r, label: r, devs: list.filter((d) => ((d.room || "").trim() || "Sin estancia") === r) }));
+    return ordenarGrupos(names, "estancia").map((r) => ({ key: r, label: r, devs: list.filter((d) => ((d.room || "").trim() || "Sin estancia") === r) }));
   }
   return [{ key: "all", label: "", devs: list, flat: true }];
 }
@@ -2291,15 +2317,16 @@ function renderGroups() {
       el("button", { class: "btn primary", type: "button", text: "Añadir el primero", onclick: () => openDialog() }))));
     return;
   }
-  for (const g of groupsOf(list)) {
-    if (!g.devs.length) continue;
+  const grupos = groupsOf(list).filter((g) => g.devs.length);
+  for (const [i, g] of grupos.entries()) {
     const sec = el("section", { class: "devs", "aria-label": g.label || "Dispositivos" });
     if (!g.flat) {
       const activo = S.sel === grpSelId(S.group, g.key);
       const cab = el("div", { class: "grp-h" + (activo ? " sel" : ""), role: "button", tabindex: "0",
         "aria-pressed": String(activo), title: "Ver solo «" + g.label + "» en la gráfica y el resumen",
         "aria-label": "Ver solo «" + g.label + "» en la gráfica y el resumen" },
-        el("h3", {}, g.icon ? icon(g.icon) : null, g.label), groupAgg(g.devs));
+        el("h3", {}, g.icon ? icon(g.icon) : null, g.label),
+        grupos.length > 1 ? flechasGrupo(g, i, grupos.length) : null, groupAgg(g.devs));
       cab.addEventListener("click", () => selectGroup(S.group, g.key));
       cab.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === cab) { e.preventDefault(); cab.click(); } });
       sec.append(cab);
@@ -2307,6 +2334,27 @@ function renderGroups() {
     for (const d of g.devs) sec.append(devRow(d));
     box.append(sec);
   }
+}
+/* Flechas para cambiar el orden de los grupos (tipos o estancias) sin salir de la ventana principal */
+function flechasGrupo(g, i, total) {
+  const que = S.group === "tipo" ? "el tipo" : "la estancia";
+  const bot = (txt, verbo, delta, tope) => {
+    const t = verbo + " " + que + " «" + g.label + "»";
+    const b = el("button", { type: "button", text: txt, title: t, "aria-label": t, disabled: tope ? "" : null });
+    b.addEventListener("click", (e) => { e.stopPropagation(); moverGrupo(g.key, delta); });
+    b.addEventListener("keydown", (e) => e.stopPropagation());   /* Intro y espacio son del botón, no de la cabecera */
+    return b;
+  };
+  return el("span", { class: "gord" }, bot("▲", "Subir", -1, i === 0), bot("▼", "Bajar", 1, i === total - 1));
+}
+/* Sube o baja un grupo y guarda el orden completo de la agrupación actual */
+function moverGrupo(key, delta) {
+  const claves = groupsOf(devs()).filter((g) => !g.flat && g.devs.length).map((g) => claveGrupo(S.group, g.key));
+  const i = claves.indexOf(claveGrupo(S.group, key)), j = i + delta;
+  if (i < 0 || j < 0 || j >= claves.length) return;
+  [claves[i], claves[j]] = [claves[j], claves[i]];
+  guardarOrdenGrupos(S.group, claves);
+  renderFilters(); renderGroups(); renderSummary();
 }
 /* Fija la selección activa (un dispositivo, un grupo o "all") y repinta todo lo que depende de ella */
 function setSel(sel) {
@@ -2538,6 +2586,12 @@ function renderFilters() {
       if (parseGrpSel(S.sel)) S.sel = "all";   /* el grupo seleccionado era de la agrupación anterior */
       renderFilters(); renderGroups(); renderLegend(); drawChart(); renderSummary();
     }); gg.append(b);
+  }
+  if (ordenGrupos(S.group).length) {      /* solo si se ha tocado el orden de esta agrupación */
+    const r = el("button", { type: "button", class: "reset", text: "Orden original",
+      title: "Deshace el orden que has puesto con las flechas y vuelve a " + (S.group === "tipo" ? "los tipos" : "las estancias") + " de siempre" });
+    r.addEventListener("click", () => { guardarOrdenGrupos(S.group, null); renderFilters(); renderGroups(); renderSummary(); });
+    gg.append(r);
   }
   const uno = (S.sel !== "all" && !parseGrpSel(S.sel)) || devs().length === 1;
   const sg = $("#scaleGrp"); sg.replaceChildren(); sg.hidden = uno || metricDevs().length < 2; $("#scaleLbl").hidden = sg.hidden;

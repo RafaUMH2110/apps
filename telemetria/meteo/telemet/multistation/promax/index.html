@@ -639,6 +639,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     </div>
     <div class="ctrl-fila" id="filaChipsEst"><span class="etq">Stations</span><div class="chips" id="chipsEst"></div></div>
     <div class="ctrl-fila" id="filaChipsVar"><span class="etq">Variables</span><div class="chips" id="chipsVar"></div></div>
+    <div class="ctrl-fila" id="filaChipsGraf" style="display:none"><span class="etq">Charts</span><div class="chips" id="chipsGraf"></div></div>
     <div class="ctrl-fila" id="filaEstSel" style="display:none"><span class="etq">Station</span><select id="estSelEvol" aria-label="Station"></select></div>
     <p class="evol-nota" id="evolNota"></p>
     <p class="evol-nota" id="autoEstado" role="status" aria-live="polite" style="display:none;margin-top:-8px"></p>
@@ -719,7 +720,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet MultiStation ProMax. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 12 November 2026, 05:18</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 27 November 2026, 23:55</p>
 </footer>
 
 <div class="bottomnav">
@@ -813,13 +814,15 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
   // “One station” view: same groupings as TeleMet History (with a double Y axis for rain and solar+UV).
   const GRUPOS_ESTACION = [
-    { titulo: 'Temperature, feels-like and dew point', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
-    { titulo: 'Humidity', unidad: '%', claves: ['humidity_pct'] },
-    { titulo: 'Pressure', unidad: 'hPa', claves: ['pressure_hpa'] },
-    { titulo: 'Wind and gust', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
-    { titulo: 'Rain rate and accumulated rain', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
-    { titulo: 'Solar radiation and UV index', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
+    { id: 'temp', corto: 'Temperature', titulo: 'Temperature, feels-like and dew point', unidad: '°C', claves: ['temp_c', 'heat_index_c', 'dewpoint_c'] },
+    { id: 'hum', corto: 'Humidity', titulo: 'Humidity', unidad: '%', claves: ['humidity_pct'] },
+    { id: 'pres', corto: 'Pressure', titulo: 'Pressure', unidad: 'hPa', claves: ['pressure_hpa'] },
+    { id: 'viento', corto: 'Wind', titulo: 'Wind and gust', unidad: 'km/h', claves: ['wind_kmh', 'gust_kmh'] },
+    { id: 'lluvia', corto: 'Rain', titulo: 'Rain rate and accumulated rain', unidad: '', claves: ['rainrate_mmh', 'rain_total_mm'], ejeDer: ['rain_total_mm'], trazos: { rain_total_mm: '5 3' }, colores: { rain_total_mm: 'color-mix(in srgb, var(--c-rain) 55%, var(--c-pres))' }, cero: true },
+    { id: 'solar', corto: 'Solar and UV', titulo: 'Solar radiation and UV index', unidad: '', claves: ['solarradiation_wm2', 'uv_index'], ejeDer: ['uv_index'], cero: true }
   ];
+  // Ids of the groups above: the "single station" view only draws the chosen ones.
+  const GRUPOS_IDS = GRUPOS_ESTACION.map(g => g.id);
 
   // Chart windows: number of intervals into which the data is grouped.
   const VENTANAS = { 12: { buckets: 240, ticks: 4 }, 24: { buckets: 288, ticks: 6 }, 168: { buckets: 336, ticks: 7 } };
@@ -831,7 +834,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   let cfg = Object.assign({}, DEF);
   let running = false;
   const rts = new Map();           // station id -> runtime state
-  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax', mapaFondo: true };
+  const ui = { ventanaH: 12, modo: 'comparar', vars: ['temp_c', 'humidity_pct', 'pressure_hpa', 'wind_kmh'], grupos: GRUPOS_IDS.slice(), ocultas: [], estEvol: '', detalle: '', ref: '', resumen: 'tmax', mapaFondo: true };
   const registro = [];
   let timerSync = null, timerTick = null;
 
@@ -840,7 +843,8 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     estList: $('estList'), cfgMsg: $('cfgMsg'), cfgMsg2: $('cfgMsg2'), estGrid: $('estGrid'), metaLinea: $('metaLinea'), extremos: $('extremos'),
     mapaWrap: $('mapaWrap'), mapaFondo: $('mapaFondo'), mapa: $('mapa'), mapaPie: $('mapaPie'), tablaComp: $('tablaComp'), refSel: $('refSel'),
     detalleSel: $('detalleSel'), detalleGrid: $('detalleGrid'), detalleMeta: $('detalleMeta'),
-    chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
+    chipsEst: $('chipsEst'), chipsVar: $('chipsVar'), filaChipsVar: $('filaChipsVar'),
+    chipsGraf: $('chipsGraf'), filaChipsGraf: $('filaChipsGraf'), filaEstSel: $('filaEstSel'), estSelEvol: $('estSelEvol'),
     evolNota: $('evolNota'), autoEstado: $('autoEstado'), semanaEstado: $('semanaEstado'), charts: $('charts'), tablaSemana: $('tablaSemana'),
     diaInput: $('diaInput'), diaEstado: $('diaEstado'), diaResumen: $('diaResumen'), chartsDia: $('chartsDia'), btnCSVDia: $('btnCSVDia'),
     servBase: $('servBaseInput'), servEstado: $('servEstado'), datosTabla: $('datosTabla'), datosMsg: $('datosMsg'), registro: $('registro'),
@@ -1326,6 +1330,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if ([12, 24, 168].indexOf(u.ventanaH) >= 0) ui.ventanaH = u.ventanaH;
       if (u.modo === 'comparar' || u.modo === 'estacion') ui.modo = u.modo;
       if (Array.isArray(u.vars)) ui.vars = u.vars.filter(k => VARS_COMPARABLES.some(m => m.key === k));
+      if (Array.isArray(u.grupos)) ui.grupos = u.grupos.filter(id => GRUPOS_IDS.indexOf(id) >= 0);
       if (Array.isArray(u.ocultas)) ui.ocultas = u.ocultas;
       if (['tmax', 'tmin', 'tmed', 'lluvia', 'racha'].indexOf(u.resumen) >= 0) ui.resumen = u.resumen;
       if (typeof u.ref === 'string') ui.ref = u.ref;
@@ -1336,7 +1341,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   }
   function guardarEsts(){ return guardarLS(LS.ests, ests); }
   function guardarCfg(){ return guardarLS(LS.cfg, cfg); }
-  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol, mapaFondo: ui.mapaFondo }); }
+  function guardarUI(){ guardarLS(LS.ui, { ventanaH: ui.ventanaH, modo: ui.modo, vars: ui.vars, grupos: ui.grupos, ocultas: ui.ocultas, resumen: ui.resumen, ref: ui.ref, detalle: ui.detalle, estEvol: ui.estEvol, mapaFondo: ui.mapaFondo }); }
 
   function leerNumero(input, porDefecto, min){
     const v = parseFloat(String(input.value).replace(',', '.'));
@@ -2329,8 +2334,9 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
   // All the variables of ONE station, with the groupings of TeleMet History (double Y axis included).
   function pintarEstacion(cont, filas, e, desde, ventana, nB, ticks, conFecha){
     cont.innerHTML = '';
+    if (ui.grupos.length === 0){ cont.innerHTML = '<p class="evol-vacio">No charts selected. Turn one on under \u201cCharts\u201d, above.</p>'; return; }
     const puntosX = puntosEngancheX(desde, ventana, nB, conFecha);
-    GRUPOS_ESTACION.forEach(g => {
+    GRUPOS_ESTACION.filter(g => ui.grupos.indexOf(g.id) >= 0).forEach(g => {
       const card = construirTarjetaGrafico(g.titulo, g.unidad);
       cont.appendChild(card.el);
       const series = g.claves.map(k => {
@@ -2718,6 +2724,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     ui.ocultas = ui.ocultas.filter(id => act.some(e => e.id === id));
     el.chipsEst.innerHTML = act.map(e => '<button type="button" class="chip" data-id="' + e.id + '" style="--c:' + e.color + '" aria-pressed="' + (ui.ocultas.indexOf(e.id) < 0) + '"><i></i>' + escHTML(nombreEst(e)) + '</button>').join('') || '<span class="est-vacio">—</span>';
     el.chipsVar.innerHTML = VARS_COMPARABLES.map(m => '<button type="button" class="chip" data-k="' + m.key + '" style="--c:' + (m.key === 'temp_c' ? '#E4572E' : 'var(--steel)') + '" aria-pressed="' + (ui.vars.indexOf(m.key) >= 0) + '">' + m.etiqueta + '</button>').join('');
+    renderChipsGraf();
     if (rehacerTarjetas || el.estGrid.children.length !== ests.length) crearTarjetas();
     else ests.forEach(renderTarjeta);
     guardarUI();
@@ -2726,12 +2733,25 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
     renderTarjetasSel();
     renderEvol(); renderDetalle(); renderSemana(); renderDatos();
   }
+  // "Charts" chips: which cards are drawn in the "single station" view (and
+  // in the single-day lookup when that view is used). Remembered in this
+  // browser along with the rest of the view (LS.ui).
+  function renderChipsGraf(){
+    const todas = ui.grupos.length === GRUPOS_IDS.length;
+    el.chipsGraf.innerHTML = GRUPOS_ESTACION.map(g => {
+      const def = DEF_VAR(g.claves[0]);
+      return '<button type="button" class="chip" data-g="' + g.id + '" style="--c:' + (def ? def.color : 'var(--steel)') + '" aria-pressed="' +
+        (ui.grupos.indexOf(g.id) >= 0) + '"><i></i>' + g.corto + '</button>';
+    }).join('') + '<button type="button" class="chip" data-g="' + (todas ? '__ninguna' : '__todas') + '">' + (todas ? 'None' : 'All') + '</button>';
+  }
+
   function aplicarModoUI(){
     const comparar = ui.modo === 'comparar';
     $('modoComparar').setAttribute('aria-pressed', String(comparar));
     $('modoEstacion').setAttribute('aria-pressed', String(!comparar));
     $('filaChipsEst').style.display = comparar ? '' : 'none';
     el.filaChipsVar.style.display = comparar ? '' : 'none';
+    el.filaChipsGraf.style.display = comparar ? 'none' : '';
     el.filaEstSel.style.display = comparar ? 'none' : '';
     document.querySelectorAll('#evolVentana button').forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.h, 10) === ui.ventanaH)));
     document.querySelectorAll('#segResumen button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === ui.resumen)));
@@ -2787,6 +2807,18 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
       if (i >= 0) ui.vars.splice(i, 1); else ui.vars.push(b.dataset.k);
       ui.vars.sort((a, c) => VARS_COMPARABLES.findIndex(m => m.key === a) - VARS_COMPARABLES.findIndex(m => m.key === c));
       b.setAttribute('aria-pressed', String(ui.vars.indexOf(b.dataset.k) >= 0)); guardarUI(); renderEvol();
+    });
+    el.chipsGraf.addEventListener('click', ev => {
+      const b = ev.target.closest('.chip'); if (!b) return;
+      const id = b.dataset.g;
+      if (id === '__todas') ui.grupos = GRUPOS_IDS.slice();
+      else if (id === '__ninguna') ui.grupos = [];
+      else {
+        const i = ui.grupos.indexOf(id);
+        if (i >= 0) ui.grupos.splice(i, 1); else ui.grupos.push(id);
+        ui.grupos.sort((a, c) => GRUPOS_IDS.indexOf(a) - GRUPOS_IDS.indexOf(c));
+      }
+      guardarUI(); renderChipsGraf(); renderEvol();
     });
     document.querySelectorAll('#segResumen button').forEach(b => b.addEventListener('click', () => { ui.resumen = b.dataset.m; guardarUI(); aplicarModoUI(); renderSemana(); }));
     $('btnConsultarDia').addEventListener('click', consultarDia);

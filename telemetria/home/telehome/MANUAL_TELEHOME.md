@@ -458,6 +458,7 @@ Las tres contraseñas aceptan `{"password": "…"}` o `{"quitar": true}`, y exig
 | `POST api/logout` | Cierra la sesión del token enviado |
 | `POST api/admin/login` | Igual, pero solo acepta la de administrador (compatibilidad) |
 | `POST api/admin/logout` | Alias de `logout` |
+| `POST api/sessions/revoke-users` | Cierra todas las sesiones de usuario de confianza → `{cerradas}` (0.14.0, solo administrador) |
 
 ### Configuración completa
 
@@ -510,11 +511,22 @@ Quien no es administrador recibe una vista recortada de `api/state`: sin `dev_id
 `has_key`, ni los campos `dp_*`, `code_*` y `scale_*`; sin credenciales de la nube y con el recuento de
 llamadas a cero. No es solo que la interfaz lo oculte: el servicio no lo manda.
 
-**Las sesiones** son un token aleatorio de 32 bytes que la app envía en `X-TeleHome-Admin`. Duran 12 horas,
-hay como mucho 50 a la vez (se descartan las más antiguas) y viven en `sessionStorage`, así que se pierden al
-cerrar la pestaña. Los tokens llevan una huella de las dos contraseñas: **cambiar cualquiera de ellas
-invalida todas las sesiones abiertas**, salvo la del administrador que hace el cambio, que recibe un token
-nuevo en la respuesta.
+**Las sesiones** son un token aleatorio de 32 bytes que la app envía en `X-TeleHome-Admin`. Desde la 0.14.0
+duran según el nivel: **7 días la de usuario de confianza y 12 horas la de administrador** (`api/state` las
+da en `sesion.ttl`, en segundos, y `api/login` devuelve la que toque en `expires_in`). Hay como mucho 50 a la
+vez; al pasarse, se descartan las abiertas hace más tiempo. Los tokens llevan una huella de las dos
+contraseñas: **cambiar cualquiera de ellas invalida todas las sesiones abiertas**, salvo la del administrador
+que hace el cambio, que recibe un token nuevo en la respuesta.
+
+La app guarda el token de usuario en `localStorage`, para que la sesión aguante cerrar la pestaña durante esos
+7 días, y el de administrador en `sessionStorage`, donde se pierde al cerrarla.
+
+**Cerrar las sesiones de usuario.** Un administrador puede echar a los usuarios de confianza sin tocar las
+contraseñas: `POST api/sessions/revoke-users` borra todas las sesiones de ese nivel y responde cuántas ha
+cerrado; las de administrador siguen abiertas. En la app está en Ajustes → Opciones → «Sesiones de usuario
+abiertas», que muestra cuántas hay (`sesion.user_sessions`, solo para administradores) y el botón para
+cerrarlas. Quien tenga la contraseña de usuario puede volver a entrar con ella: para cerrarle la puerta del
+todo hay que cambiarla o quitarla.
 
 > Poner contraseña de usuario sin poner la de administrador deja la configuración accesible solo desde la
 > línea de órdenes. La orden lo avisa.
@@ -756,8 +768,9 @@ App genérica, en `localStorage`:
 | `telehome_demo_v1` | Los dispositivos de la demostración |
 | `telehome_demo_v1_rooms` | Las estancias de la demostración |
 
-En `sessionStorage`: `telehome_admin` (el token de sesión) y, si no se marcó «Recordar», también la
-contraseña del servicio.
+El token de sesión (`telehome_admin`) va en `localStorage` si es de usuario de confianza y en
+`sessionStorage` si es de administrador. En `sessionStorage` va también la contraseña del servicio, si no se
+marcó «Recordar».
 
 Las apps de iPhone y iPad usan el prefijo `telehome.`: `telehome.api`, `telehome.range`, `telehome.poll` y
 `telehome.admin`.

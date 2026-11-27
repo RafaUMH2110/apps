@@ -3,7 +3,8 @@
 este mismo repo, usando portal_render.py (misma carpeta). Recorre cada
 carpeta de app en la raíz del repo (excluyendo appindex/ y .github/) en
 vez de una única carpeta "artifacts/", porque cada app vive directamente
-en la raíz (p.ej. /consultar/index.html -> https://.../apps/consultar/).
+en la raíz (p.ej. /consultar/index.html -> enlace ../consultar/ desde el
+catálogo, siempre relativo: ver con_base()).
 
 No hace llamadas a la API de GitHub ni necesita ningún secreto: el
 workflow que invoca este script es el que hace commit/push del resultado
@@ -89,15 +90,34 @@ def list_local_apps(root):
     return apps
 
 
-def path_to_url(pages_owner, pages_repo, rel):
-    owner_lc = pages_owner.lower()
-    base = f"https://{owner_lc}.github.io/{pages_repo}"
+def path_to_rel(rel):
+    """Ruta de la app relativa a la raíz del repo: 'consultar/',
+    'moda/genimod/', 'telemetria/meteo/telemet/pro/'."""
     if rel == "index.html":
-        return f"{base}/"
+        return ""
     if rel.endswith("/index.html"):
-        slug = rel[: -len("/index.html")]
-        return f"{base}/{slug}/"
-    return f"{base}/{rel}"
+        return rel[: -len("index.html")]
+    return rel
+
+
+def con_base(catalog, base):
+    """Devuelve el catálogo con el enlace de cada app resuelto desde la página
+    que lo va a mostrar (base = '../' en appindex/, '../../' en appindex/temas/).
+
+    Los enlaces de las apps de este repo son RELATIVOS a propósito: así el
+    catálogo abre siempre la copia que está junto a él. En GitHub Pages
+    (https://rafaumh2110.github.io/apps/appindex/ -> ../consultar/) el
+    resultado es el mismo de siempre, y en un servidor propio donde se
+    despliega el repo —p. ej. http://lorca.umh.es/rafa/apps/appindex/— las
+    tarjetas abren las apps de ESE servidor y no las de GitHub. Los enlaces
+    externos (enlaces_externos.json) son absolutos y no se tocan."""
+    resuelto = []
+    for meta in catalog:
+        m = dict(meta)
+        if not m.get("external"):
+            m["url"] = base + m.get("path", "")
+        resuelto.append(m)
+    return resuelto
 
 
 def cargar_enlaces_externos():
@@ -117,18 +137,12 @@ def cargar_enlaces_externos():
             "categories": list(e.get("categories", [])), "tags": list(e.get("tags", [])),
             "client_only": bool(e.get("client_only", False)), "clase": e.get("clase", ""),
             "group": e.get("group", "otros"), "clase_app": clase_de_app("", e),
-            "subgroup": e.get("subgroup", ""), "url": e["url"],
+            "subgroup": e.get("subgroup", ""), "url": e["url"], "external": True,
         })
     return resultado
 
 
 def main():
-    pages_owner_repo = os.environ.get("GITHUB_REPOSITORY", "")
-    if "/" not in pages_owner_repo:
-        print("ERROR: no se pudo determinar GITHUB_REPOSITORY", file=sys.stderr)
-        sys.exit(1)
-    pages_owner, pages_repo = pages_owner_repo.split("/", 1)
-
     local_apps = list_local_apps(ROOT)
     if not local_apps:
         print("No se encontraron apps con metadatos de catálogo; no se actualiza el portal.")
@@ -136,7 +150,8 @@ def main():
 
     catalog = []
     for rel, meta in local_apps:
-        meta["url"] = path_to_url(pages_owner, pages_repo, rel)
+        meta["path"] = path_to_rel(rel)
+        meta["url"] = meta["path"]   # se resuelve por página en con_base()
         catalog.append(meta)
     catalog.extend(cargar_enlaces_externos())
     catalog.sort(key=lambda m: m["title"].casefold())
@@ -147,7 +162,7 @@ def main():
                university=UNIVERSITY, repo_url=REPO_URL, fecha=fecha)
 
     # Versión principal: cuadrícula plana, la que se usa en producción.
-    html_out = render_portal_html(catalog, TITLE, SUBTITLE, EYEBROW, **pie)
+    html_out = render_portal_html(con_base(catalog, "../"), TITLE, SUBTITLE, EYEBROW, **pie)
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         f.write(html_out)
@@ -155,7 +170,7 @@ def main():
 
     # Versión alternativa: agrupada por tema, estilo "forja". Punto de
     # acceso adicional, no sustituye a la versión principal de arriba.
-    html_out_temas = render_portal_html_temas(catalog, TITLE, SUBTITLE, EYEBROW, **pie)
+    html_out_temas = render_portal_html_temas(con_base(catalog, "../../"), TITLE, SUBTITLE, EYEBROW, **pie)
     os.makedirs(os.path.dirname(OUT_PATH_TEMAS), exist_ok=True)
     with open(OUT_PATH_TEMAS, "w", encoding="utf-8") as f:
         f.write(html_out_temas)

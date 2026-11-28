@@ -79,6 +79,8 @@ code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1p
 .tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
 .logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
 .logo em{font-style:normal;color:var(--brasa)}
+/* Leyenda «ProMax»: distingue esta versión de la normal sin alargar el logo. */
+.logo .promax{font:700 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--brasa);border-radius:6px;padding:4px 7px;position:relative;top:1px}
 .logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brasa),var(--forjado));display:grid;place-items:center;color:#fff}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
@@ -500,7 +502,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 
 <div class="topbar">
   <div class="tb-in">
-    <button class="logo" id="goHome" type="button" aria-label="Go to the top"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>MultiStation</em></span></button>
+    <button class="logo" id="goHome" type="button" aria-label="Go to the top"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>MultiStation</em></span><span class="promax">ProMax</span></button>
     <div class="tb-right">
       <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Stopped</span></div>
       <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glossary</span></button>
@@ -720,7 +722,7 @@ select{font:inherit;font-size:14px;padding:8px 10px;border:1.5px solid var(--lin
 <footer class="app-footer">
   <hr>
   <p>TeleMet MultiStation ProMax. Your data (Station ID and API Key) is stored only in this browser and sent exclusively to the official Weather Underground endpoint.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 27 November 2026, 23:55</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Last modified: 28 November 2026, 01:45</p>
 </footer>
 
 <div class="bottomnav">

@@ -79,6 +79,8 @@ code{font-family:var(--mono);font-size:.85em;background:var(--line-2);padding:1p
 .tb-in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
 .logo{background:none;border:0;color:var(--on-dark);font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.03em;cursor:pointer;padding:2px 4px;display:flex;align-items:center;gap:9px}
 .logo em{font-style:normal;color:var(--brasa)}
+/* Leyenda «ProMax»: distingue esta versión de la normal sin alargar el logo. */
+.logo .promax{font:700 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--brasa);border-radius:6px;padding:4px 7px;position:relative;top:1px}
 .logo .anv{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brasa),var(--forjado));display:grid;place-items:center;color:#fff}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .tb-btn{background:transparent;border:1px solid var(--panel-line);color:var(--on-dark-muted);border-radius:9px;padding:6px 10px;font:600 13px var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px}
@@ -505,7 +507,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 
 <div class="topbar">
   <div class="tb-in">
-    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Cal Pro</em></span></button>
+    <button class="logo" id="goHome" type="button" aria-label="Ir al inicio"><span class="anv"><svg class="i"><use href="#i-flag"></use></svg></span><span>TeleMet <em>Cal</em></span><span class="promax">ProMax</span></button>
     <div class="tb-right">
       <div class="light" id="luzEstadoTop" data-s="off" role="status" aria-live="polite"><span class="bulbo"></span><span class="ltxt" id="luzTextoTop">Detenido</span></div>
       <button class="tb-btn" id="btnHelp" type="button"><svg class="i"><use href="#i-help"></use></svg><span class="lbl">Glosario</span></button>
@@ -806,7 +808,7 @@ footer.app-footer hr{border:0;border-top:1px solid var(--line);margin:0 0 14px}
 <footer class="app-footer">
   <hr>
   <p>TeleMet Cal ProMax. Tus datos (Station ID y API Key) se guardan solo en este navegador y se envían exclusivamente al endpoint oficial de Weather Underground. La corrección de temperatura se calcula y se guarda también solo en este navegador.</p>
-  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 12 de noviembre de 2026, 3:16</p>
+  <p class="firma">Rafael Puerto (<a href="mailto:r.puerto@umh.es">r.puerto@umh.es</a>) · Última modificación: 28 de noviembre de 2026, 1:45</p>
 </footer>
 
 <div class="bottomnav">
